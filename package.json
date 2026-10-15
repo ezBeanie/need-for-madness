@@ -1,0 +1,18 @@
+{
+  "name": "need-for-madness",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "golden:update": "UPDATE_GOLDEN=1 vitest run test/golden",
+    "format": "prettier --write needmad.js test",
+    "format:check": "prettier --check needmad.js test"
+  },
+  "devDependencies": {
+    "prettier": "3.3.3",
+    "vite": "5.4.21",
+    "vitest": "2.1.9"
+  }
+}
