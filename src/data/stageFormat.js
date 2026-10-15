@@ -1,3 +1,5 @@
+import { readFloat, readInt } from "./values.js";
+
 // The stage format: one command per line, `command(arg,arg,...)suffix`, read in order.
 // Order matters: object numbers follow the line order and bnd() applies to the next set().
 
@@ -92,17 +94,11 @@ const COMMANDS = {
   ],
 };
 
-// Same rules as the game's getIntValue/getFloatValue: missing or unreadable is -1.
-const readNumber = (raw, parse) => {
-  const value = parse(raw === "" ? "-1" : raw);
-  return Number.isNaN(value) ? -1 : value;
-};
-
 const readField = (raw, type) => {
   if (type === text) {
     return raw;
   }
-  return readNumber(raw, type === int ? parseInt : parseFloat);
+  return type === int ? readInt(raw) : readFloat(raw);
 };
 
 const parseLine = (rawLine) => {

@@ -5,6 +5,8 @@ import {
   valueOf,
 } from "./data/stageFormat.js";
 import cars from "./data/cars.json";
+import { parseModel } from "./data/modelFormat.js";
+import { readFloat, readInt } from "./data/values.js";
 
 // Separate sources: effects may consume randomness at any rate without changing the race.
 // eslint-disable-next-line no-restricted-properties
@@ -218,17 +220,17 @@ function loadrad3D(file, rad) {
     if (rawFile.readyState === 4) {
       if (rawFile.status === 200 || rawFile.status == 0) {
         var allText = rawFile.responseText;
-        var readlines = allText.split("\n");
+        var model = parseModel(allText);
         rad.colrad = 0;
         rad.iscar = 0;
         rad.intershad = false;
         rad.interact = false;
         rad.copyonly = false;
         rad.skid = -1;
-        var vrt = [];
-        var nrm = [];
-        var tex = [];
-        var tri = [];
+        var vrt = model.vertices;
+        var nrm = model.normals;
+        var tex = model.texcoords;
+        var tri = model.triangles;
         var texufile = [];
         texufile[0] = "none";
         var bcr = 128,
@@ -238,38 +240,39 @@ function loadrad3D(file, rad) {
         var scale = 1;
         var scaleX = 1;
         var flipx = -1;
-        for (var i = 0; i < readlines.length; i++) {
-          var line = readlines[i].trim();
-          if (strtsWith(line, "flipX()")) {
+        for (var i = 0; i < model.directives.length; i++) {
+          var command = model.directives[i].command;
+          var value = model.directives[i].value;
+          if (command == "flipX") {
             flipx = 1;
           }
-          if (strtsWith(line, "scale")) {
-            scale = getFloatValue("scale", line, 0);
+          if (command == "scale") {
+            scale = readFloat(value);
           }
-          if (strtsWith(line, "Xscale")) {
-            scaleX = getFloatValue("Xscale", line, 0);
+          if (command == "Xscale") {
+            scaleX = readFloat(value);
           }
-          if (strtsWith(line, "enableAlpha()")) {
+          if (command == "enableAlpha") {
             rad.alpha = 1;
           }
-          if (strtsWith(line, "ownLight()")) {
+          if (command == "ownLight") {
             rad.ownlight = true;
           }
-          if (strtsWith(line, "ownShade()")) {
+          if (command == "ownShade") {
             rad.ownshade = true;
           }
-          if (strtsWith(line, "car()")) {
+          if (command == "car") {
             rad.iscar = 1;
             rad.alpha = 1;
           }
-          if (strtsWith(line, "skid")) {
-            rad.skid = getIntValue("skid", line, 0);
+          if (command == "skid") {
+            rad.skid = readInt(value);
             rad.sx = 0;
             rad.bx = 0;
             rad.sz = 0;
             rad.bz = 0;
           }
-          if (strtsWith(line, "intershad()")) {
+          if (command == "intershad") {
             rad.intershad = true;
             if (rad.dam == null) {
               rad.dam = 1;
@@ -277,7 +280,7 @@ function loadrad3D(file, rad) {
             rad.bndmax = 20;
             rad.walarc = 0.67;
           }
-          if (strtsWith(line, "interact()")) {
+          if (command == "interact") {
             rad.interact = true;
             if (rad.dam == null) {
               rad.dam = 1;
@@ -285,74 +288,41 @@ function loadrad3D(file, rad) {
             rad.bndmax = 20;
             rad.walarc = 0.67;
           }
-          if (strtsWith(line, "dam()")) {
+          if (command == "dam") {
             rad.dam = 3;
           }
-          if (strtsWith(line, "bndmax")) {
-            rad.bndmax = getFloatValue("bndmax", line, 0);
+          if (command == "bndmax") {
+            rad.bndmax = readFloat(value);
           }
-          if (strtsWith(line, "walarc")) {
-            rad.walarc = getFloatValue("walarc", line, 0);
+          if (command == "walarc") {
+            rad.walarc = readFloat(value);
           }
-          if (strtsWith(line, "copyonly()")) {
+          if (command == "copyonly") {
             rad.copyonly = true;
           }
-          if (strtsWith(line, "texture")) {
-            texufile[rad.nt] =
-              "data/3D/textures/" + getStringValue("texture", line, 0);
+          if (command == "texture") {
+            texufile[rad.nt] = "data/3D/textures/" + value.split(",")[0];
             rad.nt++;
           }
-          if (strtsWith(line, "intertexture")) {
+          if (command == "intertexture") {
             texufile[rad.nt] =
-              "data/interface" +
-              rdres +
-              "/" +
-              getStringValue("intertexture", line, 0);
+              "data/interface" + rdres + "/" + value.split(",")[0];
             rad.nt++;
           }
-          if (strtsWith(line, "grouptexture")) {
-            rad.tgn = getIntValue("grouptexture", line, 0) + 1;
+          if (command == "grouptexture") {
+            rad.tgn = readInt(value) + 1;
           }
-          if (line.indexOf("v(") != -1) {
-            line = line.substring(2, line.indexOf(")v"));
-            var arr = line.split(",");
-            for (var k = 0; k < arr.length; k++) {
-              vrt[k] = parseFloat(arr[k]);
-            }
-            if (rad.copyonly || rad.intershad || rad.interact || rad.iscar) {
-              rad.vrt = vrt;
-            }
-          }
-          if (line.indexOf("n(") != -1) {
-            line = line.substring(2, line.indexOf(")n"));
-            var arr = line.split(",");
-            for (var k = 0; k < arr.length; k++) {
-              nrm[k] = parseFloat(arr[k]);
-            }
-            if (rad.copyonly || rad.intershad || rad.interact) {
-              rad.nrm = nrm;
-            }
-          }
-          if (line.indexOf("t(") != -1) {
-            line = line.substring(2, line.indexOf(")t"));
-            var arr = line.split(",");
-            for (var k = 0; k < arr.length; k++) {
-              tex[k] = parseFloat(arr[k]);
-            }
-            if (rad.copyonly || rad.iscar) {
-              rad.tex = tex;
-            }
-          }
-          if (line.indexOf("p(") != -1) {
-            line = line.substring(2, line.indexOf(")p"));
-            var arr = line.split(",");
-            for (var k = 0; k < arr.length; k++) {
-              tri[k] = parseInt(arr[k]);
-            }
-            if (rad.copyonly || rad.intershad || rad.interact || rad.iscar) {
-              rad.tri = tri;
-            }
-          }
+        }
+        // All directives precede the data lines in every model file.
+        if (rad.copyonly || rad.intershad || rad.interact || rad.iscar) {
+          rad.vrt = vrt;
+          rad.tri = tri;
+        }
+        if (rad.copyonly || rad.intershad || rad.interact) {
+          rad.nrm = nrm;
+        }
+        if (rad.copyonly || rad.iscar) {
+          rad.tex = tex;
         }
         if (!rad.copyonly) {
           if (rad.nt == 0) {
