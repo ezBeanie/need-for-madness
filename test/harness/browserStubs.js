@@ -172,7 +172,7 @@ class Audio {
   }
 }
 
-export const createBrowserGlobals = ({ root, queue, rafCallbacks }) => {
+export const createBrowserGlobals = ({ root, queue }) => {
   const gl = createWebGLStub();
   const ctx2d = create2dContextStub();
   const canvas3D = createCanvasStub(gl);
@@ -198,7 +198,7 @@ export const createBrowserGlobals = ({ root, queue, rafCallbacks }) => {
     addEventListener: noop,
     setTimeout: noop,
     clearTimeout: noop,
-    requestAnimationFrame: (cb) => rafCallbacks.push(cb),
+    requestAnimationFrame: noop,
     Image: createImageClass(queue),
     Audio,
     AudioContext: createAudioContextClass(queue),

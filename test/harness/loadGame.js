@@ -84,9 +84,9 @@ const compileGame = () => {
   const source = `(function (__browser, Math) {
 var { ${BROWSER_NAMES.join(", ")} } = __browser;
 ${glMatrix}
-;var mat4 = self.mat4;
+;var mat4 = self.mat4, quat = self.quat, vec3 = self.vec3;
 ${game}
-return { ${accessors.join(",\n")} };
+return { mat4, ${accessors.join(",\n")} };
 })`;
   return vm.runInThisContext(source, { filename: "needmad-harness-bundle.js" });
 };
@@ -101,11 +101,9 @@ const forbiddenRandom = () => {
 export const loadGame = ({ seed = 1, fxSeed = seed + 1000 } = {}) => {
   compiled ??= compileGame();
   const queue = createTaskQueue();
-  const rafCallbacks = [];
   const browser = createBrowserGlobals({
     root: PROJECT_ROOT,
     queue,
-    rafCallbacks,
   });
   browser.window = browser;
   browser.self = browser;
@@ -123,9 +121,7 @@ export const loadGame = ({ seed = 1, fxSeed = seed + 1000 } = {}) => {
   const step = () => {
     ctx.gameloop();
     queue.flush();
-    for (const render of rafCallbacks.splice(0)) {
-      render(frame * FRAME_MS);
-    }
+    ctx.render(frame * FRAME_MS);
     queue.flush();
     frame++;
   };

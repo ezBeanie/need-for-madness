@@ -2020,15 +2020,142 @@ function colorbgstforend() {
   gl.bindBuffer(gl.ARRAY_BUFFER, bgst.cbuf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
 }
+// Drawing happens every display frame, the logic only every tickms. Everything drawn is
+// interpolated between its state at the last two ticks, tickalpha being the position in
+// between. Draw instances are told apart by their matrix object (car[c].mat, dust[i].mat...).
+var tickcount = 0;
+var tickalpha = 1;
+var lerpstates = new WeakMap();
+var drawmat = mat4.create();
+var dcmat = mat4.create();
+var dcamx = 0,
+  dcamy = 0,
+  dcamz = 0;
+var camstate = null;
+// Moves further than this between two ticks are teleports (reset, reused particle, camera cut).
+var lerpjump = 300;
+var lerpquat = quat.create();
+var lerpscale = vec3.create();
+var lerppos = vec3.create();
+function newlerpshot() {
+  return {
+    x: 0,
+    y: 0,
+    z: 0,
+    rot: quat.create(),
+    scale: vec3.create(),
+    mirrored: false,
+  };
+}
+function takelerpshot(shot, x, y, z, mat) {
+  shot.x = x;
+  shot.y = y;
+  shot.z = z;
+  mat4.getScaling(shot.scale, mat);
+  var rotmat = mat4.clone(mat);
+  for (var col = 0; col < 3; col++) {
+    for (var row = 0; row < 3; row++) {
+      rotmat[col * 4 + row] /= shot.scale[col] || 1;
+    }
+  }
+  shot.mirrored = mat4.determinant(rotmat) < 0;
+  mat4.getRotation(shot.rot, rotmat);
+}
+// The latest two tick states of one draw instance, recorded the first time it is drawn after a tick.
+function lerpstateof(rad) {
+  var st = lerpstates.get(rad.mat);
+  if (!st) {
+    st = { tick: -1, prev: newlerpshot(), cur: newlerpshot(), hasprev: false };
+    lerpstates.set(rad.mat, st);
+  }
+  if (st.tick != tickcount) {
+    var old = st.prev;
+    st.prev = st.cur;
+    st.cur = old;
+    takelerpshot(st.cur, rad.x, rad.y, rad.z, rad.mat);
+    st.hasprev =
+      st.tick == tickcount - 1 &&
+      !st.cur.mirrored &&
+      !st.prev.mirrored &&
+      pyd(st.prev.x, st.cur.x, st.prev.y, st.cur.y, st.prev.z, st.cur.z) <
+        lerpjump;
+    st.tick = tickcount;
+  }
+  return st;
+}
+// Fills drawmat with the model matrix to draw rad with, relative to the drawn camera.
+function placemodel(rad) {
+  rad.mat[12] = rad.x - camx;
+  rad.mat[13] = rad.y - camy;
+  rad.mat[14] = rad.z - camz;
+  var st = lerpstateof(rad);
+  var moved = st.cur.x != rad.x || st.cur.y != rad.y || st.cur.z != rad.z;
+  if (!st.hasprev || moved || tickalpha >= 1) {
+    mat4.copy(drawmat, rad.mat);
+    drawmat[12] = rad.x - dcamx;
+    drawmat[13] = rad.y - dcamy;
+    drawmat[14] = rad.z - dcamz;
+    return;
+  }
+  var a = tickalpha;
+  quat.slerp(lerpquat, st.prev.rot, st.cur.rot, a);
+  vec3.lerp(lerpscale, st.prev.scale, st.cur.scale, a);
+  lerppos[0] = st.prev.x + (st.cur.x - st.prev.x) * a - dcamx;
+  lerppos[1] = st.prev.y + (st.cur.y - st.prev.y) * a - dcamy;
+  lerppos[2] = st.prev.z + (st.cur.z - st.prev.z) * a - dcamz;
+  mat4.fromRotationTranslationScale(drawmat, lerpquat, lerppos, lerpscale);
+}
+// Sets the camera to draw with (dcamx..., dcmat) between the last two ticks' cameras.
+function placecamera() {
+  if (!cmat) {
+    return;
+  }
+  if (!camstate) {
+    camstate = { tick: -1, prev: null, cur: null };
+  }
+  if (camstate.tick != tickcount) {
+    camstate.prev = camstate.tick == tickcount - 1 ? camstate.cur : null;
+    camstate.cur = { x: camx, y: camy, z: camz, mat: mat4.clone(cmat) };
+    camstate.tick = tickcount;
+  }
+  var prev = camstate.prev;
+  var cur = camstate.cur;
+  var a = tickalpha;
+  if (
+    !prev ||
+    a >= 1 ||
+    pyd(prev.x, cur.x, prev.y, cur.y, prev.z, cur.z) > lerpjump ||
+    camcut(prev.mat, cur.mat)
+  ) {
+    dcamx = camx;
+    dcamy = camy;
+    dcamz = camz;
+    mat4.copy(dcmat, cmat);
+    return;
+  }
+  dcamx = prev.x + (cur.x - prev.x) * a;
+  dcamy = prev.y + (cur.y - prev.y) * a;
+  dcamz = prev.z + (cur.z - prev.z) * a;
+  for (var i = 0; i < 16; i++) {
+    dcmat[i] = prev.mat[i] + (cur.mat[i] - prev.mat[i]) * a;
+  }
+}
+// A camera rotating that much within one tick is a cut, not a pan.
+function camcut(prevmat, curmat) {
+  for (var i = 0; i < 16; i++) {
+    if (Math.abs(curmat[i] - prevmat[i]) > 0.5) {
+      return true;
+    }
+  }
+  return false;
+}
 function drawparticle(rad) {
   if (rad.loaded) {
     if (rad.alpha) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     }
-    rad.mat[12] = rad.x - camx;
-    rad.mat[13] = rad.y - camy;
-    rad.mat[14] = rad.z - camz;
+    placemodel(rad);
     gl.bindBuffer(gl.ARRAY_BUFFER, rad.vbuf);
     gl.vertexAttribPointer(
       programInfo[0].attribLocations.vertexPosition,
@@ -2054,12 +2181,12 @@ function drawparticle(rad) {
     gl.uniformMatrix4fv(
       programInfo[0].uniformLocations.projectionMatrix,
       false,
-      cmat,
+      dcmat,
     );
     gl.uniformMatrix4fv(
       programInfo[0].uniformLocations.modelViewMatrix,
       false,
-      rad.mat,
+      drawmat,
     );
     gl.drawElements(gl.TRIANGLES, rad.ni, gl.UNSIGNED_SHORT, 0);
     if (rad.alpha) {
@@ -2091,13 +2218,11 @@ function drawrad3D(rad) {
         pro = 4;
       }
     }
-    rad.mat[12] = rad.x - camx;
-    rad.mat[13] = rad.y - camy;
-    rad.mat[14] = rad.z - camz;
+    placemodel(rad);
     var normalMatrix = null;
     if (pro == 1) {
       normalMatrix = mat4.create();
-      mat4.invert(normalMatrix, rad.mat);
+      mat4.invert(normalMatrix, drawmat);
       mat4.transpose(normalMatrix, normalMatrix);
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, rad.vbuf);
@@ -2137,12 +2262,12 @@ function drawrad3D(rad) {
     gl.uniformMatrix4fv(
       programInfo[pro].uniformLocations.projectionMatrix,
       false,
-      cmat,
+      dcmat,
     );
     gl.uniformMatrix4fv(
       programInfo[pro].uniformLocations.modelViewMatrix,
       false,
-      rad.mat,
+      drawmat,
     );
     if (pro == 1) {
       gl.uniformMatrix4fv(
@@ -4195,6 +4320,9 @@ var vert = false;
 var td = false;
 var htrns = 0;
 var updateframe = false;
+// Fase whose 3D scene has been drawn from a finished logic tick and may be redrawn every frame.
+var framefase = -1;
+var renderedfase = -1;
 function gameworks() {
   var fieldOfView = (55 * Math.PI) / 180;
   var zNear = 0.1;
@@ -5174,6 +5302,11 @@ function unlockedcar() {
   }
 }
 function render(now) {
+  if (fase != renderedfase) {
+    framefase = -1;
+    renderedfase = fase;
+  }
+  placecamera();
   if (
     fase == 7 ||
     fase == 8 ||
@@ -5182,7 +5315,8 @@ function render(now) {
     fase == 16 ||
     fase == 18
   ) {
-    if (updateframe) {
+    if (updateframe || framefase == fase) {
+      framefase = fase;
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
       gl.clearDepth(1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -5340,10 +5474,10 @@ function render(now) {
       }
       updateframe = false;
     }
-    requestAnimationFrame(render);
   }
   if (fase == 2) {
-    if (updateframe) {
+    if (updateframe || framefase == fase) {
+      framefase = fase;
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
       gl.clearDepth(1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -5389,10 +5523,10 @@ function render(now) {
       }
       updateframe = false;
     }
-    requestAnimationFrame(render);
   }
   if (fase == 4) {
-    if (updateframe) {
+    if (updateframe || framefase == fase) {
+      framefase = fase;
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
       gl.clearDepth(1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -5430,10 +5564,10 @@ function render(now) {
       }
       updateframe = false;
     }
-    requestAnimationFrame(render);
   }
   if (fase == 12 && fredo == 76) {
-    if (updateframe) {
+    if (updateframe || framefase == fase) {
+      framefase = fase;
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
       gl.clearDepth(1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -5466,7 +5600,6 @@ function render(now) {
       }
       updateframe = false;
     }
-    requestAnimationFrame(render);
   }
 }
 function newcontrol() {
@@ -12441,6 +12574,7 @@ function gameloop() {
     frgm -= 1;
   }
   frgm += m;
+  tickcount++;
 }
 function mainloop(now) {
   if (lasttick == -1) {
@@ -12452,6 +12586,8 @@ function mainloop(now) {
     gameloop();
     ticktime -= tickms;
   }
+  tickalpha = ticktime / tickms;
+  render(now);
   requestAnimationFrame(mainloop);
 }
 var interaud = null;
@@ -13206,7 +13342,6 @@ function pausedgame() {
       playedforeplay = false;
     }
     fase = 7;
-    requestAnimationFrame(render);
   }
   on = 0;
   if (onhip == 1) {
@@ -13356,7 +13491,6 @@ function pausedgame() {
         playedforeplay = false;
       }
       fase = 7;
-      requestAnimationFrame(render);
       noten = 0;
     }
     if (onhip == 1) {
@@ -13665,7 +13799,6 @@ function drawmain() {
       var fogdist = 10700;
       setworld(snap, fogc, lvx, lvy, lvz, fogdist);
       fase = 2;
-      requestAnimationFrame(render);
     }
   }
   if (!flwg) {
@@ -14850,7 +14983,6 @@ function afterswitch() {
   resumestagetrack();
   updateframe = false;
   fase = 16;
-  requestAnimationFrame(render);
 }
 function drawrevtime() {
   rd.clearRect(0, 0, canw, canh);
@@ -16762,7 +16894,6 @@ function endgame() {
         fredo = 76;
         colorbgstforend();
         updateframe = true;
-        requestAnimationFrame(render);
         carmy = -20;
         carup = 0;
         carms = 100;
@@ -17315,10 +17446,8 @@ function stageloading() {
         ondud = 0;
       }
       fase = 4;
-      requestAnimationFrame(render);
     } else {
       ncars = 1;
-      requestAnimationFrame(render);
       pauseintertrack();
       playtrack();
       fase = 7;
@@ -17868,7 +17997,6 @@ function aftersparkstart() {
   }
   updateframe = false;
   fase = 7;
-  requestAnimationFrame(render);
 }
 function spPolygon(stx, sty, xd, yd, fm, to, enx, eny) {
   rd.beginPath();
@@ -19004,7 +19132,6 @@ function rewindreplay() {
       }
     }
   }
-  requestAnimationFrame(render);
   fase = 8;
 }
 function replay() {
@@ -19464,7 +19591,6 @@ function preprevtime() {
     }
   }
   resumestagetrack();
-  requestAnimationFrame(render);
   switcnt = 0;
   fase = 18;
 }
