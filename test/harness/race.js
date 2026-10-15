@@ -27,7 +27,7 @@ export const startRace = ({ stage, car, seed = 1, unlocked = 17 }) => {
   stepUntil(() => ctx.fase === 4, 100, "stage select");
 
   ctx.gamemode = 0;
-  ctx.showStartgameAd();
+  ctx.startflash();
   stepUntil(() => ctx.fase === 7, 10, "race");
 
   return { ...game, step };

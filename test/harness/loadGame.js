@@ -69,11 +69,9 @@ const topLevelNames = (source) => {
 // returned object exposes every top-level var/function via getters and setters.
 const compileGame = () => {
   const glMatrix = readSource("gl-matrix-min.js");
-  const game = [
-    readSource("needmad.js"),
-    readSource("poki-stub.js"),
-    inlineScriptOfIndexHtml(),
-  ].join("\n;\n");
+  const game = [readSource("needmad.js"), inlineScriptOfIndexHtml()].join(
+    "\n;\n",
+  );
   const { vars, functions } = topLevelNames(game);
   const accessors = [
     ...[...vars].map(
@@ -88,7 +86,6 @@ var { ${BROWSER_NAMES.join(", ")} } = __browser;
 ${glMatrix}
 ;var mat4 = self.mat4;
 ${game}
-;var PokiSDK = window.PokiSDK;
 return { ${accessors.join(",\n")} };
 })`;
   return vm.runInThisContext(source, { filename: "needmad-harness-bundle.js" });
@@ -109,7 +106,6 @@ export const loadGame = ({ seed = 1 } = {}) => {
   browser.self = browser;
   const math = Object.create(Math, { random: { value: seededRandom(seed) } });
   const ctx = compiled(browser, math);
-  ctx.pokiready = true;
 
   let frame = 0;
   const step = () => {

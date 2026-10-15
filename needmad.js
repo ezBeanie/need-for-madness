@@ -2677,7 +2677,7 @@ var bg3D = newrad3D();
 var contimg = [];
 var btimg = [];
 var muimg = [];
-var lbar, rbar, lckd, rewd;
+var lbar, rbar, lckd;
 var mainbg, rider, logo;
 var insano = [];
 var inst = [];
@@ -2694,10 +2694,9 @@ function loadconfe() {
 }
 var reqload = 0;
 var dataload = 500;
-var pokiready = false;
-var datacnt = 3817;
+var datacnt = 3816;
 if (isphone) {
-  datacnt = 3771;
+  datacnt = 3770;
 }
 var stanza = 0;
 function loaddata() {
@@ -2723,12 +2722,6 @@ function loaddata() {
         if (cp.stage == 17) {
           cp.stage = Math.floor(3 + Math.random() * 13);
           canreset = true;
-        }
-        for (var i = 0; i < 4; i++) {
-          rewlocked[i] = getInfo("rewlocked" + i + "");
-          if (rewlocked[i] == -1) {
-            rewlocked[i] = 1;
-          }
         }
       }
     }
@@ -3006,11 +2999,6 @@ function loaddata() {
           dataload++;
         };
         lckd.src = "data/interface" + rdres + "/locked.png";
-        rewd = new Image();
-        rewd.onload = function () {
-          dataload++;
-        };
-        rewd.src = "data/interface" + rdres + "/reward.png";
         mainbg = new Image();
         mainbg.onload = function () {
           dataload += 402;
@@ -3125,7 +3113,7 @@ function loaddata() {
       dataload += 309;
       bg3D.loaded++;
     }
-    if (dataload == datacnt && pokiready) {
+    if (dataload == datacnt) {
       cartextures();
       createwheels();
       if (stanza == 0 || stanza == 1) {
@@ -3133,7 +3121,6 @@ function loaddata() {
         for (var i = 0; i < 43; i++) {
           loadsnd(i);
         }
-        loadingComplete();
       }
       if (stanza == 0) {
         fredo = 0;
@@ -12416,10 +12403,6 @@ function gameloop() {
   if (fase == 13) {
     resetgame();
   }
-  if (fase == 14) {
-    rd.fillStyle = "#15190D";
-    rd.fillRect(0, 0, canw, canh);
-  }
   if (fase == 15) {
     rd.fillStyle = "#FFFFFF";
     rd.fillRect(0, 0, canw, canh);
@@ -12644,7 +12627,7 @@ function loadeng(num) {
 }
 var engstarted = false;
 function starteng(engloop) {
-  if (canplaysnd && engload[sel[im]] && !mutegame && !holdcnt && fase != 14) {
+  if (canplaysnd && engload[sel[im]] && !mutegame && !holdcnt) {
     engsource = enginau.createBufferSource();
     engsource.buffer = engb[sel[im]];
     engsource.connect(engvol);
@@ -13225,7 +13208,6 @@ function pausedgame() {
     } else {
       playedforeplay = false;
     }
-    gameplayStart();
     fase = 7;
     requestAnimationFrame(render);
   }
@@ -13328,7 +13310,7 @@ function pausedgame() {
       stopstagetrack();
       playedforeplay = false;
     }
-    afterquitgamead();
+    afterquitgame();
   }
   if (u[im].up) {
     onhip--;
@@ -13376,7 +13358,6 @@ function pausedgame() {
       } else {
         playedforeplay = false;
       }
-      gameplayStart();
       fase = 7;
       requestAnimationFrame(render);
       noten = 0;
@@ -13411,7 +13392,7 @@ function pausedgame() {
         stopstagetrack();
         playedforeplay = false;
       }
-      afterquitgamead();
+      afterquitgame();
     }
     enter = 2;
   }
@@ -13442,11 +13423,11 @@ function pausedgame() {
     }
   }
 }
-function afterquitgamead() {
+function afterquitgame() {
   if (stanza == 1) {
     reqload = 0;
     dataload = 500;
-    datacnt = 2459;
+    datacnt = 2458;
     stanza = 2;
     onskip = false;
     fase = 0;
@@ -14869,7 +14850,6 @@ function drawswitch() {
   }
 }
 function afterswitch() {
-  gameplayStart();
   resumestagetrack();
   updateframe = false;
   fase = 16;
@@ -14953,8 +14933,6 @@ var wasu = false,
   wast = false;
 var gamemode = 0;
 var unlocked = 1;
-var rewlocked = [1, 1, 1, 1];
-var tiplocked = 0;
 var sel = [0, 0, 0, 0, 0, 0, 0];
 var ncars = 7;
 var im = 0;
@@ -15335,7 +15313,6 @@ function drawinter() {
     /*if (winner){if (holdcnt==150) { exitnow=true; }}else{if (drawbutton(7,(640*mw),(canh-(55*avm)-(20*mh)),270,60,"#89C800","#CADC00","#4B6E00","#778200",0,"Continue ",20,0.8,btimg[1],0.8,false)) { exitnow=true; }}*/ if (
       exitnow
     ) {
-      gameplayStop();
       if (htyp) {
         onbreplay = 2;
       } else {
@@ -15368,7 +15345,6 @@ function drawinter() {
       enter = 2;
       onhip = 0;
       stopstagetrack();
-      gameplayStop();
       if (engstarted) {
         engsource.loop = false;
         engstarted = false;
@@ -15615,7 +15591,6 @@ function drawinter() {
       if (!holdit) {
         onhip = 0;
         stopstagetrack();
-        gameplayStop();
         if (engstarted) {
           engsource.loop = false;
           engstarted = false;
@@ -16589,7 +16564,6 @@ function iniend() {
       confc = 0;
       confg = 0;
       confr = 0;
-      finishedGame();
     }
     if (unlcar != -1) {
       morgn = 0.4 * Math.random();
@@ -16748,7 +16722,7 @@ function endgame() {
     if (winner && unlocked == cp.stage && ncars != 1) {
       if (enter == 1) {
         stopstagetrack();
-        afteradend();
+        afterend();
         enter = 2;
       }
       if (
@@ -16772,13 +16746,13 @@ function endgame() {
         )
       ) {
         stopstagetrack();
-        afteradend();
+        afterend();
       }
     } else {
       switcnt++;
       if (switcnt == 30) {
         stopstagetrack();
-        afteradend();
+        afterend();
       }
     }
   } else {
@@ -16800,7 +16774,7 @@ function endgame() {
     }
   }
 }
-function afteradend() {
+function afterend() {
   if (winner && unlocked == cp.stage && ncars != 1) {
     if (cp.stage != 17) {
       unlocked++;
@@ -16812,7 +16786,7 @@ function afteradend() {
   if (stanza == 1) {
     reqload = 0;
     dataload = 500;
-    datacnt = 2459;
+    datacnt = 2458;
     stanza = 2;
     onskip = true;
     fase = 0;
@@ -16934,18 +16908,13 @@ function drawcarselect() {
       }
     }
     var clocked = 0;
-    if (sel[0] >= 7 && sel[0] <= 10) {
-      if (rewlocked[sel[0] - 7]) {
-        clocked = -1;
-      }
-    }
     if (sel[0] >= 11 && unlocked <= (sel[0] - 10) * 2) {
       clocked = (sel[0] - 10) * 2;
     }
     if (!clocked && lastsel != sel[0]) {
       lastsel = sel[0];
     }
-    if (clocked <= 0) {
+    if (!clocked) {
       rd.letterSpacing = "1px";
       rd.font = "" + 11 * (mh + mw) + "px junk";
       rd.textAlign = "right";
@@ -17154,34 +17123,99 @@ function drawcarselect() {
         6 * mh,
         111 * mh,
       );
-      if (clocked == -1) {
-        rd.drawImage(rewd, 640 * mw - 43.5 * mh, 627 * mh, 87 * mh, 56 * mh);
-      } else {
-        rd.drawImage(lckd, 640 * mw - 29 * mh, 619 * mh, 58 * mh, 72 * mh);
-      }
+      rd.drawImage(lckd, 640 * mw - 29 * mh, 619 * mh, 58 * mh, 72 * mh);
     }
-    if (clocked <= 0) {
-      if (clocked != -1) {
+    if (!clocked) {
+      if (
+        drawbutton(
+          3,
+          rigy - 150 * avm,
+          720 * mh - 100 * avm,
+          200,
+          70,
+          "#0057E6",
+          "#65EFFF",
+          "#440078",
+          "#2F00A8",
+          0,
+          "PLAY ",
+          25,
+          0.9,
+          btimg[1],
+          0.9,
+          true,
+        )
+      ) {
+        saveInfo("carsel", sel[0]);
+        if (cp.stage > unlocked) {
+          cp.stage = unlocked;
+        }
+        if (unlocked != 17 && gamemode == 1) {
+          cp.stage = unlocked;
+          gamemode = 0;
+        }
+        stageloadtyp = 0;
+        stageload = -1;
+        fase = 3;
+      }
+      if (unlocked == 1) {
+        if (handson != 167) {
+          handson++;
+          if (handson > 130) {
+            handson = 90;
+          }
+        }
         if (
           drawbutton(
-            3,
-            rigy - 150 * avm,
-            720 * mh - 100 * avm,
-            200,
-            70,
+            5,
+            640 * mw,
+            720 * mh - 90 * avm,
+            220,
+            60,
             "#0057E6",
             "#65EFFF",
             "#440078",
             "#2F00A8",
+            1,
+            "Practice ",
+            22,
+            0.9,
+            null,
             0,
-            "PLAY ",
-            25,
-            0.9,
-            btimg[1],
-            0.9,
-            true,
+            false,
           )
         ) {
+          saveInfo("carsel", sel[0]);
+          pauseintertrack();
+          cp.stage = 2;
+          stageloadtyp = 2;
+          stageload = -1;
+          fase = 3;
+          handson = 167;
+        }
+        if (
+          (handson > 100 && handson < 110) ||
+          (handson > 120 && handson < 130)
+        ) {
+          rd.drawImage(
+            inst[10],
+            640 * mw,
+            720 * mh - 90 * avm + 25 * avm,
+            56 * avm,
+            62 * avm,
+          );
+        }
+        if (enter == 1) {
+          saveInfo("carsel", sel[0]);
+          pauseintertrack();
+          cp.stage = 2;
+          stageloadtyp = 2;
+          stageload = -1;
+          fase = 3;
+          handson = 167;
+        }
+      } else {
+        if (enter == 1) {
           saveInfo("carsel", sel[0]);
           if (cp.stage > unlocked) {
             cp.stage = unlocked;
@@ -17193,129 +17227,6 @@ function drawcarselect() {
           stageloadtyp = 0;
           stageload = -1;
           fase = 3;
-        }
-        if (unlocked == 1) {
-          if (handson != 167) {
-            handson++;
-            if (handson > 130) {
-              handson = 90;
-            }
-          }
-          if (
-            drawbutton(
-              5,
-              640 * mw,
-              720 * mh - 90 * avm,
-              220,
-              60,
-              "#0057E6",
-              "#65EFFF",
-              "#440078",
-              "#2F00A8",
-              1,
-              "Practice ",
-              22,
-              0.9,
-              null,
-              0,
-              false,
-            )
-          ) {
-            saveInfo("carsel", sel[0]);
-            pauseintertrack();
-            cp.stage = 2;
-            stageloadtyp = 2;
-            stageload = -1;
-            fase = 3;
-            handson = 167;
-          }
-          if (
-            (handson > 100 && handson < 110) ||
-            (handson > 120 && handson < 130)
-          ) {
-            rd.drawImage(
-              inst[10],
-              640 * mw,
-              720 * mh - 90 * avm + 25 * avm,
-              56 * avm,
-              62 * avm,
-            );
-          }
-          if (enter == 1) {
-            saveInfo("carsel", sel[0]);
-            pauseintertrack();
-            cp.stage = 2;
-            stageloadtyp = 2;
-            stageload = -1;
-            fase = 3;
-            handson = 167;
-          }
-        } else {
-          if (enter == 1) {
-            saveInfo("carsel", sel[0]);
-            if (cp.stage > unlocked) {
-              cp.stage = unlocked;
-            }
-            if (unlocked != 17 && gamemode == 1) {
-              cp.stage = unlocked;
-              gamemode = 0;
-            }
-            stageloadtyp = 0;
-            stageload = -1;
-            fase = 3;
-          }
-        }
-      } else {
-        if (
-          drawbutton(
-            3,
-            rigy - 150 * avm,
-            720 * mh - 100 * avm,
-            200,
-            70,
-            "#3FFF6C",
-            "#3FFFD0",
-            "#008C21",
-            "#009E77",
-            0,
-            "PLAY ",
-            25,
-            0.9,
-            btimg[5],
-            0.9,
-            true,
-          )
-        ) {
-          nextc = 0;
-          flyout = 2;
-        }
-        if (enter == 1) {
-          nextc = 0;
-          flyout = 2;
-          enter = 2;
-        }
-        if (
-          drawbutton(
-            5,
-            rigy - 410 * avm,
-            720 * mh - 100 * avm,
-            200,
-            70,
-            "#0057E6",
-            "#65EFFF",
-            "#440078",
-            "#2F00A8",
-            0,
-            "GET ",
-            25,
-            0.9,
-            btimg[4],
-            0.9,
-            true,
-          )
-        ) {
-          pauseintertrack();
-          RewardCar();
         }
       }
     }
@@ -17347,19 +17258,6 @@ function drawcarselect() {
     }
   }
   musictog();
-}
-function unlockrewcar() {
-  playintertrack();
-  rewlocked[sel[0] - 7] = 0;
-  saveInfo("rewlocked" + (sel[0] - 7) + "", rewlocked[sel[0] - 7]);
-  saveInfo("carsel", sel[0]);
-  fase = 2;
-  requestAnimationFrame(render);
-}
-function failedrewcar() {
-  playintertrack();
-  fase = 2;
-  requestAnimationFrame(render);
 }
 var alipha = 0;
 var bgsload = null;
@@ -17424,7 +17322,6 @@ function stageloading() {
     } else {
       ncars = 1;
       requestAnimationFrame(render);
-      gameplayStart();
       pauseintertrack();
       playtrack();
       fase = 7;
@@ -17708,54 +17605,28 @@ function drawstageselect() {
       }
       if (!flkun) {
         if (hastip) {
-          if (tiplocked != cp.stage) {
-            if (
-              drawbutton(
-                6,
-                70 * mw + 357 * avm,
-                720 * mh - 157 * avm,
-                160,
-                60,
-                "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-                "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-                "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-                "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
-                0,
-                "TIP ",
-                20,
-                0.9,
-                btimg[4],
-                0.9,
-                false,
-              )
-            ) {
-              pauseintertrack();
-              RewardTip();
-            }
-          } else {
-            if (
-              drawbutton(
-                6,
-                70 * mw + 357 * avm,
-                720 * mh - 157 * avm,
-                120,
-                60,
-                "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-                "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-                "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-                "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
-                1,
-                "TIP ",
-                22,
-                0.9,
-                null,
-                0,
-                false,
-              )
-            ) {
-              ontip = true;
-              dudo = 0;
-            }
+          if (
+            drawbutton(
+              6,
+              70 * mw + 357 * avm,
+              720 * mh - 157 * avm,
+              120,
+              60,
+              "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
+              "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
+              "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
+              "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+              1,
+              "TIP ",
+              22,
+              0.9,
+              null,
+              0,
+              false,
+            )
+          ) {
+            ontip = true;
+            dudo = 0;
           }
         } else {
           if (cp.stage == 1 || cp.stage == 2) {
@@ -17781,7 +17652,7 @@ function drawstageselect() {
             ) {
               ncars = 1;
               pauseintertrack();
-              showStartgameAd();
+              startflash();
             }
           }
         }
@@ -17809,7 +17680,7 @@ function drawstageselect() {
         ) {
           gamemode = 1;
           pauseintertrack();
-          showStartgameAd();
+          startflash();
         }
       }
       if (flkpl > 30) {
@@ -17870,12 +17741,12 @@ function drawstageselect() {
       ) {
         gamemode = 0;
         pauseintertrack();
-        showStartgameAd();
+        startflash();
       }
       if (enter == 1) {
         gamemode = 0;
         pauseintertrack();
-        showStartgameAd();
+        startflash();
         enter = 2;
       }
       if (!flwg) {
@@ -17983,21 +17854,11 @@ function drawstageselect() {
   }
   musictog();
 }
-function tipunlocked() {
-  playintertrack();
-  tiplocked = cp.stage;
-  ontip = true;
-  dudo = 0;
-  fase = 4;
-  requestAnimationFrame(render);
-}
-function tipunlockedfailed() {
-  playintertrack();
-  fase = 4;
-  requestAnimationFrame(render);
+function startflash() {
+  cntspark = 2;
+  fase = 15;
 }
 function aftersparkstart() {
-  gameplayStart();
   playtrack();
   setworld(snap, fogc, lvx, lvy, lvz, fogdist);
   if (gamemode == 1) {
@@ -19720,7 +19581,6 @@ function revtime() {
     tcnt = 30;
     auscnt = 45;
     cp.haltall = false;
-    gameplayStart();
     fase = 7;
     nrec = 0;
     fr = 0;

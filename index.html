@@ -21,7 +21,6 @@ src: url(data/verdana.ttf);
 </style>
 <script src="gl-matrix-min.js"></script>
 <script src="needmad.js"></script>
-<script src="poki-stub.js"></script>
 
 </head>
 
@@ -163,7 +162,7 @@ if (k==39||k==68) { u[im].right=false; }
 if (k==32) { u[im].handb=false; if (fase!=7) { if (enter) { enter=0; } } }
 if (k==13||k==27) { if (enter) { enter=0; } }
 if (k==81) { if (u[im].arrace) { u[im].arrace=false; }  else { u[im].arrace=true; } keyonx=0; }
-if (k==82) { if ((fase==7)&&(starcnt==0)) { gameplayStop(); if (engstarted) { engsource.loop=false; engstarted=false; } stopstagetrack(); Rewardrevtime(); } keyonx=0; }
+if (k==82) { if ((fase==7)&&(starcnt==0)) { if (engstarted) { engsource.loop=false; engstarted=false; } stopstagetrack(); preprevtime(); } keyonx=0; }
 if (k==90||k==88) { lookback=0; }
 if (k==86) { if (fase==7) { camode++; if (camode==3) { camode=0; } } }
 if (k==78) { if (!mutegame) { mutegame=true; if (engstarted) { engsource.loop=false; engstarted=false; } } else { mutegame=false; } } 
@@ -172,34 +171,7 @@ if (k==77) { if (!mutemusic) { mutemusic=true; } else { mutemusic=false; } }
 } 
 
 
-var canshowAd=false;
-
-function init() { gotGamepads(); document.getElementById("loading").style.visibility="hidden"; gameloop(); PokiSDK.init().then(initDone).catch(() => { initDone(); }); }
-
-function initDone() { pokiready=true; } 
-
-function loadingComplete() { PokiSDK.gameLoadingFinished(); }
-
-function gameplayStart() { PokiSDK.gameplayStart(); }
-
-function gameplayStop() { canshowAd=true; PokiSDK.gameplayStop(); } 
-
-function showStartgameAd() { if (canshowAd) { fase=14; PokiSDK.commercialBreak().then(() => { cntspark=2; fase=15; }); } else { cntspark=2; fase=15; } } 
-
-function showSwitchAd() { fase=14; PokiSDK.commercialBreak().then(() => { cntspark=2; fase=17; }); }
-
-function showEndgameAd() { fase=14; PokiSDK.commercialBreak().then(() => { afteradend(); }); }
-
-function showQuitgameAd() { fase=14; PokiSDK.commercialBreak().then(() => { afterquitgamead(); }); }
-
-function RewardCar() { fase=14; PokiSDK.rewardedBreak().then((success) => { if(success) { unlockrewcar(); } else { failedrewcar(); } }); }
-
-function RewardTip() { fase=14; PokiSDK.rewardedBreak().then((success) => { if(success) { tipunlocked(); } else { tipunlockedfailed(); } }); }
-
-function Rewardrevtime() { fase=14; PokiSDK.rewardedBreak().then((success) => { if(success) { preprevtime(); } else { preprevtime(); } }); }
-
-
-function finishedGame() { }
+function init() { gotGamepads(); document.getElementById("loading").style.visibility="hidden"; gameloop(); }
 
 
 function saveInfo(iname,ivalue)
