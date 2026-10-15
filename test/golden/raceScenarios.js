@@ -45,8 +45,14 @@ const scriptedRaces = [
 
 const scenarios = [...autopilotRaces, ...scriptedRaces];
 
-const checkAgainstGolden = ({ name, stage, car, input }) => {
-  const race = recordRace({ stage, car, seed: stage, frames: FRAMES, input });
+const checkAgainstGolden = async ({ name, stage, car, input }) => {
+  const race = await recordRace({
+    stage,
+    car,
+    seed: stage,
+    frames: FRAMES,
+    input,
+  });
   const golden = goldenOrWrite(name, {
     stage,
     car,

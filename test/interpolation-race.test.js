@@ -12,8 +12,8 @@ const fullThrottle = {
 };
 const wrecks = { stage: 5, car: 15, input: autopilot, frames: 3000 };
 
-const raceFrames = ({ stage, car, input, frames }, onFrame) => {
-  const { ctx, step } = startRace({ stage, car });
+const raceFrames = async ({ stage, car, input, frames }, onFrame) => {
+  const { ctx, step } = await startRace({ stage, car });
   for (let frame = 0; frame < frames && ctx.fase === 7; frame++) {
     Object.assign(ctx.u[0], input(ctx));
     step();
@@ -22,10 +22,10 @@ const raceFrames = ({ stage, car, input, frames }, onFrame) => {
 };
 
 describe("interpolated drawing in a real race", () => {
-  test("wheels stay on their car between ticks, also when it spins or flips", () => {
+  test("wheels stay on their car between ticks, also when it spins or flips", async () => {
     let checked = 0;
     let worst = 0;
-    raceFrames(fullThrottle, (ctx) => {
+    await raceFrames(fullThrottle, (ctx) => {
       for (let c = 0; c < ctx.ncars; c++) {
         worst = Math.max(worst, wheelSlip(ctx, ctx.car[c].typ, ctx.car[c]));
         checked++;
@@ -38,7 +38,7 @@ describe("interpolated drawing in a real race", () => {
 
   // A shadow is interpolated on its own, it is no rigid part of the car. Between two ticks
   // it has to stay under the car body, not jump ahead to the next tick.
-  test("shadows stay under their car between ticks", () => {
+  test("shadows stay under their car between ticks", async () => {
     const offset = (ctx, c, alpha) => {
       ctx.tickalpha = alpha;
       const typ = ctx.car[c].typ;
@@ -48,7 +48,7 @@ describe("interpolated drawing in a real race", () => {
     };
     let checked = 0;
     let off = 0;
-    raceFrames(fullThrottle, (ctx) => {
+    await raceFrames(fullThrottle, (ctx) => {
       for (let c = 0; c < ctx.ncars; c++) {
         const atTick = offset(ctx, c, 1);
         const between = offset(ctx, c, 0.5);
@@ -64,11 +64,11 @@ describe("interpolated drawing in a real race", () => {
     expect(off / checked).toBeLessThan(0.01);
   });
 
-  test("drawn instances keep their matrix object from tick to tick", () => {
+  test("drawn instances keep their matrix object from tick to tick", async () => {
     const kept = { persistent: 0, dust: 0, explosions: 0 };
     const total = { persistent: 0, dust: 0, explosions: 0 };
     let before = null;
-    raceFrames(wrecks, (ctx) => {
+    await raceFrames(wrecks, (ctx) => {
       const now = {
         persistent: [ctx.skydom.mat, ctx.ground.mat].concat(
           ctx.car

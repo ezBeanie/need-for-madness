@@ -25,8 +25,8 @@ const countNewInstances = (ctx) => {
 describe("interpolated drawing in the menus", () => {
   test.each(Object.keys(screens))(
     "%s keeps every drawn instance from tick to tick",
-    (screen) => {
-      const { ctx, step } = screens[screen]();
+    async (screen) => {
+      const { ctx, step } = await screens[screen]();
       ctx.tickalpha = 0.5;
       const created = countNewInstances(ctx);
       for (let i = 0; i < 30; i++) {
@@ -41,8 +41,8 @@ describe("interpolated drawing in the menus", () => {
     },
   );
 
-  test("wheels stay on the turning car in the car select", () => {
-    const { ctx, step } = openCarSelect();
+  test("wheels stay on the turning car in the car select", async () => {
+    const { ctx, step } = await openCarSelect();
     const typ = ctx.sel[0];
     let worst = 0;
     for (let i = 0; i < 100; i++) {
@@ -54,8 +54,8 @@ describe("interpolated drawing in the menus", () => {
 
   // bgst is a backdrop placed 106 units in front of the camera every tick. Drawn apart
   // from the camera, it slides out of view while the camera swoops onto the track.
-  test("the stage select backdrop stays in front of the swooping camera", () => {
-    const { ctx, step } = openStageSelect({ stage: 3, car: 5 });
+  test("the stage select backdrop stays in front of the swooping camera", async () => {
+    const { ctx, step } = await openStageSelect({ stage: 3, car: 5 });
     let worst = 0;
     for (let i = 0; i < 100; i++) {
       step();

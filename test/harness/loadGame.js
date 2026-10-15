@@ -1,31 +1,14 @@
-import { parse } from "acorn";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
 import { createBrowserGlobals, createTaskQueue } from "./browserStubs.js";
 
-export const PROJECT_ROOT = join(
-  dirname(fileURLToPath(import.meta.url)),
-  "../..",
-);
+const PROJECT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
+// What the browser fetches lives in public/, like the Vite dev server serves it.
+const PUBLIC_ROOT = join(PROJECT_ROOT, "public");
 
 const FRAME_MS = 35;
-
-// Browser globals the game scripts reference as free identifiers.
-const BROWSER_NAMES = [
-  "window",
-  "self",
-  "document",
-  "navigator",
-  "screen",
-  "Image",
-  "Audio",
-  "AudioContext",
-  "XMLHttpRequest",
-  "requestAnimationFrame",
-  "setTimeout",
-];
 
 // mulberry32: tiny, fast and identical on every platform.
 const seededRandom = (seed) => {
@@ -39,81 +22,58 @@ const seededRandom = (seed) => {
   };
 };
 
-const readSource = (file) => readFileSync(join(PROJECT_ROOT, file), "utf8");
-
-// The game's input handlers, saveInfo/getInfo etc. live in the inline <script> of index.html.
-const inlineScriptOfIndexHtml = () => {
-  const match = readSource("index.html").match(/<script>([\s\S]*?)<\/script>/);
-  if (!match) {
-    throw new Error("inline <script> not found in index.html");
-  }
-  return match[1];
-};
-
-const topLevelNames = (source) => {
-  const vars = new Set();
-  const functions = new Set();
-  for (const node of parse(source, { ecmaVersion: "latest" }).body) {
-    if (node.type === "VariableDeclaration") {
-      node.declarations.forEach((d) => vars.add(d.id.name));
-    }
-    if (node.type === "FunctionDeclaration") {
-      functions.add(node.id.name);
-    }
-  }
-  return { vars, functions };
-};
-
-// Globals inside a vm context are very slow (property interceptors), and needmad.js is
-// almost only globals. So all scripts run inside one function scope instead, and the
-// returned object exposes every top-level var/function via getters and setters.
-const compileGame = () => {
-  const glMatrix = readSource("gl-matrix-min.js");
-  const game = [readSource("needmad.js"), inlineScriptOfIndexHtml()].join(
-    "\n;\n",
+// gl-matrix is a classic script in index.html that defines mat4, quat, vec3 on self.
+const installGlMatrix = () => {
+  globalThis.self = globalThis;
+  vm.runInThisContext(
+    readFileSync(join(PUBLIC_ROOT, "gl-matrix-min.js"), "utf8"),
   );
-  const { vars, functions } = topLevelNames(game);
-  const accessors = [
-    ...[...vars].map(
-      (n) => `get ${n}() { return ${n}; }, set ${n}(v) { ${n} = v; }`,
-    ),
-    ...[...functions]
-      .filter((n) => !vars.has(n))
-      .map((n) => `get ${n}() { return ${n}; }`),
-  ];
-  const source = `(function (__browser, Math) {
-var { ${BROWSER_NAMES.join(", ")} } = __browser;
-${glMatrix}
-;var mat4 = self.mat4, quat = self.quat, vec3 = self.vec3;
-${game}
-return { mat4, ${accessors.join(",\n")} };
-})`;
-  return vm.runInThisContext(source, { filename: "needmad-harness-bundle.js" });
 };
 
-let compiled;
+const glNames = [
+  ...new Set(
+    readFileSync(join(PROJECT_ROOT, "src/game.js"), "utf8")
+      .match(/\bgl\.\w+/g)
+      .map((use) => use.slice(3)),
+  ),
+];
 
-const forbiddenRandom = () => {
-  throw new Error("use simrandom() or fxrandom() instead of Math.random()");
+const installBrowser = (queue) => {
+  for (const [name, value] of Object.entries(
+    createBrowserGlobals({ root: PUBLIC_ROOT, queue, glNames }),
+  )) {
+    Object.defineProperty(globalThis, name, {
+      value,
+      writable: true,
+      configurable: true,
+    });
+  }
+  globalThis.window = globalThis;
 };
 
-// seed drives the simulation, fxSeed only visual and sound effects.
-export const loadGame = ({ seed = 1, fxSeed = seed + 1000 } = {}) => {
-  compiled ??= compileGame();
+let instances = 0;
+
+// Every call imports a fresh instance of the game module (the query makes it a new module),
+// with its own browser stubs. seed drives the simulation, fxSeed only visual and sound effects.
+export const loadGame = async ({ seed = 1, fxSeed = seed + 1000 } = {}) => {
+  if (!globalThis.mat4) {
+    installGlMatrix();
+  }
   const queue = createTaskQueue();
-  const browser = createBrowserGlobals({
-    root: PROJECT_ROOT,
-    queue,
-  });
-  browser.window = browser;
-  browser.self = browser;
-  // needmad.js starts with `var fxrandom = Math.random` and already uses it at load time.
+  installBrowser(queue);
+
+  // The game reads Math.random once when loading (simrandom and fxrandom start as it,
+  // and the car select smoke is placed right away); it never calls it afterwards.
   const fxrandom = seededRandom(fxSeed);
-  const math = Object.create(Math, {
-    random: { value: fxrandom, writable: true },
-  });
-  const ctx = compiled(browser, math);
-  math.random = forbiddenRandom;
+  const random = Math.random;
+  Math.random = fxrandom;
+  let ctx;
+  try {
+    const gameModule = `../../src/game.js?instance=${++instances}`;
+    ({ __state: ctx } = await import(/* @vite-ignore */ gameModule));
+  } finally {
+    Math.random = random;
+  }
   ctx.simrandom = seededRandom(seed);
   ctx.fxrandom = fxrandom;
 

@@ -24,8 +24,8 @@ const expectGolden = (name, data) => {
 describe("parsed stage data matches the golden master", () => {
   test.each(Array.from({ length: STAGE_COUNT }, (_, i) => i + 1))(
     "stage %i",
-    (stage) => {
-      const { ctx } = startRace({ stage, car: 5 });
+    async (stage) => {
+      const { ctx } = await startRace({ stage, car: 5 });
       const cp = ctx.cp;
       const range = (n) => Array.from({ length: n }, (_, i) => i);
       expectGolden(`stage-${String(stage).padStart(2, "0")}`, {
@@ -61,8 +61,8 @@ describe("parsed stage data matches the golden master", () => {
 });
 
 describe("car data matches the golden master", () => {
-  test("stats, wheels and models of all cars", () => {
-    const { ctx } = startRace({ stage: 1, car: 5 });
+  test("stats, wheels and models of all cars", async () => {
+    const { ctx } = await startRace({ stage: 1, car: 5 });
     const stats = Object.fromEntries(
       Object.entries(ctx.cd).filter(([, v]) => Array.isArray(v)),
     );

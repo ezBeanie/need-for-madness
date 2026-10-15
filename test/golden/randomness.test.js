@@ -20,12 +20,20 @@ const races = [
 ];
 
 describe("simulation does not depend on effect randomness", () => {
-  test.each(races)("$name", ({ stage, car, input }) => {
-    const run = (fxSeed) =>
-      recordRace({ stage, car, seed: stage, fxSeed, frames: 2000, input })
-        .hashes;
-    const first = run(1);
-    const second = run(2);
+  test.each(races)("$name", async ({ stage, car, input }) => {
+    const run = async (fxSeed) =>
+      (
+        await recordRace({
+          stage,
+          car,
+          seed: stage,
+          fxSeed,
+          frames: 2000,
+          input,
+        })
+      ).hashes;
+    const first = await run(1);
+    const second = await run(2);
     const firstDiff = first.findIndex((hash, frame) => hash !== second[frame]);
     expect(firstDiff, "first frame where the race differs").toBe(-1);
     expect(second.length).toBe(first.length);

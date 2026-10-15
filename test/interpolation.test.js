@@ -16,8 +16,8 @@ const drawAt = (tick, alpha, x, rotationDeg) => {
   return { x: m[12], angle: (Math.atan2(m[8], m[0]) * 180) / Math.PI };
 };
 
-beforeEach(() => {
-  ({ ctx } = loadGame());
+beforeEach(async () => {
+  ({ ctx } = await loadGame());
   rad = { x: 0, y: 0, z: 0, mat: ctx.mat4.create() };
 });
 

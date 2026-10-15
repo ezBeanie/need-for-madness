@@ -27,10 +27,18 @@ export const createTaskQueue = () => {
   };
 };
 
-const createWebGLStub = () => {
-  const constants = new Map();
+// A plain object with every gl.* name the game uses; a Proxy would cost a trap per access.
+const createWebGLStub = (glNames) => {
   const handle = () => ({});
-  const methods = {
+  const gl = {};
+  for (const name of glNames) {
+    if (/^[A-Z0-9_]+$/.test(name)) {
+      gl[name] = 0x1000 + Object.keys(gl).length;
+    } else {
+      gl[name] = name.startsWith("create") ? handle : noop;
+    }
+  }
+  return Object.assign(gl, {
     getExtension: () => null,
     getParameter: () => 0,
     getShaderParameter: () => true,
@@ -39,28 +47,8 @@ const createWebGLStub = () => {
     getProgramInfoLog: () => "",
     getAttribLocation: () => 0,
     getUniformLocation: handle,
-    checkFramebufferStatus: () => constants.get("FRAMEBUFFER_COMPLETE"),
-  };
-  return new Proxy(
-    {},
-    {
-      get: (_, prop) => {
-        if (typeof prop !== "string") {
-          return undefined;
-        }
-        if (/^[A-Z0-9_]+$/.test(prop)) {
-          if (!constants.has(prop)) {
-            constants.set(prop, 0x1000 + constants.size);
-          }
-          return constants.get(prop);
-        }
-        if (prop in methods) {
-          return methods[prop];
-        }
-        return prop.startsWith("create") ? handle : noop;
-      },
-    },
-  );
+    checkFramebufferStatus: () => gl.FRAMEBUFFER_COMPLETE,
+  });
 };
 
 const create2dContextStub = () => {
@@ -172,8 +160,8 @@ class Audio {
   }
 }
 
-export const createBrowserGlobals = ({ root, queue }) => {
-  const gl = createWebGLStub();
+export const createBrowserGlobals = ({ root, queue, glNames }) => {
+  const gl = createWebGLStub(glNames);
   const ctx2d = create2dContextStub();
   const canvas3D = createCanvasStub(gl);
   const canvas2D = createCanvasStub(ctx2d);
@@ -181,7 +169,6 @@ export const createBrowserGlobals = ({ root, queue }) => {
   const element = () => ({ style: {}, addEventListener: noop });
 
   return {
-    console,
     navigator: { userAgent: "node-harness", getGamepads: () => [] },
     screen: { width: 1280, height: 720 },
     innerWidth: 1280,
@@ -196,8 +183,6 @@ export const createBrowserGlobals = ({ root, queue }) => {
       addEventListener: noop,
     },
     addEventListener: noop,
-    setTimeout: noop,
-    clearTimeout: noop,
     requestAnimationFrame: noop,
     Image: createImageClass(queue),
     Audio,
