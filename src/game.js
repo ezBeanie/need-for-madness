@@ -1,3 +1,10 @@
+import {
+  isSpecialFix,
+  parseStage,
+  pathType,
+  valueOf,
+} from "./data/stageFormat.js";
+
 // Separate sources: effects may consume randomness at any rate without changing the race.
 // eslint-disable-next-line no-restricted-properties
 var simrandom = Math.random;
@@ -3416,7 +3423,6 @@ function loadstage() {
     if (rawFile.readyState === 4) {
       if (rawFile.status === 200 || rawFile.status == 0) {
         var allText = rawFile.responseText;
-        var readlines = allText.split("\n");
         cp.n = 0;
         cp.nsp = 0;
         nb = 0;
@@ -3432,92 +3438,94 @@ function loadstage() {
         var bounds = [0, 0, 0, 0];
         var bounded = false;
         hastip = 0;
-        for (var i = 0; i < readlines.length; i++) {
-          var line = readlines[i].trim();
-          if (strtsWith(line, "name")) {
-            cp.name = getStringValue("name", line, 0);
+        var entries = parseStage(allText);
+        for (var i = 0; i < entries.length; i++) {
+          var e = entries[i];
+          var v = function (field) {
+            return valueOf(e, field);
+          };
+          if (e.command == "name") {
+            cp.name = e.name ?? "";
           }
-          if (strtsWith(line, "nlaps")) {
-            cp.nlaps = getIntValue("nlaps", line, 0);
+          if (e.command == "nlaps") {
+            cp.nlaps = v("laps");
           }
-          if (strtsWith(line, "addon")) {
-            adod = getIntValue("addon", line, 0);
+          if (e.command == "addon") {
+            adod = v("count");
           }
-          if (strtsWith(line, "snap")) {
-            snap[0] = getIntValue("snap", line, 0) / 100;
-            snap[1] = getIntValue("snap", line, 1) / 100;
-            snap[2] = getIntValue("snap", line, 2) / 100;
+          if (e.command == "snap") {
+            snap[0] = v("r") / 100;
+            snap[1] = v("g") / 100;
+            snap[2] = v("b") / 100;
           }
-          if (strtsWith(line, "sky")) {
-            skyc[0] = getIntValue("sky", line, 0);
-            skyc[1] = getIntValue("sky", line, 1);
-            skyc[2] = getIntValue("sky", line, 2);
+          if (e.command == "sky") {
+            skyc[0] = v("r");
+            skyc[1] = v("g");
+            skyc[2] = v("b");
           }
-          if (strtsWith(line, "fog")) {
-            fogc[0] = getIntValue("fog", line, 0);
-            fogc[1] = getIntValue("fog", line, 1);
-            fogc[2] = getIntValue("fog", line, 2);
+          if (e.command == "fog") {
+            fogc[0] = v("r");
+            fogc[1] = v("g");
+            fogc[2] = v("b");
           }
-          if (strtsWith(line, "clouds")) {
-            cloudsc[0] = getIntValue("clouds", line, 0);
-            cloudsc[1] = getIntValue("clouds", line, 1);
-            cloudsc[2] = getIntValue("clouds", line, 2);
-            cloudtyp = getIntValue("clouds", line, 3);
+          if (e.command == "clouds") {
+            cloudsc[0] = v("r");
+            cloudsc[1] = v("g");
+            cloudsc[2] = v("b");
+            cloudtyp = v("type");
           }
-          if (strtsWith(line, "ground")) {
+          if (e.command == "ground") {
             groundtexture(
-              getIntValue("ground", line, 3),
-              getIntValue("ground", line, 0),
-              getIntValue("ground", line, 1),
-              getIntValue("ground", line, 2),
-              getFloatValue("ground", line, 4),
-              getFloatValue("ground", line, 5),
+              v("texture"),
+              v("r"),
+              v("g"),
+              v("b"),
+              v("hue"),
+              v("saturation"),
             );
           }
           if (cp.stage >= 3 && unlocked == cp.stage) {
-            if (strtsWith(line, "tip")) {
-              tip[hastip] = getStringValue("tip", line, 0);
+            if (e.command == "tip") {
+              tip[hastip] = e.text ?? "";
               tip[hastip] = tip[hastip].replace("[", "(");
               tip[hastip] = tip[hastip].replace("]", ")");
               tip[hastip] = tip[hastip].replace(";", ",");
               hastip++;
             }
           }
-          if (strtsWith(line, "lightswingX")) {
-            var an = getIntValue("lightswingX", line, 0);
+          if (e.command == "lightswingX") {
+            var an = v("angle");
             lvy = Math.cos(an * (Math.PI / 180));
             an += 90;
             lvx = Math.cos(an * (Math.PI / 180));
           }
-          if (strtsWith(line, "lightswingZ")) {
-            var an = getIntValue("lightswingZ", line, 0);
+          if (e.command == "lightswingZ") {
+            var an = v("angle");
             lvy = Math.cos(an * (Math.PI / 180));
             an += 90;
             lvz = Math.cos(an * (Math.PI / 180));
           }
-          if (strtsWith(line, "distfog")) {
-            fogdist = getIntValue("distfog", line, 0);
+          if (e.command == "distfog") {
+            fogdist = v("distance");
           }
-          if (strtsWith(line, "bnd")) {
-            for (var k = 0; k < 4; k++) {
-              bounds[k] = getIntValue("bnd", line, k);
-            }
+          if (e.command == "bnd") {
+            bounds = [v("a"), v("b"), v("c"), v("d")];
             bounded = true;
           }
-          if (strtsWith(line, "set")) {
+          if (e.command == "set") {
             obo[nb] = newobo();
             obo[nb].mat = mat4.create();
-            obo[nb].typ = getIntValue("set", line, 0) - 10;
+            obo[nb].typ = v("piece") - 10;
             if (bounded) {
               for (var k = 0; k < 4; k++) {
                 obo[nb].bnd[k] = bounds[k];
               }
               bounded = false;
             }
-            obo[nb].x = -(getFloatValue("set", line, 1) / 10);
+            obo[nb].x = -(v("x") / 10);
             obo[nb].y = 0;
-            obo[nb].z = getFloatValue("set", line, 2) / 10;
-            var rot = getFloatValue("set", line, 3);
+            obo[nb].z = v("z") / 10;
+            var rot = v("rotation");
             mat4.rotate(
               obo[nb].mat,
               obo[nb].mat,
@@ -3537,36 +3545,25 @@ function loadstage() {
             if (obo[nb].typ == 39) {
               obo[nb].rot = rot;
             }
-            if (line.indexOf(")p") != -1) {
+            var path = pathType(e);
+            if (path !== null) {
               cp.x[cp.n] = obo[nb].x;
               cp.z[cp.n] = obo[nb].z;
               cp.y[cp.n] = 0;
-              cp.typ[cp.n] = 0;
+              cp.typ[cp.n] = path;
               cp.obi[cp.n] = nb;
-              if (line.indexOf(")pt") != -1) {
-                cp.typ[cp.n] = -1;
-              }
-              if (line.indexOf(")pr") != -1) {
-                cp.typ[cp.n] = -2;
-              }
-              if (line.indexOf(")po") != -1) {
-                cp.typ[cp.n] = -3;
-              }
-              if (line.indexOf(")ph") != -1) {
-                cp.typ[cp.n] = -4;
-              }
               cp.n++;
             }
             nb++;
           }
-          if (strtsWith(line, "chk")) {
+          if (e.command == "chk") {
             obo[nb] = newobo();
             obo[nb].mat = mat4.create();
-            obo[nb].typ = getIntValue("chk", line, 0) - 10;
-            obo[nb].x = -(getFloatValue("chk", line, 1) / 10);
+            obo[nb].typ = v("piece") - 10;
+            obo[nb].x = -(v("x") / 10);
             obo[nb].y = 0.4;
-            obo[nb].z = getFloatValue("chk", line, 2) / 10;
-            var rot = getFloatValue("chk", line, 3);
+            obo[nb].z = v("z") / 10;
+            var rot = v("rotation");
             mat4.rotate(
               obo[nb].mat,
               obo[nb].mat,
@@ -3574,7 +3571,7 @@ function loadstage() {
               [0, 1, 0],
             );
             if (obo[nb].typ == 54) {
-              obo[nb].y = -(getFloatValue("chk", line, 4) / 10);
+              obo[nb].y = -(v("y") / 10);
             }
             if (Math.abs(rot) == 90) {
               obo[nb].bx = build[obo[nb].typ].bz;
@@ -3602,35 +3599,31 @@ function loadstage() {
             obo[nb].iscp = cp.nsp;
             nb++;
           }
-          if (strtsWith(line, "fix")) {
+          if (e.command == "fix") {
             obo[nb] = newobo();
             obo[nb].mat = mat4.create();
-            obo[nb].typ = getIntValue("fix", line, 0) - 10;
-            obo[nb].x = -(getFloatValue("fix", line, 1) / 10);
-            obo[nb].z = getFloatValue("fix", line, 2) / 10;
-            obo[nb].y = -(getFloatValue("fix", line, 3) / 10) + 25;
-            var rot = getFloatValue("fix", line, 4);
+            obo[nb].typ = v("piece") - 10;
+            obo[nb].x = -(v("x") / 10);
+            obo[nb].z = v("z") / 10;
+            obo[nb].y = -(v("y") / 10) + 25;
+            var rot = v("rotation");
             mat4.rotate(
               obo[nb].mat,
               obo[nb].mat,
               rot * (Math.PI / 180),
               [0, 1, 0],
             );
-            if (line.indexOf(")s") != -1) {
-              cp.special[nf] = true;
-            } else {
-              cp.special[nf] = false;
-            }
+            cp.special[nf] = isSpecialFix(e);
             fi[nf] = nb;
             nf++;
             nb++;
           }
-          if (strtsWith(line, "maxr")) {
-            var num = getIntValue("maxr", line, 0);
-            var limit = -(getFloatValue("maxr", line, 1) / 10);
+          if (e.command == "maxr") {
+            var num = v("count");
+            var limit = -(v("limit") / 10);
             limr = limit + 5;
             limro = nb;
-            var strt = getFloatValue("maxr", line, 2) / 10;
+            var strt = v("start") / 10;
             for (var c = 0; c < num; c++) {
               obo[nb] = newobo();
               obo[nb].mat = mat4.create();
@@ -3641,12 +3634,12 @@ function loadstage() {
               nb++;
             }
           }
-          if (strtsWith(line, "maxl")) {
-            var num = getIntValue("maxl", line, 0);
-            var limit = -(getFloatValue("maxl", line, 1) / 10);
+          if (e.command == "maxl") {
+            var num = v("count");
+            var limit = -(v("limit") / 10);
             liml = limit - 5;
             limlo = nb;
-            var strt = getFloatValue("maxl", line, 2) / 10;
+            var strt = v("start") / 10;
             for (var c = 0; c < num; c++) {
               obo[nb] = newobo();
               obo[nb].mat = mat4.create();
@@ -3663,12 +3656,12 @@ function loadstage() {
               nb++;
             }
           }
-          if (strtsWith(line, "maxt")) {
-            var num = getIntValue("maxt", line, 0);
-            var limit = getFloatValue("maxt", line, 1) / 10;
+          if (e.command == "maxt") {
+            var num = v("count");
+            var limit = v("limit") / 10;
             limt = limit - 5;
             limto = nb;
-            var strt = -getFloatValue("maxt", line, 2) / 10;
+            var strt = -v("start") / 10;
             for (var c = 0; c < num; c++) {
               obo[nb] = newobo();
               obo[nb].mat = mat4.create();
@@ -3685,12 +3678,12 @@ function loadstage() {
               nb++;
             }
           }
-          if (strtsWith(line, "maxb")) {
-            var num = getIntValue("maxb", line, 0);
-            var limit = getFloatValue("maxb", line, 1) / 10;
+          if (e.command == "maxb") {
+            var num = v("count");
+            var limit = v("limit") / 10;
             limb = limit + 5;
             limbo = nb;
-            var strt = -getFloatValue("maxb", line, 2) / 10;
+            var strt = -v("start") / 10;
             for (var c = 0; c < num; c++) {
               obo[nb] = newobo();
               obo[nb].mat = mat4.create();
