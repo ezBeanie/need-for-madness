@@ -33,4 +33,11 @@ export default [
       globals: globals.node,
     },
   },
+  {
+    // page.evaluate callbacks run in the browser
+    files: ["test/visual/**/*.js"],
+    languageOptions: {
+      globals: { ...globals.node, ...globals.browser },
+    },
+  },
 ];
