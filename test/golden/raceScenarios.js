@@ -1,5 +1,5 @@
-import { describe, expect, test } from "vitest";
-import { goldenOrWrite } from "../harness/golden.js";
+import { describe, test } from "vitest";
+import { expectMatchesGolden } from "../harness/golden.js";
 import { NO_INPUT, autopilot, recordRace } from "../harness/race.js";
 
 const STAGE_COUNT = 17;
@@ -53,31 +53,7 @@ const checkAgainstGolden = async ({ name, stage, car, input }) => {
     frames: FRAMES,
     input,
   });
-  const golden = goldenOrWrite(name, {
-    stage,
-    car,
-    frames: race.frames,
-    hashes: race.hashes.join(" "),
-    samples: race.samples,
-  });
-  if (golden === null) {
-    return;
-  }
-
-  const goldenHashes = golden.hashes.split(" ");
-  const firstDiff = race.hashes.findIndex(
-    (hash, frame) => hash !== goldenHashes[frame],
-  );
-  if (firstDiff !== -1) {
-    const sampleFrame = Math.floor(firstDiff / 100) * 100;
-    expect.fail(
-      `race state diverges at frame ${firstDiff}.\n` +
-        `now:    ${JSON.stringify(race.states[firstDiff])}\n` +
-        `golden sample at frame ${sampleFrame} (now there: ${JSON.stringify(race.states[sampleFrame])}):\n` +
-        `        ${JSON.stringify(golden.samples[sampleFrame])}`,
-    );
-  }
-  expect(race.frames).toBe(golden.frames);
+  expectMatchesGolden(name, { stage, car }, race);
 };
 
 // Vitest runs test files in parallel but tests within a file sequentially,

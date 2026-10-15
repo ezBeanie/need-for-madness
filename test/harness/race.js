@@ -109,6 +109,40 @@ export const raceState = (ctx) => ({
   }),
 });
 
+const normalizeAngle = (angle) => {
+  let a = angle;
+  while (a < -180) a += 360;
+  while (a > 180) a -= 360;
+  return a;
+};
+
+// Drives car 0 along the stage's path points in order and eases off the gas in sharp
+// turns. Good enough to win the first stages, so race ends and replays get covered.
+export const racingAutopilot = () => {
+  let next = 0;
+  return (ctx) => {
+    const car = ctx.car[0];
+    const cp = ctx.cp;
+    for (
+      let skipped = 0;
+      skipped < 3 && Math.hypot(cp.x[next] - car.x, cp.z[next] - car.z) < 350;
+      skipped++
+    ) {
+      next = (next + 1) % cp.n;
+    }
+    const dx = cp.x[next] - car.x;
+    const dz = cp.z[next] - car.z;
+    const pan = 90 + (dx >= 0 ? 180 : 0) + Math.atan(dz / dx) / DEG;
+    const diff = normalizeAngle(normalizeAngle(car.xz) - normalizeAngle(pan));
+    return {
+      ...NO_INPUT,
+      up: Math.abs(diff) < 50 || ctx.speed[0] < 12,
+      left: diff > 4,
+      right: diff < -4,
+    };
+  };
+};
+
 const hashState = (state) =>
   createHash("sha1").update(JSON.stringify(state)).digest("hex").slice(0, 10);
 
@@ -138,19 +172,43 @@ export const recordRace = async ({
     step();
     states.push(raceState(ctx));
   }
-  return {
-    frames: states.length,
-    hashes: states.map(hashState),
-    samples: Object.fromEntries(
-      states
-        .map((state, frame) => [frame, state])
-        .filter(
-          ([frame]) =>
-            frame % SAMPLE_EVERY === 0 || frame === states.length - 1,
-        ),
-    ),
-    states,
-  };
+  return summarize(states);
 };
+
+// The race state plus where the game flow is: menus, results, unlocked stages.
+const flowState = (ctx) => ({
+  ...raceState(ctx),
+  stage: ctx.cp.stage,
+  unlocked: ctx.unlocked,
+  winner: ctx.winner,
+  holdcnt: ctx.holdcnt,
+});
+
+// Records a whole game flow, e.g. finishing a race and clicking through the menus.
+// script(ctx, frame, game) runs before every frame and may press keys or call game
+// functions.
+export const recordFlow = async ({ stage, car, seed, frames, script }) => {
+  const game = await startRace({ stage, car, seed });
+  const states = [];
+  for (let frame = 0; frame < frames; frame++) {
+    script(game.ctx, frame, game);
+    game.step();
+    states.push(flowState(game.ctx));
+  }
+  return summarize(states);
+};
+
+const summarize = (states) => ({
+  frames: states.length,
+  hashes: states.map(hashState),
+  samples: Object.fromEntries(
+    states
+      .map((state, frame) => [frame, state])
+      .filter(
+        ([frame]) => frame % SAMPLE_EVERY === 0 || frame === states.length - 1,
+      ),
+  ),
+  states,
+});
 
 export { NO_INPUT };

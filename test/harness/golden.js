@@ -1,4 +1,5 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { expect } from "vitest";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -35,4 +36,32 @@ export const goldenOrWrite = (name, data) => {
     return null;
   }
   return golden;
+};
+
+// Compares a recording (see recordRace/recordFlow) frame by frame with its golden master
+// and reports the first frame where the state differs.
+export const expectMatchesGolden = (name, meta, recording) => {
+  const golden = goldenOrWrite(name, {
+    ...meta,
+    frames: recording.frames,
+    hashes: recording.hashes.join(" "),
+    samples: recording.samples,
+  });
+  if (golden === null) {
+    return;
+  }
+  const goldenHashes = golden.hashes.split(" ");
+  const firstDiff = recording.hashes.findIndex(
+    (hash, frame) => hash !== goldenHashes[frame],
+  );
+  if (firstDiff !== -1) {
+    const sampleFrame = Math.floor(firstDiff / 100) * 100;
+    expect.fail(
+      `state diverges at frame ${firstDiff}.\n` +
+        `now:    ${JSON.stringify(recording.states[firstDiff])}\n` +
+        `golden sample at frame ${sampleFrame} (now there: ${JSON.stringify(recording.states[sampleFrame])}):\n` +
+        `        ${JSON.stringify(golden.samples[sampleFrame])}`,
+    );
+  }
+  expect(recording.frames).toBe(golden.frames);
 };
