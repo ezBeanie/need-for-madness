@@ -171,7 +171,7 @@ if (k==77) { if (!mutemusic) { mutemusic=true; } else { mutemusic=false; } }
 } 
 
 
-function init() { gotGamepads(); document.getElementById("loading").style.visibility="hidden"; gameloop(); }
+function init() { gotGamepads(); document.getElementById("loading").style.visibility="hidden"; requestAnimationFrame(mainloop); }
 
 
 function saveInfo(iname,ivalue)

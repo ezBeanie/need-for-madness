@@ -12193,10 +12193,14 @@ var gpat = 4;
 var gotgamepad = false;
 var gpress = [0, 0, 0, 0, 0, 0, 0, 0];
 var gparr = false;
-var totime = 0,
-  nfr = 0,
-  actat = 20,
-  ltime = -1;
+// The game logic runs in fixed ticks, independent of the display refresh rate.
+// 35 ms is what the original self-regulating setTimeout loop settled at, so every
+// tick advances the physics by m = 0.7 original ticks exactly as before.
+var tickms = 35;
+// Caps how much time is caught up after a stall, e.g. when the tab was in the background.
+var maxcatchup = 250;
+var ticktime = 0,
+  lasttick = -1;
 var m = 0.7;
 var frgm = 0;
 var canw = 1280,
@@ -12433,32 +12437,22 @@ function gameloop() {
       mutedmusic = false;
     }
   }
-  var date = new Date();
-  var ctime = date.getTime();
-  if (ltime == -1) {
-    totime = 20;
-  } else {
-    totime += ctime - ltime;
-  }
-  ltime = ctime;
-  nfr++;
-  if (nfr == 5) {
-    if (totime > 250 * m) {
-      actat--;
-      if (actat < 5) {
-        actat = 5;
-      }
-    } else {
-      actat += 2;
-    }
-    totime = 0;
-    nfr = 0;
-  }
   if (frgm >= m) {
     frgm -= 1;
   }
   frgm += m;
-  setTimeout("gameloop()", actat);
+}
+function mainloop(now) {
+  if (lasttick == -1) {
+    lasttick = now - tickms;
+  }
+  ticktime += Math.min(now - lasttick, maxcatchup);
+  lasttick = now;
+  while (ticktime >= tickms) {
+    gameloop();
+    ticktime -= tickms;
+  }
+  requestAnimationFrame(mainloop);
 }
 var interaud = null;
 var interaudstat = 0;
