@@ -1,3 +1,6 @@
+// Separate sources: effects may consume randomness at any rate without changing the race.
+var simrandom = Math.random;
+var fxrandom = Math.random;
 var programInfo = [];
 function newparticle() {
   return {
@@ -1834,12 +1837,12 @@ function createsparks() {
     }
     var vert = [];
     var indice = [];
-    var von = Math.random() * 1;
+    var von = fxrandom() * 1;
     var negvon = 1;
-    if (Math.random() > Math.random()) {
+    if (fxrandom() > fxrandom()) {
       negvon = -1;
     }
-    var varn = 20 + Math.random() * 10;
+    var varn = 20 + fxrandom() * 10;
     var size = 0.2 + s * 0.04;
     var ox = [-0.5 * size, 0.5 * size, 0];
     var oy = [0.5 * neg * size, -0.5 * neg * size, 0];
@@ -2720,7 +2723,7 @@ function loaddata() {
           cntkeys = 200;
         }
         if (cp.stage == 17) {
-          cp.stage = Math.floor(3 + Math.random() * 13);
+          cp.stage = Math.floor(3 + simrandom() * 13);
           canreset = true;
         }
       }
@@ -3619,49 +3622,49 @@ function chipaway(c, x, y, z, ctmag) {
     chip[i].ry = x * car[c].mat[1] + y * car[c].mat[5] + z * car[c].mat[9];
     chip[i].rz = x * car[c].mat[2] + y * car[c].mat[6] + z * car[c].mat[10];
     chip[i].cn = c;
-    chip[ui].vx = ctmag * (30 - Math.random() * 60);
-    chip[ui].vy = ctmag * (30 - Math.random() * 60);
-    chip[ui].vz = ctmag * (30 - Math.random() * 60);
-    chip[ui].rtn1 = Math.floor(Math.random() * 5);
+    chip[ui].vx = ctmag * (30 - fxrandom() * 60);
+    chip[ui].vy = ctmag * (30 - fxrandom() * 60);
+    chip[ui].vz = ctmag * (30 - fxrandom() * 60);
+    chip[ui].rtn1 = Math.floor(fxrandom() * 5);
     if (chip[ui].rtn1 < 3) {
-      chip[ui].rtn1mag = Math.random() * 60;
+      chip[ui].rtn1mag = fxrandom() * 60;
     }
-    chip[ui].rtn2 = Math.floor(Math.random() * 5);
+    chip[ui].rtn2 = Math.floor(fxrandom() * 5);
     if (chip[ui].rtn2 < 3) {
-      chip[ui].rtn2mag = Math.random() * 60;
+      chip[ui].rtn2mag = fxrandom() * 60;
     }
     var ox = [];
     ox[0] = 0;
     var avox = 0;
     for (var i = 1; i < 3; i++) {
-      ox[i] = ox[0] + ctmag * (10 - Math.random() * 20);
+      ox[i] = ox[0] + ctmag * (10 - fxrandom() * 20);
       avox += ox[i];
     }
     avox = avox / 2;
     for (var i = 0; i < 3; i++) {
-      ox[i] -= (avox / 2) * (1 - Math.random() * Math.random());
+      ox[i] -= (avox / 2) * (1 - fxrandom() * fxrandom());
     }
     var oy = [];
     oy[0] = 0;
     var avoy = 0;
     for (var i = 1; i < 3; i++) {
-      oy[i] = oy[0] + ctmag * (10 - Math.random() * 20);
+      oy[i] = oy[0] + ctmag * (10 - fxrandom() * 20);
       avoy += oy[i];
     }
     avoy = avoy / 2;
     for (var i = 0; i < 3; i++) {
-      oy[i] -= (avoy / 2) * (1 - Math.random() * Math.random());
+      oy[i] -= (avoy / 2) * (1 - fxrandom() * fxrandom());
     }
     var oz = [];
     oz[0] = 0;
     var avoz = 0;
     for (var i = 1; i < 3; i++) {
-      oz[i] = oz[0] + ctmag * (10 - Math.random() * 20);
+      oz[i] = oz[0] + ctmag * (10 - fxrandom() * 20);
       avoz += oz[i];
     }
     avoz = avoz / 2;
     for (var i = 0; i < 3; i++) {
-      oz[i] -= (avoz / 2) * (1 - Math.random() * Math.random());
+      oz[i] -= (avoz / 2) * (1 - fxrandom() * fxrandom());
     }
     var rmx =
       (oy[1] - oy[0]) * (oz[2] - oz[0]) - (oz[1] - oz[0]) * (oy[2] - oy[0]);
@@ -3689,7 +3692,7 @@ function chipaway(c, x, y, z, ctmag) {
     }
     chip[ui].ni = 3;
     chip[ui].nt = 1;
-    var roni = Math.random();
+    var roni = fxrandom();
     if (roni > 0.334) {
       chip[ui].ownshade = true;
     }
@@ -3788,7 +3791,7 @@ function sprks(cn, x, y, z, sx, sy, sz, cap) {
     }
     var oli = 1;
     if (cap == 2) {
-      if (Math.random() > Math.random()) {
+      if (fxrandom() > fxrandom()) {
         oli = 2;
       }
     }
@@ -3805,24 +3808,24 @@ function sprks(cn, x, y, z, sx, sy, sz, cap) {
         nspr++;
       }
       sprk[ui] = newsprk();
-      sprk[ui].typ = Math.floor(Math.random() * 6);
+      sprk[ui].typ = Math.floor(fxrandom() * 6);
       if (sprk[ui].typ == 6) {
         sprk[ui].typ = 0;
       }
-      sprk[ui].x = x + (Math.random() * 3 - 1.5);
+      sprk[ui].x = x + (fxrandom() * 3 - 1.5);
       if (cap == 2) {
-        sprk[ui].y = y + wlh[cn][0] * 2.4 + (Math.random() * 3 - 1.5);
+        sprk[ui].y = y + wlh[cn][0] * 2.4 + (fxrandom() * 3 - 1.5);
       } else {
-        sprk[ui].y = y + Math.random() * 2;
+        sprk[ui].y = y + fxrandom() * 2;
       }
-      sprk[ui].z = z + (Math.random() * 3 - 1.5);
+      sprk[ui].z = z + (fxrandom() * 3 - 1.5);
       if (cap == 2) {
-        sy -= Math.random() * 1;
+        sy -= fxrandom() * 1;
       } else {
-        sx += Math.random() * 1 - 0.5;
-        sz += Math.random() * 1 - 0.5;
+        sx += fxrandom() * 1 - 0.5;
+        sz += fxrandom() * 1 - 0.5;
       }
-      sprk[ui].sp = 32 - Math.random() * 2 - vdist;
+      sprk[ui].sp = 32 - fxrandom() * 2 - vdist;
       sprk[ui].sp *= 0.4;
       sprk[ui].mat = mat4.create();
       var vx = -(sx / vdist);
@@ -3908,7 +3911,7 @@ function dustup(tskd, c, mst, x, y, z, sx, sz, smag, tlt, capsz) {
     }
     dust[ui] = newdust();
     if (!capsz) {
-      var fk = Math.random();
+      var fk = fxrandom();
       dust[ui].x = (x + car[c].x * fk) / (1 + fk);
       dust[ui].z = (z + car[c].z * fk) / (1 + fk);
       dust[ui].dy = (y + car[c].y * fk) / (1 + fk);
@@ -3921,19 +3924,19 @@ function dustup(tskd, c, mst, x, y, z, sx, sz, smag, tlt, capsz) {
       dust[ui].y = 0;
     }
     dust[ui].mag = 0.2 + smag * bk * 0.8;
-    var ron = Math.floor(4 * Math.random());
+    var ron = Math.floor(4 * fxrandom());
     if (ron == 4) {
       ron = 0;
     }
     dust[ui].rot = 90 * ron - 90;
-    var sk = 0.1 + Math.random();
+    var sk = 0.1 + fxrandom();
     if (sk > 1) {
       sk = 1;
     }
     dust[ui].sx = sx * sk;
     dust[ui].sz = sz * sk;
     dust[ui].stg = 1;
-    dust[ui].tx = Math.floor(Math.random() * 3);
+    dust[ui].tx = Math.floor(fxrandom() * 3);
     if (dust[ui].tx == 3) {
       dust[ui].tx = 0;
     }
@@ -4000,7 +4003,7 @@ function dustfly() {
         dust[i].mat[k * 4 + 2] *= dust[i].mag * mt;
       }
       if (!onpausefr) {
-        dust[i].mag += 0.05 + Math.random() * 0.05;
+        dust[i].mag += 0.05 + fxrandom() * 0.05;
         if (dust[i].stg >= 2) {
           dust[i].ta += 0.45;
           if (dust[i].ta > 4) {
@@ -4072,7 +4075,7 @@ function firexp(c, vsx, vsy, vsz) {
     nexp++;
   }
   var rad = carobj[car[c].typ];
-  var ir = Math.floor(rad.ni * Math.random());
+  var ir = Math.floor(rad.ni * fxrandom());
   if (ir == rad.ni) {
     ir = 0;
   }
@@ -4095,10 +4098,10 @@ function firexp(c, vsx, vsy, vsz) {
   exp[ui].vsx = vsx;
   exp[ui].vsy = vsy;
   exp[ui].vsz = vsz;
-  exp[ui].vy = 0.4 + Math.random() * 0.2;
-  exp[ui].size = 0.6 + Math.random() * 0.6;
-  exp[ui].rot = 360 * Math.random();
-  exp[ui].typ = Math.floor(Math.random() * 3);
+  exp[ui].vy = 0.4 + fxrandom() * 0.2;
+  exp[ui].size = 0.6 + fxrandom() * 0.6;
+  exp[ui].rot = 360 * fxrandom();
+  exp[ui].typ = Math.floor(fxrandom() * 3);
   if (exp[ui].typ == 3) {
     exp[ui].typ = 0;
   }
@@ -4468,10 +4471,10 @@ function gameworks() {
   if (camode == 2) {
     if (td) {
       var sidn = 1;
-      if (Math.random() > Math.random()) {
+      if (fxrandom() > fxrandom()) {
         sidn = -1;
       }
-      camy = car[cim].y + 10 + 160 * Math.random();
+      camy = car[cim].y + 10 + 160 * fxrandom();
       camx = car[cim].x + 40 * sidn * mcos(mxz[cim]) - 500 * msin(mxz[cim]);
       camz = car[cim].z + 40 * sidn * msin(mxz[cim]) + 500 * mcos(mxz[cim]);
       td = false;
@@ -4582,19 +4585,19 @@ function newsmoke() {
 var smoke = [];
 for (var i = 0; i < 9; i++) {
   smoke[i] = newsmoke();
-  smoke[i].rot = 360 * Math.random();
-  smoke[i].rota = 1 + 3 * Math.random();
-  if (Math.random() > Math.random()) {
+  smoke[i].rot = 360 * fxrandom();
+  smoke[i].rota = 1 + 3 * fxrandom();
+  if (fxrandom() > fxrandom()) {
     smoke[i].rota *= -1;
   }
-  smoke[i].x = 60 - 120 * Math.random();
-  smoke[i].y = 3 + 52 * Math.random();
-  smoke[i].sx = 0.05 + Math.random() * 0.3;
-  if (Math.random() > Math.random()) {
+  smoke[i].x = 60 - 120 * fxrandom();
+  smoke[i].y = 3 + 52 * fxrandom();
+  smoke[i].sx = 0.05 + fxrandom() * 0.3;
+  if (fxrandom() > fxrandom()) {
     smoke[i].sx *= -1;
   }
-  smoke[i].sy = 0.1 + Math.random() * 0.4;
-  if (Math.random() > Math.random()) {
+  smoke[i].sy = 0.1 + fxrandom() * 0.4;
+  if (fxrandom() > fxrandom()) {
     smoke[i].sy *= -1;
   }
 }
@@ -4618,31 +4621,31 @@ function carselect() {
     smoke[i].mat = mat4.create();
     smoke[i].x += smoke[i].sx;
     if (smoke[i].sx < 0 && smoke[i].x < -60) {
-      smoke[i].sx = 0.05 + Math.random() * 0.3;
-      smoke[i].rota = 1 + 3 * Math.random();
-      if (Math.random() > Math.random()) {
+      smoke[i].sx = 0.05 + fxrandom() * 0.3;
+      smoke[i].rota = 1 + 3 * fxrandom();
+      if (fxrandom() > fxrandom()) {
         smoke[i].rota *= -1;
       }
     }
     if (smoke[i].sx > 0 && smoke[i].x > 60) {
-      smoke[i].sx = -(0.05 + Math.random() * 0.3);
-      smoke[i].rota = 1 + 3 * Math.random();
-      if (Math.random() > Math.random()) {
+      smoke[i].sx = -(0.05 + fxrandom() * 0.3);
+      smoke[i].rota = 1 + 3 * fxrandom();
+      if (fxrandom() > fxrandom()) {
         smoke[i].rota *= -1;
       }
     }
     smoke[i].y += smoke[i].sy;
     if (smoke[i].sy < 0 && smoke[i].y < 3) {
-      smoke[i].sy = 0.1 + Math.random() * 0.4;
-      smoke[i].rota = 1 + 3 * Math.random();
-      if (Math.random() > Math.random()) {
+      smoke[i].sy = 0.1 + fxrandom() * 0.4;
+      smoke[i].rota = 1 + 3 * fxrandom();
+      if (fxrandom() > fxrandom()) {
         smoke[i].rota *= -1;
       }
     }
     if (smoke[i].sy > 0 && smoke[i].y > 55) {
-      smoke[i].sy = -(0.1 + Math.random() * 0.4);
-      smoke[i].rota = 1 + 3 * Math.random();
-      if (Math.random() > Math.random()) {
+      smoke[i].sy = -(0.1 + fxrandom() * 0.4);
+      smoke[i].rota = 1 + 3 * fxrandom();
+      if (fxrandom() > fxrandom()) {
         smoke[i].rota *= -1;
       }
     }
@@ -5293,7 +5296,7 @@ function render(now) {
             mat4.rotate(
               elec.mat,
               elec.mat,
-              Math.random() * 360 * (Math.PI / 180),
+              fxrandom() * 360 * (Math.PI / 180),
               [0, 0, 1],
             );
             drawrad3D(elec);
@@ -5797,7 +5800,7 @@ for (var i = 0; i < 7; i++) {
 function inishcars() {
   for (var i = 0; i < ncars; i++) {
     car[i].typ = sel[i];
-    car[i].x = xstart[i] + 4 * Math.random() - 2;
+    car[i].x = xstart[i] + 4 * simrandom() - 2;
     car[i].z = zstart[i];
     car[i].grat = wly[car[i].typ][1] + 1.5 * wlh[car[i].typ][1];
     car[i].y = car[i].grat;
@@ -5815,8 +5818,8 @@ function inishcars() {
     car[i].keyx[3] = wlx[car[i].typ][1];
     car[i].keyz[3] = wlz[car[i].typ][1];
     car[i].mat = mat4.create();
-    car[i].ctxl[0] = Math.random();
-    car[i].ctxl[1] = Math.random();
+    car[i].ctxl[0] = fxrandom();
+    car[i].ctxl[1] = fxrandom();
     car[i].fcnt = 0;
   }
 }
@@ -5834,7 +5837,7 @@ function sortcars(stage) {
   for (var i = 1; i < ti; i++) {
     oks[i] = false;
     while (!oks[i]) {
-      sel[i] = Math.floor(Math.random() * (28 + 10 * (stage / 17)));
+      sel[i] = Math.floor(simrandom() * (28 + 10 * (stage / 17)));
       if (sel[i] >= 19) {
         sel[i] -= 19;
       }
@@ -5857,7 +5860,7 @@ function sortcars(stage) {
             outproba = 0.5;
           }
         }
-        if (outproba > Math.random()) {
+        if (outproba > simrandom()) {
           oks[i] = false;
         }
       }
@@ -5876,7 +5879,7 @@ function sortcars(stage) {
         unlocked == 8 &&
         (sel[i] == 4 || sel[i] == 6 || sel[i] == 9)
       ) {
-        if (Math.random() > Math.random()) {
+        if (simrandom() > simrandom()) {
           oks[i] = false;
         }
       }
@@ -5885,7 +5888,7 @@ function sortcars(stage) {
         unlocked == 9 &&
         (sel[i] == 4 || sel[i] == 3 || sel[i] == 0 || sel[i] == 2)
       ) {
-        if (Math.random() > Math.random()) {
+        if (simrandom() > simrandom()) {
           oks[i] = false;
         }
       }
@@ -5894,7 +5897,7 @@ function sortcars(stage) {
         unlocked == 10 &&
         (sel[i] == 2 || sel[i] == 6 || sel[i] == 9 || sel[i] == 14)
       ) {
-        if (Math.random() > Math.random()) {
+        if (simrandom() > simrandom()) {
           oks[i] = false;
         }
       }
@@ -5918,7 +5921,7 @@ function sortcars(stage) {
           oks[i] = false;
         }
         if (sel[i] == 14 || sel[i] == 16) {
-          if (Math.random() > Math.random()) {
+          if (simrandom() > simrandom()) {
             oks[i] = false;
           }
         }
@@ -5942,7 +5945,7 @@ function sortcars(stage) {
           oks[i] = false;
         }
         if (sel[i] < 11) {
-          if (Math.random() > 0.1) {
+          if (simrandom() > 0.1) {
             oks[i] = false;
           }
         }
@@ -5981,7 +5984,7 @@ function sortcars(stage) {
       }
     }
     if (!okcar) {
-      var ssi = Math.floor(1 + 5 * Math.random());
+      var ssi = Math.floor(1 + 5 * simrandom());
       if (ssi == 6) {
         ssi = 5;
       }
@@ -5996,14 +5999,14 @@ function sortcars(stage) {
       }
     }
     if (!okcar) {
-      var ssi = Math.floor(1 + 5 * Math.random());
+      var ssi = Math.floor(1 + 5 * simrandom());
       if (ssi == 6) {
         ssi = 5;
       }
       sel[ssi] = 16;
     }
     var tk = 1;
-    if (Math.random() > Math.random()) {
+    if (simrandom() > simrandom()) {
       tk = 2;
     }
     for (var i = 3; i < 6; i++) {
@@ -6024,7 +6027,7 @@ function sortcars(stage) {
       }
     }
     tk = 4;
-    if (Math.random() > Math.random()) {
+    if (simrandom() > simrandom()) {
       tk = 5;
     }
     for (var i = 1; i < 4; i++) {
@@ -6179,8 +6182,8 @@ function inishcontrol() {
     }
     if (cp.stage == 12) {
       if (c != 6) {
-        hold[c] = Math.floor(20 + 10 * Math.random());
-        revstart[c] = Math.floor(10 + 10 * Math.random());
+        hold[c] = Math.floor(20 + 10 * simrandom());
+        revstart[c] = Math.floor(10 + 10 * simrandom());
       } else {
         hold[c] = 5;
       }
@@ -6306,7 +6309,7 @@ function control() {
             if (cp.stage == 14) {
               skiplev[c] = 1;
               if (cn == 17) {
-                if (Math.random() > 0.8) {
+                if (simrandom() > 0.8) {
                   acr[c] = 1;
                 } else {
                   acr[c] = 0;
@@ -6326,7 +6329,7 @@ function control() {
             if (gamemode == 1 && (100 * hitmag[c]) / cd.maxmag[cn] > 85) {
               skiplev[c] = 0;
             }
-            rampp[c] = Math.floor(Math.random() * 4 - 2);
+            rampp[c] = Math.floor(simrandom() * 4 - 2);
             if (rampp[c] == 2) {
               rampp[c] = 1;
             }
@@ -6354,7 +6357,7 @@ function control() {
             }
             if (cntrn[c] == 0) {
               agressed[c] = false;
-              turntyp[c] = Math.floor(Math.random() * 4);
+              turntyp[c] = Math.floor(simrandom() * 4);
               if (turntyp[c] == 4) {
                 turntyp[c] = 3;
               }
@@ -6365,7 +6368,7 @@ function control() {
                 }
               }
               if (cp.pos[im] - cp.pos[c] < 0 || cp.stage == 10) {
-                turntyp[c] = Math.floor(Math.random() * 2);
+                turntyp[c] = Math.floor(simrandom() * 2);
                 if (turntyp[c] == 2) {
                   turntyp[c] = 1;
                 }
@@ -6407,7 +6410,7 @@ function control() {
                   cp.stage == 16 ||
                   cp.stage == 17
                 ) {
-                  turntyp[c] = Math.floor(Math.random() * 3);
+                  turntyp[c] = Math.floor(simrandom() * 3);
                   if (turntyp[c] == 3) {
                     turntyp[c] = 2;
                   }
@@ -6436,7 +6439,7 @@ function control() {
               cntrn[c]--;
             }
             saftey[c] = Math.floor(
-              (98 - power[c]) * 0.5 * (Math.random() * 0.5 + 0.5),
+              (98 - power[c]) * 0.5 * (simrandom() * 0.5 + 0.5),
             );
             if (saftey[c] > 20) {
               saftey[c] = 20;
@@ -6451,7 +6454,7 @@ function control() {
             if (cp.stage == 3) {
               mw = 0.4;
             }
-            mustland[c] = mw + (Math.random() / 2 - 0.25);
+            mustland[c] = mw + (simrandom() / 2 - 0.25);
             mw = 1;
             if (cp.stage == 1) {
               mw = 5;
@@ -6487,7 +6490,7 @@ function control() {
             }
             stuntf[c] = 0;
             if (cp.stage == 10) {
-              if (cp.pos[c] - cp.pos[im] > 1 || Math.random() > Math.random()) {
+              if (cp.pos[c] - cp.pos[im] > 1 || simrandom() > simrandom()) {
                 stuntf[c] = 1;
                 saftey[c] = 10;
               } else {
@@ -6526,12 +6529,12 @@ function control() {
               if (pcleared[c] == 120) {
                 stuntf[c] = 2;
               }
-              avoidnlev[c] = Math.floor(2700 * Math.random());
+              avoidnlev[c] = Math.floor(2700 * simrandom());
             }
             if (gamemode == 1) {
-              avoidnlev[c] = Math.floor(2700 * Math.random());
+              avoidnlev[c] = Math.floor(2700 * simrandom());
             }
-            trickprf[c] = (power[c] - 38) / 50 - Math.random() * 0.5;
+            trickprf[c] = (power[c] - 38) / 50 - simrandom() * 0.5;
             if (power[c] < 60) {
               trickprf[c] = -1;
             }
@@ -6568,7 +6571,7 @@ function control() {
             if (cp.stage == 17) {
               trickprf[c] = -1;
             }
-            if (Math.random() > power[c] / 100) {
+            if (simrandom() > power[c] / 100) {
               usebounce[c] = true;
             } else {
               usebounce[c] = false;
@@ -6586,7 +6589,7 @@ function control() {
             if (cp.stage == 9 || cp.stage == 10 || cp.stage == 14) {
               usebounce[c] = false;
             }
-            if (Math.random() > hitmag[c] / cd.maxmag[cn]) {
+            if (simrandom() > hitmag[c] / cd.maxmag[cn]) {
               perfection[c] = false;
             } else {
               perfection[c] = true;
@@ -6934,14 +6937,14 @@ function control() {
                         atp = 0;
                       }
                     }
-                    if (Math.random() < atp) {
+                    if (simrandom() < atp) {
                       attack[c] = 40 * (Math.abs(cp.clear[i] - clear[c]) + 1);
                       if (attack[c] > 500) {
                         attack[c] = 500;
                       }
                       aim[c] = 0;
                       if (cp.stage == 3 && cn == 12) {
-                        if (Math.random() > Math.random()) {
+                        if (simrandom() > simrandom()) {
                           aim[c] = 1;
                         }
                       }
@@ -6949,16 +6952,16 @@ function control() {
                         if (i == im && cp.pos[im] < cp.pos[c]) {
                           aim[c] = 1.5;
                         } else {
-                          aim[c] = Math.random();
+                          aim[c] = simrandom();
                         }
                       }
                       if (cp.stage == 5) {
-                        aim[c] = Math.random() * 1.5;
+                        aim[c] = simrandom() * 1.5;
                       }
                       if (cp.stage == 7) {
                         if (c != 6) {
                           if (
-                            Math.random() > Math.random() ||
+                            simrandom() > simrandom() ||
                             cp.pos[im] < cp.pos[c]
                           ) {
                             aim[c] = 1;
@@ -6966,8 +6969,8 @@ function control() {
                         }
                       }
                       if (cp.stage == 8 && cn == 14) {
-                        if (Math.random() > Math.random()) {
-                          aim[c] = 0.76 + Math.random() * 0.76;
+                        if (simrandom() > simrandom()) {
+                          aim[c] = 0.76 + simrandom() * 0.76;
                         }
                       }
                       if (cp.stage == 9) {
@@ -6988,11 +6991,11 @@ function control() {
                             attack[c] = 150;
                           }
                         } else {
-                          aim[c] = Math.random();
+                          aim[c] = simrandom();
                         }
                       }
                       if (cp.stage == 12) {
-                        if (Math.random() > Math.random()) {
+                        if (simrandom() > simrandom()) {
                           aim[c] = 0.7;
                           if (cn == 14) {
                             aim[c] += 0.7;
@@ -7010,9 +7013,9 @@ function control() {
                         }
                       }
                       if (cp.stage == 15) {
-                        aim[c] = Math.random() * 1.5;
+                        aim[c] = simrandom() * 1.5;
                         attack[c] = attack[c] / 2;
-                        if (Math.random() > Math.random()) {
+                        if (simrandom() > simrandom()) {
                           exitattack[c] = true;
                         } else {
                           exitattack[c] = false;
@@ -7020,11 +7023,11 @@ function control() {
                       }
                       if (cp.stage == 16) {
                         if (cn == 14) {
-                          aim[c] = 0.2 + Math.random() * 0.8;
+                          aim[c] = 0.2 + simrandom() * 0.8;
                           attack[c] = 70;
                         }
                         if (cn == 16) {
-                          if (Math.random() > Math.random()) {
+                          if (simrandom() > simrandom()) {
                             aim[c] = 0.7;
                           }
                           if (attack[c] > 150) {
@@ -7032,7 +7035,7 @@ function control() {
                           }
                         }
                         if (cn == 18 || cn == 12 || cn == 17) {
-                          aim[c] = Math.random() * 1.5;
+                          aim[c] = simrandom() * 1.5;
                           if (
                             Math.abs(cp.clear[i] - clear[c]) <= 2 ||
                             cn == 17
@@ -7042,7 +7045,7 @@ function control() {
                         }
                       }
                       acr[c] = i;
-                      turntyp[c] = Math.floor(1 + Math.random() * 2);
+                      turntyp[c] = Math.floor(1 + simrandom() * 2);
                       if (turntyp[c] == 3) {
                         turntyp[c] = 2;
                       }
@@ -7057,7 +7060,7 @@ function control() {
                       car[c].z / 10,
                       car[i].z / 10,
                     ) < 300 &&
-                    Math.random() > 0.6 - cp.pos[c] / 10
+                    simrandom() > 0.6 - cp.pos[c] / 10
                   ) {
                     clrnce[c] = 0;
                     acuracy[c] = 0;
@@ -7150,7 +7153,7 @@ function control() {
             } else {
             }
             stcnt[c] = 0;
-            statusque[c] = Math.floor(20 * Math.random());
+            statusque[c] = Math.floor(20 * simrandom());
           } else {
             if (frgm >= m) {
               stcnt[c]++;
@@ -7228,7 +7231,7 @@ function control() {
                 }
               }
               if (cp.stage != 9 || pnt != 0) {
-                if (Math.random() > skiplev[c]) {
+                if (simrandom() > skiplev[c]) {
                   tpnt = pnt;
                   var notimpcp = false;
                   if (cp.typ[tpnt] > 0) {
@@ -7263,7 +7266,7 @@ function control() {
                     }
                   }
                 } else {
-                  if (Math.random() > skiplev[c]) {
+                  if (simrandom() > skiplev[c]) {
                     while (cp.typ[pnt] == -1) {
                       pnt++;
                       if (pnt >= cp.n) {
@@ -7689,8 +7692,8 @@ function control() {
                       cp.z[pnt] / 10,
                     ) < 800
                   ) {
-                    oupnt[c] = -Math.floor(75 + Math.random() * 200);
-                    runbul[c] = Math.floor(50 + Math.random() * 100);
+                    oupnt[c] = -Math.floor(75 + simrandom() * 200);
+                    runbul[c] = Math.floor(50 + simrandom() * 100);
                   }
                 }
                 if (oupnt[c] < -1) {
@@ -7984,7 +7987,7 @@ function control() {
                 );
               }
               turncnt[c] = 0;
-              randtcnt[c] = Math.floor(acuracy[c] * Math.random());
+              randtcnt[c] = Math.floor(acuracy[c] * simrandom());
             } else {
               if (frgm >= m) {
                 turncnt[c]++;
@@ -8158,7 +8161,7 @@ function control() {
             }
             if (
               upv > 7 &&
-              (Math.random() > trickprf[c] / divo || stuntf[c] == 4)
+              (simrandom() > trickprf[c] / divo || stuntf[c] == 4)
             ) {
               oxy[c] = pxy[c];
               ozy[c] = pzy[c];
@@ -8174,7 +8177,7 @@ function control() {
                 udswt[c] = false;
               } else {
                 if (
-                  (Math.random() > Math.random() && stuntf[c] != 3) ||
+                  (simrandom() > simrandom() && stuntf[c] != 3) ||
                   stuntf[c] == 1 ||
                   stuntf[c] == 2 ||
                   stuntf[c] == 4
@@ -8183,7 +8186,7 @@ function control() {
                     stuntf[c] = 5;
                   }
                   if (
-                    (Math.random() > Math.random() ||
+                    (simrandom() > simrandom() ||
                       stuntf[c] == 2 ||
                       stuntf[c] == 5) &&
                     stuntf[c] != 1 &&
@@ -8193,12 +8196,12 @@ function control() {
                   } else {
                     uddirect[c] = 1;
                   }
-                  udstart[c] = Math.floor(10 * Math.random() * trickprf[c]);
+                  udstart[c] = Math.floor(10 * simrandom() * trickprf[c]);
                   if (stuntf[c] == 4 || stuntf[c] == 5 || cp.stage == 16) {
                     udstart[c] = 0;
                   }
                   if (
-                    Math.random() > 0.85 &&
+                    simrandom() > 0.85 &&
                     stuntf[c] != 1 &&
                     stuntf[c] != 4 &&
                     stuntf[c] != 5
@@ -8206,40 +8209,40 @@ function control() {
                     udswt[c] = true;
                   }
                   if (
-                    Math.random() > trickprf[c] + 0.3 &&
+                    simrandom() > trickprf[c] + 0.3 &&
                     stuntf[c] != 1 &&
                     stuntf[c] != 2 &&
                     stuntf[c] != 4 &&
                     stuntf[c] != 5
                   ) {
-                    if (Math.random() > Math.random()) {
+                    if (simrandom() > simrandom()) {
                       lrdirect[c] = -1;
                     } else {
                       lrdirect[c] = 1;
                     }
-                    lrstart[c] = Math.floor(30 * Math.random());
-                    if (Math.random() > 0.75) {
+                    lrstart[c] = Math.floor(30 * simrandom());
+                    if (simrandom() > 0.75) {
                       lrswt[c] = true;
                     }
                   }
                 } else {
-                  if (Math.random() > Math.random()) {
+                  if (simrandom() > simrandom()) {
                     lrdirect[c] = -1;
                   } else {
                     lrdirect[c] = 1;
                   }
-                  lrstart[c] = Math.floor(10 * Math.random() * trickprf[c]);
-                  if (Math.random() > 0.75) {
+                  lrstart[c] = Math.floor(10 * simrandom() * trickprf[c]);
+                  if (simrandom() > 0.75) {
                     lrswt[c] = true;
                   }
-                  if (Math.random() > trickprf[c] + 0.3) {
-                    if (Math.random() > Math.random() || stuntf[c] == 3) {
+                  if (simrandom() > trickprf[c] + 0.3) {
+                    if (simrandom() > simrandom() || stuntf[c] == 3) {
                       uddirect[c] = -1;
                     } else {
                       uddirect[c] = 1;
                     }
-                    udstart[c] = Math.floor(30 * Math.random());
-                    if (Math.random() > 0.85) {
+                    udstart[c] = Math.floor(30 * simrandom());
+                    if (simrandom() > 0.85) {
                       udswt[c] = true;
                     }
                   }
@@ -8359,7 +8362,7 @@ function control() {
               }
             } else {
               if (swat[c] == 2) {
-                if (capsized[c] && Math.random() > mustland[c]) {
+                if (capsized[c] && simrandom() > mustland[c]) {
                   if (udbare[c]) {
                     lrbare[c] = true;
                     udbare[c] = false;
@@ -8410,7 +8413,7 @@ function control() {
                       }
                     }
                   } else {
-                    if (Math.random() > mustland[c]) {
+                    if (simrandom() > mustland[c]) {
                       u[c].up = true;
                     }
                   }
@@ -8439,7 +8442,7 @@ function control() {
                       }
                     }
                   } else {
-                    if (Math.random() > mustland[c]) {
+                    if (simrandom() > mustland[c]) {
                       u[c].down = true;
                     }
                   }
@@ -8487,7 +8490,7 @@ function control() {
                       }
                     }
                   } else {
-                    if (Math.random() > mustland[c]) {
+                    if (simrandom() > mustland[c]) {
                       u[c].right = true;
                     }
                   }
@@ -8516,7 +8519,7 @@ function control() {
                       }
                     }
                   } else {
-                    if (Math.random() > mustland[c]) {
+                    if (simrandom() > mustland[c]) {
                       u[c].left = true;
                     }
                   }
@@ -9352,7 +9355,7 @@ function drive() {
               if (tskd != 0) {
                 mag = 1.2;
               }
-              if (Math.random() > 0.65) {
+              if (fxrandom() > 0.65) {
                 dustup(
                   tskd,
                   c,
@@ -9376,7 +9379,7 @@ function drive() {
               }
             } else {
               if (tskd == 1) {
-                if (Math.random() > 0.8) {
+                if (fxrandom() > 0.8) {
                   dustup(
                     tskd,
                     c,
@@ -9393,7 +9396,7 @@ function drive() {
                 }
               }
               if (tskd == 2) {
-                if (Math.random() > 0.6) {
+                if (fxrandom() > 0.6) {
                   dustup(
                     tskd,
                     c,
@@ -10287,7 +10290,7 @@ function drive() {
           }
         }
       } else {
-        var k = Math.floor(Math.random() * 4);
+        var k = Math.floor(fxrandom() * 4);
         if (k == 4) {
           k = 0;
         }
@@ -10301,7 +10304,7 @@ function drive() {
           scz[c][k],
           1,
         );
-        k = Math.floor(Math.random() * 4);
+        k = Math.floor(fxrandom() * 4);
         if (k == 4) {
           k = 0;
         }
@@ -10793,21 +10796,21 @@ function drive() {
     if (frgm >= m) {
       if (mtouch[c] && tskd == 2) {
         car[c].zy +=
-          ((Math.random() * 5 * speed[c]) / cd.swits[cn][2] -
+          ((simrandom() * 5 * speed[c]) / cd.swits[cn][2] -
             (2.5 * speed[c]) / cd.swits[cn][2]) *
           (cd.bounce[cn] - 0.3);
         car[c].xy +=
-          ((Math.random() * 5 * speed[c]) / cd.swits[cn][2] -
+          ((simrandom() * 5 * speed[c]) / cd.swits[cn][2] -
             (2.5 * speed[c]) / cd.swits[cn][2]) *
           (cd.bounce[cn] - 0.3);
       }
       if (wtouch[c] && tskd == 1) {
         car[c].zy +=
-          ((Math.random() * 3.34 * speed[c]) / cd.swits[cn][2] -
+          ((simrandom() * 3.34 * speed[c]) / cd.swits[cn][2] -
             (1.67 * speed[c]) / cd.swits[cn][2]) *
           (cd.bounce[cn] - 0.3);
         car[c].xy +=
-          ((Math.random() * 3.34 * speed[c]) / cd.swits[cn][2] -
+          ((simrandom() * 3.34 * speed[c]) / cd.swits[cn][2] -
             (1.67 * speed[c]) / cd.swits[cn][2]) *
           (cd.bounce[cn] - 0.3);
       }
@@ -10823,11 +10826,11 @@ function drive() {
         if (cntdest[c] < 6) {
           if (embos[c] == 0) {
             carobj[car[c].typ].alpha = 1;
-            embodir[c] = Math.floor(Math.random() * 3);
+            embodir[c] = Math.floor(fxrandom() * 3);
             if (embodir[c] == 3) {
               embodir[c] = 0;
             }
-            embomag[c] = 1.2 + Math.random() * 0.2;
+            embomag[c] = 1.2 + fxrandom() * 0.2;
           }
           if (embos[c] == 1) {
             carobj[car[c].typ].alpha = 2;
@@ -11075,8 +11078,8 @@ function drive() {
         onelec = true;
         carobj[car[c].typ].alpha = 1;
         if (car[c].fcnt % 2 == 0) {
-          if (Math.random() > 0.333) {
-            if (Math.random() > Math.random()) {
+          if (fxrandom() > 0.333) {
+            if (fxrandom() > fxrandom()) {
               carobj[car[c].typ].alpha = 3;
             } else {
               carobj[car[c].typ].alpha = 2;
@@ -11310,7 +11313,7 @@ function drive() {
       if (rpdcatch == 0) {
         catchnow(1);
         if (htyp == 1) {
-          hat = 265 + Math.random() * 30;
+          hat = 265 + fxrandom() * 30;
         }
       }
     }
@@ -11478,7 +11481,7 @@ function colide(c, xc) {
             if (colidim[xc]) {
               colidim[xc] = false;
             }
-            if (Math.random() > Math.random()) {
+            if (fxrandom() > fxrandom()) {
               sprks(
                 car[c].typ,
                 (kx[i] + xkx[j]) / 2,
@@ -11527,7 +11530,7 @@ function colide(c, xc) {
             if (colidim[xc]) {
               colidim[xc] = false;
             }
-            if (Math.random() > Math.random()) {
+            if (fxrandom() > fxrandom()) {
               sprks(
                 car[c].typ,
                 (kx[i] + xkx[j]) / 2,
@@ -11638,7 +11641,7 @@ function colide(c, xc) {
             if (colidim[xc]) {
               colidim[xc] = false;
             }
-            if (Math.random() > Math.random()) {
+            if (fxrandom() > fxrandom()) {
               sprks(
                 car[c].typ,
                 (kx[i] + xkx[j]) / 2,
@@ -11687,7 +11690,7 @@ function colide(c, xc) {
             if (colidim[xc]) {
               colidim[xc] = false;
             }
-            if (Math.random() > Math.random()) {
+            if (fxrandom() > fxrandom()) {
               sprks(
                 car[c].typ,
                 (kx[i] + xkx[j]) / 2,
@@ -11826,7 +11829,7 @@ function regn(nr, k, mag, c) {
             rad.dvert[i * 3 + 2],
           ) < cd.clrad[car[c].typ]
         ) {
-          tmag = (mag / 30) * Math.random();
+          tmag = (mag / 30) * simrandom();
           if (nr == 0) {
             rad.dvert[i * 3 + 2] -= tmag * msin(car[c].xz) * mcos(car[c].zy);
             rad.dvert[i * 3] += tmag * mcos(car[c].xz) * mcos(car[c].xy);
@@ -11840,7 +11843,7 @@ function regn(nr, k, mag, c) {
             rad.dvert[i * 3] += tmag * msin(car[c].xy);
           }
           if (Math.abs(tmag) > 0.1) {
-            if (Math.random() > 0.91) {
+            if (fxrandom() > 0.91) {
               if (fase != 9) {
                 chipaway(
                   c,
@@ -11864,12 +11867,12 @@ function regn(nr, k, mag, c) {
             rad.dvert[i * 3 + 1] > cd.flipy[car[c].typ] + squash[c]) &&
           Math.abs(squash[c]) < cd.msquash[car[c].typ]
         ) {
-          tmag = (mag / 15) * Math.random();
+          tmag = (mag / 15) * simrandom();
           rad.dvert[i * 3 + 1] -= tmag;
           tsq -= tmag;
           nsq++;
           if (Math.abs(tmag) > 0.1) {
-            if (Math.random() > 0.91) {
+            if (fxrandom() > 0.91) {
               if (fase != 9) {
                 chipaway(
                   c,
@@ -11894,16 +11897,16 @@ function regn(nr, k, mag, c) {
             11 *
             cd.dammult[car[c].typ] *
             cd.colrdammult[car[c].typ];
-          var npt = Math.round(cmag + Math.random() * cmag);
+          var npt = Math.round(cmag + fxrandom() * cmag);
           for (var p = 0; p < npt; p++) {
-            var pxv = Math.round(6 * Math.random() - 3);
-            var pyv = Math.round(6 * Math.random() - 3);
+            var pxv = Math.round(6 * fxrandom() - 3);
+            var pyv = Math.round(6 * fxrandom() - 3);
             if (pxv == 0 && pyv == 0) {
               var ein = 1;
-              if (Math.random() > Math.random()) {
+              if (fxrandom() > fxrandom()) {
                 ein = -1;
               }
-              if (Math.random() > Math.random()) {
+              if (fxrandom() > fxrandom()) {
                 pxv += ein;
               } else {
                 pyv += ein;
@@ -11911,7 +11914,7 @@ function regn(nr, k, mag, c) {
             }
             var px = pxc + pxv;
             var py = pyc + pyv;
-            var rnp = Math.round(20 + Math.random() * 100);
+            var rnp = Math.round(20 + fxrandom() * 100);
             var glass = false;
             var ongrey = false;
             if (modpix == 2) {
@@ -11923,7 +11926,7 @@ function regn(nr, k, mag, c) {
                 pixels[pp] == pixels[pp + 1] &&
                 pixels[pp + 1] == pixels[pp + 2]
               ) {
-                pixels[pp] += Math.round(Math.random() * 10 - 5);
+                pixels[pp] += Math.round(fxrandom() * 10 - 5);
                 if (pixels[pp] < 0) {
                   pixels[pp] = 0;
                 }
@@ -11946,13 +11949,13 @@ function regn(nr, k, mag, c) {
                   pixels[pp + 2] == skyglass[2]
                 ) {
                   if (!glass) {
-                    if (Math.random() > 0.95) {
+                    if (fxrandom() > 0.95) {
                       glass = true;
                     }
                     rnp = 0;
                   }
                   if (modpix == 2) {
-                    if (Math.random() < 0.5) {
+                    if (fxrandom() < 0.5) {
                       glass = false;
                     }
                     rnp = 0;
@@ -11975,11 +11978,11 @@ function regn(nr, k, mag, c) {
                     pixels[pp + 2] = (55 + pixels[pp + 2] * av) / (1 + av);
                     car[c].ctxl[0] = px / 256;
                     car[c].ctxl[1] = py / 256;
-                    if (Math.random() > 0.8) {
+                    if (fxrandom() > 0.8) {
                       if (Math.abs(pxv) < Math.abs(pyv)) {
-                        pxv += Math.round(Math.random() * 2 - 1);
+                        pxv += Math.round(fxrandom() * 2 - 1);
                       } else {
-                        pyv += Math.round(Math.random() * 2 - 1);
+                        pyv += Math.round(fxrandom() * 2 - 1);
                       }
                     }
                   } else {
@@ -12071,15 +12074,15 @@ function burn(c) {
 function chipburn(c) {
   var rad = carobj[car[c].typ];
   for (var i = 0; i < rad.ni; i++) {
-    if (Math.random() > Math.random() && Math.random() > Math.random()) {
-      car[c].ctxl[0] = Math.random();
-      car[c].ctxl[1] = Math.random();
+    if (fxrandom() > fxrandom() && fxrandom() > fxrandom()) {
+      car[c].ctxl[0] = fxrandom();
+      car[c].ctxl[1] = fxrandom();
       chipaway(
         c,
         rad.dvert[i * 3],
         rad.dvert[i * 3 + 1],
         rad.dvert[i * 3 + 2],
-        0.1 + Math.random() * 0.2,
+        0.1 + fxrandom() * 0.2,
       );
     }
   }
@@ -12686,7 +12689,7 @@ function grndscrapesnd(typ, sx, sy, sz) {
       if (typ == 2) {
         sdt += 2;
       }
-      if (Math.random() > Math.random()) {
+      if (fxrandom() > fxrandom()) {
         playsnd(23 + sdt, scpr);
       } else {
         playsnd(24 + sdt, scpr);
@@ -12700,12 +12703,12 @@ var lscrape = -1;
 function scrapesnd(sx, sy, sz) {
   if (bfscrape == 0) {
     if (Math.sqrt(sx * sx + sy * sy + sz * sz) > 5) {
-      var srp = Math.floor(Math.random() * 3);
+      var srp = Math.floor(fxrandom() * 3);
       if (srp == 4) {
         srp = 0;
       }
       while (srp == lscrape) {
-        srp = Math.floor(Math.random() * 3);
+        srp = Math.floor(fxrandom() * 3);
         if (srp == 4) {
           srp = 0;
         }
@@ -12728,7 +12731,7 @@ function bumpsnd(bi, bmag, typ) {
     } else {
       bmpr += 0.4;
     }
-    bmpr += 0.2 * Math.random();
+    bmpr += 0.2 * fxrandom();
     if (onbsnd) {
       playsnd(18, bmpr);
       onbsnd = false;
@@ -12746,12 +12749,12 @@ var lcrhig = -1;
 function crashsnd(cmag, sign) {
   if (sign == 0) {
     if (bfcrash[0] == 0 && Math.abs(cmag) > 2.5 && Math.abs(cmag) < 10) {
-      var crp = Math.floor(Math.random() * 3);
+      var crp = Math.floor(fxrandom() * 3);
       if (crp == 4) {
         crp = 0;
       }
       while (crp == lcrlow) {
-        crp = Math.floor(Math.random() * 3);
+        crp = Math.floor(fxrandom() * 3);
         if (crp == 4) {
           crp = 0;
         }
@@ -12761,12 +12764,12 @@ function crashsnd(cmag, sign) {
       bfcrash[0] = 3;
     }
     if (bfcrash[1] == 0 && Math.abs(cmag) >= 10 && Math.abs(cmag) < 17) {
-      var crp = Math.floor(Math.random() * 3);
+      var crp = Math.floor(fxrandom() * 3);
       if (crp == 4) {
         crp = 0;
       }
       while (crp == lcrmed) {
-        crp = Math.floor(Math.random() * 3);
+        crp = Math.floor(fxrandom() * 3);
         if (crp == 4) {
           crp = 0;
         }
@@ -12776,12 +12779,12 @@ function crashsnd(cmag, sign) {
       bfcrash[1] = 3;
     }
     if (bfcrash[2] == 0 && Math.abs(cmag) >= 17) {
-      var crp = Math.floor(Math.random() * 3);
+      var crp = Math.floor(fxrandom() * 3);
       if (crp == 4) {
         crp = 0;
       }
       while (crp == lcrhig) {
-        crp = Math.floor(Math.random() * 3);
+        crp = Math.floor(fxrandom() * 3);
         if (crp == 4) {
           crp = 0;
         }
@@ -12823,16 +12826,16 @@ function skidsnd(typ, ontsk, gmag) {
       if (spbr > 1.2) {
         spbr = 1.2;
       }
-      if (ontsk && typ == 1 && Math.random() > Math.random()) {
+      if (ontsk && typ == 1 && fxrandom() > fxrandom()) {
         typ = 0;
       }
       if (typ == 0) {
-        var skp = Math.floor(Math.random() * 4);
+        var skp = Math.floor(fxrandom() * 4);
         if (skp == 4) {
           skp = 0;
         }
         while (skp == sklast[0] || skp == sklast[1]) {
-          skp = Math.floor(Math.random() * 4);
+          skp = Math.floor(fxrandom() * 4);
           if (skp == 4) {
             skp = 0;
           }
@@ -12841,12 +12844,12 @@ function skidsnd(typ, ontsk, gmag) {
         sklast[1] = sklast[0];
         sklast[0] = skp;
       } else {
-        var skp = Math.floor(Math.random() * 4);
+        var skp = Math.floor(fxrandom() * 4);
         if (skp == 4) {
           skp = 0;
         }
         while (skp == dsklast[0] || skp == dsklast[1]) {
-          skp = Math.floor(Math.random() * 4);
+          skp = Math.floor(fxrandom() * 4);
           if (skp == 4) {
             skp = 0;
           }
@@ -12855,7 +12858,7 @@ function skidsnd(typ, ontsk, gmag) {
         dsklast[1] = dsklast[0];
         dsklast[0] = skp;
       }
-      bfskid = Math.floor(Math.random() * 20);
+      bfskid = Math.floor(fxrandom() * 20);
       if (bfskid < 5) {
         bfskid = 5;
       }
@@ -12944,7 +12947,7 @@ function enginsnd() {
           }
           if (flexr != 1 + 1.1 * cd.engrev[sel[im]]) {
             flexr = 1 + 1.1 * cd.engrev[sel[im]];
-            flexm = 0.02 + 0.16 * Math.random();
+            flexm = 0.02 + 0.16 * fxrandom();
           }
         } else {
           reqvol = flexr;
@@ -12955,7 +12958,7 @@ function enginsnd() {
           flexr -= flexm;
           if (flexr < 1 + 0.5 * cd.engrev[sel[im]]) {
             flexr = 1 + 1.1 * cd.engrev[sel[im]];
-            flexm = 0.02 + 0.16 * Math.random();
+            flexm = 0.02 + 0.16 * fxrandom();
           }
         }
         if (revfase != 0) {
@@ -12970,16 +12973,16 @@ function enginsnd() {
       if (revfase == 0) {
         revout = 20;
         revat = reqpbr;
-        revto = revat + 0.3 + 0.2 * Math.random();
+        revto = revat + 0.3 + 0.2 * fxrandom();
         if (revto < 2) {
           revto = 2;
         }
-        revup = 0.1 + 0.3 * Math.random();
-        revdn = 0.1 + 0.2 * Math.random();
-        revfr = Math.floor(5 + 5 * Math.random());
+        revup = 0.1 + 0.3 * fxrandom();
+        revdn = 0.1 + 0.2 * fxrandom();
+        revfr = Math.floor(5 + 5 * fxrandom());
         revfase = 1;
-        if (Math.random() > Math.random()) {
-          doublerev = revto * (0.8 + 0.15 * Math.random());
+        if (fxrandom() > fxrandom()) {
+          doublerev = revto * (0.8 + 0.15 * fxrandom());
         } else {
           doublerev = 0;
         }
@@ -13048,7 +13051,7 @@ function enginsnd() {
     if (atmax) {
       if (ringr == 0) {
         reqpbr *= 1.06;
-        ringr = Math.floor(Math.random() * 50);
+        ringr = Math.floor(fxrandom() * 50);
       } else {
         ringr--;
       }
@@ -13749,7 +13752,7 @@ function gameinstructions() {
   }
   if (dudo > 0) {
     if (aflk) {
-      ondud = Math.floor(Math.random() * 6);
+      ondud = Math.floor(fxrandom() * 6);
       if (ondud == 6) {
         ondud = 5;
       }
@@ -14449,7 +14452,7 @@ function resetgame() {
   }
   if (dudo > 0) {
     if (aflk) {
-      ondud = Math.floor(Math.random() * 6);
+      ondud = Math.floor(fxrandom() * 6);
       if (ondud == 6) {
         ondud = 5;
       }
@@ -14699,7 +14702,7 @@ function drawswitch() {
     slideto = 180;
     slidedir = false;
     swing = 0;
-    if (Math.random() > Math.random()) {
+    if (fxrandom() > fxrandom()) {
       swingto = 45;
       swingdir = false;
     } else {
@@ -15326,8 +15329,8 @@ function drawinter() {
     }
     if (onbreplay == 1) {
       cntreps = 0;
-      adv = Math.floor(90 * Math.random());
-      vxz = Math.floor(360 * Math.random());
+      adv = Math.floor(90 * fxrandom());
+      vxz = Math.floor(360 * fxrandom());
       hrewindhreplay();
     }
     if (onbreplay) {
@@ -15981,12 +15984,12 @@ function drawinter() {
           prp = 3;
         }
         if (surfer[im]) {
-          asay = " " + adj[4][Math.floor(Math.random() * 2.99)] + asay;
+          asay = " " + adj[4][Math.floor(fxrandom() * 2.99)] + asay;
         }
         if (prp != 3) {
-          asay = adj[prp][Math.floor(Math.random() * 2.99)] + asay + exlm[prp];
+          asay = adj[prp][Math.floor(fxrandom() * 2.99)] + asay + exlm[prp];
         } else {
-          asay = adj[prp][Math.floor(Math.random() * 2.99)];
+          asay = adj[prp][Math.floor(fxrandom() * 2.99)];
         }
         if (!wasay) {
           tcnt = auscnt;
@@ -16048,7 +16051,7 @@ function drawonbordo() {
   }
   if (starcnt > 130) {
     if (pwflk) {
-      ondud = Math.floor(Math.random() * 6);
+      ondud = Math.floor(fxrandom() * 6);
       if (ondud == 6) {
         ondud = 5;
       }
@@ -16250,7 +16253,7 @@ function drawhreplay() {
     }
     if (rmode == 43) {
       if (holdf >= 1 && holdf < 43) {
-        if (holdf % Math.floor(2 + Math.random() * 3) == 0 && !lwit) {
+        if (holdf % Math.floor(2 + fxrandom() * 3) == 0 && !lwit) {
           rd.globalAlpha = 0.5;
           rd.fillStyle = "#FFFFFF";
           rd.fillRect(0, 0, canw, canh);
@@ -16524,15 +16527,15 @@ var confr = 0;
 var confl = -1;
 var confg = 0;
 var confc = 0;
-var morgn = Math.random();
+var morgn = fxrandom();
 var unlcar = -1;
 function iniend() {
   fredo = 0;
-  ondud = Math.floor(Math.random() * 6);
+  ondud = Math.floor(fxrandom() * 6);
   if (ondud == 6) {
     ondud = 5;
   }
-  morgn = Math.random();
+  morgn = fxrandom();
   unlcar = -1;
   switcnt = 0;
   if (winner && unlocked == cp.stage && ncars != 1) {
@@ -16566,7 +16569,7 @@ function iniend() {
       confr = 0;
     }
     if (unlcar != -1) {
-      morgn = 0.4 * Math.random();
+      morgn = 0.4 * fxrandom();
     }
   }
 }
@@ -16780,7 +16783,7 @@ function afterend() {
       unlocked++;
       cp.stage = unlocked;
     } else {
-      cp.stage = Math.floor(3 + Math.random() * 13);
+      cp.stage = Math.floor(3 + simrandom() * 13);
     }
   }
   if (stanza == 1) {
@@ -17378,7 +17381,7 @@ function drawstageselect() {
       }
       if (dudo > 50) {
         if (aflk) {
-          ondud = Math.floor(Math.random() * 6);
+          ondud = Math.floor(fxrandom() * 6);
           if (ondud == 6) {
             ondud = 5;
           }
@@ -17788,7 +17791,7 @@ function drawstageselect() {
       }
       if (dudo < 200) {
         if (aflk) {
-          ondud = Math.floor(Math.random() * 6);
+          ondud = Math.floor(fxrandom() * 6);
           if (ondud == 6) {
             ondud = 5;
           }
@@ -18496,8 +18499,8 @@ function drawcoolrect(xb, yb, wb, hb, cb1, cb2, cbs, per) {
 }
 function createbordo() {
   for (var i = 0; i < 16; i++) {
-    xsp[i] = 50 + i * 73.75 + Math.random() * 60 - 30;
-    ysp[i] = 50 + Math.random() * 30 - 15;
+    xsp[i] = 50 + i * 73.75 + fxrandom() * 60 - 30;
+    ysp[i] = 50 + fxrandom() * 30 - 15;
   }
   var cntout = 0;
   for (var i = 0; i < 14; i++) {
@@ -18507,8 +18510,8 @@ function createbordo() {
       Math.abs(ysp[i] - ysp[i + 2]) < 7 &&
       (xsp[i + 1] < 460 || xsp[i + 1] > 820)
     ) {
-      if (Math.random() > Math.random() || xsp[i + 1] > 820) {
-        ysp[i + 1] += 30 + Math.random() * 30;
+      if (fxrandom() > fxrandom() || xsp[i + 1] > 820) {
+        ysp[i + 1] += 30 + fxrandom() * 30;
         xsp[i] = (xsp[i + 1] * 5 + xsp[i]) / 6;
         xsp[i + 2] = (xsp[i + 1] * 5 + xsp[i + 2]) / 6;
       }
@@ -18519,8 +18522,8 @@ function createbordo() {
     }
   }
   for (var i = 16; i < 25; i++) {
-    xsp[i] = 1230 + Math.random() * 30 - 15;
-    ysp[i] = 50 + (i - 16) * 68.88 + Math.random() * 60 - 30;
+    xsp[i] = 1230 + fxrandom() * 30 - 15;
+    ysp[i] = 50 + (i - 16) * 68.88 + fxrandom() * 60 - 30;
   }
   cntout = 0;
   for (var i = 16; i < 23; i++) {
@@ -18530,7 +18533,7 @@ function createbordo() {
       Math.abs(xsp[i] - xsp[i + 2]) < 7 &&
       ysp[i + 1] < 330
     ) {
-      xsp[i + 1] -= 30 + Math.random() * 30;
+      xsp[i + 1] -= 30 + fxrandom() * 30;
       ysp[i] = (ysp[i + 1] * 5 + ysp[i]) / 6;
       ysp[i + 2] = (ysp[i + 1] * 5 + ysp[i + 2]) / 6;
       cntout = 10;
@@ -18540,8 +18543,8 @@ function createbordo() {
     }
   }
   for (var i = 25; i < 41; i++) {
-    xsp[i] = 1230 - (i - 25) * 73.75 + Math.random() * 60 - 30;
-    ysp[i] = 670 + Math.random() * 30 - 15;
+    xsp[i] = 1230 - (i - 25) * 73.75 + fxrandom() * 60 - 30;
+    ysp[i] = 670 + fxrandom() * 30 - 15;
   }
   cntout = 0;
   var vony = 876;
@@ -18556,8 +18559,8 @@ function createbordo() {
       xsp[i + 1] < vony &&
       (xsp[i + 1] > 572 || !hastip)
     ) {
-      if (Math.random() > Math.random()) {
-        ysp[i + 1] -= 30 + Math.random() * 30;
+      if (fxrandom() > fxrandom()) {
+        ysp[i + 1] -= 30 + fxrandom() * 30;
         xsp[i] = (xsp[i + 1] * 5 + xsp[i]) / 6;
         xsp[i + 2] = (xsp[i + 1] * 5 + xsp[i + 2]) / 6;
       }
@@ -18568,8 +18571,8 @@ function createbordo() {
     }
   }
   for (var i = 41; i < 50; i++) {
-    xsp[i] = 50 + Math.random() * 30 - 15;
-    ysp[i] = 670 - (i - 41) * 68.88 + Math.random() * 60 - 30;
+    xsp[i] = 50 + fxrandom() * 30 - 15;
+    ysp[i] = 670 - (i - 41) * 68.88 + fxrandom() * 60 - 30;
   }
   cntout = 0;
   for (var i = 41; i < 48; i++) {
@@ -18579,8 +18582,8 @@ function createbordo() {
       Math.abs(xsp[i] - xsp[i + 2]) < 7 &&
       (ysp[i + 1] < 330 || ysp[i + 1] > 450)
     ) {
-      if (Math.random() > Math.random()) {
-        xsp[i + 1] += 30 + Math.random() * 30;
+      if (fxrandom() > fxrandom()) {
+        xsp[i + 1] += 30 + fxrandom() * 30;
         ysp[i] = (ysp[i + 1] * 5 + ysp[i]) / 6;
         ysp[i + 2] = (ysp[i + 1] * 5 + ysp[i + 2]) / 6;
       }
@@ -19019,11 +19022,11 @@ function replay() {
       if (cntdest[c] < 6) {
         if (embos[c] == 0) {
           carobj[car[c].typ].alpha = 1;
-          embodir[c] = Math.floor(Math.random() * 3);
+          embodir[c] = Math.floor(fxrandom() * 3);
           if (embodir[c] == 3) {
             embodir[c] = 0;
           }
-          embomag[c] = 1.2 + Math.random() * 0.2;
+          embomag[c] = 1.2 + fxrandom() * 0.2;
         }
         if (embos[c] == 1) {
           carobj[car[c].typ].alpha = 2;
@@ -19062,8 +19065,8 @@ function replay() {
       onelec = true;
       carobj[car[c].typ].alpha = 1;
       if (car[c].fcnt % 2 == 0) {
-        if (Math.random() > 0.333) {
-          if (Math.random() > Math.random()) {
+        if (fxrandom() > 0.333) {
+          if (fxrandom() > fxrandom()) {
             carobj[car[c].typ].alpha = 3;
           } else {
             carobj[car[c].typ].alpha = 2;
@@ -19255,7 +19258,7 @@ function hrewindhreplay() {
   holdf = 0;
   rmode = 0;
   if (htyp == 1) {
-    if (Math.random() > Math.random()) {
+    if (fxrandom() > fxrandom()) {
       rmode = 98;
     } else {
       rmode = 43;
@@ -19276,11 +19279,11 @@ function hreplay() {
       if (cntdest[c] < 6) {
         if (embos[c] == 0) {
           carobj[car[c].typ].alpha = 1;
-          embodir[c] = Math.floor(Math.random() * 3);
+          embodir[c] = Math.floor(fxrandom() * 3);
           if (embodir[c] == 3) {
             embodir[c] = 0;
           }
-          embomag[c] = 1.2 + Math.random() * 0.2;
+          embomag[c] = 1.2 + fxrandom() * 0.2;
         }
         if (embos[c] == 1) {
           carobj[car[c].typ].alpha = 2;
@@ -19326,8 +19329,8 @@ function hreplay() {
       onelec = true;
       carobj[car[c].typ].alpha = 1;
       if (car[c].fcnt % 2 == 0) {
-        if (Math.random() > 0.333) {
-          if (Math.random() > Math.random()) {
+        if (fxrandom() > 0.333) {
+          if (fxrandom() > fxrandom()) {
             carobj[car[c].typ].alpha = 3;
           } else {
             carobj[car[c].typ].alpha = 2;
@@ -19486,8 +19489,8 @@ function revtime() {
       onelec = true;
       carobj[car[c].typ].alpha = 1;
       if (car[c].fcnt % 2 == 0) {
-        if (Math.random() > 0.333) {
-          if (Math.random() > Math.random()) {
+        if (fxrandom() > 0.333) {
+          if (fxrandom() > fxrandom()) {
             carobj[car[c].typ].alpha = 3;
           } else {
             carobj[car[c].typ].alpha = 2;

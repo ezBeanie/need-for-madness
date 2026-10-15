@@ -93,7 +93,12 @@ return { ${accessors.join(",\n")} };
 
 let compiled;
 
-export const loadGame = ({ seed = 1 } = {}) => {
+const forbiddenRandom = () => {
+  throw new Error("use simrandom() or fxrandom() instead of Math.random()");
+};
+
+// seed drives the simulation, fxSeed only visual and sound effects.
+export const loadGame = ({ seed = 1, fxSeed = seed + 1000 } = {}) => {
   compiled ??= compileGame();
   const queue = createTaskQueue();
   const rafCallbacks = [];
@@ -104,8 +109,15 @@ export const loadGame = ({ seed = 1 } = {}) => {
   });
   browser.window = browser;
   browser.self = browser;
-  const math = Object.create(Math, { random: { value: seededRandom(seed) } });
+  // needmad.js starts with `var fxrandom = Math.random` and already uses it at load time.
+  const fxrandom = seededRandom(fxSeed);
+  const math = Object.create(Math, {
+    random: { value: fxrandom, writable: true },
+  });
   const ctx = compiled(browser, math);
+  math.random = forbiddenRandom;
+  ctx.simrandom = seededRandom(seed);
+  ctx.fxrandom = fxrandom;
 
   let frame = 0;
   const step = () => {

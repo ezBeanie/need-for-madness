@@ -11,8 +11,8 @@ const NO_INPUT = {
 };
 const DEG = 0.017453292519943295;
 
-export const startRace = ({ stage, car, seed = 1, unlocked = 17 }) => {
-  const game = loadGame({ seed });
+export const startRace = ({ stage, car, seed = 1, fxSeed, unlocked = 17 }) => {
+  const game = loadGame({ seed, fxSeed });
   const { ctx, step, stepUntil } = game;
   stepUntil(() => ctx.fase === 1, 400, "main menu");
 
@@ -90,8 +90,8 @@ const SAMPLE_EVERY = 100;
 
 // Runs a race and records a hash of the full race state for every frame, plus readable
 // samples so a mismatch can be inspected.
-export const recordRace = ({ stage, car, seed, frames, input }) => {
-  const { ctx, step, key } = startRace({ stage, car, seed });
+export const recordRace = ({ stage, car, seed, fxSeed, frames, input }) => {
+  const { ctx, step, key } = startRace({ stage, car, seed, fxSeed });
   const states = [];
   let held = { ...NO_INPUT };
   for (let frame = 0; frame < frames && ctx.fase === 7; frame++) {
