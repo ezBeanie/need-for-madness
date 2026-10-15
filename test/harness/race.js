@@ -11,12 +11,28 @@ const NO_INPUT = {
 };
 const DEG = 0.017453292519943295;
 
-export const startRace = ({ stage, car, seed = 1, fxSeed, unlocked = 17 }) => {
+export const openCarSelect = ({ seed = 1, fxSeed } = {}) => {
   const game = loadGame({ seed, fxSeed });
-  const { ctx, step, stepUntil } = game;
+  const { ctx, stepUntil, key } = game;
+  stepUntil(() => ctx.fase === 1, 400, "main menu");
+  key(13, true);
+  stepUntil(() => ctx.fase === 2, 300, "car select");
+  key(13, false);
+  return game;
+};
+
+export const openStageSelect = ({
+  stage,
+  car,
+  seed = 1,
+  fxSeed,
+  unlocked = 17,
+}) => {
+  const game = loadGame({ seed, fxSeed });
+  const { ctx, stepUntil } = game;
   stepUntil(() => ctx.fase === 1, 400, "main menu");
 
-  // Same state the car and stage select screens leave behind before "PLAY".
+  // Same state the car select screen leaves behind before "PLAY".
   ctx.sel[0] = car;
   ctx.unlocked = unlocked;
   ctx.cp.stage = stage;
@@ -25,12 +41,16 @@ export const startRace = ({ stage, car, seed = 1, fxSeed, unlocked = 17 }) => {
   ctx.updateframe = true;
   ctx.fase = 3;
   stepUntil(() => ctx.fase === 4, 100, "stage select");
+  return game;
+};
 
+export const startRace = ({ stage, car, seed = 1, fxSeed, unlocked = 17 }) => {
+  const game = openStageSelect({ stage, car, seed, fxSeed, unlocked });
+  const { ctx, stepUntil } = game;
   ctx.gamemode = 0;
   ctx.startflash();
   stepUntil(() => ctx.fase === 7, 10, "race");
-
-  return { ...game, step };
+  return game;
 };
 
 // Steers the player towards the path point the game itself tracks for car 0.

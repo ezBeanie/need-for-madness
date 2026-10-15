@@ -1,4 +1,5 @@
 import { describe, expect, test } from "vitest";
+import { drawnMatrix, wheelSlip } from "./harness/drawing.js";
 import { NO_INPUT, autopilot, startRace } from "./harness/race.js";
 
 // Fast driving, stunts, flips back onto the wheels, crashes and dust on stage 1;
@@ -20,52 +21,47 @@ const raceFrames = ({ stage, car, input, frames }, onFrame) => {
   }
 };
 
-// The model matrix rad is drawn with for instance inst, handed over like render() does.
-const drawnMatrix = (ctx, rad, inst) => {
-  rad.x = inst.x;
-  rad.y = inst.y;
-  rad.z = inst.z;
-  rad.mat = inst.mat;
-  ctx.placemodel(rad);
-  return ctx.mat4.clone(ctx.drawmat);
-};
-
-// Where the wheels are drawn, seen from the drawn car body.
-const wheelsOnBody = (ctx, c, alpha) => {
-  const { mat4 } = ctx;
-  const typ = ctx.car[c].typ;
-  ctx.tickalpha = alpha;
-  ctx.whl[typ].forEach((wheel) => ctx.lerpattach(wheel.mat, ctx.car[c]));
-  const body = mat4.invert(
-    mat4.create(),
-    drawnMatrix(ctx, ctx.carobj[typ], ctx.car[c]),
-  );
-  return ctx.whl[typ].map((wheel, w) => {
-    const drawn = drawnMatrix(ctx, ctx.tired[typ][w >> 1], wheel);
-    const onBody = mat4.multiply(mat4.create(), body, drawn);
-    return [onBody[12], onBody[13], onBody[14]];
-  });
-};
-
 describe("interpolated drawing in a real race", () => {
   test("wheels stay on their car between ticks, also when it spins or flips", () => {
     let checked = 0;
     let worst = 0;
     raceFrames(fullThrottle, (ctx) => {
       for (let c = 0; c < ctx.ncars; c++) {
-        const atTick = wheelsOnBody(ctx, c, 1);
-        for (const alpha of [0.25, 0.5, 0.75]) {
-          wheelsOnBody(ctx, c, alpha).forEach((pos, w) => {
-            const off = Math.hypot(...pos.map((v, i) => v - atTick[w][i]));
-            worst = Math.max(worst, off);
-          });
-        }
+        worst = Math.max(worst, wheelSlip(ctx, ctx.car[c].typ, ctx.car[c]));
         checked++;
       }
       ctx.tickalpha = 1;
     });
     expect(checked).toBeGreaterThan(10_000);
     expect(worst).toBeLessThan(0.05);
+  });
+
+  // A shadow is interpolated on its own, it is no rigid part of the car. Between two ticks
+  // it has to stay under the car body, not jump ahead to the next tick.
+  test("shadows stay under their car between ticks", () => {
+    const offset = (ctx, c, alpha) => {
+      ctx.tickalpha = alpha;
+      const typ = ctx.car[c].typ;
+      const body = drawnMatrix(ctx, ctx.carobj[typ], ctx.car[c]);
+      const shadow = drawnMatrix(ctx, ctx.shad[typ], ctx.shad[typ]);
+      return [shadow[12] - body[12], shadow[14] - body[14]];
+    };
+    let checked = 0;
+    let off = 0;
+    raceFrames(fullThrottle, (ctx) => {
+      for (let c = 0; c < ctx.ncars; c++) {
+        const atTick = offset(ctx, c, 1);
+        const between = offset(ctx, c, 0.5);
+        if (Math.hypot(between[0] - atTick[0], between[1] - atTick[1]) > 0.5) {
+          off++;
+        }
+        checked++;
+      }
+      ctx.tickalpha = 1;
+    });
+    expect(checked).toBeGreaterThan(10_000);
+    // a shadow switching to another side of a tilted car is drawn without transition
+    expect(off / checked).toBeLessThan(0.01);
   });
 
   test("drawn instances keep their matrix object from tick to tick", () => {

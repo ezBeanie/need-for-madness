@@ -1,0 +1,75 @@
+import { describe, expect, test } from "vitest";
+import { drawnMatrix, wheelSlip } from "./harness/drawing.js";
+import { openCarSelect, openStageSelect } from "./harness/race.js";
+
+const screens = {
+  "car select": () => openCarSelect(),
+  "stage select": () => openStageSelect({ stage: 3, car: 5 }),
+};
+
+// Counts the draw instances interpolation sees for the first time. On a screen without
+// spawning particles, a new one in every tick means a matrix that gets recreated per tick.
+const countNewInstances = (ctx) => {
+  const states = new WeakMap();
+  let created = 0;
+  ctx.lerpstates = {
+    get: (mat) => states.get(mat),
+    set: (mat, state) => {
+      created++;
+      return states.set(mat, state);
+    },
+  };
+  return () => created;
+};
+
+describe("interpolated drawing in the menus", () => {
+  test.each(Object.keys(screens))(
+    "%s keeps every drawn instance from tick to tick",
+    (screen) => {
+      const { ctx, step } = screens[screen]();
+      ctx.tickalpha = 0.5;
+      const created = countNewInstances(ctx);
+      for (let i = 0; i < 30; i++) {
+        step();
+      }
+      const afterWarmup = created();
+      expect(afterWarmup).toBeGreaterThan(0);
+      for (let i = 0; i < 100; i++) {
+        step();
+      }
+      expect(created() - afterWarmup).toBe(0);
+    },
+  );
+
+  test("wheels stay on the turning car in the car select", () => {
+    const { ctx, step } = openCarSelect();
+    const typ = ctx.sel[0];
+    let worst = 0;
+    for (let i = 0; i < 100; i++) {
+      step();
+      worst = Math.max(worst, wheelSlip(ctx, typ, ctx.carobj[typ]));
+    }
+    expect(worst).toBeLessThan(0.05);
+  });
+
+  // bgst is a backdrop placed 106 units in front of the camera every tick. Drawn apart
+  // from the camera, it slides out of view while the camera swoops onto the track.
+  test("the stage select backdrop stays in front of the swooping camera", () => {
+    const { ctx, step } = openStageSelect({ stage: 3, car: 5 });
+    let worst = 0;
+    for (let i = 0; i < 100; i++) {
+      step();
+      for (const alpha of [0.25, 0.5, 0.75]) {
+        ctx.tickalpha = alpha;
+        ctx.placecamera();
+        const drawn = drawnMatrix(ctx, ctx.bgst, ctx.bgst);
+        worst = Math.max(
+          worst,
+          Math.abs(Math.hypot(drawn[12], drawn[13], drawn[14]) - 106),
+        );
+      }
+      ctx.tickalpha = 1;
+    }
+    expect(worst).toBeLessThan(1);
+  });
+});

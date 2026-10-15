@@ -2042,20 +2042,25 @@ var lerpscale = vec3.create();
 var lerppos = vec3.create();
 var lerpparentnow = mat4.create();
 var lerpparentdrawn = mat4.create();
+// Most matrices are rotations (rigid, possibly scaled and mirrored) and are interpolated
+// as such. Others, like car shadows projected onto a slope, are interpolated element-wise.
 function newlerpshot() {
   return {
     x: 0,
     y: 0,
     z: 0,
+    m: new Float32Array(16),
+    rigid: false,
+    mirrored: false,
     rot: quat.create(),
     scale: vec3.create(),
-    mirrored: false,
   };
 }
 function takelerpshot(shot, x, y, z, mat) {
   shot.x = x;
   shot.y = y;
   shot.z = z;
+  mat4.copy(shot.m, mat);
   mat4.getScaling(shot.scale, mat);
   var rotmat = mat4.clone(mat);
   for (var col = 0; col < 3; col++) {
@@ -2063,8 +2068,42 @@ function takelerpshot(shot, x, y, z, mat) {
       rotmat[col * 4 + row] /= shot.scale[col] || 1;
     }
   }
+  shot.rigid = true;
+  for (var i = 0; i < 3; i++) {
+    var j = (i + 1) % 3;
+    var dot =
+      rotmat[i * 4] * rotmat[j * 4] +
+      rotmat[i * 4 + 1] * rotmat[j * 4 + 1] +
+      rotmat[i * 4 + 2] * rotmat[j * 4 + 2];
+    if (Math.abs(dot) > 0.01) {
+      shot.rigid = false;
+    }
+  }
   shot.mirrored = mat4.determinant(rotmat) < 0;
+  if (shot.mirrored) {
+    rotmat[8] = -rotmat[8];
+    rotmat[9] = -rotmat[9];
+    rotmat[10] = -rotmat[10];
+  }
   mat4.getRotation(shot.rot, rotmat);
+}
+function rigidpair(from, to) {
+  return from.rigid && to.rigid && from.mirrored == to.mirrored;
+}
+// Whether the change between two tick states is a motion and not a jump.
+function lerpable(from, to) {
+  if (pyd(from.x, to.x, from.y, to.y, from.z, to.z) >= lerpjump) {
+    return false;
+  }
+  if (rigidpair(from, to)) {
+    return Math.abs(quat.dot(from.rot, to.rot)) > lerpturn;
+  }
+  for (var i = 0; i < 11; i++) {
+    if (i % 4 != 3 && Math.abs(to.m[i] - from.m[i]) > 1) {
+      return false;
+    }
+  }
+  return true;
 }
 // The latest two tick states of one draw instance, recorded the first time it is drawn after a tick.
 function lerpentry(mat) {
@@ -2089,13 +2128,7 @@ function lerpstateof(rad) {
     st.prev = st.cur;
     st.cur = old;
     takelerpshot(st.cur, rad.x, rad.y, rad.z, rad.mat);
-    st.hasprev =
-      st.tick == tickcount - 1 &&
-      !st.cur.mirrored &&
-      !st.prev.mirrored &&
-      pyd(st.prev.x, st.cur.x, st.prev.y, st.cur.y, st.prev.z, st.cur.z) <
-        lerpjump &&
-      Math.abs(quat.dot(st.prev.rot, st.cur.rot)) > lerpturn;
+    st.hasprev = st.tick == tickcount - 1 && lerpable(st.prev, st.cur);
     st.tick = tickcount;
   }
   return st;
@@ -2114,12 +2147,28 @@ function lerpattach(childmat, parent) {
 }
 // The world matrix of a tick state, or of the state between two ticks.
 function shotmatrix(out, from, to, a) {
-  quat.slerp(lerpquat, from.rot, to.rot, a);
-  vec3.lerp(lerpscale, from.scale, to.scale, a);
   lerppos[0] = from.x + (to.x - from.x) * a;
   lerppos[1] = from.y + (to.y - from.y) * a;
   lerppos[2] = from.z + (to.z - from.z) * a;
-  return mat4.fromRotationTranslationScale(out, lerpquat, lerppos, lerpscale);
+  if (!rigidpair(from, to)) {
+    for (var i = 0; i < 12; i++) {
+      out[i] = from.m[i] + (to.m[i] - from.m[i]) * a;
+    }
+    out[12] = lerppos[0];
+    out[13] = lerppos[1];
+    out[14] = lerppos[2];
+    out[15] = 1;
+    return out;
+  }
+  quat.slerp(lerpquat, from.rot, to.rot, a);
+  vec3.lerp(lerpscale, from.scale, to.scale, a);
+  mat4.fromRotationTranslationScale(out, lerpquat, lerppos, lerpscale);
+  if (to.mirrored) {
+    out[8] = -out[8];
+    out[9] = -out[9];
+    out[10] = -out[10];
+  }
+  return out;
 }
 // Fills drawmat with the model matrix to draw rad with, relative to the drawn camera.
 function placemodel(rad) {
@@ -4790,10 +4839,10 @@ function carselect() {
   bg3D.x = 0;
   bg3D.y = 14;
   bg3D.z = -99;
-  bg3D.mat = mat4.create();
+  bg3D.mat = resetmat(bg3D.mat);
   mat4.rotate(bg3D.mat, bg3D.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
   for (var i = 0; i < 9; i++) {
-    smoke[i].mat = mat4.create();
+    smoke[i].mat = resetmat(smoke[i].mat);
     smoke[i].x += smoke[i].sx;
     if (smoke[i].sx < 0 && smoke[i].x < -60) {
       smoke[i].sx = 0.05 + fxrandom() * 0.3;
@@ -4955,7 +5004,7 @@ function carselect() {
     wlx[sel[0]][0] * carobj[sel[0]].mat[2] -
     wly[sel[0]][0] * carobj[sel[0]].mat[6] +
     wlz[sel[0]][0] * carobj[sel[0]].mat[10];
-  whl[sel[0]][0].mat = mat4.create();
+  whl[sel[0]][0].mat = resetmat(whl[sel[0]][0].mat);
   for (var k = 0; k < 12; k++) {
     whl[sel[0]][0].mat[k] = carobj[sel[0]].mat[k];
   }
@@ -4980,7 +5029,7 @@ function carselect() {
     wlx[sel[0]][0] * carobj[sel[0]].mat[2] -
     wly[sel[0]][0] * carobj[sel[0]].mat[6] +
     wlz[sel[0]][0] * carobj[sel[0]].mat[10];
-  whl[sel[0]][1].mat = mat4.create();
+  whl[sel[0]][1].mat = resetmat(whl[sel[0]][1].mat);
   for (var k = 0; k < 12; k++) {
     whl[sel[0]][1].mat[k] = carobj[sel[0]].mat[k];
   }
@@ -5005,7 +5054,7 @@ function carselect() {
     wlx[sel[0]][1] * carobj[sel[0]].mat[2] -
     wly[sel[0]][1] * carobj[sel[0]].mat[6] +
     wlz[sel[0]][1] * carobj[sel[0]].mat[10];
-  whl[sel[0]][2].mat = mat4.create();
+  whl[sel[0]][2].mat = resetmat(whl[sel[0]][2].mat);
   for (var k = 0; k < 12; k++) {
     whl[sel[0]][2].mat[k] = carobj[sel[0]].mat[k];
   }
@@ -5030,7 +5079,7 @@ function carselect() {
     wlx[sel[0]][1] * carobj[sel[0]].mat[2] -
     wly[sel[0]][1] * carobj[sel[0]].mat[6] +
     wlz[sel[0]][1] * carobj[sel[0]].mat[10];
-  whl[sel[0]][3].mat = mat4.create();
+  whl[sel[0]][3].mat = resetmat(whl[sel[0]][3].mat);
   for (var k = 0; k < 12; k++) {
     whl[sel[0]][3].mat[k] = carobj[sel[0]].mat[k];
   }
@@ -5165,7 +5214,7 @@ function stageselect() {
   if (chkflk >= 5) {
     chkflk = 0;
   }
-  bgst.mat = mat4.create();
+  bgst.mat = resetmat(bgst.mat);
   mat4.rotate(bgst.mat, bgst.mat, camxz * (Math.PI / 180), [0, -1, 0]);
   mat4.rotate(bgst.mat, bgst.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
   bgst.mat[0] *= aspect * 0.5625;
@@ -5249,7 +5298,7 @@ function unlockedcar() {
       wlx[sel[0]][0] * carobj[sel[0]].mat[2] -
       wly[sel[0]][0] * carobj[sel[0]].mat[6] +
       wlz[sel[0]][0] * carobj[sel[0]].mat[10];
-    whl[sel[0]][0].mat = mat4.create();
+    whl[sel[0]][0].mat = resetmat(whl[sel[0]][0].mat);
     for (var k = 0; k < 12; k++) {
       whl[sel[0]][0].mat[k] = carobj[sel[0]].mat[k];
     }
@@ -5274,7 +5323,7 @@ function unlockedcar() {
       wlx[sel[0]][0] * carobj[sel[0]].mat[2] -
       wly[sel[0]][0] * carobj[sel[0]].mat[6] +
       wlz[sel[0]][0] * carobj[sel[0]].mat[10];
-    whl[sel[0]][1].mat = mat4.create();
+    whl[sel[0]][1].mat = resetmat(whl[sel[0]][1].mat);
     for (var k = 0; k < 12; k++) {
       whl[sel[0]][1].mat[k] = carobj[sel[0]].mat[k];
     }
@@ -5299,7 +5348,7 @@ function unlockedcar() {
       wlx[sel[0]][1] * carobj[sel[0]].mat[2] -
       wly[sel[0]][1] * carobj[sel[0]].mat[6] +
       wlz[sel[0]][1] * carobj[sel[0]].mat[10];
-    whl[sel[0]][2].mat = mat4.create();
+    whl[sel[0]][2].mat = resetmat(whl[sel[0]][2].mat);
     for (var k = 0; k < 12; k++) {
       whl[sel[0]][2].mat[k] = carobj[sel[0]].mat[k];
     }
@@ -5324,7 +5373,7 @@ function unlockedcar() {
       wlx[sel[0]][1] * carobj[sel[0]].mat[2] -
       wly[sel[0]][1] * carobj[sel[0]].mat[6] +
       wlz[sel[0]][1] * carobj[sel[0]].mat[10];
-    whl[sel[0]][3].mat = mat4.create();
+    whl[sel[0]][3].mat = resetmat(whl[sel[0]][3].mat);
     for (var k = 0; k < 12; k++) {
       whl[sel[0]][3].mat[k] = carobj[sel[0]].mat[k];
     }
@@ -5334,7 +5383,7 @@ function unlockedcar() {
       -90 * (Math.PI / 180),
       [0, 1, 0],
     );
-    bgst.mat = mat4.create();
+    bgst.mat = resetmat(bgst.mat);
     mat4.rotate(bgst.mat, bgst.mat, camxz * (Math.PI / 180), [0, -1, 0]);
     mat4.rotate(bgst.mat, bgst.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
     bgst.mat[0] *= aspect * 0.5625;
@@ -5550,6 +5599,9 @@ function render(now) {
       gl.depthFunc(gl.LEQUAL);
       drawrad3D(shad[sel[0]]);
       for (var w = 0; w < 4; w++) {
+        lerpattach(whl[sel[0]][w].mat, carobj[sel[0]]);
+      }
+      for (var w = 0; w < 4; w++) {
         var k = 0;
         if (w >= 2) {
           k = 1;
@@ -5626,6 +5678,9 @@ function render(now) {
       drawparticle(bgst);
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
+      for (var w = 0; w < 4; w++) {
+        lerpattach(whl[sel[0]][w].mat, carobj[sel[0]]);
+      }
       for (var w = 0; w < 4; w++) {
         var k = 0;
         if (w >= 2) {
