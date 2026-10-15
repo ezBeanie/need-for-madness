@@ -7,10 +7,11 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "golden:update": "UPDATE_GOLDEN=1 vitest run test/golden",
-    "format": "prettier --write needmad.js test",
-    "format:check": "prettier --check needmad.js test"
+    "format": "prettier --write needmad.js test vitest.config.js",
+    "format:check": "prettier --check needmad.js test vitest.config.js"
   },
   "devDependencies": {
+    "acorn": "8.14.0",
     "prettier": "3.3.3",
     "vite": "5.4.21",
     "vitest": "2.1.9"
