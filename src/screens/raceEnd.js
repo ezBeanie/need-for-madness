@@ -323,11 +323,11 @@ const leaveRaceEnd = () => {
     loading.loaded = 500;
     loading.total = 2458;
     loading.stanza = 2;
-    menu.skipIntro = true;
+    menu.continuesToCarSelect = true;
     game.phase = PHASE.loading;
   } else {
     menu.animation = 0;
-    menu.skipIntro = true;
+    menu.continuesToCarSelect = true;
     game.phase = PHASE.mainMenu;
   }
 };

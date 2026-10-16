@@ -169,7 +169,7 @@ const choose = (entry) => {
     }
     leaveMenu();
     menu.animation = 0;
-    menu.skipIntro = false;
+    menu.continuesToCarSelect = false;
     game.phase = PHASE.mainMenu;
   }
 };

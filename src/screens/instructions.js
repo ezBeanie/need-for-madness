@@ -9,17 +9,18 @@ import { pointer } from "../input/pointer.js";
 import { backdropHue, cssRgb, hslToRgb } from "../ui/color.js";
 import { images } from "../ui/images.js";
 import {
-  drawInsano,
-  fillSpeechBubble,
+  BUBBLE_INK,
+  drawTalkingInsano,
   insano,
   insanoScale,
-  talkWhileTicksLast,
+  startBubbleText,
+  writeBubbleLines,
 } from "../ui/insano.js";
 import { rd, view } from "../ui/view.js";
 import {
   BUTTON,
   anyButtonHeld,
-  drawButton,
+  drawBlueButton,
   drawMenuBackground,
   drawMeter,
 } from "../ui/widgets.js";
@@ -45,8 +46,6 @@ export const PAGE = {
 // how long Insano talks after the page changes
 export const TALK_TICKS = 250;
 
-const INK = "#002748";
-
 export function gameinstructions() {
   rd.fillStyle = "#000000";
   rd.fillRect(0, 0, view.width, view.height);
@@ -56,13 +55,7 @@ export function gameinstructions() {
     drawPausedRaceBackdrop();
   }
   const scale = insanoScale();
-  talkWhileTicksLast();
-  drawInsano(scale, 260 * view.scaleY);
-  const top = 260 * view.scaleY - 200 * scale;
-  rd.fillStyle = "#FFFFFF";
-  rd.globalAlpha = 0.7;
-  fillSpeechBubble(200 * scale, top, 1060 * scale, 570 * scale, 20 * scale);
-  rd.globalAlpha = 1;
+  const top = drawTalkingInsano(scale);
   // a page left by a click draws the page it leads to in the same frame
   PAGES.forEach((drawPage, page) => {
     if (instructions.page == page) {
@@ -98,51 +91,6 @@ const close = () => {
   }
 };
 
-const startText = (scale) => {
-  rd.letterSpacing = "0px";
-  rd.font = "" + 30 * scale + "px verd";
-  rd.textBaseline = "middle";
-  rd.textAlign = "left";
-  rd.fillStyle = INK;
-};
-
-// Lines of text in the bubble, each at its height below the bubble's top.
-const writeLines = (scale, top, lines) => {
-  lines.forEach(([y, text]) => {
-    rd.fillText(text, 200 * scale + 20 * scale, top + y * scale);
-  });
-};
-
-const blueButton = ({
-  id,
-  x,
-  y,
-  width,
-  layout,
-  text,
-  fontSize,
-  image,
-  pulsing,
-}) =>
-  drawButton({
-    id,
-    x,
-    y,
-    width,
-    height: 60,
-    faceTop: "#0075D8",
-    faceBottom: "#299DFF",
-    shadowTop: "#003F74",
-    shadowBottom: "#006AC4",
-    layout,
-    text,
-    fontSize,
-    textOpacity: 0.9,
-    image,
-    imageOpacity: image === null ? 0 : 0.9,
-    pulsing,
-  });
-
 const confirmed = () => {
   if (confirm.state == CONFIRM.pressed) {
     confirm.state = CONFIRM.used;
@@ -157,7 +105,7 @@ const drawWelcome = (scale, top) => {
   rd.font = "" + 30 * scale + "px junk";
   rd.textBaseline = "middle";
   rd.textAlign = "left";
-  rd.fillStyle = INK;
+  rd.fillStyle = BUBBLE_INK;
   rd.fillText(
     "Welcome to  Need for Madness !",
     left + 20 * scale,
@@ -165,7 +113,7 @@ const drawWelcome = (scale, top) => {
   );
   rd.letterSpacing = "0px";
   rd.font = "" + 30 * scale + "px verd";
-  writeLines(scale, top, [
+  writeBubbleLines(scale, top, [
     [76, "In this game there are two ways to complete a stage."],
     [116, "One is by racing and finishing in first place, the other is by"],
     [156, "wasting and crashing all the other cars in the stage!"],
@@ -193,8 +141,8 @@ const drawWelcome = (scale, top) => {
 };
 
 const drawPowerUp = (scale, top) => {
-  startText(scale);
-  writeLines(scale, top, [
+  startBubbleText(scale);
+  writeBubbleLines(scale, top, [
     [56, "Whether you are racing or wasting, you will need to"],
     [96, "power up your car."],
     [136, "The more powered your car is, the stronger and faster"],
@@ -234,8 +182,8 @@ const drawPowerUp = (scale, top) => {
 
 const drawArrowAndHoop = (scale, top) => {
   const left = 200 * scale;
-  startText(scale);
-  writeLines(scale, top, [
+  startBubbleText(scale);
+  writeBubbleLines(scale, top, [
     [36, "When wasting cars, to help you find the other cars in the stage,"],
     [76, "press the 'Arrow Target' button to toggle the guidance arrow"],
     [116, "from pointing to the track to pointing to the cars."],
@@ -260,7 +208,7 @@ const drawArrowAndHoop = (scale, top) => {
 
 const drawControls = (scale, top) => {
   const left = 200 * scale;
-  startText(scale);
+  startBubbleText(scale);
   const picture = (image, x, y, width, height) => {
     rd.drawImage(
       image,
@@ -271,7 +219,7 @@ const drawControls = (scale, top) => {
     );
   };
   if (!isPhone) {
-    writeLines(scale, top, [
+    writeBubbleLines(scale, top, [
       [36, "Drive your car using the keyboard arrows and also use the"],
       [76, "keyboard arrows when your car is in the air to perform stunts."],
       [116, "Press Spacebar for Handbrakes to drift while turning and make"],
@@ -286,7 +234,7 @@ const drawControls = (scale, top) => {
       top + 420 * scale,
     );
   } else {
-    writeLines(scale, top, [
+    writeBubbleLines(scale, top, [
       [36, "Drive your car using the arrow buttons on the screen."],
       [76, "Also use them when your car is in the air to perform stunts."],
     ]);
@@ -294,7 +242,7 @@ const drawControls = (scale, top) => {
     picture(images.touchControls[1], 300, 110, 128, 128);
     picture(images.touchControls[3], 550, 110, 128, 128);
     picture(images.touchControls[2], 700, 110, 128, 128);
-    writeLines(scale, top, [
+    writeBubbleLines(scale, top, [
       [290, "Press the Handbrake button while turning to drift and make"],
       [330, "quick 180 turns."],
     ]);
@@ -303,8 +251,8 @@ const drawControls = (scale, top) => {
 };
 
 const drawCoach = (scale, top) => {
-  startText(scale);
-  writeLines(scale, top, [
+  startBubbleText(scale);
+  writeBubbleLines(scale, top, [
     [36, "And finally my name is Coach Insano, and I am here to help you"],
     [76, "and guide you to become the greatest Need for Madness driver"],
     [116, "you can be!"],
@@ -314,7 +262,7 @@ const drawCoach = (scale, top) => {
   // phones have no keyboard
   if (
     !isPhone &&
-    blueButton({
+    drawBlueButton({
       id: 1,
       x: 240 * scale + 285 * view.scale,
       y: top + 250 * scale,
@@ -330,7 +278,7 @@ const drawCoach = (scale, top) => {
     instructions.page = PAGE.keyboard;
   }
   if (
-    blueButton({
+    drawBlueButton({
       id: 2,
       x: 240 * scale + 140 * view.scale,
       y: top + (isPhone ? 300 : 350) * scale,
@@ -348,8 +296,8 @@ const drawCoach = (scale, top) => {
 };
 
 const drawKeyboard = (scale, top) => {
-  startText(scale);
-  writeLines(scale, top, [
+  startBubbleText(scale);
+  writeBubbleLines(scale, top, [
     [36, "Additional Keyboard Controls"],
     [116, "[X] & [Z] to look back while driving."],
     [156, "[Q] to toggle the guidance arrow by Keyboard."],
@@ -367,8 +315,8 @@ const drawKeyboard = (scale, top) => {
 };
 
 const drawCredits = (scale, top) => {
-  startText(scale);
-  writeLines(scale, top, [
+  startBubbleText(scale);
+  writeBubbleLines(scale, top, [
     [36, "Music Credits"],
     [76, "Interface and Game Menus: Neon Nox - Shift"],
     [116, "Stage 1: Alpharisc - Video Disco"],
@@ -381,7 +329,7 @@ const drawCredits = (scale, top) => {
     [396, "Stage 8: Jeremiah Kane - Street Warriors (feat. FAVORIT89)"],
   ]);
   if (
-    blueButton({
+    drawBlueButton({
       id: 1,
       x: 1170 * scale - 75 * view.scale,
       y: top + 430 * scale,
@@ -403,8 +351,8 @@ const drawCredits = (scale, top) => {
 };
 
 const drawMoreCredits = (scale, top) => {
-  startText(scale);
-  writeLines(scale, top, [
+  startBubbleText(scale);
+  writeBubbleLines(scale, top, [
     [36, "Music Credits"],
     [76, "Stage 9: DEADLIFE - We Are One & The Same"],
     [116, "Stage 10: Wice - Star Fighter"],
@@ -438,7 +386,7 @@ const drawNavigation = (scale, top) => {
   const y = top + 560 * scale - 65 * view.scale;
   if (instructions.page > PAGE.welcome) {
     if (
-      blueButton({
+      drawBlueButton({
         id: 4,
         x: 240 * scale + 75 * view.scale,
         y,
@@ -458,7 +406,7 @@ const drawNavigation = (scale, top) => {
   }
   if (instructions.page < PAGE.coach) {
     if (
-      blueButton({
+      drawBlueButton({
         id: 3,
         x: 1280 * scale - 70 * scale - 100 * view.scale,
         y,
@@ -480,7 +428,7 @@ const drawNavigation = (scale, top) => {
   }
   if (instructions.page == PAGE.coach) {
     if (
-      blueButton({
+      drawBlueButton({
         id: 3,
         x: 1280 * scale - 70 * scale - 110 * view.scale,
         y,

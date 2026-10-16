@@ -21,7 +21,6 @@ import {
   loadSound,
   pauseMenuMusic,
   pauseMusic,
-  playMenuMusic,
   playStageMusic,
   resumeMusic,
   startEngine,
@@ -77,6 +76,7 @@ import {
 } from "./render/models.js";
 import { canvas2D, rd, view } from "./ui/view.js";
 import { camera } from "./render/camera.js";
+import { lookForGamepads, pollGamepads } from "./input/gamepad.js";
 import {
   carModels,
   carShadows,
@@ -107,7 +107,7 @@ import {
   inishinter,
 } from "./ui/hud.js";
 import { SHOWCASE, menu, showcase } from "./screens/menuState.js";
-import { gameinstructions, instructions } from "./screens/instructions.js";
+import { gameinstructions } from "./screens/instructions.js";
 import { loading } from "./loading/progress.js";
 import { game, MAX_CARS, PHASE } from "./core/state.js";
 import { tick } from "./core/tick.js";
@@ -148,6 +148,7 @@ import {
   insanoScale,
   pickTalkingPicture,
 } from "./ui/insano.js";
+import { drawmain, resetgame } from "./screens/mainMenu.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 function cartextures() {
@@ -1347,11 +1348,11 @@ function loaddata() {
     drawloading();
     if (loading.step == 0) {
       if (loading.stanza == 0) {
-        menu.skipIntro = false;
+        menu.continuesToCarSelect = false;
         game.carTypes[0] = loadSetting("carsel");
         if (game.carTypes[0] == -1) {
           game.carTypes[0] = 5;
-          menu.skipIntro = true;
+          menu.continuesToCarSelect = true;
           raceEvents.onautocorrect = 2;
         }
         game.unlocked = loadSetting("unlocked");
@@ -4060,10 +4061,6 @@ var mutedmusic = false;
 var omutemusic = false;
 var omutegame = false;
 var cntspark = 0;
-var gpat = 4;
-var gotgamepad = false;
-var gpress = [0, 0, 0, 0, 0, 0, 0, 0];
-var gparr = false;
 // The game logic runs in fixed ticks, independent of the display refresh rate (see tick.js).
 var tickms = 35;
 // Caps how much time is caught up after a stall, e.g. when the tab was in the background.
@@ -4092,148 +4089,7 @@ function gameloop() {
     canvas2D.style.height = "" + view.height + "px";
     gl.viewport(0, 0, view.width, view.height);
   }
-  if (gotgamepad) {
-    var gp = navigator.getGamepads();
-    for (var i = 0; i < gp.length; i++) {
-      if (gpress[i] == null) {
-        gpress[i] = 0;
-      }
-      if (gp[i] != null) {
-        if (gp[i].connected) {
-          var aleft = false,
-            aright = false;
-          if (Math.abs(gp[i].axes[0]) > 0.1) {
-            if (gp[i].axes[0] < 0) {
-              aleft = true;
-            } else {
-              aright = true;
-            }
-          }
-          if (Math.abs(gp[i].axes[2]) > 0.1) {
-            if (gp[i].axes[2] < 0) {
-              aleft = true;
-            } else {
-              aright = true;
-            }
-          }
-          var aup = false,
-            adown = false;
-          if (Math.abs(gp[i].axes[1]) > 0.1) {
-            if (gp[i].axes[1] < 0) {
-              aup = true;
-            } else {
-              adown = true;
-            }
-          }
-          if (Math.abs(gp[i].axes[3]) > 0.1) {
-            if (gp[i].axes[3] < 0) {
-              aup = true;
-            } else {
-              adown = true;
-            }
-          }
-          if (gp[i].buttons[0].pressed || aup) {
-            racers[game.player].u.up = true;
-            gpress[i] = 10;
-          } else {
-            if (gpress[i]) {
-              racers[game.player].u.up = false;
-            }
-          }
-          if (gp[i].buttons[2].pressed || adown) {
-            racers[game.player].u.down = true;
-            gpress[i] = 10;
-          } else {
-            if (gpress[i]) {
-              racers[game.player].u.down = false;
-            }
-          }
-          if (gp[i].buttons[3].pressed || aleft) {
-            racers[game.player].u.left = true;
-            gpress[i] = 10;
-          } else {
-            if (gpress[i]) {
-              racers[game.player].u.left = false;
-            }
-          }
-          if (gp[i].buttons[1].pressed || aright) {
-            racers[game.player].u.right = true;
-            gpress[i] = 10;
-          } else {
-            if (gpress[i]) {
-              racers[game.player].u.right = false;
-            }
-          }
-          if (gp[i].buttons.length > 7) {
-            if (gp[i].buttons[4].pressed) {
-              if (!gparr) {
-                if (racers[game.player].u.arrace) {
-                  racers[game.player].u.arrace = false;
-                } else {
-                  racers[game.player].u.arrace = true;
-                }
-                gparr = true;
-              }
-              gpress[i] = 10;
-            } else {
-              if (gpress[i]) {
-                gparr = false;
-              }
-            }
-            if (gp[i].buttons[5].pressed) {
-              racers[game.player].u.handb = true;
-              gpress[i] = 10;
-            } else {
-              if (gpress[i]) {
-                racers[game.player].u.handb = false;
-              }
-            }
-            if (gp[i].buttons[6].pressed) {
-              camera.lookBack = -1;
-              gpress[i] = 10;
-            } else {
-              if (gpress[i]) {
-                if (camera.lookBack == -1) {
-                  camera.lookBack = 0;
-                }
-              }
-            }
-            if (gp[i].buttons[7].pressed) {
-              camera.lookBack = 1;
-              gpress[i] = 10;
-            } else {
-              if (gpress[i]) {
-                if (camera.lookBack == 1) {
-                  camera.lookBack = 0;
-                }
-              }
-            }
-          }
-          var penter = false;
-          for (var k = 8; k < gp[i].buttons.length; k++) {
-            if (gp[i].buttons[k].pressed) {
-              penter = true;
-            }
-          }
-          if (penter) {
-            if (!confirm.state) {
-              confirm.state = CONFIRM.pressed;
-            }
-            gpress[i] = 10;
-          } else {
-            if (gpress[i]) {
-              if (confirm.state) {
-                confirm.state = CONFIRM.released;
-              }
-            }
-          }
-          if (gpress[i]) {
-            gpress[i]--;
-          }
-        }
-      }
-    }
-  }
+  pollGamepads();
   if (game.phase == PHASE.loading) {
     loaddata();
   }
@@ -4541,372 +4397,7 @@ function enginsnd() {
   }
   coolDownCarSounds();
 }
-function gotGamepads() {
-  if (gpat) {
-    gotgamepad = false;
-    try {
-      if (supportsGamepads()) {
-        var gp = navigator.getGamepads();
-        for (var i = 0; i < gp.length; i++) {
-          if (gp[i] != null) {
-            gotgamepad = true;
-          }
-        }
-      }
-    } catch (e) {}
-    gpat--;
-  }
-}
-function supportsGamepads() {
-  return !!navigator.getGamepads;
-}
 
-var cnf = 0;
-var cnl = 0;
-var relit = "RE-LIT";
-function drawmain() {
-  rd.fillStyle = "#000000";
-  rd.fillRect(0, 0, view.width, view.height);
-  if (menu.animation == 0) {
-    playMenuMusic();
-    cnf = 0;
-  }
-  var lefy = (view.width - 1280 * view.scaleY) / 2;
-  var rigy = lefy + 1280 * view.scaleY;
-  rd.drawImage(images.menuBackground, lefy, 0, 1280 * view.scaleY, view.height);
-  var ixs = lefy + 270 * view.scaleY,
-    iys = 39 * view.scaleY;
-  var rxs = lefy + 520 * view.scaleY,
-    rys = 43 * view.scaleY;
-  var fm = view.scaleY;
-  var mrg = 1;
-  if (lefy < 0) {
-    lefy = 0;
-    rigy = view.width;
-    fm = view.scale;
-    mrg = 1 - 0.9752 * ((1 - view.scaleX / view.scaleY) / 0.4375);
-  }
-  var ixe = lefy + 40 * fm,
-    iye = 186 * fm;
-  var rxe = rigy - 520 * fm,
-    rye = 102 * fm;
-  var ixf = (ixs * (25 - cnf) + ixe * cnf) / 25;
-  var iyf = (iys * (25 - cnf) + iye * cnf) / 25;
-  var rxf = (rxs * (25 - cnf) + rxe * cnf) / 25;
-  var ryf = (rys * (25 - cnf) + rye * cnf) / 25;
-  if (cnf != 0) {
-    rd.globalAlpha = 0.2 + (cnf / 25) * 0.8;
-    rd.drawImage(
-      images.insano[0],
-      ixf,
-      iyf,
-      274 * view.scaleY,
-      341 * view.scaleY,
-    );
-    rd.drawImage(images.rider, rxf, ryf, 386 * view.scaleY, 191 * view.scaleY);
-    rd.globalAlpha = 1;
-  }
-  if (cnf == 25) {
-    rd.drawImage(
-      images.logo,
-      lefy + 282 * fm * mrg,
-      view.height - 464 * fm,
-      905 * fm,
-      258 * fm,
-    );
-    rd.letterSpacing = "1px";
-    rd.font = "" + 24 * (view.scaleY + view.scaleX) + "px junk";
-    rd.textAlign = "left";
-    rd.textBaseline = "middle";
-    var grd = rd.createLinearGradient(
-      lefy + 282 * fm * mrg + 760 * fm,
-      view.height - 464 * fm + 150 * fm,
-      lefy + 282 * fm * mrg + 760 * fm + rd.measureText(relit).width,
-      view.height - 464 * fm + 150 * fm,
-    );
-    grd.addColorStop(0, "#FF5B01");
-    grd.addColorStop(1, "#FF9601");
-    rd.fillStyle = grd;
-    rd.fillText(
-      relit,
-      lefy + 282 * fm * mrg + 760 * fm,
-      view.height - 464 * fm + 150 * fm,
-    );
-    if (cnl == 0) {
-      if (relit == "RE-LI T") {
-        relit = "RE-LIT";
-      }
-      if (relit == "RE-LIt") {
-        relit = "RE-LI T";
-      }
-      if (relit == "RE-Lit") {
-        relit = "RE-LIt";
-      }
-      if (relit == "RE-lit") {
-        relit = "RE-Lit";
-      }
-      if (relit == "Re-lit") {
-        relit = "RE-lit";
-      }
-      if (relit == "re-lit") {
-        relit = "Re-lit";
-      }
-      if (relit == "re-liT") {
-        relit = "re-lit";
-      }
-      if (relit == "re-lIT") {
-        relit = "re-liT";
-      }
-      if (relit == "re-LIT") {
-        relit = "re-lIT";
-      }
-      if (relit == "rE-LIT") {
-        relit = "re-LIT";
-      }
-      if (relit == "RE-LIT") {
-        relit = "rE-LIT";
-      }
-      cnl = 1;
-    } else {
-      cnl--;
-    }
-  }
-  if (!menu.skipIntro) {
-    if (
-      drawButton({
-        id: 1,
-        x: rigy - 230 * view.scale,
-        y: 720 * view.scaleY - 200 * view.scale,
-        width: 360,
-        height: 60,
-        faceTop: "#FF1301",
-        faceBottom: "#FF8A01",
-        shadowTop: "#780800",
-        shadowBottom: "#784100",
-        layout: BUTTON.textOnly,
-        text: "Game Instructions",
-        fontSize: 19,
-        textOpacity: 0.9,
-        image: null,
-        imageOpacity: 0,
-        pulsing: false,
-      })
-    ) {
-      pauseMenuMusic();
-      instructions.fromMainMenu = true;
-      instructions.page = 0;
-      insano.talkTicks = 250;
-      game.phase = PHASE.instructions;
-    }
-    if (
-      drawButton({
-        id: 3,
-        x: rigy - 150 * view.scale,
-        y: 720 * view.scaleY - 100 * view.scale,
-        width: 200,
-        height: 70,
-        faceTop: "#FF3D01",
-        faceBottom: "#FFB401",
-        shadowTop: "#771D01",
-        shadowBottom: "#775401",
-        layout: BUTTON.textThenImage,
-        text: "PLAY ",
-        fontSize: 25,
-        textOpacity: 0.9,
-        image: images.buttons[1],
-        imageOpacity: 0.9,
-        pulsing: true,
-      })
-    ) {
-      menu.animation = 29;
-      cnf = 25;
-    }
-    if (menu.animation < 29) {
-      if (confirm.state == CONFIRM.pressed) {
-        menu.animation = 29;
-        confirm.state = CONFIRM.used;
-      }
-    }
-    if (menu.resetOffered) {
-      if (
-        drawButton({
-          id: 7,
-          x: rigy - 450 * view.scale,
-          y: 720 * view.scaleY - 90 * view.scale,
-          width: 280,
-          height: 60,
-          faceTop: "#FF1301",
-          faceBottom: "#FF8A01",
-          shadowTop: "#780800",
-          shadowBottom: "#784100",
-          layout: BUTTON.textOnly,
-          text: "Reset Game",
-          fontSize: 22,
-          textOpacity: 0.9,
-          image: null,
-          imageOpacity: 0,
-          pulsing: 0,
-        })
-      ) {
-        insano.talkTicks = 250;
-        game.phase = PHASE.resetQuestion;
-      }
-    }
-    drawMusicToggle();
-  }
-  if (!menu.skipIntro) {
-    if (menu.animation != 15) {
-      menu.animation++;
-    } else {
-      if (cnf != 25) {
-        cnf++;
-      }
-    }
-  } else {
-    if (cnf != 25) {
-      cnf++;
-      menu.animation = 1;
-    } else {
-      menu.animation++;
-    }
-  }
-  if (menu.animation >= 30) {
-    rd.globalAlpha = (menu.animation - 50) / 10;
-    rd.fillStyle = "#000000";
-    rd.fillRect(0, 0, view.width, view.height);
-    rd.globalAlpha = 1;
-    if (menu.animation == 40) {
-      gotGamepads();
-      game.player = 0;
-      racers[game.player].u.left = false;
-      racers[game.player].u.right = false;
-      racers[game.player].u.up = false;
-      racers[game.player].u.down = false;
-      racers[game.player].u.handb = false;
-      showcase.motion = SHOWCASE.droppingIn;
-      showcase.dropSpeed = 0;
-      showcase.height = 100;
-      scene.tint = [0, -0.05, 0.6];
-      var fogc = [0, 0, 0];
-      var lvx = 0,
-        lvy = 0.866,
-        lvz = -0.5;
-      var fogdist = 10700;
-      setWorld(scene.tint, fogc, lvx, lvy, lvz, fogdist);
-      game.phase = PHASE.carSelect;
-    }
-  }
-  pulseButtons();
-}
-
-function resetgame() {
-  rd.fillStyle = "#000000";
-  rd.fillRect(0, 0, view.width, view.height);
-  var lefy = (view.width - 1280 * view.scaleY) / 2;
-  rd.drawImage(images.menuBackground, lefy, 0, 1280 * view.scaleY, view.height);
-  var fm = insanoScale();
-  if (blink.on) {
-    blink.on = false;
-  } else {
-    blink.on = true;
-  }
-  if (insano.talkTicks > 0) {
-    if (blink.on) {
-      pickTalkingPicture();
-    }
-    insano.talkTicks--;
-  } else {
-    insano.picture = 2;
-  }
-  rd.drawImage(
-    images.insano[insano.picture],
-    10 * fm,
-    260 * view.scaleY,
-    274 * fm * 0.7,
-    341 * fm * 0.7,
-  );
-  var topo = 260 * view.scaleY - 200 * fm;
-  rd.fillStyle = "#FFFFFF";
-  rd.globalAlpha = 0.7;
-  fillSpeechBubble(200 * fm, topo, 1060 * fm, 570 * fm, 20 * fm);
-  rd.globalAlpha = 1;
-  rd.letterSpacing = "0px";
-  rd.font = "" + 30 * fm + "px verd";
-  rd.textBaseline = "middle";
-  rd.textAlign = "left";
-  rd.fillStyle = "#002748";
-  rd.fillText("Reset your Game", 200 * fm + 20 * fm, topo + 36 * fm);
-  rd.fillText(
-    "Would you like to play the game from the beginning again?",
-    200 * fm + 20 * fm,
-    topo + 76 * fm,
-  );
-  rd.fillText(
-    "Note! This will delete all your saved unlocked cars and stages",
-    200 * fm + 20 * fm,
-    topo + 156 * fm,
-  );
-  rd.fillText(
-    "and will start the game like it was never played before!",
-    200 * fm + 20 * fm,
-    topo + 196 * fm,
-  );
-  rd.fillText(
-    "Challenge yourself again and reset the game now?",
-    200 * fm + 20 * fm,
-    topo + 276 * fm,
-  );
-  if (
-    drawButton({
-      id: 3,
-      x: 730 * fm,
-      y: topo + 410 * fm - 65 * view.scale,
-      width: 500,
-      height: 60,
-      faceTop: "#0075D8",
-      faceBottom: "#299DFF",
-      shadowTop: "#003F74",
-      shadowBottom: "#006AC4",
-      layout: BUTTON.textOnly,
-      text: "Yes!  Reset my game now",
-      fontSize: 20,
-      textOpacity: 0.9,
-      image: null,
-      imageOpacity: 0,
-      pulsing: false,
-    })
-  ) {
-    game.unlocked = 1;
-    track.stage = game.unlocked;
-    saveSetting("unlocked", game.unlocked);
-    game.carTypes[0] = 5;
-    saveSetting("carsel", game.carTypes[0]);
-    menu.resetOffered = false;
-    game.phase = PHASE.mainMenu;
-  }
-  if (
-    drawButton({
-      id: 4,
-      x: 240 * fm + 100 * view.scale,
-      y: topo + 560 * fm - 65 * view.scale,
-      width: 200,
-      height: 60,
-      faceTop: "#0075D8",
-      faceBottom: "#299DFF",
-      shadowTop: "#003F74",
-      shadowBottom: "#006AC4",
-      layout: BUTTON.imageThenText,
-      text: " Cancel",
-      fontSize: 18,
-      textOpacity: 0.9,
-      image: images.buttons[3],
-      imageOpacity: 0.9,
-      pulsing: false,
-    })
-  ) {
-    game.phase = PHASE.mainMenu;
-  }
-}
 function drawloading() {
   var grd = rd.createLinearGradient(0, 0, view.width, view.height);
   grd.addColorStop(0, "#A87700");
@@ -6392,7 +5883,7 @@ function onKey(action, pressed) {
 installKeyboard(onKey);
 
 function init() {
-  gotGamepads();
+  lookForGamepads();
   document.getElementById("loading").style.visibility = "hidden";
   requestAnimationFrame(mainloop);
 }

@@ -79,3 +79,33 @@ export const fillSpeechBubble = (x, y, width, height, cornerRadius) => {
   rd.quadraticCurveTo(x, y, x + cornerRadius, y);
   rd.fill();
 };
+
+// Insano talking, with the big speech bubble of the instructions and the reset question.
+// Returns the bubble's top.
+export const drawTalkingInsano = (scale) => {
+  talkWhileTicksLast();
+  drawInsano(scale, 260 * view.scaleY);
+  const top = 260 * view.scaleY - 200 * scale;
+  rd.fillStyle = "#FFFFFF";
+  rd.globalAlpha = 0.7;
+  fillSpeechBubble(200 * scale, top, 1060 * scale, 570 * scale, 20 * scale);
+  rd.globalAlpha = 1;
+  return top;
+};
+
+export const BUBBLE_INK = "#002748";
+
+export const startBubbleText = (scale) => {
+  rd.letterSpacing = "0px";
+  rd.font = "" + 30 * scale + "px verd";
+  rd.textBaseline = "middle";
+  rd.textAlign = "left";
+  rd.fillStyle = BUBBLE_INK;
+};
+
+// Lines of text in the bubble, each at its height below the bubble's top.
+export const writeBubbleLines = (scale, top, lines) => {
+  lines.forEach(([y, text]) => {
+    rd.fillText(text, 200 * scale + 20 * scale, top + y * scale);
+  });
+};

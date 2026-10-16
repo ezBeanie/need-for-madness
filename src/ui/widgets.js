@@ -464,3 +464,34 @@ export const drawMenuBackground = () => {
   const left = (view.width - 1280 * view.scaleY) / 2;
   rd.drawImage(images.menuBackground, left, 0, 1280 * view.scaleY, view.height);
 };
+
+// The blue buttons of Insano's pages.
+export const drawBlueButton = ({
+  id,
+  x,
+  y,
+  width,
+  layout,
+  text,
+  fontSize,
+  image,
+  pulsing,
+}) =>
+  drawButton({
+    id,
+    x,
+    y,
+    width,
+    height: 60,
+    faceTop: "#0075D8",
+    faceBottom: "#299DFF",
+    shadowTop: "#003F74",
+    shadowBottom: "#006AC4",
+    layout,
+    text,
+    fontSize,
+    textOpacity: 0.9,
+    image,
+    imageOpacity: image === null ? 0 : 0.9,
+    pulsing,
+  });
