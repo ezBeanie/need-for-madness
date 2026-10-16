@@ -10,7 +10,8 @@ import {
 import { cosDeg, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
 import { PHASE, game } from "../core/state.js";
-import { applyracecars, nextRaceSize, startflash } from "../game.js";
+import { startflash } from "../game.js";
+import { applyracecars, nextRaceSize } from "../race/field.js";
 import {
   AFTER_LOAD,
   STAGE_LOAD,

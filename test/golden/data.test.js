@@ -66,20 +66,21 @@ const WHEEL_KEYS = ["wlx", "wly", "wlz", "wlh", "shadadj"];
 describe("car data matches the golden master", () => {
   test("stats, wheels and models of all cars", async () => {
     const { ctx } = await startRace({ stage: 1, car: 5 });
+    const { carStats } = await import("../../src/data/carStats.js");
     const stats = Object.fromEntries(
-      Object.entries(ctx.carStats).filter(
+      Object.entries(carStats).filter(
         ([key, v]) => Array.isArray(v) && !WHEEL_KEYS.includes(key),
       ),
     );
     const cars = Array.from({ length: CAR_COUNT }, (_, i) => {
       const model = ctx.carModels[i];
       return {
-        name: ctx.carStats.names[i],
+        name: carStats.names[i],
         wheels: {
-          x: ctx.carStats.wlx[i],
-          y: ctx.carStats.wly[i],
-          z: ctx.carStats.wlz[i],
-          h: ctx.carStats.wlh[i],
+          x: carStats.wlx[i],
+          y: carStats.wly[i],
+          z: carStats.wlz[i],
+          h: carStats.wlh[i],
         },
         model: {
           bounds: [model.bx, model.by, model.bz],

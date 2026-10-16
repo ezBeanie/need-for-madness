@@ -7,7 +7,7 @@ import {
   pathType,
   valueOf,
 } from "../data/stageFormat.js";
-import { setupcars } from "../game.js";
+import { setupcars } from "../race/field.js";
 import { effects } from "../race/effects.js";
 import { pieceModels, pieces, track } from "../race/track.js";
 import {
