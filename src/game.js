@@ -2190,15 +2190,7 @@ function loadstage() {
             }
           }
         }
-        track.insih();
-        if (stanza != 1) {
-          sortcars(track.stage);
-        }
-        inishinter();
-        inishcars();
-        inishcontrol();
-        inishmad();
-        inishrecord();
+        setupcars();
         skytexture(skyc, fogc, cloudsc, cloudtyp);
         for (var i = 0; i < 3; i++) {
           scene.glassColor[i] = Math.round((skyc[i] * 2 + 70) / 3);
@@ -3818,8 +3810,29 @@ function inishcars() {
     car[i].fcnt = 0;
   }
 }
+// Chooses the opponents and puts all cars on the start grid.
+function setupcars() {
+  track.insih();
+  if (stanza != 1) {
+    sortcars(track.stage);
+  }
+  inishinter();
+  inishcars();
+  inishcontrol();
+  inishmad();
+  inishrecord();
+}
+// The field size can change in the stage select after the stage loaded with its cars.
+var sortedcars = 0;
+function applyracecars() {
+  if (sortedcars != game.raceCars) {
+    setupcars();
+    gamecartextures();
+  }
+}
 function sortcars(stage) {
   game.carCount = game.raceCars;
+  sortedcars = game.raceCars;
   for (var i = 1; i < game.carCount; i++) {
     game.carTypes[i] = -1;
   }
@@ -9322,6 +9335,7 @@ function drawstageselect() {
             true,
           )
         ) {
+          applyracecars();
           game.mode = 1;
           pauseMenuMusic();
           startflash();
@@ -9379,11 +9393,13 @@ function drawstageselect() {
           true,
         )
       ) {
+        applyracecars();
         game.mode = 0;
         pauseMenuMusic();
         startflash();
       }
       if (enter == 1) {
+        applyracecars();
         game.mode = 0;
         pauseMenuMusic();
         startflash();

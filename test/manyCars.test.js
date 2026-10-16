@@ -73,3 +73,19 @@ test("C in the stage select cycles the field size and remembers it", async () =>
   expect(sizes).toEqual([10, 15, 20, 7]);
   expect(stored.get("racecars")).toBe("7");
 });
+
+test("a field size chosen in the stage select applies to the race started from it", async () => {
+  const { ctx, key, step, stepUntil } = await openStageSelect({
+    stage: 3,
+    car: 5,
+  });
+  key(67, true);
+  key(67, false);
+  step();
+  key(13, true);
+  step();
+  key(13, false);
+  stepUntil(() => ctx.game.phase === PHASE.race, 10, "race");
+  expect(ctx.game.carCount).toBe(10);
+  expect(ctx.car[9].z).toBeGreaterThan(ctx.car[6].z);
+});
