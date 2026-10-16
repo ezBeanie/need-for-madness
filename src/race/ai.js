@@ -88,6 +88,14 @@ export const resetPursuit = (c) => {
   Object.assign(ai[c], newPursuit());
 };
 
+// The last car is the stage's special opponent (see sortcars).
+const boss = () => game.carCount - 1;
+
+// The race position of car c on the scale of the original seven cars (0 first, 6 last),
+// for the formulas tuned to it.
+const rank = (c) =>
+  game.carCount > 1 ? (track.pos[c] * 6) / (game.carCount - 1) : 0;
+
 // the path point index each AI car heads for first (set per stage)
 const fpnt = [0, 0, 0, 0, 0];
 
@@ -139,14 +147,14 @@ export function inishcontrol() {
     if (track.stage == 7) {
       ai[c].hold = 10;
     }
-    if (track.stage == 8 && c != 6) {
+    if (track.stage == 8 && c != boss()) {
       ai[c].hold = 50;
     }
     if (track.stage == 10) {
       ai[c].hold = 60;
     }
     if (track.stage == 11) {
-      if (c != 6) {
+      if (c != boss()) {
         ai[c].hold = 35;
         ai[c].revstart = 25;
       } else {
@@ -155,7 +163,7 @@ export function inishcontrol() {
       ai[c].statusque = 0;
     }
     if (track.stage == 12) {
-      if (c != 6) {
+      if (c != boss()) {
         ai[c].hold = Math.floor(20 + 10 * random.sim());
         ai[c].revstart = Math.floor(10 + 10 * random.sim());
       } else {
@@ -166,7 +174,7 @@ export function inishcontrol() {
     if (track.stage == 14) {
       ai[c].hold = 30;
       ai[c].statusque = 0;
-      if (c != 6) {
+      if (c != boss()) {
         ai[c].revstart = 1;
       }
     }
@@ -197,7 +205,7 @@ export function control() {
           if (ai[c].stcnt > ai[c].statusque) {
             var tstage = track.stage;
             ai[c].acuracy = Math.floor(
-              (7 - track.pos[c]) * track.pos[game.player] * (6 - tstage * 2),
+              (7 - rank(c)) * rank(game.player) * (6 - tstage * 2),
             );
             if (ai[c].acuracy < 0) {
               ai[c].acuracy = 0;
@@ -228,9 +236,9 @@ export function control() {
               mw = 0.5;
             }
             ai[c].upwait = Math.floor(
-              (track.pos[game.player] - track.pos[c]) *
-                (track.pos[game.player] - track.pos[c]) *
-                (track.pos[game.player] - track.pos[c]) *
+              (rank(game.player) - rank(c)) *
+                (rank(game.player) - rank(c)) *
+                (rank(game.player) - rank(c)) *
                 mw,
             );
             if (ai[c].upwait > 80) {
@@ -648,7 +656,7 @@ export function control() {
               if (track.stage == 4) {
                 powtoattack = 20;
               }
-              if (track.stage == 5 && c != 6) {
+              if (track.stage == 5 && c != boss()) {
                 powtoattack = 40;
               }
               if ((track.stage == 2 || track.stage == 13) && cn == 16) {
@@ -817,7 +825,7 @@ export function control() {
                     if (bim < 1) {
                       bim = 1;
                     }
-                    var atp = ((track.pos[c] + 1) * (7 - track.pos[i])) / bim;
+                    var atp = ((rank(c) + 1) * (7 - rank(i))) / bim;
                     if (game.mode != 1) {
                       if (track.stage != 17) {
                         if (atp > 0.7) {
@@ -840,13 +848,13 @@ export function control() {
                           atp *= 0.5;
                         }
                       }
-                      if (track.stage == 5 && c == 6) {
+                      if (track.stage == 5 && c == boss()) {
                         atp *= 0.7;
                       }
                       if (track.stage == 6) {
                         atp = 0;
                       }
-                      if (track.stage == 7 && c == 6 && i == game.player) {
+                      if (track.stage == 7 && c == boss() && i == game.player) {
                         atp *= 1.5;
                       }
                       if (track.stage == 8) {
@@ -972,7 +980,7 @@ export function control() {
                         ai[c].aim = random.sim() * 1.5;
                       }
                       if (track.stage == 7) {
-                        if (c != 6) {
+                        if (c != boss()) {
                           if (
                             random.sim() > random.sim() ||
                             track.pos[game.player] < track.pos[c]
@@ -1073,7 +1081,7 @@ export function control() {
                       car[c].z / 10,
                       car[i].z / 10,
                     ) < 300 &&
-                    random.sim() > 0.6 - track.pos[c] / 10
+                    random.sim() > 0.6 - rank(c) / 10
                   ) {
                     ai[c].clrnce = 0;
                     ai[c].acuracy = 0;

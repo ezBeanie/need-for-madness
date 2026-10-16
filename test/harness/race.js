@@ -28,6 +28,7 @@ export const openStageSelect = async ({
   seed = 1,
   fxSeed,
   unlocked = 17,
+  cars = 7,
 }) => {
   const game = await loadGame({ seed, fxSeed });
   const { ctx, stepUntil } = game;
@@ -36,6 +37,7 @@ export const openStageSelect = async ({
   // Same state the car select screen leaves behind before "PLAY".
   ctx.game.carTypes[0] = car;
   ctx.game.unlocked = unlocked;
+  ctx.game.raceCars = cars;
   ctx.track.stage = stage;
   ctx.stageloadtyp = 0;
   ctx.stageload = 0;
@@ -51,8 +53,16 @@ export const startRace = async ({
   seed = 1,
   fxSeed,
   unlocked = 17,
+  cars,
 }) => {
-  const game = await openStageSelect({ stage, car, seed, fxSeed, unlocked });
+  const game = await openStageSelect({
+    stage,
+    car,
+    seed,
+    fxSeed,
+    unlocked,
+    cars,
+  });
   const { ctx, stepUntil } = game;
   ctx.game.mode = 0;
   ctx.startflash();

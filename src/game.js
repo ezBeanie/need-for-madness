@@ -3781,8 +3781,12 @@ function checkstat() {
     }
   }
 }
-var xstart = [0, -35, 35, 0, -35, 35, 0];
-var zstart = [-76, -38, -38, 0, 38, 38, 76];
+// The start grid: one car in the middle, then two side by side, and so on backwards.
+var xstart = Array.from({ length: MAX_CARS }, (_, i) => [0, -35, 35][i % 3]);
+var zstart = Array.from(
+  { length: MAX_CARS },
+  (_, i) => -76 + 38 * (Math.floor(i / 3) * 2 + (i % 3 == 0 ? 0 : 1)),
+);
 function inishcars() {
   for (var i = 0; i < game.carCount; i++) {
     car[i].typ = game.carTypes[i];
@@ -3811,8 +3815,8 @@ function inishcars() {
   }
 }
 function sortcars(stage) {
-  game.carCount = 7;
-  for (var i = 1; i < 7; i++) {
+  game.carCount = game.raceCars;
+  for (var i = 1; i < game.carCount; i++) {
     game.carTypes[i] = -1;
   }
   var oks = [];
@@ -3823,7 +3827,9 @@ function sortcars(stage) {
   }
   for (var i = 1; i < ti; i++) {
     oks[i] = false;
+    var tries = 0;
     while (!oks[i]) {
+      tries++;
       game.carTypes[i] = Math.floor(random.sim() * (28 + 10 * (stage / 17)));
       if (game.carTypes[i] >= 19) {
         game.carTypes[i] -= 19;
@@ -3832,9 +3838,12 @@ function sortcars(stage) {
         game.carTypes[i] = 18;
       }
       oks[i] = true;
-      for (var j = 0; j < game.carCount; j++) {
-        if (i != j && game.carTypes[i] == game.carTypes[j]) {
-          oks[i] = false;
+      // the original seven always differ; beyond them there are not enough car types
+      if (i < 7 || tries < 50) {
+        for (var j = 0; j < game.carCount; j++) {
+          if (i != j && game.carTypes[i] == game.carTypes[j]) {
+            oks[i] = false;
+          }
         }
       }
       if ((stage != 15 && stage != 16) || game.unlocked != stage) {
@@ -3957,7 +3966,7 @@ function sortcars(stage) {
   }
   if (stage == 6 && game.unlocked == 6) {
     var okcar = false;
-    for (var i = 0; i < 7; i++) {
+    for (var i = 0; i < game.carCount; i++) {
       if (game.carTypes[i] == 11) {
         okcar = true;
       }
@@ -3976,7 +3985,7 @@ function sortcars(stage) {
   }
   if (stage == 12 && game.unlocked == 12) {
     var okcar = false;
-    for (var i = 0; i < 7; i++) {
+    for (var i = 0; i < game.carCount; i++) {
       if (game.carTypes[i] == 14) {
         okcar = true;
       }
@@ -3991,7 +4000,7 @@ function sortcars(stage) {
   }
   if (stage == 16 && game.unlocked == 16) {
     var okcar = false;
-    for (var i = 0; i < 7; i++) {
+    for (var i = 0; i < game.carCount; i++) {
       if (game.carTypes[i] == 16) {
         okcar = true;
       }

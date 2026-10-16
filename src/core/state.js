@@ -36,6 +36,8 @@ export const game = {
   // car type of every car in the race, the player's at index 0
   carTypes: Array(MAX_CARS).fill(0),
   carCount: 7,
+  // how many cars a championship race has, chosen in the stage select
+  raceCars: 7,
   // index of the car the player controls (another one in replays)
   player: 0,
 };
