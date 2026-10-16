@@ -28,12 +28,22 @@ export const createTaskQueue = () => {
 };
 
 // A plain object with every gl.* name the game uses; a Proxy would cost a trap per access.
+// A WebGL constant's value: the same for a name wherever and in whichever order the game
+// uses it (FNV-1a hash), so the recorded WebGL calls do not change when code moves.
+const constantFor = (name) => {
+  let hash = 0x811c9dc5;
+  for (const char of name) {
+    hash = Math.imul(hash ^ char.charCodeAt(0), 0x01000193) >>> 0;
+  }
+  return 0x10000 + hash;
+};
+
 const createWebGLStub = (glNames) => {
   const handle = () => ({});
   const gl = {};
   for (const name of glNames) {
     if (/^[A-Z0-9_]+$/.test(name)) {
-      gl[name] = 0x1000 + Object.keys(gl).length;
+      gl[name] = constantFor(name);
     } else {
       gl[name] = name.startsWith("create") ? handle : noop;
     }
