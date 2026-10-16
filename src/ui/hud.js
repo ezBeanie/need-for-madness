@@ -22,6 +22,7 @@ import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { pointer } from "../input/pointer.js";
+import { COUNTDOWN } from "../race/countdown.js";
 import { raceEvents } from "../race/events.js";
 import { car, racers } from "../race/racers.js";
 import {
@@ -481,7 +482,7 @@ export function inishinter() {
   messageImportant = false;
   powerHintTicks = 0;
   raceEvents.stuntTicks = 45;
-  raceEvents.countdown = 186;
+  raceEvents.countdown = COUNTDOWN.start;
   countdownNumber = 0;
   countdownNumberTicks = 0;
   raceEvents.checkpointsAnnounced = 0;

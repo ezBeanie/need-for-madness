@@ -99,10 +99,17 @@ export const loadGame = async ({
     "../../src/render/interpolation.js"
   );
   Object.assign(ctx, { drawMatrix, placeModel });
-  // what the pause menu's "Instant Replay" calls, for the flows
-  const { rewindreplay } = await import("../../src/race/recording.js");
-  if (!("rewindreplay" in ctx)) {
-    Object.assign(ctx, { rewindreplay });
+  // state the tests steer that game.js no longer imports itself, from the game's own
+  // module instances
+  const shared = {
+    ...(await import("../../src/race/recording.js")),
+    ...(await import("../../src/input/confirm.js")),
+    ...(await import("../../src/input/pointer.js")),
+  };
+  for (const name of ["rewindreplay", "confirm", "pointer"]) {
+    if (!(name in ctx)) {
+      ctx[name] = shared[name];
+    }
   }
 
   let frame = 0;
