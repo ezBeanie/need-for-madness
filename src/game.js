@@ -53,10 +53,19 @@ import {
   placeModel,
   resetMatrix,
 } from "./render/interpolation.js";
+import {
+  canvas3D,
+  drawModel,
+  drawParticle,
+  gl,
+  isPowerOf2,
+  loadTextureGroup,
+  setWorld,
+  textureGroups,
+} from "./render/renderer.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 var camrs, pyclos, pnext, pback, onycl;
-var programInfo = [];
 function newparticle() {
   return {
     loaded: 0,
@@ -732,40 +741,6 @@ function loadrad3D(file, rad) {
     }
   };
   rawFile.send(null);
-}
-function texturegroup() {
-  return { loaded: 0, texture: null };
-}
-function loadtgroup(tgrp, n) {
-  tgrp.texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, tgrp.texture);
-  var pixel = new Uint8Array([150, 150, 150, 255]);
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    0,
-    gl.RGBA,
-    1,
-    1,
-    0,
-    gl.RGBA,
-    gl.UNSIGNED_BYTE,
-    pixel,
-  );
-  var image = new Image();
-  image.onload = function () {
-    tgrp.texture = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, tgrp.texture);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
-    if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-      gl.generateMipmap(gl.TEXTURE_2D);
-    } else {
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    }
-    tgrp.loaded = 1;
-  };
-  image.src = "data/3D/textures/g" + n + ".png";
 }
 function cartextures() {
   for (var i = 0; i < 19; i++) {
@@ -1963,401 +1938,6 @@ function colorbgstforend() {
   gl.bindBuffer(gl.ARRAY_BUFFER, bgst.cbuf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
 }
-function drawparticle(rad) {
-  if (rad.loaded) {
-    if (rad.alpha) {
-      gl.enable(gl.BLEND);
-      gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    }
-    placeModel(rad);
-    gl.bindBuffer(gl.ARRAY_BUFFER, rad.vbuf);
-    gl.vertexAttribPointer(
-      programInfo[0].attribLocations.vertexPosition,
-      3,
-      gl.FLOAT,
-      false,
-      0,
-      0,
-    );
-    gl.enableVertexAttribArray(programInfo[0].attribLocations.vertexPosition);
-    gl.bindBuffer(gl.ARRAY_BUFFER, rad.cbuf);
-    gl.vertexAttribPointer(
-      programInfo[0].attribLocations.vertexColor,
-      4,
-      gl.FLOAT,
-      false,
-      0,
-      0,
-    );
-    gl.enableVertexAttribArray(programInfo[0].attribLocations.vertexColor);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, rad.ibuf);
-    gl.useProgram(programInfo[0].program);
-    gl.uniformMatrix4fv(
-      programInfo[0].uniformLocations.projectionMatrix,
-      false,
-      drawCamera.projection,
-    );
-    gl.uniformMatrix4fv(
-      programInfo[0].uniformLocations.modelViewMatrix,
-      false,
-      drawMatrix,
-    );
-    gl.drawElements(gl.TRIANGLES, rad.ni, gl.UNSIGNED_SHORT, 0);
-    if (rad.alpha) {
-      gl.disable(gl.BLEND);
-    }
-  }
-}
-function drawrad3D(rad) {
-  if (rad.loaded) {
-    if (rad.alpha) {
-      gl.enable(gl.BLEND);
-      if (rad.alpha == 1) {
-        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-      }
-      if (rad.alpha == 2) {
-        gl.blendFunc(gl.ONE_MINUS_CONSTANT_COLOR, gl.DST_COLOR);
-      }
-      if (rad.alpha == 3) {
-        gl.blendFunc(gl.ONE_MINUS_CONSTANT_COLOR, gl.DST_ALPHA);
-      }
-    }
-    var pro = 1;
-    if (rad.ownshade) {
-      pro = 2;
-    }
-    if (rad.ownlight) {
-      pro = 3;
-      if (rad.ownshade) {
-        pro = 4;
-      }
-    }
-    placeModel(rad);
-    var normalMatrix = null;
-    if (pro == 1) {
-      normalMatrix = mat4.create();
-      mat4.invert(normalMatrix, drawMatrix);
-      mat4.transpose(normalMatrix, normalMatrix);
-    }
-    gl.bindBuffer(gl.ARRAY_BUFFER, rad.vbuf);
-    gl.vertexAttribPointer(
-      programInfo[pro].attribLocations.vertexPosition,
-      3,
-      gl.FLOAT,
-      false,
-      0,
-      0,
-    );
-    gl.enableVertexAttribArray(programInfo[pro].attribLocations.vertexPosition);
-    if (pro == 1) {
-      gl.bindBuffer(gl.ARRAY_BUFFER, rad.nbuf);
-      gl.vertexAttribPointer(
-        programInfo[pro].attribLocations.vertexNormal,
-        3,
-        gl.FLOAT,
-        false,
-        0,
-        0,
-      );
-      gl.enableVertexAttribArray(programInfo[pro].attribLocations.vertexNormal);
-    }
-    gl.bindBuffer(gl.ARRAY_BUFFER, rad.tbuf);
-    gl.vertexAttribPointer(
-      programInfo[pro].attribLocations.textureCoord,
-      2,
-      gl.FLOAT,
-      false,
-      0,
-      0,
-    );
-    gl.enableVertexAttribArray(programInfo[pro].attribLocations.textureCoord);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, rad.ibuf);
-    gl.useProgram(programInfo[pro].program);
-    gl.uniformMatrix4fv(
-      programInfo[pro].uniformLocations.projectionMatrix,
-      false,
-      drawCamera.projection,
-    );
-    gl.uniformMatrix4fv(
-      programInfo[pro].uniformLocations.modelViewMatrix,
-      false,
-      drawMatrix,
-    );
-    if (pro == 1) {
-      gl.uniformMatrix4fv(
-        programInfo[pro].uniformLocations.normalMatrix,
-        false,
-        normalMatrix,
-      );
-    }
-    gl.activeTexture(gl.TEXTURE0);
-    if (!rad.tgn) {
-      if (rad.nt == 1) {
-        gl.bindTexture(gl.TEXTURE_2D, rad.texture);
-      } else {
-        gl.bindTexture(gl.TEXTURE_2D, rad.texture[rad.ont]);
-      }
-    } else {
-      gl.bindTexture(gl.TEXTURE_2D, tgroup[rad.tgn - 1].texture);
-    }
-    gl.uniform1i(programInfo[pro].uniformLocations.uSampler, 0);
-    gl.drawElements(gl.TRIANGLES, rad.ni, gl.UNSIGNED_SHORT, 0);
-    if (rad.alpha) {
-      gl.disable(gl.BLEND);
-    }
-  }
-}
-function setworld(snap, fogc, ldx, ldy, ldz, fogdist) {
-  var ambcol = [];
-  var defcol = [];
-  var owncol = [];
-  var litcol = [];
-  var fogcol = [];
-  for (var i = 0; i < 3; i++) {
-    ambcol[i] = 0.6 + snap[i] * 0.6;
-    ambcol[i] *= 0.76;
-    defcol[i] = 0.7 + snap[i] * 0.7;
-    defcol[i] *= 0.76;
-    owncol[i] = 1.2 + snap[i] * 1.2;
-    owncol[i] *= 0.76;
-    litcol[i] = 1.3 + snap[i] * 1.3;
-    litcol[i] *= 0.76;
-    fogcol[i] = fogc[i] / 255;
-    fogcol[i] = fogcol[i] + fogcol[i] * snap[i];
-    fogcol[i] *= 0.76;
-  }
-  var dirvec = [ldx, ldy, ldz];
-  var fogstart = 100;
-  var fogend = fogdist;
-  var vsSource = [];
-  var fsSource = [];
-  vsSource[0] = `attribute vec4 aVertexPosition; attribute vec4 aVertexColor; uniform mat4 uModelViewMatrix; uniform mat4 uProjectionMatrix; varying lowp vec4 vColor; varying vec3 v_posf; void main(void) { gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition; vColor = aVertexColor; v_posf = (uModelViewMatrix * aVertexPosition).xyz; }`;
-  fsSource[0] =
-    `precision mediump float; varying vec3 v_posf; varying lowp vec4 vColor; highp vec4 u_fogColor=vec4(` +
-    fogcol[0] +
-    `,` +
-    fogcol[1] +
-    `,` +
-    fogcol[2] +
-    `,1);highp float u_fogNear=` +
-    fogstart +
-    `.0;highp float u_fogFar=` +
-    fogend +
-    `.0; void main(void) { float abx=abs(v_posf.x); float aby=abs(v_posf.y); float abz=abs(v_posf.z); float fct=(abs(abx-abz)/(abx+abz)); float mav=((abx+abz)/(2.0-fct)); float fogDistance=((mav+(mav*(1.0-fct)*0.414))+(aby*0.5)); float fogAmount = smoothstep(u_fogNear, u_fogFar, fogDistance);gl_FragColor = mix(vColor, u_fogColor, fogAmount); }`;
-  vsSource[1] =
-    `attribute vec4 aVertexPosition; attribute vec3 aVertexNormal; attribute vec2 aTextureCoord; uniform mat4 uNormalMatrix; uniform mat4 uModelViewMatrix; uniform mat4 uProjectionMatrix; varying highp vec2 vTextureCoord; varying highp vec3 vLighting;varying vec3 v_posf; void main(void) { gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition; vTextureCoord = aTextureCoord; highp vec3 ambientLight = vec3(` +
-    ambcol[0] +
-    `,` +
-    ambcol[1] +
-    `,` +
-    ambcol[2] +
-    `); highp vec3 directionalLightColor = vec3(` +
-    defcol[0] +
-    `,` +
-    defcol[1] +
-    `,` +
-    defcol[2] +
-    `); highp vec3 directionalVector = normalize(vec3(` +
-    dirvec[0] +
-    `,` +
-    dirvec[1] +
-    `,` +
-    dirvec[2] +
-    `)); highp vec4 transformedNormal = uNormalMatrix * vec4(aVertexNormal, 1.0); highp float directional = max(dot(transformedNormal.xyz, directionalVector), 0.0); vLighting = ambientLight + (directionalLightColor * directional); v_posf = (uModelViewMatrix * aVertexPosition).xyz; }`;
-  fsSource[1] =
-    `precision mediump float;varying highp vec2 vTextureCoord; varying highp vec3 vLighting; varying vec3 v_posf;uniform sampler2D uSampler; highp vec4 u_fogColor=vec4(` +
-    fogcol[0] +
-    `,` +
-    fogcol[1] +
-    `,` +
-    fogcol[2] +
-    `,1);highp float u_fogNear=` +
-    fogstart +
-    `.0;highp float u_fogFar=` +
-    fogend +
-    `.0; void main(void) { highp vec4 texelColor = texture2D(uSampler, vTextureCoord); float abx=abs(v_posf.x); float aby=abs(v_posf.y); float abz=abs(v_posf.z); float fct=(abs(abx-abz)/(abx+abz)); float mav=((abx+abz)/(2.0-fct)); float fogDistance=((mav+(mav*(1.0-fct)*0.414))+(aby*0.5)); float fogAmount = smoothstep(u_fogNear, u_fogFar, fogDistance);highp vec4 color=vec4(texelColor.rgb * vLighting, texelColor.a); gl_FragColor = mix(color, u_fogColor, fogAmount); }`;
-  vsSource[2] =
-    `attribute vec4 aVertexPosition; attribute vec2 aTextureCoord; uniform mat4 uModelViewMatrix; uniform mat4 uProjectionMatrix; varying highp vec2 vTextureCoord; varying highp vec3 vLighting; varying vec3 v_posf;void main(void) { gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition; vTextureCoord = aTextureCoord; highp vec3 ambientLight=vec3(` +
-    owncol[0] +
-    `,` +
-    owncol[1] +
-    `,` +
-    owncol[2] +
-    `); vLighting = ambientLight; v_posf = (uModelViewMatrix * aVertexPosition).xyz; }`;
-  fsSource[2] =
-    `precision mediump float;varying highp vec2 vTextureCoord; varying highp vec3 vLighting; varying vec3 v_posf;uniform sampler2D uSampler; highp vec4 u_fogColor=vec4(` +
-    fogcol[0] +
-    `,` +
-    fogcol[1] +
-    `,` +
-    fogcol[2] +
-    `,1);highp float u_fogNear=` +
-    fogstart +
-    `.0;highp float u_fogFar=` +
-    fogend +
-    `.0; void main(void) { highp vec4 texelColor = texture2D(uSampler, vTextureCoord); float abx=abs(v_posf.x); float aby=abs(v_posf.y); float abz=abs(v_posf.z); float fct=(abs(abx-abz)/(abx+abz)); float mav=((abx+abz)/(2.0-fct)); float fogDistance=((mav+(mav*(1.0-fct)*0.414))+(aby*0.5)); float fogAmount = smoothstep(u_fogNear, u_fogFar, fogDistance);highp vec4 color=vec4(texelColor.rgb * vLighting, texelColor.a); gl_FragColor = mix(color, u_fogColor, fogAmount); }`;
-  vsSource[3] =
-    `attribute vec4 aVertexPosition; attribute vec2 aTextureCoord; uniform mat4 uModelViewMatrix; uniform mat4 uProjectionMatrix; varying highp vec2 vTextureCoord; varying highp vec3 vLighting; varying vec3 v_posf;void main(void) { gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition; vTextureCoord = aTextureCoord; highp vec3 ambientLight=vec3(` +
-    litcol[0] +
-    `,` +
-    litcol[1] +
-    `,` +
-    litcol[2] +
-    `); vLighting = ambientLight; v_posf = (uModelViewMatrix * aVertexPosition).xyz; }`;
-  fsSource[3] =
-    `precision mediump float;varying highp vec2 vTextureCoord; varying highp vec3 vLighting; varying vec3 v_posf;uniform sampler2D uSampler; highp vec4 u_fogColor=vec4(` +
-    fogcol[0] +
-    `,` +
-    fogcol[1] +
-    `,` +
-    fogcol[2] +
-    `,1);highp float u_fogNear=` +
-    fogstart +
-    `.0;highp float u_fogFar=` +
-    fogend +
-    `.0; void main(void) { highp vec4 texelColor = texture2D(uSampler, vTextureCoord); float abx=abs(v_posf.x); float aby=abs(v_posf.y); float abz=abs(v_posf.z); float fct=(abs(abx-abz)/(abx+abz)); float mav=((abx+abz)/(2.0-fct)); float fogDistance=((mav+(mav*(1.0-fct)*0.414))+(aby*0.5)); float fogAmount = smoothstep(u_fogNear, u_fogFar, fogDistance);highp vec4 color=vec4(texelColor.rgb * vLighting, texelColor.a); gl_FragColor = mix(color, u_fogColor, fogAmount); }`;
-  vsSource[4] = `attribute vec4 aVertexPosition; attribute vec2 aTextureCoord; uniform mat4 uModelViewMatrix; uniform mat4 uProjectionMatrix; varying highp vec2 vTextureCoord; varying highp vec3 vLighting; varying vec3 v_posf;void main(void) { gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition; vTextureCoord = aTextureCoord; highp vec3 ambientLight=vec3(1,1,1); vLighting = ambientLight; v_posf = (uModelViewMatrix * aVertexPosition).xyz; }`;
-  fsSource[4] =
-    `precision mediump float;varying highp vec2 vTextureCoord; varying highp vec3 vLighting; varying vec3 v_posf;uniform sampler2D uSampler; highp vec4 u_fogColor=vec4(` +
-    fogcol[0] +
-    `,` +
-    fogcol[1] +
-    `,` +
-    fogcol[2] +
-    `,1);highp float u_fogNear=` +
-    fogstart +
-    `.0;highp float u_fogFar=` +
-    fogend +
-    `.0; void main(void) { highp vec4 texelColor = texture2D(uSampler, vTextureCoord); float abx=abs(v_posf.x); float aby=abs(v_posf.y); float abz=abs(v_posf.z); float fct=(abs(abx-abz)/(abx+abz)); float mav=((abx+abz)/(2.0-fct)); float fogDistance=((mav+(mav*(1.0-fct)*0.414))+(aby*0.5)); float fogAmount = smoothstep(u_fogNear, u_fogFar, fogDistance);highp vec4 color=vec4(texelColor.rgb * vLighting, texelColor.a); gl_FragColor = mix(color, u_fogColor, fogAmount); }`;
-  var shaderProgram = [];
-  for (var i = 0; i < 5; i++) {
-    programInfo[i] = null;
-    shaderProgram[i] = initShaderProgram(gl, vsSource[i], fsSource[i]);
-  }
-  programInfo[0] = {
-    program: shaderProgram[0],
-    attribLocations: {
-      vertexPosition: gl.getAttribLocation(shaderProgram[0], "aVertexPosition"),
-      vertexColor: gl.getAttribLocation(shaderProgram[0], "aVertexColor"),
-    },
-    uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(
-        shaderProgram[0],
-        "uProjectionMatrix",
-      ),
-      modelViewMatrix: gl.getUniformLocation(
-        shaderProgram[0],
-        "uModelViewMatrix",
-      ),
-    },
-  };
-  programInfo[1] = {
-    program: shaderProgram[1],
-    attribLocations: {
-      vertexPosition: gl.getAttribLocation(shaderProgram[1], "aVertexPosition"),
-      vertexNormal: gl.getAttribLocation(shaderProgram[1], "aVertexNormal"),
-      textureCoord: gl.getAttribLocation(shaderProgram[1], "aTextureCoord"),
-    },
-    uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(
-        shaderProgram[1],
-        "uProjectionMatrix",
-      ),
-      modelViewMatrix: gl.getUniformLocation(
-        shaderProgram[1],
-        "uModelViewMatrix",
-      ),
-      normalMatrix: gl.getUniformLocation(shaderProgram[1], "uNormalMatrix"),
-      uSampler: gl.getUniformLocation(shaderProgram[1], "uSampler"),
-    },
-  };
-  programInfo[2] = {
-    program: shaderProgram[2],
-    attribLocations: {
-      vertexPosition: gl.getAttribLocation(shaderProgram[2], "aVertexPosition"),
-      textureCoord: gl.getAttribLocation(shaderProgram[2], "aTextureCoord"),
-    },
-    uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(
-        shaderProgram[2],
-        "uProjectionMatrix",
-      ),
-      modelViewMatrix: gl.getUniformLocation(
-        shaderProgram[2],
-        "uModelViewMatrix",
-      ),
-      uSampler: gl.getUniformLocation(shaderProgram[2], "uSampler"),
-    },
-  };
-  programInfo[3] = {
-    program: shaderProgram[3],
-    attribLocations: {
-      vertexPosition: gl.getAttribLocation(shaderProgram[3], "aVertexPosition"),
-      textureCoord: gl.getAttribLocation(shaderProgram[3], "aTextureCoord"),
-    },
-    uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(
-        shaderProgram[3],
-        "uProjectionMatrix",
-      ),
-      modelViewMatrix: gl.getUniformLocation(
-        shaderProgram[3],
-        "uModelViewMatrix",
-      ),
-      uSampler: gl.getUniformLocation(shaderProgram[3], "uSampler"),
-    },
-  };
-  programInfo[4] = {
-    program: shaderProgram[4],
-    attribLocations: {
-      vertexPosition: gl.getAttribLocation(shaderProgram[4], "aVertexPosition"),
-      textureCoord: gl.getAttribLocation(shaderProgram[4], "aTextureCoord"),
-    },
-    uniformLocations: {
-      projectionMatrix: gl.getUniformLocation(
-        shaderProgram[4],
-        "uProjectionMatrix",
-      ),
-      modelViewMatrix: gl.getUniformLocation(
-        shaderProgram[4],
-        "uModelViewMatrix",
-      ),
-      uSampler: gl.getUniformLocation(shaderProgram[4], "uSampler"),
-    },
-  };
-}
-function initShaderProgram(gl, vsSource, fsSource) {
-  const vertexShader = loadShader(gl, gl.VERTEX_SHADER, vsSource);
-  const fragmentShader = loadShader(gl, gl.FRAGMENT_SHADER, fsSource);
-  const shaderProgram = gl.createProgram();
-  gl.attachShader(shaderProgram, vertexShader);
-  gl.attachShader(shaderProgram, fragmentShader);
-  gl.linkProgram(shaderProgram);
-  if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
-    alert(
-      "Unable to initialize the shader program: " +
-        gl.getProgramInfoLog(shaderProgram),
-    );
-    return null;
-  }
-  return shaderProgram;
-}
-function loadShader(gl, type, source) {
-  const shader = gl.createShader(type);
-  gl.shaderSource(shader, source);
-  gl.compileShader(shader);
-  if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-    alert(
-      "An error occurred compiling the shaders: " + gl.getShaderInfoLog(shader),
-    );
-    gl.deleteShader(shader);
-    return null;
-  }
-  return shader;
-}
-function isPowerOf2(value) {
-  return (value & (value - 1)) == 0;
-}
 function getonscreen(m, rad) {
   var x = rad.mat[12];
   var y = rad.mat[13];
@@ -2520,10 +2100,6 @@ var timetube = newparticle();
 var build = [];
 for (var i = 0; i < 66; i++) {
   build[i] = newrad3D();
-}
-var tgroup = [];
-for (var i = 0; i < 20; i++) {
-  tgroup[i] = texturegroup();
 }
 var fixdisk = newrad3D();
 var elec = newrad3D();
@@ -2809,7 +2385,7 @@ function loaddata() {
           }
         }
         if (loadthis) {
-          loadtgroup(tgroup[i], i);
+          loadTextureGroup(textureGroups[i], i);
         }
       }
     }
@@ -2951,9 +2527,9 @@ function loaddata() {
       }
     }
     for (var i = 0; i < 19; i++) {
-      if (tgroup[i].loaded == 1) {
+      if (textureGroups[i].loaded == 1) {
         dataload += 44;
-        tgroup[i].loaded++;
+        textureGroups[i].loaded++;
       }
     }
     if (sprite.loaded && sprite.loaded == sprite.nt + 1) {
@@ -3353,9 +2929,9 @@ function loadstage() {
         nexp = 0;
         if (stageloadtyp != 2) {
           var opsnap = [-(snap[0] * 3), -(snap[1] * 3), -(snap[2] * 3)];
-          setworld(opsnap, fogc, 0, 1, 0, 10700);
+          setWorld(opsnap, fogc, 0, 1, 0, 10700);
         } else {
-          setworld(snap, fogc, lvx, lvy, lvz, fogdist);
+          setWorld(snap, fogc, lvx, lvy, lvz, fogdist);
         }
         stageload = 2;
       }
@@ -5038,10 +4614,10 @@ function render(now) {
       gl.clearDepth(1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.disable(gl.DEPTH_TEST);
-      drawrad3D(ground);
-      drawrad3D(skydom);
+      drawModel(ground);
+      drawModel(skydom);
       if (fase == 18) {
-        drawparticle(timetube);
+        drawParticle(timetube);
       }
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
@@ -5069,7 +4645,7 @@ function render(now) {
         build[obo[i].typ].y = obo[i].y;
         build[obo[i].typ].z = obo[i].z;
         build[obo[i].typ].mat = obo[i].mat;
-        drawrad3D(build[obo[i].typ]);
+        drawModel(build[obo[i].typ]);
         if (obo[i].typ == 29) {
           gl.disable(gl.CULL_FACE);
         }
@@ -5080,25 +4656,25 @@ function render(now) {
           spark[sprk[i].typ].y = sprk[i].y;
           spark[sprk[i].typ].z = sprk[i].z;
           spark[sprk[i].typ].mat = sprk[i].mat;
-          drawparticle(spark[sprk[i].typ]);
+          drawParticle(spark[sprk[i].typ]);
         }
       }
       for (var c = 0; c < ncars; c++) {
         if (shad[car[c].typ].intershad) {
           gl.disable(gl.DEPTH_TEST);
         }
-        drawrad3D(shad[car[c].typ]);
+        drawModel(shad[car[c].typ]);
         if (shad[car[c].typ].intershad) {
           gl.enable(gl.DEPTH_TEST);
         }
       }
       for (var i = 0; i < nchp; i++) {
-        drawrad3D(chip[i]);
+        drawModel(chip[i]);
       }
       if (oncheckpoint != -1) {
-        drawparticle(cptext);
+        drawParticle(cptext);
         if (onlastcheck) {
-          drawparticle(fntext);
+          drawParticle(fntext);
         }
       }
       for (var c = 0; c < ncars; c++) {
@@ -5115,20 +4691,20 @@ function render(now) {
             tiren[car[c].typ][k].y = whl[car[c].typ][w].y;
             tiren[car[c].typ][k].z = whl[car[c].typ][w].z;
             tiren[car[c].typ][k].mat = whl[car[c].typ][w].mat;
-            drawparticle(tiren[car[c].typ][k]);
+            drawParticle(tiren[car[c].typ][k]);
           } else {
             tirel[car[c].typ][k].x = whl[car[c].typ][w].x;
             tirel[car[c].typ][k].y = whl[car[c].typ][w].y;
             tirel[car[c].typ][k].z = whl[car[c].typ][w].z;
             tirel[car[c].typ][k].mat = whl[car[c].typ][w].mat;
-            drawparticle(tirel[car[c].typ][k]);
+            drawParticle(tirel[car[c].typ][k]);
           }
         }
         carobj[car[c].typ].x = car[c].x;
         carobj[car[c].typ].y = car[c].y;
         carobj[car[c].typ].z = car[c].z;
         carobj[car[c].typ].mat = car[c].mat;
-        drawrad3D(carobj[car[c].typ]);
+        drawModel(carobj[car[c].typ]);
         for (var w = 0; w < 4; w++) {
           var k = 0;
           if (w >= 2) {
@@ -5138,7 +4714,7 @@ function render(now) {
           tired[car[c].typ][k].y = whl[car[c].typ][w].y;
           tired[car[c].typ][k].z = whl[car[c].typ][w].z;
           tired[car[c].typ][k].mat = whl[car[c].typ][w].mat;
-          drawrad3D(tired[car[c].typ][k]);
+          drawModel(tired[car[c].typ][k]);
         }
       }
       if (onelec) {
@@ -5153,7 +4729,7 @@ function render(now) {
               random.fx() * 360 * (Math.PI / 180),
               [0, 0, 1],
             );
-            drawrad3D(elec);
+            drawModel(elec);
           }
         }
       }
@@ -5163,12 +4739,12 @@ function render(now) {
           fixdisk.y = obo[fi[i]].y;
           fixdisk.z = obo[fi[i]].z;
           fixdisk.mat = obo[fi[i]].mat;
-          drawrad3D(fixdisk);
+          drawModel(fixdisk);
         }
       }
       if (fase == 16) {
         for (var c = 0; c < ncars; c++) {
-          drawparticle(switchp[c]);
+          drawParticle(switchp[c]);
         }
       }
       for (var i = 0; i < nexp; i++) {
@@ -5178,7 +4754,7 @@ function render(now) {
           explode[exp[ewer[i]].typ].z = exp[ewer[i]].z;
           explode[exp[ewer[i]].typ].ont = Math.floor(exp[ewer[i]].ani);
           explode[exp[ewer[i]].typ].mat = exp[ewer[i]].mat;
-          drawrad3D(explode[exp[ewer[i]].typ]);
+          drawModel(explode[exp[ewer[i]].typ]);
         }
       }
       for (var k = 0; k < ndst; k++) {
@@ -5189,7 +4765,7 @@ function render(now) {
           sprite.z = dust[i].z;
           sprite.mat = dust[i].mat;
           sprite.texture = dtexture[dust[i].tx][Math.floor(dust[i].ta)];
-          drawrad3D(sprite);
+          drawModel(sprite);
         }
       }
       updateframe = false;
@@ -5202,7 +4778,7 @@ function render(now) {
       gl.clearDepth(1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.disable(gl.DEPTH_TEST);
-      drawrad3D(bg3D);
+      drawModel(bg3D);
       for (var i = 0; i < 9; i++) {
         sprite.x = smoke[i].x;
         sprite.y = smoke[i].y;
@@ -5213,11 +4789,11 @@ function render(now) {
           ui -= 3;
         }
         sprite.texture = stexture[ui];
-        drawrad3D(sprite);
+        drawModel(sprite);
       }
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
-      drawrad3D(shad[sel[0]]);
+      drawModel(shad[sel[0]]);
       for (var w = 0; w < 4; w++) {
         attachTo(whl[sel[0]][w].mat, carobj[sel[0]]);
       }
@@ -5230,9 +4806,9 @@ function render(now) {
         tiren[sel[0]][k].y = whl[sel[0]][w].y;
         tiren[sel[0]][k].z = whl[sel[0]][w].z;
         tiren[sel[0]][k].mat = whl[sel[0]][w].mat;
-        drawparticle(tiren[sel[0]][k]);
+        drawParticle(tiren[sel[0]][k]);
       }
-      drawrad3D(carobj[sel[0]]);
+      drawModel(carobj[sel[0]]);
       for (var w = 0; w < 4; w++) {
         var k = 0;
         if (w >= 2) {
@@ -5242,7 +4818,7 @@ function render(now) {
         tired[sel[0]][k].y = whl[sel[0]][w].y;
         tired[sel[0]][k].z = whl[sel[0]][w].z;
         tired[sel[0]][k].mat = whl[sel[0]][w].mat;
-        drawrad3D(tired[sel[0]][k]);
+        drawModel(tired[sel[0]][k]);
       }
       updateframe = false;
     }
@@ -5254,7 +4830,7 @@ function render(now) {
       gl.clearDepth(1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.disable(gl.DEPTH_TEST);
-      drawparticle(bgst);
+      drawParticle(bgst);
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
       if (!flkun) {
@@ -5275,14 +4851,14 @@ function render(now) {
           build[obo[i].typ].y = obo[i].y;
           build[obo[i].typ].z = obo[i].z;
           build[obo[i].typ].mat = obo[i].mat;
-          drawrad3D(build[obo[i].typ]);
+          drawModel(build[obo[i].typ]);
         }
         for (var i = 0; i < nf; i++) {
           fixdisk.x = obo[fi[i]].x;
           fixdisk.y = obo[fi[i]].y;
           fixdisk.z = obo[fi[i]].z;
           fixdisk.mat = obo[fi[i]].mat;
-          drawrad3D(fixdisk);
+          drawModel(fixdisk);
         }
       }
       updateframe = false;
@@ -5295,7 +4871,7 @@ function render(now) {
       gl.clearDepth(1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.disable(gl.DEPTH_TEST);
-      drawparticle(bgst);
+      drawParticle(bgst);
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
       for (var w = 0; w < 4; w++) {
@@ -5310,9 +4886,9 @@ function render(now) {
         tiren[sel[0]][k].y = whl[sel[0]][w].y;
         tiren[sel[0]][k].z = whl[sel[0]][w].z;
         tiren[sel[0]][k].mat = whl[sel[0]][w].mat;
-        drawparticle(tiren[sel[0]][k]);
+        drawParticle(tiren[sel[0]][k]);
       }
-      drawrad3D(carobj[sel[0]]);
+      drawModel(carobj[sel[0]]);
       for (var w = 0; w < 4; w++) {
         var k = 0;
         if (w >= 2) {
@@ -5322,7 +4898,7 @@ function render(now) {
         tired[sel[0]][k].y = whl[sel[0]][w].y;
         tired[sel[0]][k].z = whl[sel[0]][w].z;
         tired[sel[0]][k].mat = whl[sel[0]][w].mat;
-        drawrad3D(tired[sel[0]][k]);
+        drawModel(tired[sel[0]][k]);
       }
       updateframe = false;
     }
@@ -13180,7 +12756,7 @@ function drawmain() {
         lvy = 0.866,
         lvz = -0.5;
       var fogdist = 10700;
-      setworld(snap, fogc, lvx, lvy, lvz, fogdist);
+      setWorld(snap, fogc, lvx, lvy, lvz, fogdist);
       fase = 2;
     }
   }
@@ -17036,7 +16612,7 @@ function drawstageselect() {
           lvy = 0.866,
           lvz = -0.5;
         var fogdist = 10700;
-        setworld(snap, fogc, lvx, lvy, lvz, fogdist);
+        setWorld(snap, fogc, lvx, lvy, lvz, fogdist);
         fase = 2;
         rd.fillStyle = "#FFFFFF";
         rd.fillRect(0, 0, canw, canh);
@@ -17354,7 +16930,7 @@ function startflash() {
 }
 function aftersparkstart() {
   playStageMusic(cp.stage);
-  setworld(snap, fogc, lvx, lvy, lvz, fogdist);
+  setWorld(snap, fogc, lvx, lvy, lvz, fogdist);
   if (gamemode == 1) {
     for (var c = 1; c < ncars; c++) {
       if (!isEngineLoaded(sel[c])) {
@@ -19087,9 +18663,6 @@ function revtime() {
 }
 
 // Canvas, input and start-up (formerly the inline script of index.html).
-var canvas3D = document.querySelector("#canvas3D");
-var gl =
-  canvas3D.getContext("webgl") || canvas3D.getContext("experimental-webgl");
 
 var canvas2D = document.querySelector("#canvas2D");
 var rd = canvas2D.getContext("2d");

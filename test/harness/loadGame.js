@@ -1,5 +1,5 @@
 import { vi } from "vitest";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
@@ -32,11 +32,23 @@ const installGlMatrix = () => {
   );
 };
 
+const sourceFiles = (dir) =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+    entry.isDirectory()
+      ? sourceFiles(join(dir, entry.name))
+      : entry.name.endsWith(".js")
+        ? [join(dir, entry.name)]
+        : [],
+  );
+
+// every gl.* name the game uses, for the WebGL stub
 const glNames = [
   ...new Set(
-    readFileSync(join(PROJECT_ROOT, "src/game.js"), "utf8")
-      .match(/\bgl\.\w+/g)
-      .map((use) => use.slice(3)),
+    sourceFiles(join(PROJECT_ROOT, "src")).flatMap((file) =>
+      (readFileSync(file, "utf8").match(/\bgl\.\w+/g) ?? []).map((use) =>
+        use.slice(3),
+      ),
+    ),
   ),
 ];
 
