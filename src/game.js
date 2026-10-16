@@ -7,6 +7,16 @@ import {
 import cars from "./data/cars.json";
 import { parseModel } from "./data/modelFormat.js";
 import { readFloat, readInt } from "./data/values.js";
+import {
+  cosDeg as mcos,
+  distance as pyd,
+  distanceSquared as rpy,
+  distanceSquaredXZ as pyo,
+  distanceXZ as py,
+  rotateAxes as rotomat,
+  rotatePoints as rotate,
+  sinDeg as msin,
+} from "./core/math.js";
 
 // Separate sources: effects may consume randomness at any rate without changing the race.
 // eslint-disable-next-line no-restricted-properties
@@ -2551,36 +2561,6 @@ function getonscreen(m, rad) {
   ];
   return [(propoint[0] * 0.5 + 0.5) * canw, (propoint[1] * -0.5 + 0.5) * canh];
 }
-function getxyzscreen(m, x, y, z) {
-  x -= camx;
-  y -= camy;
-  z -= camz;
-  var w = x * m[0 * 4 + 3] + y * m[1 * 4 + 3] + z * m[2 * 4 + 3] + m[3 * 4 + 3];
-  var propoint = [
-    (x * m[0 * 4 + 0] + y * m[1 * 4 + 0] + z * m[2 * 4 + 0] + m[3 * 4 + 0]) / w,
-    (x * m[0 * 4 + 1] + y * m[1 * 4 + 1] + z * m[2 * 4 + 1] + m[3 * 4 + 1]) / w,
-    (x * m[0 * 4 + 2] + y * m[1 * 4 + 2] + z * m[2 * 4 + 2] + m[3 * 4 + 2]) / w,
-  ];
-  return [(propoint[0] * 0.5 + 0.5) * canw, (propoint[1] * -0.5 + 0.5) * canh];
-}
-var seed = 0;
-function mrandom() {
-  var rand = Math.sin(seed * (Math.PI / 1800)) * 1000;
-  seed++;
-  if (seed >= 3600) {
-    seed = 0;
-  }
-  rand = rand - Math.floor(rand);
-  return rand;
-}
-function py(x1, x2, z1, z2) {
-  return Math.sqrt((x1 - x2) * (x1 - x2) + (z1 - z2) * (z1 - z2));
-}
-function pyd(x1, x2, y1, y2, z1, z2) {
-  return Math.sqrt(
-    (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) + (z1 - z2) * (z1 - z2),
-  );
-}
 function strtsWith(line, sval) {
   return line.substring(0, sval.length) == sval;
 }
@@ -2618,36 +2598,6 @@ function getIntValue(func, strn, indx) {
     }
   } catch (err) {
     ret = -1;
-  }
-  return ret;
-}
-function getStringValue(func, strn, indx) {
-  var ret = "";
-  try {
-    var w = 0,
-      c = 0,
-      got = 0;
-    var o = "",
-      r = "";
-    w = func.length + 1;
-    while (w < strn.length && got != 2) {
-      o = "" + strn.charAt(w);
-      if (o == "," || o == ")") {
-        c++;
-        if (got == 1 || c > indx) {
-          got = 2;
-        }
-      } else {
-        if (c == indx) {
-          r += o;
-          got = 1;
-        }
-      }
-      w++;
-    }
-    ret = r;
-  } catch (err) {
-    ret = "";
   }
   return ret;
 }
@@ -12170,36 +12120,6 @@ function fixcar(c) {
   }
   gl.deleteFramebuffer(framebuffer);
   rad.loaded = 2;
-}
-function rotomat(xp, yp, an) {
-  if (an != 0) {
-    for (var i = 0; i < 3; i++) {
-      var xptmp = xp[i];
-      xp[i] = xp[i] * mcos(an) - yp[i] * msin(an);
-      yp[i] = xptmp * msin(an) + yp[i] * mcos(an);
-    }
-  }
-}
-function rotate(xp, yp, cx, cy, an, n) {
-  if (an != 0) {
-    for (var i = 0; i < n; i++) {
-      var xptmp = xp[i];
-      xp[i] = cx + ((xp[i] - cx) * mcos(an) - (yp[i] - cy) * msin(an));
-      yp[i] = cy + ((xptmp - cx) * msin(an) + (yp[i] - cy) * mcos(an));
-    }
-  }
-}
-function mcos(an) {
-  return Math.cos((an * Math.PI) / 180);
-}
-function msin(an) {
-  return Math.sin((an * Math.PI) / 180);
-}
-function pyo(x1, x2, z1, z2) {
-  return (x1 - x2) * (x1 - x2) + (z1 - z2) * (z1 - z2);
-}
-function rpy(x1, x2, y1, y2, z1, z2) {
-  return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2) + (z1 - z2) * (z1 - z2);
 }
 var mutegame = false;
 var mutemusic = false;

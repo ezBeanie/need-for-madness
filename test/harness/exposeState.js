@@ -4,6 +4,7 @@ const GAME_MODULE = "/src/game.js";
 
 const topLevelNames = (source) => {
   const vars = new Set();
+  // functions and imported bindings: readable, not assignable
   const functions = new Set();
   for (const node of parse(source, {
     ecmaVersion: "latest",
@@ -14,6 +15,9 @@ const topLevelNames = (source) => {
     }
     if (node.type === "FunctionDeclaration") {
       functions.add(node.id.name);
+    }
+    if (node.type === "ImportDeclaration") {
+      node.specifiers.forEach((s) => functions.add(s.local.name));
     }
   }
   return { vars, functions };
