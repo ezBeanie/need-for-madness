@@ -21,7 +21,7 @@ import { random } from "../core/random.js";
 import { MAX_CARS, PHASE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
-import { gl } from "../render/renderer.js";
+import { gl, keepDamageTexture } from "../render/renderer.js";
 import { carModels, carTextures, scene } from "../render/scene.js";
 import { burn, chipaway, chipburn, dustup, firexp, sprks } from "./effects.js";
 import { raceEvents } from "./events.js";
@@ -3462,24 +3462,8 @@ export function regn(nr, k, mag, c) {
         }
         rad.iscar = 2;
       }
-      var pixelread = false;
-      var framebuffer = gl.createFramebuffer();
-      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-      gl.framebufferTexture2D(
-        gl.FRAMEBUFFER,
-        gl.COLOR_ATTACHMENT0,
-        gl.TEXTURE_2D,
-        rad.texture[1],
-        0,
-      );
-      var pixels = null;
-      if (
-        gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE
-      ) {
-        pixels = new Uint8Array(256 * 256 * 4);
-        gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-        pixelread = true;
-      }
+      var pixels = rad.damagePixels;
+      var pixelread = pixels != null;
       var tsq = 0,
         nsq = 0;
       for (var i = 0; i < rad.ni; i++) {
@@ -3674,31 +3658,9 @@ export function regn(nr, k, mag, c) {
         racers[c].squash += tsq / nsq;
       }
       if (pixelread) {
-        gl.bindTexture(gl.TEXTURE_2D, rad.texture[1]);
-        gl.texImage2D(
-          gl.TEXTURE_2D,
-          0,
-          gl.RGBA,
-          256,
-          256,
-          0,
-          gl.RGBA,
-          gl.UNSIGNED_BYTE,
-          pixels,
-        );
-        gl.generateMipmap(gl.TEXTURE_2D);
+        rad.damagedPixels = true;
       }
-      gl.deleteFramebuffer(framebuffer);
-      rad.loaded = 0;
-      gl.deleteBuffer(rad.vbuf);
-      rad.vbuf = null;
-      rad.vbuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, rad.vbuf);
-      gl.bufferData(
-        gl.ARRAY_BUFFER,
-        new Float32Array(rad.dvert),
-        gl.STATIC_DRAW,
-      );
+      rad.damagedVertices = true;
       rad.loaded = 2;
     }
   }
@@ -3719,10 +3681,31 @@ export function fixcar(c) {
   rad.vbuf = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, rad.vbuf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rad.dvert), gl.STATIC_DRAW);
+  rad.damagedVertices = false;
   gl.deleteTexture(rad.texture[1]);
   rad.texture[1] = null;
   rad.texture[1] = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, rad.texture[1]);
+  // The repaired texture is the one gamecartextures made when the stage loaded; copying
+  // it avoids reading it back from the GPU, which waits for all drawing queued so far.
+  if (rad.cleanPixels) {
+    var clean = Uint8Array.from(rad.cleanPixels);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      256,
+      256,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      clean,
+    );
+    gl.generateMipmap(gl.TEXTURE_2D);
+    keepDamageTexture(rad, clean);
+    rad.loaded = 2;
+    return;
+  }
   gl.texImage2D(
     gl.TEXTURE_2D,
     0,
@@ -3765,7 +3748,10 @@ export function fixcar(c) {
       pixels,
     );
     gl.generateMipmap(gl.TEXTURE_2D);
+  } else {
+    pixels = null;
   }
   gl.deleteFramebuffer(framebuffer);
+  keepDamageTexture(rad, pixels);
   rad.loaded = 2;
 }

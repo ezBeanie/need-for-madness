@@ -234,10 +234,48 @@ const bindAttribute = (location, buffer, size) => {
 };
 
 // Draws a textured model (loaded with loadrad3D) at its x, y, z and mat.
+// Car damage: the simulation dents a car model's vertices (model.dvert) and scratches and
+// burns a copy of its damage texture (texture[1]). Reading that texture back and uploading
+// both after every hit stalled the GPU when many cars collided, so the copy is kept here
+// and the changes go up once, when the model is drawn.
+export const keepDamageTexture = (model, pixels) => {
+  model.damagePixels = pixels;
+  model.damagedPixels = false;
+};
+
+const uploadDamage = (model) => {
+  if (model.damagedVertices) {
+    gl.bindBuffer(gl.ARRAY_BUFFER, model.vbuf);
+    gl.bufferData(
+      gl.ARRAY_BUFFER,
+      new Float32Array(model.dvert),
+      gl.DYNAMIC_DRAW,
+    );
+    model.damagedVertices = false;
+  }
+  if (model.damagedPixels) {
+    gl.bindTexture(gl.TEXTURE_2D, model.texture[1]);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      256,
+      256,
+      0,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      model.damagePixels,
+    );
+    gl.generateMipmap(gl.TEXTURE_2D);
+    model.damagedPixels = false;
+  }
+};
+
 export const drawModel = (model) => {
   if (!model.loaded) {
     return;
   }
+  uploadDamage(model);
   if (model.alpha) {
     gl.enable(gl.BLEND);
     BLENDING[model.alpha]?.();

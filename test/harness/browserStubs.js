@@ -38,7 +38,37 @@ const createWebGLStub = (glNames) => {
       gl[name] = name.startsWith("create") ? handle : noop;
     }
   }
+  // Textures keep the pixels uploaded to them and read back what a framebuffer shows, like
+  // a GPU does: the car damage scratches the texture it reads back. Images carry no pixels
+  // here, so textures made from them read back as zeros.
+  let texture = null;
+  let framebuffer = null;
   return Object.assign(gl, {
+    bindTexture: (target, t) => {
+      texture = t;
+    },
+    texImage2D: (...args) => {
+      if (texture) {
+        const data = args.length === 9 ? args[8] : null;
+        texture.pixels = ArrayBuffer.isView(data)
+          ? Uint8Array.from(data)
+          : null;
+      }
+    },
+    bindFramebuffer: (target, f) => {
+      framebuffer = f;
+    },
+    framebufferTexture2D: (target, attachment, textarget, t) => {
+      if (framebuffer) {
+        framebuffer.texture = t;
+      }
+    },
+    readPixels: (x, y, width, height, format, type, out) => {
+      const pixels = framebuffer?.texture?.pixels;
+      if (pixels) {
+        out.set(pixels.subarray(0, width * height * 4));
+      }
+    },
     getExtension: () => null,
     getParameter: () => 0,
     getShaderParameter: () => true,

@@ -631,39 +631,15 @@ export function expburn() {
 }
 export function burn(c) {
   var rad = carModels[car[c].typ];
-  var framebuffer = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-  gl.framebufferTexture2D(
-    gl.FRAMEBUFFER,
-    gl.COLOR_ATTACHMENT0,
-    gl.TEXTURE_2D,
-    rad.texture[1],
-    0,
-  );
-  var pixels = null;
-  if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE) {
-    pixels = new Uint8Array(256 * 256 * 4);
-    gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+  var pixels = rad.damagePixels;
+  if (pixels != null) {
     for (var p = racers[c].bshft; p < 256 * 256 * 4; p += 12) {
       pixels[p] = 14 + pixels[p] * 0.6667;
       pixels[p + 1] = 4 + pixels[p + 1] * 0.6667;
       pixels[p + 2] = pixels[p + 2] * 0.6667;
     }
-    gl.bindTexture(gl.TEXTURE_2D, rad.texture[1]);
-    gl.texImage2D(
-      gl.TEXTURE_2D,
-      0,
-      gl.RGBA,
-      256,
-      256,
-      0,
-      gl.RGBA,
-      gl.UNSIGNED_BYTE,
-      pixels,
-    );
-    gl.generateMipmap(gl.TEXTURE_2D);
+    rad.damagedPixels = true;
   }
-  gl.deleteFramebuffer(framebuffer);
   racers[c].bshft += 4;
   if (racers[c].bshft == 12) {
     racers[c].bshft = 0;

@@ -51,6 +51,7 @@ import {
   loadTextureGroup,
   setWorld,
   textureGroups,
+  keepDamageTexture,
 } from "./render/renderer.js";
 import {
   loadModel,
@@ -187,6 +188,7 @@ function gamecartextures() {
       gl.deleteTexture(carModels[car[c].typ].texture[1]);
       carModels[car[c].typ].texture[1] = null;
     }
+    var pixels = null;
     carModels[car[c].typ].texture[1] = gl.createTexture();
     gl.bindTexture(gl.TEXTURE_2D, carModels[car[c].typ].texture[1]);
     gl.texImage2D(
@@ -208,7 +210,7 @@ function gamecartextures() {
       0,
     );
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE) {
-      var pixels = new Uint8Array(256 * 256 * 4);
+      pixels = new Uint8Array(256 * 256 * 4);
       gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
       for (var p = 0; p < 256 * 256 * 4; p += 4) {
         if (pixels[p] == 116 && pixels[p + 1] == 130 && pixels[p + 2] == 140) {
@@ -233,6 +235,8 @@ function gamecartextures() {
       gl.generateMipmap(gl.TEXTURE_2D);
     }
     gl.deleteFramebuffer(framebuffer);
+    keepDamageTexture(carModels[car[c].typ], pixels);
+    carModels[car[c].typ].cleanPixels = pixels && Uint8Array.from(pixels);
     carModels[car[c].typ].ont = 1;
     carModels[car[c].typ].loaded = 4;
   }
