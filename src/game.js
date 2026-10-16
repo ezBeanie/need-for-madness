@@ -97,7 +97,7 @@ import {
 import { drive, fixcar, inishmad } from "./race/physics.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
-var camrs, pnext, pback, onycl;
+var onycl;
 function cartextures() {
   for (var i = 0; i < 19; i++) {
     var loadthis = false;
@@ -2845,9 +2845,6 @@ function carselect() {
     if (flyout == 1) {
       cszy = 0;
       carms += 0.5;
-      if (carms > 10) {
-        camrs = 10;
-      }
       carmy -= carms;
       if (carmy < -21) {
         carmy = -21;
@@ -3079,8 +3076,7 @@ function carselect() {
 }
 var hit = 4500,
   ptr = 0,
-  ptcnt = -10,
-  nrnd = 0;
+  ptcnt = -10;
 var trx = 0,
   trz = 0,
   atrx = 0,
@@ -3098,7 +3094,6 @@ function stageselect() {
   if (hit > 500) {
     if (hit == 4500) {
       ptr = 0;
-      nrnd = 0;
       ptcnt = 0;
       camera.pitch = 67;
       atrx = (track.x[0] - trx) / 116;
@@ -3127,7 +3122,6 @@ function stageselect() {
       ptr++;
       if (ptr == track.n) {
         ptr = 0;
-        nrnd++;
       }
       ptcnt = 0;
     } else {
@@ -4530,30 +4524,6 @@ function enginsnd() {
     }
   }
   coolDownCarSounds();
-}
-function fullscreen() {
-  if (isPhone) {
-    if (
-      window.innerWidth != screen.width ||
-      window.innerHeight != screen.height
-    ) {
-      if (document.body.requestFullScreen) {
-        document.body.requestFullScreen();
-      } else {
-        if (document.body.webkitRequestFullScreen) {
-          document.body.webkitRequestFullScreen();
-        } else {
-          if (document.body.mozRequestFullScreen) {
-            document.body.mozRequestFullScreen();
-          } else {
-            if (document.body.msRequestFullscreen) {
-              document.body.msRequestFullscreen();
-            }
-          }
-        }
-      }
-    }
-  }
 }
 function gotGamepads() {
   if (gpat) {
@@ -6458,8 +6428,6 @@ function inishinter() {
   wasay = false;
   pwcnt = 0;
   raceEvents.auscnt = 45;
-  pnext = 0;
-  pback = 0;
   starcnt = 186;
   gocnt = 0;
   gocntdrop = 0;
@@ -9359,10 +9327,6 @@ function drawstageselect() {
       rgb2 = hslToRgb(hsl[0] + 0.05, 1, 0.6);
       rgb3 = hslToRgb(hsl[0] - 0.05, 1, 0.2);
       rgb4 = hslToRgb(hsl[0] + 0.05, 1, 0.2);
-      var bbtn = 220;
-      if (track.stage != game.unlocked && track.stage >= 3) {
-        bbtn = 740;
-      }
       if (
         drawbutton(
           1,
@@ -10330,7 +10294,6 @@ installPointer(canvas2D, {
 
 var enter = 0;
 
-var pbr = 1;
 // Enter, escape (and the handbrake outside races) confirm in the menus.
 function confirmkey(pressed) {
   if (pressed && !enter) {

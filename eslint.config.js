@@ -15,13 +15,15 @@ export default [
     },
     rules: {
       "no-undef": "error",
+      // legacy functions keep unused parameters and empty catch bindings of the original
+      "no-unused-vars": ["error", { args: "none", caughtErrors: "none" }],
       "no-restricted-properties": [
         "error",
         {
           object: "Math",
           property: "random",
           message:
-            "Use simrandom() for the simulation or fxrandom() for effects, so tests can seed them.",
+            "Use random.sim() for the simulation or random.fx() for effects, so tests can seed them.",
         },
       ],
     },
