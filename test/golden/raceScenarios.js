@@ -1,5 +1,8 @@
 import { describe, test } from "vitest";
-import { expectMatchesGolden } from "../harness/golden.js";
+import {
+  expectDrawingMatchesGolden,
+  expectMatchesGolden,
+} from "../harness/golden.js";
 import { NO_INPUT, autopilot, recordRace } from "../harness/race.js";
 
 const STAGE_COUNT = 17;
@@ -54,6 +57,7 @@ const checkAgainstGolden = async ({ name, stage, car, input }) => {
     input,
   });
   expectMatchesGolden(name, { stage, car }, race);
+  expectDrawingMatchesGolden(name, race);
 };
 
 // Vitest runs test files in parallel but tests within a file sequentially,

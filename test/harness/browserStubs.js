@@ -81,6 +81,10 @@ const createWebGLStub = (glNames) => {
   });
 };
 
+// Set listener to hear every call on a 2D canvas: listener(name, args, call) returns what
+// the call returns (see canvasRecorder.js).
+export const canvasCalls = { listener: null };
+
 const create2dContextStub = () => {
   const methods = {
     measureText: (text) => ({ width: String(text).length * 8 }),
@@ -92,10 +96,13 @@ const create2dContextStub = () => {
   const state = {};
   return new Proxy(state, {
     get: (target, prop) => {
-      if (prop in methods) {
-        return methods[prop];
+      const value =
+        prop in methods ? methods[prop] : prop in target ? target[prop] : noop;
+      if (canvasCalls.listener && typeof value === "function") {
+        return (...args) =>
+          canvasCalls.listener(prop, args, () => value(...args), target);
       }
-      return prop in target ? target[prop] : noop;
+      return value;
     },
     set: (target, prop, value) => {
       target[prop] = value;

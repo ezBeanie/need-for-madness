@@ -65,3 +65,22 @@ export const expectMatchesGolden = (name, meta, recording) => {
   }
   expect(recording.frames).toBe(golden.frames);
 };
+
+// Compares what was drawn on the 2D canvases, frame by frame, with its golden master.
+export const expectDrawingMatchesGolden = (name, recording) => {
+  const golden = goldenOrWrite(`${name}-drawing`, {
+    frames: recording.frames,
+    hashes: recording.drawings.join(" "),
+  });
+  if (golden === null) {
+    return;
+  }
+  const goldenHashes = golden.hashes.split(" ");
+  const firstDiff = recording.drawings.findIndex(
+    (hash, frame) => hash !== goldenHashes[frame],
+  );
+  if (firstDiff !== -1) {
+    expect.fail(`the drawing differs from frame ${firstDiff} on`);
+  }
+  expect(recording.drawings.length).toBe(goldenHashes.length);
+};

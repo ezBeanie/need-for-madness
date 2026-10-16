@@ -1,5 +1,8 @@
 import { describe, test } from "vitest";
-import { expectMatchesGolden } from "../harness/golden.js";
+import {
+  expectDrawingMatchesGolden,
+  expectMatchesGolden,
+} from "../harness/golden.js";
 import { NO_INPUT, racingAutopilot, recordFlow } from "../harness/race.js";
 
 const ENTER = 13;
@@ -94,5 +97,6 @@ describe("game flows match the golden master", () => {
       script: script(),
     });
     expectMatchesGolden(name, { stage, car }, recording);
+    expectDrawingMatchesGolden(name, recording);
   });
 });

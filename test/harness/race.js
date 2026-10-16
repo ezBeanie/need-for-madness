@@ -1,5 +1,6 @@
 import { createHash } from "node:crypto";
 import { PHASE } from "../../src/core/state.js";
+import { recordCanvas } from "./canvasRecorder.js";
 import { loadGame } from "./loadGame.js";
 
 const KEY = { up: 38, down: 40, left: 37, right: 39, handb: 32 };
@@ -171,6 +172,8 @@ export const recordRace = async ({
 }) => {
   const { ctx, step, key } = await startRace({ stage, car, seed, fxSeed });
   const states = [];
+  const canvas = recordCanvas();
+  const drawings = [];
   let held = { ...NO_INPUT };
   for (
     let frame = 0;
@@ -186,8 +189,10 @@ export const recordRace = async ({
     held = wanted;
     step();
     states.push(raceState(ctx));
+    drawings.push(canvas.take());
   }
-  return summarize(states);
+  canvas.stop();
+  return summarize(states, drawings);
 };
 
 // The race state plus where the game flow is: menus, results, unlocked stages.
@@ -205,16 +210,22 @@ const flowState = (ctx) => ({
 export const recordFlow = async ({ stage, car, seed, frames, script }) => {
   const game = await startRace({ stage, car, seed });
   const states = [];
+  const canvas = recordCanvas();
+  const drawings = [];
   for (let frame = 0; frame < frames; frame++) {
     script(game.ctx, frame, game);
     game.step();
     states.push(flowState(game.ctx));
+    drawings.push(canvas.take());
   }
-  return summarize(states);
+  canvas.stop();
+  return summarize(states, drawings);
 };
 
-const summarize = (states) => ({
+// drawings: per frame a hash of what was drawn on the 2D canvases (see canvasRecorder.js)
+const summarize = (states, drawings) => ({
   frames: states.length,
+  drawings,
   hashes: states.map(hashState),
   samples: Object.fromEntries(
     states
