@@ -17,7 +17,31 @@ import {
   rotatePoints as rotate,
   sinDeg as msin,
 } from "./core/math.js";
+import {
+  interfaceResolution,
+  isFirefox,
+  isIos,
+  isPhone,
+} from "./core/platform.js";
 import { random } from "./core/random.js";
+import {
+  audio,
+  engine,
+  isEngineLoaded,
+  loadEngine,
+  loadSound,
+  pauseMenuMusic,
+  pauseMusic,
+  playMenuMusic,
+  playSound,
+  playStageMusic,
+  resumeMusic,
+  resumeStageMusic,
+  startEngine,
+  stopEngine,
+  stopStageMusic,
+  unlockAudio,
+} from "./audio/audio.js";
 import {
   attachTo,
   drawCamera,
@@ -321,7 +345,10 @@ function loadrad3D(file, rad) {
           }
           if (command == "intertexture") {
             texufile[rad.nt] =
-              "data/interface" + rdres + "/" + value.split(",")[0];
+              "data/interface" +
+              interfaceResolution +
+              "/" +
+              value.split(",")[0];
             rad.nt++;
           }
           if (command == "grouptexture") {
@@ -2466,30 +2493,8 @@ function rgbToHsl(r, g, b) {
   }
   return [h, s, l];
 }
-var isphone = false;
-if (
-  navigator.userAgent.match(/Android/i) ||
-  navigator.userAgent.match(/BlackBerry/i) ||
-  navigator.userAgent.match(/iPhone|iPad|iPod/i) ||
-  navigator.userAgent.match(/Opera Mini/i) ||
-  navigator.userAgent.match(/IEMobile/i)
-) {
-  isphone = true;
-}
-if ("ontouchstart" in document.documentElement) {
-  isphone = true;
-}
-var isios = false;
-if (navigator.userAgent.match(/iPhone|iPad|iPod/i)) {
-  isios = true;
-}
-var isfirefox = navigator.userAgent.toLowerCase().includes("firefox");
-var rdres = 1;
-if (screen.width <= 680) {
-  rdres = 2;
-}
 var impimg = new Image();
-impimg.src = "data/interface" + rdres + "/loading.png";
+impimg.src = "data/interface" + interfaceResolution + "/loading.png";
 var ground = newrad3D();
 var grndimg = [];
 var skydom = newrad3D();
@@ -2540,7 +2545,8 @@ function loadconfe() {
   if (!confeloaded) {
     for (var i = 0; i < 29; i++) {
       confe[i] = new Image();
-      confe[i].src = "data/interface" + rdres + "/conf/" + i + ".png";
+      confe[i].src =
+        "data/interface" + interfaceResolution + "/conf/" + i + ".png";
     }
     confeloaded = true;
   }
@@ -2548,7 +2554,7 @@ function loadconfe() {
 var reqload = 0;
 var dataload = 500;
 var datacnt = 3816;
-if (isphone) {
+if (isPhone) {
   datacnt = 3770;
 }
 var stanza = 0;
@@ -2810,13 +2816,14 @@ function loaddata() {
         loadrad3D("data/3D/bg.r3d", bg3D);
       }
       if (stanza != 2) {
-        if (isphone) {
+        if (isPhone) {
           for (var i = 0; i < 6; i++) {
             contimg[i] = new Image();
             contimg[i].onload = function () {
               dataload++;
             };
-            contimg[i].src = "data/interface" + rdres + "/cn" + i + ".png";
+            contimg[i].src =
+              "data/interface" + interfaceResolution + "/cn" + i + ".png";
           }
         }
         for (var i = 0; i < 7; i++) {
@@ -2824,14 +2831,16 @@ function loaddata() {
           btimg[i].onload = function () {
             dataload++;
           };
-          btimg[i].src = "data/interface" + rdres + "/btn" + (i + 1) + ".png";
+          btimg[i].src =
+            "data/interface" + interfaceResolution + "/btn" + (i + 1) + ".png";
         }
         for (var i = 0; i < 6; i++) {
           muimg[i] = new Image();
           muimg[i].onload = function () {
             dataload++;
           };
-          muimg[i].src = "data/interface" + rdres + "/mu" + i + ".png";
+          muimg[i].src =
+            "data/interface" + interfaceResolution + "/mu" + i + ".png";
         }
       }
     }
@@ -2841,32 +2850,32 @@ function loaddata() {
         lbar.onload = function () {
           dataload++;
         };
-        lbar.src = "data/interface" + rdres + "/lbar.png";
+        lbar.src = "data/interface" + interfaceResolution + "/lbar.png";
         rbar = new Image();
         rbar.onload = function () {
           dataload++;
         };
-        rbar.src = "data/interface" + rdres + "/rbar.png";
+        rbar.src = "data/interface" + interfaceResolution + "/rbar.png";
         lckd = new Image();
         lckd.onload = function () {
           dataload++;
         };
-        lckd.src = "data/interface" + rdres + "/locked.png";
+        lckd.src = "data/interface" + interfaceResolution + "/locked.png";
         mainbg = new Image();
         mainbg.onload = function () {
           dataload += 402;
         };
-        mainbg.src = "data/interface" + rdres + "/mainbg.png";
+        mainbg.src = "data/interface" + interfaceResolution + "/mainbg.png";
         rider = new Image();
         rider.onload = function () {
           dataload += 14;
         };
-        rider.src = "data/interface" + rdres + "/rider.png";
+        rider.src = "data/interface" + interfaceResolution + "/rider.png";
         logo = new Image();
         logo.onload = function () {
           dataload += 20;
         };
-        logo.src = "data/interface" + rdres + "/logo.png";
+        logo.src = "data/interface" + interfaceResolution + "/logo.png";
       }
       if (stanza != 2) {
         for (var i = 0; i < 6; i++) {
@@ -2874,10 +2883,11 @@ function loaddata() {
           insano[i].onload = function () {
             dataload += 20;
           };
-          insano[i].src = "data/interface" + rdres + "/insano" + i + ".png";
+          insano[i].src =
+            "data/interface" + interfaceResolution + "/insano" + i + ".png";
         }
         for (var i = 0; i < 11; i++) {
-          if (i < 5 || !isphone || i == 8 || i == 10) {
+          if (i < 5 || !isPhone || i == 8 || i == 10) {
             inst[i] = new Image();
             inst[i].onload = function () {
               dataload += 13;
@@ -2972,7 +2982,7 @@ function loaddata() {
       if (stanza == 0 || stanza == 1) {
         creatdustextures();
         for (var i = 0; i < 43; i++) {
-          loadsnd(i);
+          loadSound(i);
         }
       }
       if (stanza == 0) {
@@ -4072,7 +4082,7 @@ function gameworks() {
       }
       if (
         starcnt > 65 &&
-        !isphone &&
+        !isPhone &&
         (cp.stage == 1 || cp.stage == 2) &&
         unlocked == 1
       ) {
@@ -10805,7 +10815,7 @@ function drive() {
               repcar[c].fixat[repcar[c].nfix] = 430;
               repcar[c].nfix++;
               if (c == im) {
-                playsnd(29, 1);
+                playSound(29, 1);
               }
             }
           } else {
@@ -10817,7 +10827,7 @@ function drive() {
               repcar[c].fixat[repcar[c].nfix] = 430;
               repcar[c].nfix++;
               if (c == im) {
-                playsnd(29, 1);
+                playSound(29, 1);
               }
             }
           }
@@ -11901,8 +11911,6 @@ function fixcar(c) {
   gl.deleteFramebuffer(framebuffer);
   rad.loaded = 2;
 }
-var mutegame = false;
-var mutemusic = false;
 var mutedmusic = false;
 var omutemusic = false;
 var omutegame = false;
@@ -12144,14 +12152,14 @@ function gameloop() {
       afterswitch();
     }
   }
-  if (mutemusic) {
+  if (audio.muteMusic) {
     if (!mutedmusic) {
-      pausemusic();
+      pauseMusic();
       mutedmusic = true;
     }
   } else {
     if (mutedmusic) {
-      resumemusic();
+      resumeMusic();
       mutedmusic = false;
     }
   }
@@ -12175,221 +12183,9 @@ function mainloop(now) {
   render(now);
   requestAnimationFrame(mainloop);
 }
-var interaud = null;
-var interaudstat = 0;
-var firstinterplay = true;
-function playintertrack() {
-  try {
-    if (interaudstat == 0) {
-      interaud = new Audio("data/music/shift.mp3");
-      interaud.volume = 1;
-      interaud.loop = true;
-    }
-    interaud.volume = 0.6;
-    if (clickmade) {
-      if (!mutemusic) {
-        if (!isios || !firstinterplay) {
-          interaud.play();
-        }
-      }
-    }
-  } catch (e) {}
-  interaudstat = 1;
-  checkplayinter = true;
-}
-function pauseintertrack() {
-  if (interaudstat == 1) {
-    if (clickmade) {
-      interaud.pause();
-    }
-    interaudstat = 2;
-  }
-}
-var stageaud = null;
-var stageaudstat = 0;
-var laststageaud = -1;
-function playtrack() {
-  try {
-    if (laststageaud != cp.stage) {
-      stageaud = new Audio("data/music/stage" + cp.stage + ".mp3");
-      stageaud.volume = 1;
-      stageaud.loop = true;
-      laststageaud = cp.stage;
-    } else {
-      stageaud.currentTime = 0;
-    }
-    stageaud.volume = 0.7;
-    if (clickmade) {
-      if (!mutemusic) {
-        if (!isios) {
-          stageaud.play();
-        }
-      }
-    }
-  } catch (e) {}
-  stageaudstat = 1;
-  checkplaystage = true;
-}
-function stopstagetrack() {
-  if (stageaudstat == 1) {
-    if (clickmade) {
-      stageaud.pause();
-    }
-    stageaudstat = 2;
-  }
-}
-function resumestagetrack() {
-  if (stageaudstat == 2) {
-    if (clickmade) {
-      if (!mutemusic) {
-        stageaud.play();
-      }
-    }
-    stageaudstat = 1;
-  }
-}
-function pausemusic() {
-  if (stageaudstat == 1) {
-    if (clickmade) {
-      stageaud.pause();
-    }
-  }
-  if (interaudstat == 1) {
-    if (clickmade) {
-      interaud.pause();
-    }
-  }
-}
-function resumemusic() {
-  if (stageaudstat == 1) {
-    if (clickmade) {
-      stageaud.play();
-    }
-  }
-  if (interaudstat == 1) {
-    if (clickmade) {
-      interaud.play();
-    }
-  }
-}
-var canplaysnd = false;
-var soundau = null;
-var sndb = [];
-var sndload = [];
-var intersndload = 0;
-var enginau = null;
-var engvol = null;
-var engb = [];
-var engload = [];
-for (var i = 0; i < 19; i++) {
-  engload[i] = false;
-}
-var engsource = null;
-try {
-  window.AudioContext = window.AudioContext || window.webkitAudioContext;
-  soundau = new AudioContext();
-  enginau = new AudioContext();
-  engvol = enginau.createGain();
-  canplaysnd = true;
-} catch (e) {
-  canplaysnd = false;
-}
-function loadsnd(num) {
-  if (canplaysnd) {
-    sndload[num] = false;
-    var request = new XMLHttpRequest();
-    request.open("GET", "data/sounds/s" + num + ".mp3", true);
-    request.responseType = "arraybuffer";
-    request.onload = function () {
-      soundau.decodeAudioData(
-        request.response,
-        function (buffer) {
-          sndb[num] = buffer;
-        },
-        onError,
-      );
-      sndload[num] = true;
-    };
-    request.send();
-  }
-}
-function onError() {}
-var playedasnd = false;
-function playsnd(num, pbr) {
-  if (canplaysnd && sndload[num] && !mutegame) {
-    var source = soundau.createBufferSource();
-    source.buffer = sndb[num];
-    source.connect(soundau.destination);
-    source.playbackRate.value = pbr;
-    source.start();
-    playedasnd = true;
-  }
-}
-function loadeng(num) {
-  if (canplaysnd) {
-    var request = new XMLHttpRequest();
-    request.open("GET", "data/sounds/eng" + num + ".wav", true);
-    request.responseType = "arraybuffer";
-    request.onload = function () {
-      enginau.decodeAudioData(
-        request.response,
-        function (buffer) {
-          engb[num] = buffer;
-        },
-        onError,
-      );
-      engload[num] = true;
-    };
-    request.send();
-  }
-}
-var engstarted = false;
-function starteng(engloop) {
-  if (canplaysnd && engload[sel[im]] && !mutegame && !holdcnt) {
-    engsource = enginau.createBufferSource();
-    engsource.buffer = engb[sel[im]];
-    engsource.connect(engvol);
-    engvol.connect(enginau.destination);
-    engsource.loop = engloop;
-    engsource.start();
-    engstarted = true;
-  }
-}
-var clickmade = false;
-var checkplaystage = false;
-var checkplayinter = false;
-var checksnd = 5;
+// A click or touch allows audio (see unlockAudio).
 function checknplay() {
-  if (!clickmade) {
-    clickmade = true;
-  }
-  if (checkplayinter && interaudstat == 1 && !mutemusic) {
-    if (interaud.currentTime == 0) {
-      interaud.play();
-      firstinterplay = false;
-    }
-    checkplayinter = false;
-  }
-  if (checkplaystage && stageaudstat == 1 && !mutemusic) {
-    if (stageaud.currentTime == 0) {
-      stageaud.play();
-    }
-    checkplaystage = false;
-  }
-  if (
-    checksnd &&
-    playedasnd &&
-    fase == 7 &&
-    canplaysnd &&
-    sndload[25] &&
-    !mutegame
-  ) {
-    if (soundau.currentTime == 0) {
-      playsnd(25, 1);
-      checksnd = 1;
-    }
-    checksnd--;
-  }
+  unlockAudio(fase == 7);
 }
 var bfgscrape = 0;
 function grndscrapesnd(typ, sx, sy, sz) {
@@ -12405,9 +12201,9 @@ function grndscrapesnd(typ, sx, sy, sz) {
         sdt += 2;
       }
       if (random.fx() > random.fx()) {
-        playsnd(23 + sdt, scpr);
+        playSound(23 + sdt, scpr);
       } else {
-        playsnd(24 + sdt, scpr);
+        playSound(24 + sdt, scpr);
       }
       bfgscrape = 5;
     }
@@ -12428,7 +12224,7 @@ function scrapesnd(sx, sy, sz) {
           srp = 0;
         }
       }
-      playsnd(srp + 20, 1);
+      playSound(srp + 20, 1);
       bfscrape = 5;
     }
   }
@@ -12448,10 +12244,10 @@ function bumpsnd(bi, bmag, typ) {
     }
     bmpr += 0.2 * random.fx();
     if (onbsnd) {
-      playsnd(18, bmpr);
+      playSound(18, bmpr);
       onbsnd = false;
     } else {
-      playsnd(19, bmpr);
+      playSound(19, bmpr);
       onbsnd = true;
     }
     bfbump[bi] = 4;
@@ -12474,7 +12270,7 @@ function crashsnd(cmag, sign) {
           crp = 0;
         }
       }
-      playsnd(crp + 14, 1);
+      playSound(crp + 14, 1);
       lcrlow = crp;
       bfcrash[0] = 3;
     }
@@ -12489,7 +12285,7 @@ function crashsnd(cmag, sign) {
           crp = 0;
         }
       }
-      playsnd(crp + 11, 1);
+      playSound(crp + 11, 1);
       lcrmed = crp;
       bfcrash[1] = 3;
     }
@@ -12504,7 +12300,7 @@ function crashsnd(cmag, sign) {
           crp = 0;
         }
       }
-      playsnd(crp + 8, 1);
+      playSound(crp + 8, 1);
       lcrhig = crp;
       bfcrash[2] = 3;
     }
@@ -12512,18 +12308,18 @@ function crashsnd(cmag, sign) {
   if (bfcrash[3] == 0) {
     if (sign == -1) {
       if (Math.abs(cmag) >= 2.5 && Math.abs(cmag) < 10) {
-        playsnd(15, 1);
+        playSound(15, 1);
       }
       if (Math.abs(cmag) >= 10 && Math.abs(cmag) < 17) {
-        playsnd(12, 1);
+        playSound(12, 1);
       }
       if (Math.abs(cmag) >= 17) {
-        playsnd(10, 1);
+        playSound(10, 1);
       }
       bfcrash[3] = 3;
     }
     if (sign == 1) {
-      playsnd(17, 1);
+      playSound(17, 1);
       bfcrash[3] = 4;
     }
   }
@@ -12555,7 +12351,7 @@ function skidsnd(typ, ontsk, gmag) {
             skp = 0;
           }
         }
-        playsnd(skp, spbr);
+        playSound(skp, spbr);
         sklast[1] = sklast[0];
         sklast[0] = skp;
       } else {
@@ -12569,7 +12365,7 @@ function skidsnd(typ, ontsk, gmag) {
             skp = 0;
           }
         }
-        playsnd(skp + 4, spbr);
+        playSound(skp + 4, spbr);
         dsklast[1] = dsklast[0];
         dsklast[0] = skp;
       }
@@ -12594,7 +12390,7 @@ var reqvol = 1;
 var reqpbr = 1;
 var ringr = 10;
 function enginsnd() {
-  if (engstarted) {
+  if (engine.started) {
     var atmax = false;
     var pedl = false;
     if ((u[im].up && speed[im] > 0) || (u[im].down && speed[im] < 0)) {
@@ -12757,10 +12553,11 @@ function enginsnd() {
       }
     }
     if (holdcnt == 0) {
-      engvol.gain.value += ((reqvol - 1) * 0.75 + 1 - engvol.gain.value) / 10;
+      engine.volume.gain.value +=
+        ((reqvol - 1) * 0.75 + 1 - engine.volume.gain.value) / 10;
     } else {
-      if (engvol.gain.value > 0.3) {
-        engvol.gain.value -= 0.01;
+      if (engine.volume.gain.value > 0.3) {
+        engine.volume.gain.value -= 0.01;
       }
     }
     if (atmax) {
@@ -12775,9 +12572,11 @@ function enginsnd() {
     if (abo < 0) {
       abo = 0;
     }
-    engsource.playbackRate.value = 1 + abo * cd.engrev[sel[im]];
+    engine.source.playbackRate.value = 1 + abo * cd.engrev[sel[im]];
   } else {
-    starteng(true);
+    if (!holdcnt) {
+      startEngine(sel[im], true);
+    }
   }
   if (bfskid != 0) {
     bfskid--;
@@ -12800,7 +12599,7 @@ function enginsnd() {
   }
 }
 function fullscreen() {
-  if (isphone) {
+  if (isPhone) {
     if (
       window.innerWidth != screen.width ||
       window.innerHeight != screen.height
@@ -12846,10 +12645,7 @@ var onhip = 0;
 var noten = 0;
 var playedforeplay = false;
 function pausedgame() {
-  if (engstarted) {
-    engsource.loop = false;
-    engstarted = false;
-  }
+  stopEngine();
   rd.clearRect(0, 0, canw, canh);
   var r = Math.floor(128 - 128 * snap[0]);
   if (r > 255) {
@@ -12922,7 +12718,7 @@ function pausedgame() {
   ) {
     noten = 0;
     if (!playedforeplay) {
-      resumestagetrack();
+      resumeStageMusic();
     } else {
       playedforeplay = false;
     }
@@ -12954,7 +12750,7 @@ function pausedgame() {
   ) {
     if (nrec >= 430) {
       onbreplay = 2;
-      resumestagetrack();
+      resumeStageMusic();
       playedforeplay = true;
       noten = 0;
     } else {
@@ -12987,7 +12783,7 @@ function pausedgame() {
   ) {
     noten = 0;
     if (playedforeplay) {
-      stopstagetrack();
+      stopStageMusic();
       playedforeplay = false;
     }
     instmain = false;
@@ -13024,7 +12820,7 @@ function pausedgame() {
     }
     noten = 0;
     if (playedforeplay) {
-      stopstagetrack();
+      stopStageMusic();
       playedforeplay = false;
     }
     afterquitgame();
@@ -13071,7 +12867,7 @@ function pausedgame() {
   if (enter == 1) {
     if (onhip == 0) {
       if (!playedforeplay) {
-        resumestagetrack();
+        resumeStageMusic();
       } else {
         playedforeplay = false;
       }
@@ -13081,7 +12877,7 @@ function pausedgame() {
     if (onhip == 1) {
       if (nrec >= 430) {
         onbreplay = 2;
-        resumestagetrack();
+        resumeStageMusic();
         playedforeplay = true;
         noten = 0;
       } else {
@@ -13091,7 +12887,7 @@ function pausedgame() {
     if (onhip == 2) {
       noten = 0;
       if (playedforeplay) {
-        stopstagetrack();
+        stopStageMusic();
         playedforeplay = false;
       }
       instmain = false;
@@ -13105,7 +12901,7 @@ function pausedgame() {
       }
       noten = 0;
       if (playedforeplay) {
-        stopstagetrack();
+        stopStageMusic();
         playedforeplay = false;
       }
       afterquitgame();
@@ -13163,7 +12959,7 @@ function drawmain() {
   rd.fillStyle = "#000000";
   rd.fillRect(0, 0, canw, canh);
   if (fredo == 0) {
-    playintertrack();
+    playMenuMusic();
     cnf = 0;
   }
   var lefy = (canw - 1280 * mh) / 2;
@@ -13281,7 +13077,7 @@ function drawmain() {
         false,
       )
     ) {
-      pauseintertrack();
+      pauseMenuMusic();
       instmain = true;
       ifase = 0;
       dudo = 250;
@@ -13640,7 +13436,7 @@ function gameinstructions() {
     rd.textBaseline = "middle";
     rd.textAlign = "left";
     rd.fillStyle = "#002748";
-    if (!isphone) {
+    if (!isPhone) {
       rd.fillText(
         "Drive your car using the keyboard arrows and also use the",
         200 * fm + 20 * fm,
@@ -13764,7 +13560,7 @@ function gameinstructions() {
       200 * fm + 20 * fm,
       topo + 196 * fm,
     );
-    if (!isphone) {
+    if (!isPhone) {
       if (
         drawbutton(
           1,
@@ -14113,7 +13909,7 @@ function gameinstructions() {
     ) {
       if (instmain) {
         fase = 1;
-        playintertrack();
+        playMenuMusic();
       } else {
         fase = 11;
       }
@@ -14121,7 +13917,7 @@ function gameinstructions() {
     if (enter == 1) {
       if (instmain) {
         fase = 1;
-        playintertrack();
+        playMenuMusic();
       } else {
         fase = 11;
       }
@@ -14141,7 +13937,7 @@ function gameinstructions() {
   if (!onabtn && mdown) {
     if (instmain) {
       fase = 1;
-      playintertrack();
+      playMenuMusic();
     } else {
       fase = 11;
     }
@@ -14432,10 +14228,7 @@ function drawswitch() {
         cim2 = 0;
       }
     }
-    if (engstarted) {
-      engsource.loop = false;
-      engstarted = false;
-    }
+    stopEngine();
   }
   if (switcnt < 20) {
     camzy = 10;
@@ -14495,7 +14288,7 @@ function drawswitch() {
     }
   }
   if (switcnt == 10) {
-    playsnd(38, 1);
+    playSound(38, 1);
   }
   if (switcnt >= 10 && switcnt < 90) {
     if (tflk) {
@@ -14565,14 +14358,14 @@ function drawswitch() {
   }
 }
 function afterswitch() {
-  resumestagetrack();
+  resumeStageMusic();
   updateframe = false;
   fase = 16;
 }
 function drawrevtime() {
   rd.clearRect(0, 0, canw, canh);
   if (switcnt == 5) {
-    playsnd(41, 1);
+    playSound(41, 1);
   }
   if (switcnt >= 10 && switcnt < 90) {
     if (tflk) {
@@ -14614,11 +14407,11 @@ function drawrevtime() {
   if (Math.abs(fr - (429 - nrec)) > 30) {
     if (Math.abs(fr - (429 - nrec)) > 100) {
       if (switcnt % 30 == 0) {
-        playsnd(42, 1);
+        playSound(42, 1);
       }
     } else {
       if (switcnt % 50 == 0) {
-        playsnd(42, 1);
+        playSound(42, 1);
       }
     }
   }
@@ -14735,7 +14528,7 @@ function inishinter() {
 }
 function drawinter() {
   rd.clearRect(0, 0, canw, canh);
-  var showpcn = isphone;
+  var showpcn = isPhone;
   if (showpcn && starcnt > 65 && cp.stage == 2 && unlocked == 2) {
     showpcn = false;
   }
@@ -14918,7 +14711,7 @@ function drawinter() {
       aflk = true;
     }
     if (!cp.haltall) {
-      playsnd(33, 1);
+      playSound(33, 1);
     }
     cp.haltall = true;
     holdit = true;
@@ -14934,10 +14727,10 @@ function drawinter() {
   if (cntdest[im] != 0 && cntwis < 16) {
     cntwis++;
     if (cntwis == 1) {
-      playsnd(31, 1);
+      playSound(31, 1);
     }
     if (cntwis == 16) {
-      playsnd(30, 1);
+      playSound(30, 1);
     }
   }
   if (!holdit) {
@@ -14954,7 +14747,7 @@ function drawinter() {
           }
           winner = true;
           if (!cp.haltall) {
-            playsnd(32, 1);
+            playSound(32, 1);
           }
         } else {
           drawcs(132, "You Lost!", 0, 0, 0, 3);
@@ -15033,10 +14826,7 @@ function drawinter() {
         iniend();
         fase = 12;
       }
-      if (engstarted) {
-        engsource.loop = false;
-        engstarted = false;
-      }
+      stopEngine();
     }
     if (onbreplay == 1) {
       cntreps = 0;
@@ -15058,11 +14848,8 @@ function drawinter() {
     if (enter == 1 && starcnt <= 65) {
       enter = 2;
       onhip = 0;
-      stopstagetrack();
-      if (engstarted) {
-        engsource.loop = false;
-        engstarted = false;
-      }
+      stopStageMusic();
+      stopEngine();
       fase = 11;
     }
   }
@@ -15077,10 +14864,10 @@ function drawinter() {
       }
       drawcs(670, "0" + minutes + ":" + adlz + "" + seconds, 0, 0, 0, 4);
       if (timer == 120 || timer == 90 || timer == 60 || timer == 30) {
-        playsnd(39, 1);
+        playSound(39, 1);
       }
       if (timer == 0) {
-        playsnd(40, 1);
+        playSound(40, 1);
         createswitches();
         switcnt = 0;
         fase = 16;
@@ -15153,7 +14940,7 @@ function drawinter() {
     rd.fillText("Lap", 20 * avm, 19 * avm);
     rd.fillText("Wasted", 130 * avm, 19 * avm);
     var adln = 0;
-    if (isphone) {
+    if (isPhone) {
       adln = 70;
     }
     rd.fillText("Position", (60 + adln) * avm, 55 * avm);
@@ -15177,7 +14964,7 @@ function drawinter() {
     rd.font = "" + 11 * (mh + mw) + "px junk";
     rd.fillStyle = "#000000";
     rd.fillText(rank, (176 + adln) * avm, 55 * avm);
-    if (!isphone && ncars != 1 && (cp.stage != 1 || unlocked != 1)) {
+    if (!isPhone && ncars != 1 && (cp.stage != 1 || unlocked != 1)) {
       if (arrace) {
         if (
           drawbutton(
@@ -15304,11 +15091,8 @@ function drawinter() {
     } else {
       if (!holdit) {
         onhip = 0;
-        stopstagetrack();
-        if (engstarted) {
-          engsource.loop = false;
-          engstarted = false;
-        }
+        stopStageMusic();
+        stopEngine();
         fase = 11;
       }
     }
@@ -15317,17 +15101,14 @@ function drawinter() {
       rd.globalAlpha = 0.5;
     }
     if (onycl == 2) {
-      if (!mutegame) {
-        mutegame = true;
-        if (engstarted) {
-          engsource.loop = false;
-          engstarted = false;
-        }
+      if (!audio.muteSound) {
+        audio.muteSound = true;
+        stopEngine();
       } else {
-        mutegame = false;
+        audio.muteSound = false;
       }
     }
-    if (!mutegame) {
+    if (!audio.muteSound) {
       onycl = 2;
     } else {
       onycl = 3;
@@ -15345,13 +15126,13 @@ function drawinter() {
       rd.globalAlpha = 0.5;
     }
     if (onycl == 2) {
-      if (!mutemusic) {
-        mutemusic = true;
+      if (!audio.muteMusic) {
+        audio.muteMusic = true;
       } else {
-        mutemusic = false;
+        audio.muteMusic = false;
       }
     }
-    if (!mutemusic) {
+    if (!audio.muteMusic) {
       onycl = 4;
     } else {
       onycl = 5;
@@ -15364,7 +15145,7 @@ function drawinter() {
       42 * avm,
     );
     rd.globalAlpha = 1;
-    if (!isphone && cp.stage >= 2 && cntkeys < 200 && ncars != 1) {
+    if (!isPhone && cp.stage >= 2 && cntkeys < 200 && ncars != 1) {
       if (slide < 10 || cntkeys > 100) {
         rd.drawImage(
           inst[9],
@@ -15386,22 +15167,22 @@ function drawinter() {
       if (starcnt == 63) {
         gocnt = 3;
         gocntdrop = 16;
-        playsnd(34, 1);
+        playSound(34, 1);
       }
       if (starcnt == 41) {
         gocnt = 2;
         gocntdrop = 16;
-        playsnd(35, 1);
+        playSound(35, 1);
       }
       if (starcnt == 24) {
         gocnt = 1;
         gocntdrop = 16;
-        playsnd(36, 1);
+        playSound(36, 1);
       }
       if (starcnt == 2) {
         gocnt = 0;
         gocntdrop = 16;
-        playsnd(37, 1);
+        playSound(37, 1);
       }
       var duds = 0;
       if (starcnt <= 63 && starcnt > 52) {
@@ -15677,7 +15458,7 @@ function drawinter() {
         auscnt -= 25;
       }
       if (auscnt < 45) {
-        playsnd(27, 1);
+        playSound(27, 1);
         if (onautocorrect) {
           onautocorrect--;
         }
@@ -15741,7 +15522,7 @@ function drawinter() {
         tcnt = 15;
       }
       iclear = clear[im];
-      playsnd(28, 1);
+      playSound(28, 1);
       cntovn = 0;
       if (cntan != 0) {
         cntan = 0;
@@ -15831,7 +15612,7 @@ function drawonbordo() {
     );
   }
   if (cp.stage == 4) {
-    if (!isphone) {
+    if (!isPhone) {
       drawbutton(
         1,
         200 * fm + 240 * fm,
@@ -16435,7 +16216,7 @@ function endgame() {
     }
     if (winner && unlocked == cp.stage && ncars != 1) {
       if (enter == 1) {
-        stopstagetrack();
+        stopStageMusic();
         afterend();
         enter = 2;
       }
@@ -16459,13 +16240,13 @@ function endgame() {
           false,
         )
       ) {
-        stopstagetrack();
+        stopStageMusic();
         afterend();
       }
     } else {
       switcnt++;
       if (switcnt == 30) {
-        stopstagetrack();
+        stopStageMusic();
         afterend();
       }
     }
@@ -16899,7 +16680,7 @@ function drawcarselect() {
           )
         ) {
           saveInfo("carsel", sel[0]);
-          pauseintertrack();
+          pauseMenuMusic();
           cp.stage = 2;
           stageloadtyp = 2;
           stageload = -1;
@@ -16920,7 +16701,7 @@ function drawcarselect() {
         }
         if (enter == 1) {
           saveInfo("carsel", sel[0]);
-          pauseintertrack();
+          pauseMenuMusic();
           cp.stage = 2;
           stageloadtyp = 2;
           stageload = -1;
@@ -16980,8 +16761,8 @@ function stageloading() {
   if (stageload == 0 && (updateframe || stageloadtyp == 2)) {
     stageload = 0;
     loadstage();
-    if (!engload[sel[0]]) {
-      loadeng(sel[0]);
+    if (!isEngineLoaded(sel[0])) {
+      loadEngine(sel[0]);
     }
   }
   if (stageload == -1) {
@@ -17033,8 +16814,8 @@ function stageloading() {
       fase = 4;
     } else {
       ncars = 1;
-      pauseintertrack();
-      playtrack();
+      pauseMenuMusic();
+      playStageMusic(cp.stage);
       fase = 7;
     }
   }
@@ -17362,7 +17143,7 @@ function drawstageselect() {
               )
             ) {
               ncars = 1;
-              pauseintertrack();
+              pauseMenuMusic();
               startflash();
             }
           }
@@ -17390,7 +17171,7 @@ function drawstageselect() {
           )
         ) {
           gamemode = 1;
-          pauseintertrack();
+          pauseMenuMusic();
           startflash();
         }
       }
@@ -17451,12 +17232,12 @@ function drawstageselect() {
         )
       ) {
         gamemode = 0;
-        pauseintertrack();
+        pauseMenuMusic();
         startflash();
       }
       if (enter == 1) {
         gamemode = 0;
-        pauseintertrack();
+        pauseMenuMusic();
         startflash();
         enter = 2;
       }
@@ -17570,12 +17351,12 @@ function startflash() {
   fase = 15;
 }
 function aftersparkstart() {
-  playtrack();
+  playStageMusic(cp.stage);
   setworld(snap, fogc, lvx, lvy, lvz, fogdist);
   if (gamemode == 1) {
     for (var c = 1; c < ncars; c++) {
-      if (!engload[sel[c]]) {
-        loadeng(sel[c]);
+      if (!isEngineLoaded(sel[c])) {
+        loadEngine(sel[c]);
       }
     }
     cp.nlaps = 1;
@@ -17608,13 +17389,13 @@ function musictog() {
     rd.globalAlpha = 0.7;
   }
   if (onycl == 2) {
-    if (!mutemusic) {
-      mutemusic = true;
+    if (!audio.muteMusic) {
+      audio.muteMusic = true;
     } else {
-      mutemusic = false;
+      audio.muteMusic = false;
     }
   }
-  if (!mutemusic) {
+  if (!audio.muteMusic) {
     onycl = 4;
   } else {
     onycl = 5;
@@ -18072,7 +17853,10 @@ function drawbutton(
   if (typ == 0 || typ == 3) {
     rd.font = "" + fz * (mh + mw) + "px junk";
     rd.letterSpacing = "1px";
-    wti = rd.measureText(txt).width + 10 * avm + img.width * avm * rdres;
+    wti =
+      rd.measureText(txt).width +
+      10 * avm +
+      img.width * avm * interfaceResolution;
   }
   if (typ == 1) {
     rd.font = "" + fz * (mh + mw) + "px junk";
@@ -18080,7 +17864,7 @@ function drawbutton(
     wti = rd.measureText(txt).width;
   }
   if (typ == 2) {
-    wti = img.width * avm * rdres;
+    wti = img.width * avm * interfaceResolution;
   }
   if (typ == 0 || typ == 1) {
     rd.textBaseline = "middle";
@@ -18088,7 +17872,7 @@ function drawbutton(
     rd.fillStyle = "#000000";
     rd.globalAlpha = opa;
     var ydf = 0;
-    if (isfirefox) {
+    if (isFirefox) {
       ydf = fz * avm * 0.35;
     }
     rd.fillText(
@@ -18102,10 +17886,10 @@ function drawbutton(
     rd.globalAlpha = iopa;
     rd.drawImage(
       img,
-      xbd + wb * 0.5 + wti * 0.5 - img.width * avm * rdres,
-      ybd + hb * 0.5 - img.height * avm * 0.5 * rdres,
-      img.width * avm * rdres,
-      img.height * avm * rdres,
+      xbd + wb * 0.5 + wti * 0.5 - img.width * avm * interfaceResolution,
+      ybd + hb * 0.5 - img.height * avm * 0.5 * interfaceResolution,
+      img.width * avm * interfaceResolution,
+      img.height * avm * interfaceResolution,
     );
     rd.globalAlpha = 1;
   }
@@ -18118,9 +17902,9 @@ function drawbutton(
     rd.drawImage(
       img,
       xbd + wb * 0.5 - wti * 0.5,
-      ybd + hb * 0.5 - img.height * avm * 0.5 * rdres - subft,
-      img.width * avm * rdres,
-      img.height * avm * rdres,
+      ybd + hb * 0.5 - img.height * avm * 0.5 * interfaceResolution - subft,
+      img.width * avm * interfaceResolution,
+      img.height * avm * interfaceResolution,
     );
     rd.globalAlpha = 1;
     rd.textBaseline = "middle";
@@ -18128,7 +17912,7 @@ function drawbutton(
     rd.fillStyle = "#000000";
     rd.globalAlpha = opa;
     var ydf = 0;
-    if (isfirefox) {
+    if (isFirefox) {
       ydf = fz * avm * 0.35;
     }
     rd.fillText(
@@ -19175,7 +18959,7 @@ function preprevtime() {
       }
     }
   }
-  resumestagetrack();
+  resumeStageMusic();
   switcnt = 0;
   fase = 18;
 }
@@ -19472,11 +19256,8 @@ function Keyup(evt) {
   }
   if (k == 82) {
     if (fase == 7 && starcnt == 0) {
-      if (engstarted) {
-        engsource.loop = false;
-        engstarted = false;
-      }
-      stopstagetrack();
+      stopEngine();
+      stopStageMusic();
       preprevtime();
     }
     keyonx = 0;
@@ -19493,21 +19274,18 @@ function Keyup(evt) {
     }
   }
   if (k == 78) {
-    if (!mutegame) {
-      mutegame = true;
-      if (engstarted) {
-        engsource.loop = false;
-        engstarted = false;
-      }
+    if (!audio.muteSound) {
+      audio.muteSound = true;
+      stopEngine();
     } else {
-      mutegame = false;
+      audio.muteSound = false;
     }
   }
   if (k == 77) {
-    if (!mutemusic) {
-      mutemusic = true;
+    if (!audio.muteMusic) {
+      audio.muteMusic = true;
     } else {
-      mutemusic = false;
+      audio.muteMusic = false;
     }
   }
 }
@@ -19551,17 +19329,14 @@ window.addEventListener("keyup", Keyup, false);
 
 document.addEventListener("visibilitychange", function () {
   if (document.visibilityState == "visible") {
-    mutemusic = omutemusic;
-    mutegame = omutegame;
+    audio.muteMusic = omutemusic;
+    audio.muteSound = omutegame;
   } else {
-    omutemusic = mutemusic;
-    omutegame = mutegame;
-    mutemusic = true;
-    mutegame = true;
-    if (engstarted) {
-      engsource.loop = false;
-      engstarted = false;
-    }
+    omutemusic = audio.muteMusic;
+    omutegame = audio.muteSound;
+    audio.muteMusic = true;
+    audio.muteSound = true;
+    stopEngine();
   }
 });
 
