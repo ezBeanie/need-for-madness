@@ -25,6 +25,7 @@ import { pointer } from "../input/pointer.js";
 import { raceEvents } from "../race/events.js";
 import { car, racers } from "../race/racers.js";
 import {
+  HIGHLIGHT,
   fastforwardexit,
   hrewindhreplay,
   recording,
@@ -397,7 +398,7 @@ export function drawRewindOverlay() {
     }
     drawInsanoAside(insanoFace(ticks));
   }
-  const ticksToGo = Math.abs(recording.fr - (429 - recording.nrec));
+  const ticksToGo = Math.abs(recording.frame - (429 - recording.recordedTicks));
   if (ticksToGo > 30) {
     if (ticksToGo > 100) {
       if (ticks % 30 == 0) {
@@ -769,7 +770,7 @@ const afterRaceOver = () => {
     leave = true;
   }
   if (leave) {
-    if (recording.htyp) {
+    if (recording.highlight) {
       hud.replayStartsIn = 2;
     } else {
       startRaceEnd();
@@ -778,7 +779,7 @@ const afterRaceOver = () => {
     stopEngine();
   }
   if (hud.replayStartsIn == 1) {
-    cntreps = 0;
+    highlightPlays = 0;
     camera.orbitHeight = Math.floor(90 * random.fx());
     camera.orbitAngle = Math.floor(360 * random.fx());
     hrewindhreplay();
@@ -1525,7 +1526,44 @@ export function drawinter() {
     announceEvents();
   }
 }
-export function drawreplay() {
+const darken = (alpha) => {
+  rd.globalAlpha = alpha;
+  rd.fillStyle = "#000000";
+  rd.fillRect(0, 0, view.width, view.height);
+  rd.globalAlpha = 1;
+};
+
+const flash = () => {
+  rd.globalAlpha = 0.5;
+  rd.fillStyle = "#FFFFFF";
+  rd.fillRect(0, 0, view.width, view.height);
+  rd.globalAlpha = 1;
+};
+
+// The bottom right button of the replays.
+const replayButton = (text, faceBottom, shadowBottom) =>
+  drawButton({
+    id: 1,
+    x: view.width - 100 * view.scale - 30 * view.scaleX,
+    y: view.height - 60 * view.scale - 30 * view.scaleY,
+    width: 170,
+    height: 60,
+    faceTop: "#019DFF",
+    faceBottom,
+    shadowTop: "#004A78",
+    shadowBottom,
+    layout: BUTTON.textThenImage,
+    text,
+    fontSize: 20,
+    textOpacity: 0.7,
+    image: images.buttons[1],
+    imageOpacity: 0.7,
+    pulsing: false,
+  });
+
+// The instant replay from the pause menu: "REPLAY" and "Exit", which fast forwards back
+// to the race.
+export function drawReplayOverlay() {
   rd.clearRect(0, 0, view.width, view.height);
   rd.letterSpacing = "1px";
   rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
@@ -1533,26 +1571,7 @@ export function drawreplay() {
   rd.textBaseline = "middle";
   rd.fillStyle = "rgb(0,32,64)";
   rd.fillText("REPLAY", 20 * view.scaleX, 35 * view.scaleY);
-  if (
-    drawButton({
-      id: 1,
-      x: view.width - 100 * view.scale - 30 * view.scaleX,
-      y: view.height - 60 * view.scale - 30 * view.scaleY,
-      width: 170,
-      height: 60,
-      faceTop: "#019DFF",
-      faceBottom: "#01EAFF",
-      shadowTop: "#004A78",
-      shadowBottom: "#016D77",
-      layout: BUTTON.textThenImage,
-      text: "Exit ",
-      fontSize: 20,
-      textOpacity: 0.7,
-      image: images.buttons[1],
-      imageOpacity: 0.7,
-      pulsing: false,
-    })
-  ) {
+  if (replayButton("Exit ", "#01EAFF", "#016D77")) {
     hud.replayStartsIn = 2;
   }
   if (confirm.state == CONFIRM.pressed) {
@@ -1562,346 +1581,207 @@ export function drawreplay() {
   if (hud.replayStartsIn == 1) {
     fastforwardexit();
   }
-  if (recording.fr > 425) {
+  if (recording.frame > 425) {
     rd.fillStyle = "#000000";
     rd.fillRect(0, 0, view.width, view.height);
   }
   if (hud.replayStartsIn) {
-    rd.globalAlpha = 0.7;
-    rd.fillStyle = "#000000";
-    rd.fillRect(0, 0, view.width, view.height);
-    rd.globalAlpha = 1;
+    darken(0.7);
     hud.replayStartsIn--;
   }
 }
-var cntreps = 0;
-var lwit = false;
-export function drawhreplay() {
+
+// How often the highlight has played; after the second time the race end follows.
+let highlightPlays = 0;
+// the last tick flashed (a stunt highlight flashes at random, never twice in a row)
+let flashed = false;
+
+// The replay goes on unless it holds still (onpausefr), and starts over at its end.
+const playOrHold = (playing) => {
+  recording.onpausefr = false;
+  if (playing) {
+    recording.frame++;
+    if (recording.frame == 430) {
+      recording.frame = 0;
+      recording.held = 0;
+      hrewindhreplay();
+      highlightPlays++;
+    }
+  } else {
+    recording.onpausefr = true;
+  }
+};
+
+// Stunts and wasted cars: the camera circles the car and the replay holds still at the
+// peak, flashing.
+const holdAtPeak = (flashes) => {
+  flashes();
+  if (
+    recording.frame > recording.highlightAt &&
+    recording.held != recording.holdTicks
+  ) {
+    recording.held++;
+  }
+  camera.mode = 1;
+  camera.target = recording.highlightCar;
+  playOrHold(recording.held == 0 || recording.held == recording.holdTicks);
+};
+
+const STUNT_FLASHES = [4, 7, 44, 47, 94, 97];
+const WASTED_FLASHES = [4, 44, 94];
+
+const stuntFlashes = () => {
+  if (recording.holdTicks == 98 && STUNT_FLASHES.includes(recording.held)) {
+    flash();
+  }
+  if (recording.holdTicks == 43) {
+    if (recording.held >= 1 && recording.held < 43) {
+      if (recording.held % Math.floor(2 + random.fx() * 3) == 0 && !flashed) {
+        flash();
+        flashed = true;
+      } else {
+        flashed = false;
+      }
+    }
+  }
+};
+
+const wastedFlashes = () => {
+  if (recording.holdTicks == 95 && WASTED_FLASHES.includes(recording.held)) {
+    flash();
+  }
+};
+
+// The camera tours the cars while the replay holds still: every 30 ticks it rests on a
+// car (rests), in between it flies from one car to another (flights). The replay holds
+// still from the given replayed ticks on until the next rest.
+const tourCars = ({ rests, flights, holdFrom }) => {
+  const stop = Math.floor(recording.held / 30);
+  const between = recording.held % 30;
+  if (between == 0) {
+    camera.mode = 1;
+    camera.target = rests[stop];
+  } else {
+    camera.mode = 3;
+    camera.target = flights[stop][0];
+    camera.nextTarget = flights[stop][1];
+    camera.transition = between;
+  }
+  holdFrom.forEach((frame, i) => {
+    if (recording.frame > frame && recording.held < (i + 1) * 30) {
+      recording.held++;
+    }
+  });
+  playOrHold(recording.held % 30 == 0);
+};
+
+const showHighlight = () => {
+  const car = recording.highlightCar;
+  const other = recording.otherCar;
+  switch (recording.highlight) {
+    case HIGHLIGHT.stunt:
+      drawCenteredText(
+        90,
+        track.stage > 2 ? "Stunts!" : "Best Stunt!",
+        0,
+        32,
+        64,
+        TEXT.label,
+      );
+      holdAtPeak(stuntFlashes);
+      break;
+    case HIGHLIGHT.wasted:
+      drawCenteredText(90, "Wasted!", 0, 32, 64, TEXT.label);
+      holdAtPeak(wastedFlashes);
+      break;
+    case HIGHLIGHT.wastedThemAll:
+      drawCenteredText(90, "You Wasted'em!", 0, 32, 64, TEXT.label);
+      if (recording.held == 13 || recording.held == 16) {
+        flash();
+      }
+      tourCars({
+        rests: [car, other],
+        flights: [[car, other]],
+        holdFrom: [recording.highlightAt],
+      });
+      break;
+    case HIGHLIGHT.closeWin:
+      drawCenteredText(90, "Close Finish!", 0, 32, 64, TEXT.label);
+      tourCars({
+        rests: [car, other, car, other],
+        flights: [
+          [car, other],
+          [other, 0],
+          [car, other],
+        ],
+        holdFrom: [228, 328, 400],
+      });
+      break;
+    case HIGHLIGHT.closeLoss:
+      drawCenteredText(
+        90,
+        "Close Finish!  Almost got it!",
+        0,
+        32,
+        64,
+        TEXT.label,
+      );
+      tourCars({
+        rests: [car, other, car, other, car],
+        flights: [
+          [car, other],
+          [other, 0],
+          [car, other],
+          [other, 0],
+        ],
+        holdFrom: [128, 228, 328, 400],
+      });
+      break;
+  }
+};
+
+const toRaceEnd = () => {
+  startRaceEnd();
+  game.phase = PHASE.raceEnd;
+};
+
+// The highlight replay after a race: it plays twice, or is skipped, then the race end
+// follows. On the very first stage a tap skips it.
+export function drawHighlightOverlay() {
   rd.clearRect(0, 0, view.width, view.height);
   rd.letterSpacing = "1px";
   rd.font = "" + 24 * (view.scaleY + view.scaleX) + "px junk";
   rd.textAlign = "center";
   rd.textBaseline = "middle";
-  var grd = rd.createLinearGradient(
+  const gradient = rd.createLinearGradient(
     640 * view.scaleX,
     40 * view.scaleY - 10 * view.scale,
     640 * view.scaleX,
     40 * view.scaleY + 10 * view.scale,
   );
-  grd.addColorStop(0, "#006ED4");
-  grd.addColorStop(1, "#A3E6FF");
-  rd.fillStyle = grd;
+  gradient.addColorStop(0, "#006ED4");
+  gradient.addColorStop(1, "#A3E6FF");
+  rd.fillStyle = gradient;
   rd.fillText("Game Highlight", 640 * view.scaleX, 40 * view.scaleY);
   rd.strokeStyle = "#003E78";
   rd.lineWidth = 1.5 * view.scale;
   rd.strokeText("Game Highlight", 640 * view.scaleX, 40 * view.scaleY);
-  if (recording.htyp == 1) {
-    if (track.stage > 2) {
-      drawCenteredText(90, "Stunts!", 0, 32, 64, TEXT.label);
-    } else {
-      drawCenteredText(90, "Best Stunt!", 0, 32, 64, TEXT.label);
-    }
-    if (recording.rmode == 98) {
-      if (
-        recording.holdf == 4 ||
-        recording.holdf == 7 ||
-        recording.holdf == 44 ||
-        recording.holdf == 47 ||
-        recording.holdf == 94 ||
-        recording.holdf == 97
-      ) {
-        rd.globalAlpha = 0.5;
-        rd.fillStyle = "#FFFFFF";
-        rd.fillRect(0, 0, view.width, view.height);
-        rd.globalAlpha = 1;
-      }
-    }
-    if (recording.rmode == 43) {
-      if (recording.holdf >= 1 && recording.holdf < 43) {
-        if (recording.holdf % Math.floor(2 + random.fx() * 3) == 0 && !lwit) {
-          rd.globalAlpha = 0.5;
-          rd.fillStyle = "#FFFFFF";
-          rd.fillRect(0, 0, view.width, view.height);
-          rd.globalAlpha = 1;
-          lwit = true;
-        } else {
-          lwit = false;
-        }
-      }
-    }
-    if (recording.fr > recording.hat && recording.holdf != recording.rmode) {
-      recording.holdf++;
-    }
-    camera.mode = 1;
-    camera.target = recording.hcim;
-    recording.onpausefr = false;
-    if (recording.holdf == 0 || recording.holdf == recording.rmode) {
-      recording.fr++;
-      if (recording.fr == 430) {
-        recording.fr = 0;
-        recording.holdf = 0;
-        hrewindhreplay();
-        cntreps++;
-      }
-    } else {
-      recording.onpausefr = true;
-    }
-  }
-  if (recording.htyp == 2) {
-    drawCenteredText(90, "Wasted!", 0, 32, 64, TEXT.label);
-    if (recording.rmode == 95) {
-      if (
-        recording.holdf == 4 ||
-        recording.holdf == 44 ||
-        recording.holdf == 94
-      ) {
-        rd.globalAlpha = 0.5;
-        rd.fillStyle = "#FFFFFF";
-        rd.fillRect(0, 0, view.width, view.height);
-        rd.globalAlpha = 1;
-      }
-    }
-    if (recording.fr > recording.hat && recording.holdf != recording.rmode) {
-      recording.holdf++;
-    }
-    camera.mode = 1;
-    camera.target = recording.hcim;
-    recording.onpausefr = false;
-    if (recording.holdf == 0 || recording.holdf == recording.rmode) {
-      recording.fr++;
-      if (recording.fr == 430) {
-        recording.fr = 0;
-        recording.holdf = 0;
-        hrewindhreplay();
-        cntreps++;
-      }
-    } else {
-      recording.onpausefr = true;
-    }
-  }
-  if (recording.htyp == 3) {
-    drawCenteredText(90, "You Wasted'em!", 0, 32, 64, TEXT.label);
-    if (recording.holdf == 13 || recording.holdf == 16) {
-      rd.globalAlpha = 0.5;
-      rd.fillStyle = "#FFFFFF";
-      rd.fillRect(0, 0, view.width, view.height);
-      rd.globalAlpha = 1;
-    }
-    if (recording.holdf == 0) {
-      camera.mode = 1;
-      camera.target = recording.hcim;
-    }
-    if (recording.holdf > 0 && recording.holdf < 30) {
-      camera.mode = 3;
-      camera.target = recording.hcim;
-      camera.nextTarget = recording.hscar;
-      camera.transition = recording.holdf;
-    }
-    if (recording.holdf == 30) {
-      camera.mode = 1;
-      camera.target = recording.hscar;
-    }
-    if (recording.fr > recording.hat && recording.holdf != 30) {
-      recording.holdf++;
-    }
-    recording.onpausefr = false;
-    if (recording.holdf == 0 || recording.holdf == 30) {
-      recording.fr++;
-      if (recording.fr == 430) {
-        recording.fr = 0;
-        recording.holdf = 0;
-        hrewindhreplay();
-        cntreps++;
-      }
-    } else {
-      recording.onpausefr = true;
-    }
-  }
-  if (recording.htyp == 4) {
-    drawCenteredText(90, "Close Finish!", 0, 32, 64, TEXT.label);
-    if (recording.holdf == 0) {
-      camera.mode = 1;
-      camera.target = recording.hcim;
-    }
-    if (recording.holdf > 0 && recording.holdf < 30) {
-      camera.mode = 3;
-      camera.target = recording.hcim;
-      camera.nextTarget = recording.hscar;
-      camera.transition = recording.holdf;
-    }
-    if (recording.holdf == 30) {
-      camera.mode = 1;
-      camera.target = recording.hscar;
-    }
-    if (recording.holdf > 30 && recording.holdf < 60) {
-      camera.mode = 3;
-      camera.target = recording.hscar;
-      camera.nextTarget = 0;
-      camera.transition = recording.holdf - 30;
-    }
-    if (recording.holdf == 60) {
-      camera.mode = 1;
-      camera.target = recording.hcim;
-    }
-    if (recording.holdf > 60 && recording.holdf < 90) {
-      camera.mode = 3;
-      camera.target = recording.hcim;
-      camera.nextTarget = recording.hscar;
-      camera.transition = recording.holdf - 60;
-    }
-    if (recording.holdf == 90) {
-      camera.mode = 1;
-      camera.target = recording.hscar;
-    }
-    if (recording.fr > 228 && recording.holdf < 30) {
-      recording.holdf++;
-    }
-    if (recording.fr > 328 && recording.holdf < 60) {
-      recording.holdf++;
-    }
-    if (recording.fr > 400 && recording.holdf < 90) {
-      recording.holdf++;
-    }
-    recording.onpausefr = false;
-    if (
-      recording.holdf == 0 ||
-      recording.holdf == 30 ||
-      recording.holdf == 60 ||
-      recording.holdf == 90
-    ) {
-      recording.fr++;
-      if (recording.fr == 430) {
-        recording.fr = 0;
-        recording.holdf = 0;
-        hrewindhreplay();
-        cntreps++;
-      }
-    } else {
-      recording.onpausefr = true;
-    }
-  }
-  if (recording.htyp == 5) {
-    drawCenteredText(
-      90,
-      "Close Finish!  Almost got it!",
-      0,
-      32,
-      64,
-      TEXT.label,
-    );
-    if (recording.holdf == 0) {
-      camera.mode = 1;
-      camera.target = recording.hcim;
-    }
-    if (recording.holdf > 0 && recording.holdf < 30) {
-      camera.mode = 3;
-      camera.target = recording.hcim;
-      camera.nextTarget = recording.hscar;
-      camera.transition = recording.holdf;
-    }
-    if (recording.holdf == 30) {
-      camera.mode = 1;
-      camera.target = recording.hscar;
-    }
-    if (recording.holdf > 30 && recording.holdf < 60) {
-      camera.mode = 3;
-      camera.target = recording.hscar;
-      camera.nextTarget = 0;
-      camera.transition = recording.holdf - 30;
-    }
-    if (recording.holdf == 60) {
-      camera.mode = 1;
-      camera.target = recording.hcim;
-    }
-    if (recording.holdf > 60 && recording.holdf < 90) {
-      camera.mode = 3;
-      camera.target = recording.hcim;
-      camera.nextTarget = recording.hscar;
-      camera.transition = recording.holdf - 60;
-    }
-    if (recording.holdf == 90) {
-      camera.mode = 1;
-      camera.target = recording.hscar;
-    }
-    if (recording.holdf > 90 && recording.holdf < 120) {
-      camera.mode = 3;
-      camera.target = recording.hscar;
-      camera.nextTarget = 0;
-      camera.transition = recording.holdf - 90;
-    }
-    if (recording.holdf == 120) {
-      camera.mode = 1;
-      camera.target = recording.hcim;
-    }
-    if (recording.fr > 128 && recording.holdf < 30) {
-      recording.holdf++;
-    }
-    if (recording.fr > 228 && recording.holdf < 60) {
-      recording.holdf++;
-    }
-    if (recording.fr > 328 && recording.holdf < 90) {
-      recording.holdf++;
-    }
-    if (recording.fr > 400 && recording.holdf < 120) {
-      recording.holdf++;
-    }
-    recording.onpausefr = false;
-    if (
-      recording.holdf == 0 ||
-      recording.holdf == 30 ||
-      recording.holdf == 60 ||
-      recording.holdf == 90 ||
-      recording.holdf == 120
-    ) {
-      recording.fr++;
-      if (recording.fr == 430) {
-        recording.fr = 0;
-        recording.holdf = 0;
-        hrewindhreplay();
-        cntreps++;
-      }
-    } else {
-      recording.onpausefr = true;
-    }
-  }
-  if (cntreps == 2 && recording.fr == 427) {
-    startRaceEnd();
-    game.phase = PHASE.raceEnd;
+  showHighlight();
+  if (highlightPlays == 2 && recording.frame == 427) {
+    toRaceEnd();
   }
   if (confirm.state == CONFIRM.pressed) {
     confirm.state = CONFIRM.used;
-    startRaceEnd();
-    game.phase = PHASE.raceEnd;
+    toRaceEnd();
   }
   if (
-    drawButton({
-      id: 1,
-      x: view.width - 100 * view.scale - 30 * view.scaleX,
-      y: view.height - 60 * view.scale - 30 * view.scaleY,
-      width: 170,
-      height: 60,
-      faceTop: "#019DFF",
-      faceBottom: "#01BAFF",
-      shadowTop: "#004A78",
-      shadowBottom: "#015777",
-      layout: BUTTON.textThenImage,
-      text: "Skip ",
-      fontSize: 20,
-      textOpacity: 0.7,
-      image: images.buttons[1],
-      imageOpacity: 0.7,
-      pulsing: false,
-    }) ||
+    replayButton("Skip ", "#01BAFF", "#015777") ||
     (pointer.down && track.stage == 1 && game.unlocked == 1)
   ) {
-    startRaceEnd();
-    game.phase = PHASE.raceEnd;
+    toRaceEnd();
   }
-  if (recording.fr >= 428) {
-    rd.globalAlpha = 0.7;
-    rd.fillStyle = "#000000";
-    rd.fillRect(0, 0, view.width, view.height);
-    rd.globalAlpha = 1;
+  if (recording.frame >= 428) {
+    darken(0.7);
   }
 }
 export function arrow(pnt, misdcp, pntcar) {

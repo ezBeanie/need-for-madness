@@ -98,9 +98,9 @@ import {
 } from "./render/scene.js";
 import { pauseMenu } from "./screens/pauseMenu.js";
 import {
-  drawhreplay,
+  drawHighlightOverlay,
   drawinter,
-  drawreplay,
+  drawReplayOverlay,
   drawRewindOverlay,
   drawSwitchScreen,
   hud,
@@ -114,6 +114,7 @@ import { car, racers } from "./race/racers.js";
 import { carStats } from "./data/carStats.js";
 import { pieceModels, pieces, track } from "./race/track.js";
 import {
+  HIGHLIGHT,
   catchnow,
   hreplay,
   inishrecord,
@@ -2391,7 +2392,7 @@ function gameworks() {
     dustfly();
     expburn();
     cpanimate();
-    drawreplay();
+    drawReplayOverlay();
   }
   if (game.phase == PHASE.highlights) {
     hreplay();
@@ -2404,7 +2405,7 @@ function gameworks() {
     dustfly();
     expburn();
     cpanimate();
-    drawhreplay();
+    drawHighlightOverlay();
   }
   if (game.phase == PHASE.switchScreen) {
     drawSwitchScreen();
@@ -3753,11 +3754,11 @@ function checkstat() {
   if (recording.catchfin != 0) {
     recording.catchfin--;
     if (recording.catchfin == 0) {
-      catchnow(4 + track.pos[0]);
-      if (recording.htyp == 4 + track.pos[0]) {
-        recording.hscar = secar;
-        if (recording.htyp > 5) {
-          recording.htyp = 5;
+      catchnow(HIGHLIGHT.closeWin + track.pos[0]);
+      if (recording.highlight == HIGHLIGHT.closeWin + track.pos[0]) {
+        recording.otherCar = secar;
+        if (recording.highlight > HIGHLIGHT.closeLoss) {
+          recording.highlight = HIGHLIGHT.closeLoss;
         }
       }
     }
@@ -4660,7 +4661,7 @@ function pausedgame() {
       pulsing: on,
     })
   ) {
-    if (recording.nrec >= 430) {
+    if (recording.recordedTicks >= 430) {
       hud.replayStartsIn = 2;
       resumeStageMusic();
       playedforeplay = true;
@@ -4787,7 +4788,7 @@ function pausedgame() {
       noten = 0;
     }
     if (pauseMenu.selected == 1) {
-      if (recording.nrec >= 430) {
+      if (recording.recordedTicks >= 430) {
         hud.replayStartsIn = 2;
         resumeStageMusic();
         playedforeplay = true;

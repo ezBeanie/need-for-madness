@@ -105,7 +105,31 @@ const fingers = () => (ctx, frame) => {
   });
 };
 
+// Wins stage 1 like finishAndPlayOn, but shows the given highlight afterwards, turning
+// to car 1.
+const highlightAfterWin = (highlight) => () => {
+  const play = finishAndPlayOn();
+  let forced = false;
+  return (ctx, frame, game) => {
+    if (!forced && ctx.raceEvents.raceOverTicks) {
+      forced = true;
+      Object.assign(ctx.recording, {
+        highlight,
+        otherCar: 1,
+        highlightAt: 300,
+      });
+    }
+    play(ctx, frame, game);
+  };
+};
+
 const flows = [
+  ...[2, 3, 4, 5].map((highlight) => ({
+    name: `highlight-${highlight}-stage-01`,
+    stage: 1,
+    frames: 2600,
+    script: highlightAfterWin(highlight),
+  })),
   {
     name: "finish-and-play-on-stage-01",
     stage: 1,

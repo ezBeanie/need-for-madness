@@ -26,7 +26,7 @@ import { carModels, carTextures, scene } from "../render/scene.js";
 import { burn, chipaway, chipburn, dustup, firexp, sprks } from "./effects.js";
 import { raceEvents } from "./events.js";
 import { car, racers } from "./racers.js";
-import { catchnow, recording } from "./recording.js";
+import { HIGHLIGHT, catchnow, recording } from "./recording.js";
 import { pieceModels, pieces, track } from "./track.js";
 
 const drag = 0.05;
@@ -2793,7 +2793,7 @@ export function drive() {
                 if (
                   c == game.player &&
                   racers[c].powerup > recording.hpowerup &&
-                  recording.htyp <= 1 &&
+                  recording.highlight <= HIGHLIGHT.stunt &&
                   (racers[c].powerup > 60 ||
                     track.stage == 1 ||
                     track.stage == 2)
@@ -2940,12 +2940,16 @@ export function drive() {
         track.dested[c] = 0;
       }
     }
-    if (c == game.player && recording.rpdcatch != 0 && recording.htyp <= 1) {
+    if (
+      c == game.player &&
+      recording.rpdcatch != 0 &&
+      recording.highlight <= HIGHLIGHT.stunt
+    ) {
       recording.rpdcatch--;
       if (recording.rpdcatch == 0) {
         catchnow(1);
-        if (recording.htyp == 1) {
-          recording.hat = 265 + random.fx() * 30;
+        if (recording.highlight == HIGHLIGHT.stunt) {
+          recording.highlightAt = 265 + random.fx() * 30;
         }
       }
     }

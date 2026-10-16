@@ -205,6 +205,12 @@ const flowState = (ctx) => ({
   unlocked: ctx.game.unlocked,
   winner: ctx.raceEvents.winner,
   holdcnt: ctx.raceEvents.raceOverTicks,
+  camera: [
+    ctx.camera.mode,
+    ctx.camera.target,
+    ctx.camera.nextTarget,
+    ctx.camera.transition,
+  ],
 });
 
 // Records a whole game flow, e.g. finishing a race and clicking through the menus.
