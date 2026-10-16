@@ -5,8 +5,6 @@ import {
   valueOf,
 } from "./data/stageFormat.js";
 import cars from "./data/cars.json";
-import { parseModel } from "./data/modelFormat.js";
-import { readFloat, readInt } from "./data/values.js";
 import {
   cosDeg as mcos,
   distance as pyd,
@@ -63,685 +61,15 @@ import {
   setWorld,
   textureGroups,
 } from "./render/renderer.js";
+import {
+  loadModel,
+  loadParticleModel,
+  newModel,
+  newParticleModel,
+} from "./render/models.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 var camrs, pyclos, pnext, pback, onycl;
-function newparticle() {
-  return {
-    loaded: 0,
-    x: 0,
-    y: 0,
-    z: 0,
-    mat: null,
-    ni: 0,
-    alpha: false,
-    copyonly: false,
-  };
-}
-function loadparticle(file, rad) {
-  rad.loaded = 0;
-  var rawFile = new XMLHttpRequest();
-  rawFile.open("GET", file, true);
-  rawFile.onreadystatechange = function () {
-    if (rawFile.readyState === 4) {
-      if (rawFile.status === 200 || rawFile.status == 0) {
-        var allText = rawFile.responseText;
-        var readlines = allText.split("\n");
-        var copyvert = false;
-        var indice = [];
-        var vert = [];
-        var gradetyp = 0;
-        var cgr = [255, 255, 0, 255, 255, 0, 0, 255];
-        var scale = 1;
-        var mid = [0, 0, 0];
-        for (var i = 0; i < readlines.length; i++) {
-          var line = readlines[i].trim();
-          if (strtsWith(line, "scale")) {
-            scale = getFloatValue("scale", line, 0);
-          }
-          if (strtsWith(line, "copyonly()")) {
-            rad.copyonly = true;
-          }
-          if (strtsWith(line, "copyvert()")) {
-            copyvert = true;
-          }
-          if (strtsWith(line, "midx")) {
-            mid[0] = getFloatValue("midx", line, 0) * scale;
-          }
-          if (strtsWith(line, "midy")) {
-            mid[1] = getFloatValue("midy", line, 0) * scale;
-          }
-          if (strtsWith(line, "midz")) {
-            mid[2] = getFloatValue("midz", line, 0) * scale;
-          }
-          if (strtsWith(line, "enableAlpha()")) {
-            rad.alpha = true;
-          }
-          if (strtsWith(line, "xgrade")) {
-            gradetyp = 0;
-            for (var k = 0; k < 8; k++) {
-              cgr[k] = getIntValue("xgrade", line, k);
-            }
-          }
-          if (strtsWith(line, "ygrade")) {
-            gradetyp = 1;
-            for (var k = 0; k < 8; k++) {
-              cgr[k] = getIntValue("ygrade", line, k);
-            }
-          }
-          if (strtsWith(line, "zgrade")) {
-            gradetyp = 2;
-            for (var k = 0; k < 8; k++) {
-              cgr[k] = getIntValue("zgrade", line, k);
-            }
-          }
-          if (strtsWith(line, "timetube")) {
-            gradetyp = 3;
-            for (var k = 0; k < 8; k++) {
-              cgr[k] = getIntValue("timetube", line, k);
-            }
-          }
-          if (line.indexOf("v(") != -1) {
-            line = line.substring(2, line.indexOf(")v"));
-            var arr = line.split(",");
-            for (var k = 0; k < arr.length; k++) {
-              vert[k] = parseFloat(arr[k]);
-            }
-            if (rad.copyonly || copyvert) {
-              rad.vert = vert;
-            }
-          }
-          if (line.indexOf("p(") != -1) {
-            line = line.substring(2, line.indexOf(")p"));
-            var arr = line.split(",");
-            for (var k = 0; k < arr.length; k++) {
-              indice[k] = parseInt(arr[k]);
-            }
-            if (rad.copyonly) {
-              rad.indice = indice;
-            }
-          }
-        }
-        if (!rad.copyonly) {
-          rad.ni = indice.length;
-          if (scale != 1) {
-            for (var i = 0; i < vert.length; i++) {
-              vert[i] *= scale;
-            }
-          }
-          rad.vbuf = gl.createBuffer();
-          gl.bindBuffer(gl.ARRAY_BUFFER, rad.vbuf);
-          gl.bufferData(
-            gl.ARRAY_BUFFER,
-            new Float32Array(vert),
-            gl.STATIC_DRAW,
-          );
-          var col = [];
-          for (var i = 0; i < vert.length / 3; i++) {
-            var shf = 0;
-            if (gradetyp <= 2) {
-              if (vert[i * 3 + gradetyp] < mid[gradetyp]) {
-                shf = 4;
-              }
-            }
-            if (gradetyp == 3) {
-              if (
-                vert[i * 3 + 2] == 1.05 * scale ||
-                vert[i * 3 + 2] == -(0.35 * scale)
-              ) {
-                if (
-                  Math.abs(vert[i * 3 + 0]) == 0.4 * scale ||
-                  Math.abs(vert[i * 3 + 1]) == 0.4 * scale
-                ) {
-                  shf = 4;
-                } else {
-                  shf = 0;
-                }
-              } else {
-                if (
-                  Math.abs(vert[i * 3 + 0]) == 0.4 * scale ||
-                  Math.abs(vert[i * 3 + 1]) == 0.4 * scale
-                ) {
-                  shf = 0;
-                } else {
-                  shf = 4;
-                }
-              }
-              if (vert[i * 3 + 2] == -1.05 * scale) {
-                cgr[3] = 10;
-                cgr[7] = 15;
-              }
-              if (vert[i * 3 + 2] == -0.35 * scale) {
-                cgr[3] = 40;
-                cgr[7] = 60;
-              }
-              if (vert[i * 3 + 2] == 0.35 * scale) {
-                cgr[3] = 70;
-                cgr[7] = 105;
-              }
-              if (vert[i * 3 + 2] == 1.05 * scale) {
-                cgr[3] = 100;
-                cgr[7] = 150;
-              }
-            }
-            for (var k = 0; k < 4; k++) {
-              col[i * 4 + k] = cgr[shf + k] / 255;
-            }
-          }
-          rad.cbuf = gl.createBuffer();
-          gl.bindBuffer(gl.ARRAY_BUFFER, rad.cbuf);
-          gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
-          rad.ibuf = gl.createBuffer();
-          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, rad.ibuf);
-          gl.bufferData(
-            gl.ELEMENT_ARRAY_BUFFER,
-            new Uint16Array(indice),
-            gl.STATIC_DRAW,
-          );
-          rad.mat = mat4.create();
-        }
-        rad.loaded = 1;
-      }
-    }
-  };
-  rawFile.send(null);
-}
-function newrad3D() {
-  return {
-    loaded: 0,
-    x: 0,
-    y: 0,
-    z: 0,
-    mat: null,
-    ont: 0,
-    ni: 0,
-    nt: 0,
-    tgn: 0,
-    alpha: 0,
-    ownlight: false,
-    ownshade: false,
-  };
-}
-function loadrad3D(file, rad) {
-  rad.loaded = 0;
-  var rawFile = new XMLHttpRequest();
-  rawFile.open("GET", file, true);
-  rawFile.onreadystatechange = function () {
-    if (rawFile.readyState === 4) {
-      if (rawFile.status === 200 || rawFile.status == 0) {
-        var allText = rawFile.responseText;
-        var model = parseModel(allText);
-        rad.colrad = 0;
-        rad.iscar = 0;
-        rad.intershad = false;
-        rad.interact = false;
-        rad.copyonly = false;
-        rad.skid = -1;
-        var vrt = model.vertices;
-        var nrm = model.normals;
-        var tex = model.texcoords;
-        var tri = model.triangles;
-        var texufile = [];
-        texufile[0] = "none";
-        var bcr = 128,
-          bcg = 128,
-          bcb = 128,
-          bca = 255;
-        var scale = 1;
-        var scaleX = 1;
-        var flipx = -1;
-        for (var i = 0; i < model.directives.length; i++) {
-          var command = model.directives[i].command;
-          var value = model.directives[i].value;
-          if (command == "flipX") {
-            flipx = 1;
-          }
-          if (command == "scale") {
-            scale = readFloat(value);
-          }
-          if (command == "Xscale") {
-            scaleX = readFloat(value);
-          }
-          if (command == "enableAlpha") {
-            rad.alpha = 1;
-          }
-          if (command == "ownLight") {
-            rad.ownlight = true;
-          }
-          if (command == "ownShade") {
-            rad.ownshade = true;
-          }
-          if (command == "car") {
-            rad.iscar = 1;
-            rad.alpha = 1;
-          }
-          if (command == "skid") {
-            rad.skid = readInt(value);
-            rad.sx = 0;
-            rad.bx = 0;
-            rad.sz = 0;
-            rad.bz = 0;
-          }
-          if (command == "intershad") {
-            rad.intershad = true;
-            if (rad.dam == null) {
-              rad.dam = 1;
-            }
-            rad.bndmax = 20;
-            rad.walarc = 0.67;
-          }
-          if (command == "interact") {
-            rad.interact = true;
-            if (rad.dam == null) {
-              rad.dam = 1;
-            }
-            rad.bndmax = 20;
-            rad.walarc = 0.67;
-          }
-          if (command == "dam") {
-            rad.dam = 3;
-          }
-          if (command == "bndmax") {
-            rad.bndmax = readFloat(value);
-          }
-          if (command == "walarc") {
-            rad.walarc = readFloat(value);
-          }
-          if (command == "copyonly") {
-            rad.copyonly = true;
-          }
-          if (command == "texture") {
-            texufile[rad.nt] = "data/3D/textures/" + value.split(",")[0];
-            rad.nt++;
-          }
-          if (command == "intertexture") {
-            texufile[rad.nt] =
-              "data/interface" +
-              interfaceResolution +
-              "/" +
-              value.split(",")[0];
-            rad.nt++;
-          }
-          if (command == "grouptexture") {
-            rad.tgn = readInt(value) + 1;
-          }
-        }
-        // All directives precede the data lines in every model file.
-        if (rad.copyonly || rad.intershad || rad.interact || rad.iscar) {
-          rad.vrt = vrt;
-          rad.tri = tri;
-        }
-        if (rad.copyonly || rad.intershad || rad.interact) {
-          rad.nrm = nrm;
-        }
-        if (rad.copyonly || rad.iscar) {
-          rad.tex = tex;
-        }
-        if (!rad.copyonly) {
-          if (rad.nt == 0) {
-            rad.nt = 1;
-          }
-          rad.ni = tri.length / 3;
-          if (scale != 1) {
-            for (var i = 0; i < vrt.length; i++) {
-              vrt[i] *= scale;
-            }
-          }
-          if (scaleX != 1) {
-            for (var i = 0; i < vrt.length; i += 3) {
-              vrt[i] *= scaleX;
-            }
-            rad.vrt = vrt;
-          }
-          var indice = [];
-          var vert = [];
-          var norm = [];
-          var texu = [];
-          rad.bx = 0;
-          rad.by = 0;
-          rad.bz = 0;
-          for (var i = 0; i < rad.ni; i++) {
-            indice[i] = i;
-            vert[i * 3] = vrt[tri[i * 3] * 3] * flipx;
-            vert[i * 3 + 1] = vrt[tri[i * 3] * 3 + 1];
-            vert[i * 3 + 2] = vrt[tri[i * 3] * 3 + 2];
-            var tcrad = Math.sqrt(
-              vert[i * 3] * vert[i * 3] +
-                vert[i * 3 + 1] * vert[i * 3 + 1] +
-                vert[i * 3 + 2] * vert[i * 3 + 2],
-            );
-            if (tcrad > rad.colrad) {
-              rad.colrad = tcrad;
-            }
-            if (Math.abs(vert[i * 3]) > rad.bx) {
-              rad.bx = Math.abs(vert[i * 3]);
-            }
-            if (Math.abs(vert[i * 3 + 1]) > rad.by) {
-              rad.by = Math.abs(vert[i * 3 + 1]);
-            }
-            if (Math.abs(vert[i * 3 + 2]) > rad.bz) {
-              rad.bz = Math.abs(vert[i * 3 + 2]);
-            }
-            if (rad.skid != -1) {
-              if (rad.sx == 0 || vert[i * 3] < rad.sx) {
-                rad.sx = vert[i * 3];
-              }
-              if (rad.bx == 0 || vert[i * 3] > rad.bx) {
-                rad.bx = vert[i * 3];
-              }
-              if (rad.sz == 0 || vert[i * 3 + 2] < rad.sz) {
-                rad.sz = vert[i * 3 + 2];
-              }
-              if (rad.bz == 0 || vert[i * 3 + 2] > rad.bz) {
-                rad.bz = vert[i * 3 + 2];
-              }
-            }
-            if (!rad.ownlight && !rad.ownshade) {
-              norm[i * 3] = nrm[tri[i * 3 + 1] * 3];
-              norm[i * 3 + 1] = nrm[tri[i * 3 + 1] * 3 + 1];
-              norm[i * 3 + 2] = nrm[tri[i * 3 + 1] * 3 + 2];
-            }
-            texu[i * 2] = tex[tri[i * 3 + 2] * 2];
-            texu[i * 2 + 1] = 1 - tex[tri[i * 3 + 2] * 2 + 1];
-          }
-          rad.vbuf = gl.createBuffer();
-          gl.bindBuffer(gl.ARRAY_BUFFER, rad.vbuf);
-          gl.bufferData(
-            gl.ARRAY_BUFFER,
-            new Float32Array(vert),
-            gl.STATIC_DRAW,
-          );
-          if (!rad.ownlight && !rad.ownshade) {
-            rad.nbuf = gl.createBuffer();
-            gl.bindBuffer(gl.ARRAY_BUFFER, rad.nbuf);
-            gl.bufferData(
-              gl.ARRAY_BUFFER,
-              new Float32Array(norm),
-              gl.STATIC_DRAW,
-            );
-          }
-          rad.tbuf = gl.createBuffer();
-          gl.bindBuffer(gl.ARRAY_BUFFER, rad.tbuf);
-          gl.bufferData(
-            gl.ARRAY_BUFFER,
-            new Float32Array(texu),
-            gl.STATIC_DRAW,
-          );
-          rad.ibuf = gl.createBuffer();
-          gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, rad.ibuf);
-          gl.bufferData(
-            gl.ELEMENT_ARRAY_BUFFER,
-            new Uint16Array(indice),
-            gl.STATIC_DRAW,
-          );
-          rad.loaded = 1;
-          rad.mat = mat4.create();
-          if (!rad.tgn) {
-            if (texufile[0] != "none") {
-              if (rad.nt == 1) {
-                var image = new Image();
-                image.onload = function () {
-                  rad.texture = gl.createTexture();
-                  gl.bindTexture(gl.TEXTURE_2D, rad.texture);
-                  gl.texImage2D(
-                    gl.TEXTURE_2D,
-                    0,
-                    gl.RGBA,
-                    gl.RGBA,
-                    gl.UNSIGNED_BYTE,
-                    image,
-                  );
-                  if (isPowerOf2(image.width) && isPowerOf2(image.height)) {
-                    gl.generateMipmap(gl.TEXTURE_2D);
-                  } else {
-                    gl.texParameteri(
-                      gl.TEXTURE_2D,
-                      gl.TEXTURE_WRAP_S,
-                      gl.CLAMP_TO_EDGE,
-                    );
-                    gl.texParameteri(
-                      gl.TEXTURE_2D,
-                      gl.TEXTURE_WRAP_T,
-                      gl.CLAMP_TO_EDGE,
-                    );
-                    gl.texParameteri(
-                      gl.TEXTURE_2D,
-                      gl.TEXTURE_MIN_FILTER,
-                      gl.LINEAR,
-                    );
-                  }
-                  rad.loaded++;
-                };
-                image.src = texufile[0];
-              } else {
-                rad.texture = [];
-                var image0 = new Image();
-                image0.onload = function () {
-                  rad.texture[0] = gl.createTexture();
-                  gl.bindTexture(gl.TEXTURE_2D, rad.texture[0]);
-                  gl.texImage2D(
-                    gl.TEXTURE_2D,
-                    0,
-                    gl.RGBA,
-                    gl.RGBA,
-                    gl.UNSIGNED_BYTE,
-                    image0,
-                  );
-                  if (isPowerOf2(image0.width) && isPowerOf2(image0.height)) {
-                    gl.generateMipmap(gl.TEXTURE_2D);
-                  } else {
-                    gl.texParameteri(
-                      gl.TEXTURE_2D,
-                      gl.TEXTURE_WRAP_S,
-                      gl.CLAMP_TO_EDGE,
-                    );
-                    gl.texParameteri(
-                      gl.TEXTURE_2D,
-                      gl.TEXTURE_WRAP_T,
-                      gl.CLAMP_TO_EDGE,
-                    );
-                    gl.texParameteri(
-                      gl.TEXTURE_2D,
-                      gl.TEXTURE_MIN_FILTER,
-                      gl.LINEAR,
-                    );
-                  }
-                  rad.loaded++;
-                };
-                image0.src = texufile[0];
-                var image1 = new Image();
-                image1.onload = function () {
-                  rad.texture[1] = gl.createTexture();
-                  gl.bindTexture(gl.TEXTURE_2D, rad.texture[1]);
-                  gl.texImage2D(
-                    gl.TEXTURE_2D,
-                    0,
-                    gl.RGBA,
-                    gl.RGBA,
-                    gl.UNSIGNED_BYTE,
-                    image1,
-                  );
-                  if (isPowerOf2(image1.width) && isPowerOf2(image1.height)) {
-                    gl.generateMipmap(gl.TEXTURE_2D);
-                  } else {
-                    gl.texParameteri(
-                      gl.TEXTURE_2D,
-                      gl.TEXTURE_WRAP_S,
-                      gl.CLAMP_TO_EDGE,
-                    );
-                    gl.texParameteri(
-                      gl.TEXTURE_2D,
-                      gl.TEXTURE_WRAP_T,
-                      gl.CLAMP_TO_EDGE,
-                    );
-                    gl.texParameteri(
-                      gl.TEXTURE_2D,
-                      gl.TEXTURE_MIN_FILTER,
-                      gl.LINEAR,
-                    );
-                  }
-                  rad.loaded++;
-                };
-                image1.src = texufile[1];
-                if (rad.nt > 2) {
-                  var image2 = new Image();
-                  image2.onload = function () {
-                    rad.texture[2] = gl.createTexture();
-                    gl.bindTexture(gl.TEXTURE_2D, rad.texture[2]);
-                    gl.texImage2D(
-                      gl.TEXTURE_2D,
-                      0,
-                      gl.RGBA,
-                      gl.RGBA,
-                      gl.UNSIGNED_BYTE,
-                      image2,
-                    );
-                    if (isPowerOf2(image2.width) && isPowerOf2(image2.height)) {
-                      gl.generateMipmap(gl.TEXTURE_2D);
-                    } else {
-                      gl.texParameteri(
-                        gl.TEXTURE_2D,
-                        gl.TEXTURE_WRAP_S,
-                        gl.CLAMP_TO_EDGE,
-                      );
-                      gl.texParameteri(
-                        gl.TEXTURE_2D,
-                        gl.TEXTURE_WRAP_T,
-                        gl.CLAMP_TO_EDGE,
-                      );
-                      gl.texParameteri(
-                        gl.TEXTURE_2D,
-                        gl.TEXTURE_MIN_FILTER,
-                        gl.LINEAR,
-                      );
-                    }
-                    rad.loaded++;
-                  };
-                  image2.src = texufile[2];
-                }
-                if (rad.nt > 3) {
-                  var image3 = new Image();
-                  image3.onload = function () {
-                    rad.texture[3] = gl.createTexture();
-                    gl.bindTexture(gl.TEXTURE_2D, rad.texture[3]);
-                    gl.texImage2D(
-                      gl.TEXTURE_2D,
-                      0,
-                      gl.RGBA,
-                      gl.RGBA,
-                      gl.UNSIGNED_BYTE,
-                      image3,
-                    );
-                    if (isPowerOf2(image3.width) && isPowerOf2(image3.height)) {
-                      gl.generateMipmap(gl.TEXTURE_2D);
-                    } else {
-                      gl.texParameteri(
-                        gl.TEXTURE_2D,
-                        gl.TEXTURE_WRAP_S,
-                        gl.CLAMP_TO_EDGE,
-                      );
-                      gl.texParameteri(
-                        gl.TEXTURE_2D,
-                        gl.TEXTURE_WRAP_T,
-                        gl.CLAMP_TO_EDGE,
-                      );
-                      gl.texParameteri(
-                        gl.TEXTURE_2D,
-                        gl.TEXTURE_MIN_FILTER,
-                        gl.LINEAR,
-                      );
-                    }
-                    rad.loaded++;
-                  };
-                  image3.src = texufile[3];
-                }
-                if (rad.nt > 4) {
-                  var image4 = new Image();
-                  image4.onload = function () {
-                    rad.texture[4] = gl.createTexture();
-                    gl.bindTexture(gl.TEXTURE_2D, rad.texture[4]);
-                    gl.texImage2D(
-                      gl.TEXTURE_2D,
-                      0,
-                      gl.RGBA,
-                      gl.RGBA,
-                      gl.UNSIGNED_BYTE,
-                      image4,
-                    );
-                    if (isPowerOf2(image4.width) && isPowerOf2(image4.height)) {
-                      gl.generateMipmap(gl.TEXTURE_2D);
-                    } else {
-                      gl.texParameteri(
-                        gl.TEXTURE_2D,
-                        gl.TEXTURE_WRAP_S,
-                        gl.CLAMP_TO_EDGE,
-                      );
-                      gl.texParameteri(
-                        gl.TEXTURE_2D,
-                        gl.TEXTURE_WRAP_T,
-                        gl.CLAMP_TO_EDGE,
-                      );
-                      gl.texParameteri(
-                        gl.TEXTURE_2D,
-                        gl.TEXTURE_MIN_FILTER,
-                        gl.LINEAR,
-                      );
-                    }
-                    rad.loaded++;
-                  };
-                  image4.src = texufile[4];
-                }
-                if (rad.nt > 5) {
-                  var image5 = new Image();
-                  image5.onload = function () {
-                    rad.texture[5] = gl.createTexture();
-                    gl.bindTexture(gl.TEXTURE_2D, rad.texture[5]);
-                    gl.texImage2D(
-                      gl.TEXTURE_2D,
-                      0,
-                      gl.RGBA,
-                      gl.RGBA,
-                      gl.UNSIGNED_BYTE,
-                      image5,
-                    );
-                    if (isPowerOf2(image5.width) && isPowerOf2(image5.height)) {
-                      gl.generateMipmap(gl.TEXTURE_2D);
-                    } else {
-                      gl.texParameteri(
-                        gl.TEXTURE_2D,
-                        gl.TEXTURE_WRAP_S,
-                        gl.CLAMP_TO_EDGE,
-                      );
-                      gl.texParameteri(
-                        gl.TEXTURE_2D,
-                        gl.TEXTURE_WRAP_T,
-                        gl.CLAMP_TO_EDGE,
-                      );
-                      gl.texParameteri(
-                        gl.TEXTURE_2D,
-                        gl.TEXTURE_MIN_FILTER,
-                        gl.LINEAR,
-                      );
-                    }
-                    rad.loaded++;
-                  };
-                  image5.src = texufile[5];
-                }
-              }
-            } else {
-              rad.loaded++;
-            }
-          } else {
-            rad.loaded++;
-          }
-        } else {
-          rad.loaded = 1;
-        }
-      }
-    }
-  };
-  rawFile.send(null);
-}
 function cartextures() {
   for (var i = 0; i < 19; i++) {
     var loadthis = false;
@@ -1232,9 +560,9 @@ for (var i = 0; i < 19; i++) {
   tiren[i] = [];
   tirel[i] = [];
   for (var k = 0; k < 2; k++) {
-    tired[i][k] = newrad3D();
-    tiren[i][k] = newparticle();
-    tirel[i][k] = newparticle();
+    tired[i][k] = newModel();
+    tiren[i][k] = newParticleModel();
+    tirel[i][k] = newParticleModel();
   }
 }
 function wheel() {
@@ -1740,7 +1068,7 @@ function shadowmap(crft, shd, rad) {
 }
 var spark = [];
 for (var s = 0; s < 6; s++) {
-  spark[s] = newparticle();
+  spark[s] = newParticleModel();
 }
 function createsparks() {
   var neg = 1;
@@ -1950,83 +1278,6 @@ function getonscreen(m, rad) {
   ];
   return [(propoint[0] * 0.5 + 0.5) * canw, (propoint[1] * -0.5 + 0.5) * canh];
 }
-function strtsWith(line, sval) {
-  return line.substring(0, sval.length) == sval;
-}
-function getIntValue(func, strn, indx) {
-  var ret = -1;
-  try {
-    var w = 0,
-      c = 0,
-      got = 0;
-    var o = "",
-      r = "";
-    w = func.length + 1;
-    while (w < strn.length && got != 2) {
-      o = "" + strn.charAt(w);
-      if (o == "," || o == ")") {
-        c++;
-        if (got == 1 || c > indx) {
-          got = 2;
-        }
-      } else {
-        if (c == indx) {
-          r += o;
-          got = 1;
-        }
-      }
-      w++;
-    }
-    if (r == "") {
-      r = "-1";
-    }
-    ret = parseInt(r);
-    var rrc = "" + ret;
-    if (rrc == "NaN") {
-      ret = -1;
-    }
-  } catch (err) {
-    ret = -1;
-  }
-  return ret;
-}
-function getFloatValue(func, strn, indx) {
-  var ret = -1;
-  try {
-    var w = 0,
-      c = 0,
-      got = 0;
-    var o = "",
-      r = "";
-    w = func.length + 1;
-    while (w < strn.length && got != 2) {
-      o = "" + strn.charAt(w);
-      if (o == "," || o == ")") {
-        c++;
-        if (got == 1 || c > indx) {
-          got = 2;
-        }
-      } else {
-        if (c == indx) {
-          r += o;
-          got = 1;
-        }
-      }
-      w++;
-    }
-    if (r == "") {
-      r = "-1";
-    }
-    ret = parseFloat(r);
-    var rrc = "" + ret;
-    if (rrc == "NaN") {
-      ret = -1;
-    }
-  } catch (err) {
-    ret = -1;
-  }
-  return ret;
-}
 function hslToRgb(h, s, l) {
   var r, g, b;
   if (s == 0) {
@@ -2077,39 +1328,39 @@ function rgbToHsl(r, g, b) {
 }
 var impimg = new Image();
 impimg.src = "data/interface" + interfaceResolution + "/loading.png";
-var ground = newrad3D();
+var ground = newModel();
 var grndimg = [];
-var skydom = newrad3D();
+var skydom = newModel();
 var skyimg = [];
 var haloimg = null;
 var carobj = [];
 var shad = [];
 for (var i = 0; i < 19; i++) {
-  carobj[i] = newrad3D();
-  shad[i] = newrad3D();
+  carobj[i] = newModel();
+  shad[i] = newModel();
 }
 var cartexture = [];
 var tireimg = [];
-var tiredisk = newrad3D();
-var tire = newparticle();
-var tirelow = newparticle();
-var cptext = newparticle();
-var fntext = newparticle();
-var bgst = newparticle();
-var timetube = newparticle();
+var tiredisk = newModel();
+var tire = newParticleModel();
+var tirelow = newParticleModel();
+var cptext = newParticleModel();
+var fntext = newParticleModel();
+var bgst = newParticleModel();
+var timetube = newParticleModel();
 var build = [];
 for (var i = 0; i < 66; i++) {
-  build[i] = newrad3D();
+  build[i] = newModel();
 }
-var fixdisk = newrad3D();
-var elec = newrad3D();
-var sprite = newrad3D();
+var fixdisk = newModel();
+var elec = newModel();
+var sprite = newModel();
 var spritexture = [];
 var explode = [];
 for (var i = 0; i < 3; i++) {
-  explode[i] = newrad3D();
+  explode[i] = newModel();
 }
-var bg3D = newrad3D();
+var bg3D = newModel();
 var contimg = [];
 var btimg = [];
 var muimg = [];
@@ -2173,7 +1424,7 @@ function loaddata() {
         frm = 0;
         tro = 2;
       }
-      loadrad3D("data/3D/ground.r3d", ground);
+      loadModel("data/3D/ground.r3d", ground);
       for (var i = frm; i < tro; i++) {
         grndimg[i] = new Image();
         grndimg[i].onload = function () {
@@ -2181,7 +1432,7 @@ function loaddata() {
         };
         grndimg[i].src = "data/3D/textures/ground" + (i + 1) + ".png";
       }
-      loadrad3D("data/3D/skydom.r3d", skydom);
+      loadModel("data/3D/skydom.r3d", skydom);
       for (var i = frm; i < tro; i++) {
         skyimg[i] = new Image();
         skyimg[i].onload = function () {
@@ -2197,15 +1448,15 @@ function loaddata() {
     }
     if (reqload == 2) {
       if (stanza != 2) {
-        loadrad3D("data/3D/tiredisk.r3d", tiredisk);
-        loadparticle("data/3D/tire.prt", tire);
-        loadparticle("data/3D/tirelow.prt", tirelow);
-        loadparticle("data/3D/cptext.prt", cptext);
-        loadparticle("data/3D/fntext.prt", fntext);
-        loadparticle("data/3D/timetube.prt", timetube);
+        loadModel("data/3D/tiredisk.r3d", tiredisk);
+        loadParticleModel("data/3D/tire.prt", tire);
+        loadParticleModel("data/3D/tirelow.prt", tirelow);
+        loadParticleModel("data/3D/cptext.prt", cptext);
+        loadParticleModel("data/3D/fntext.prt", fntext);
+        loadParticleModel("data/3D/timetube.prt", timetube);
       }
       if (stanza != 1) {
-        loadparticle("data/3D/bg.prt", bgst);
+        loadParticleModel("data/3D/bg.prt", bgst);
       }
     }
     if (reqload == 3) {
@@ -2230,8 +1481,8 @@ function loaddata() {
           }
         }
         if (loadthis) {
-          loadrad3D("data/3D/car" + i + ".r3d", carobj[i]);
-          loadrad3D("data/3D/s" + i + ".r3d", shad[i]);
+          loadModel("data/3D/car" + i + ".r3d", carobj[i]);
+          loadModel("data/3D/s" + i + ".r3d", shad[i]);
           cartexture[i] = new Image();
           cartexture[i].onload = function () {
             dataload += 9;
@@ -2340,14 +1591,14 @@ function loaddata() {
             }
           }
           if (loadthis) {
-            loadrad3D("data/3D/" + defb[i] + ".r3d", build[i]);
+            loadModel("data/3D/" + defb[i] + ".r3d", build[i]);
           }
         }
       }
     }
     if (reqload == 5) {
       if (stanza != 2) {
-        loadrad3D("data/3D/sprite.r3d", sprite);
+        loadModel("data/3D/sprite.r3d", sprite);
         for (var i = 0; i < 3; i++) {
           spritexture[i] = new Image();
           spritexture[i].onload = function () {
@@ -2355,10 +1606,10 @@ function loaddata() {
           };
           spritexture[i].src = "data/3D/textures/sp" + i + ".png";
         }
-        loadrad3D("data/3D/fixdisk.r3d", fixdisk);
-        loadrad3D("data/3D/elec.r3d", elec);
+        loadModel("data/3D/fixdisk.r3d", fixdisk);
+        loadModel("data/3D/elec.r3d", elec);
         for (var i = 0; i < 3; i++) {
-          loadrad3D("data/3D/exp" + i + ".r3d", explode[i]);
+          loadModel("data/3D/exp" + i + ".r3d", explode[i]);
         }
       }
     }
@@ -2391,7 +1642,7 @@ function loaddata() {
     }
     if (reqload == 7) {
       if (stanza != 1) {
-        loadrad3D("data/3D/bg.r3d", bg3D);
+        loadModel("data/3D/bg.r3d", bg3D);
       }
       if (stanza != 2) {
         if (isPhone) {
@@ -3041,7 +2292,7 @@ function chipaway(c, x, y, z, ctmag) {
     if (ctmag < -0.4) {
       ctmag = -0.3;
     }
-    chip[ui] = newrad3D();
+    chip[ui] = newModel();
     chip[i].rx = x * car[c].mat[0] + y * car[c].mat[4] + z * car[c].mat[8];
     chip[i].ry = x * car[c].mat[1] + y * car[c].mat[5] + z * car[c].mat[9];
     chip[i].rz = x * car[c].mat[2] + y * car[c].mat[6] + z * car[c].mat[10];
@@ -13698,7 +12949,7 @@ function createswitches() {
   }
   for (var c = 0; c < ncars; c++) {
     if (switchp[c] == null) {
-      switchp[c] = newparticle();
+      switchp[c] = newParticleModel();
     }
     if (switchp[c].loaded == 1) {
       gl.deleteBuffer(switchp[c].vbuf);
