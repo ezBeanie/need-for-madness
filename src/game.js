@@ -35,10 +35,8 @@ import { CONFIRM, confirm, pressConfirm } from "./input/confirm.js";
 import { loadSetting, saveSetting } from "./core/storage.js";
 import { images } from "./ui/images.js";
 import {
-  BUTTON,
-  TEXT,
-  anyButtonHeld,
   blink,
+  BUTTON,
   buttons,
   drawButton,
   drawCenteredText,
@@ -46,10 +44,12 @@ import {
   drawMusicToggle,
   drawSlantedBar,
   fillPolygon,
+  fillRoundedRect,
   fillScaledShape,
   pulseButtons,
   strokePolygon,
   strokeScaledPolygon,
+  TEXT,
 } from "./ui/widgets.js";
 import { installPointer, pointer } from "./input/pointer.js";
 import {
@@ -106,7 +106,8 @@ import {
   hud,
   inishinter,
 } from "./ui/hud.js";
-import { instructions, menu, showcase } from "./screens/menuState.js";
+import { menu, showcase } from "./screens/menuState.js";
+import { gameinstructions, instructions } from "./screens/instructions.js";
 import { loading } from "./loading/progress.js";
 import { game, MAX_CARS, PHASE } from "./core/state.js";
 import { tick } from "./core/tick.js";
@@ -141,6 +142,12 @@ import {
   raceEndScreen,
 } from "./screens/raceEnd.js";
 import { pausedgame } from "./screens/pauseMenu.js";
+import {
+  fillSpeechBubble,
+  insano,
+  insanoScale,
+  pickTalkingPicture,
+} from "./ui/insano.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 function cartextures() {
@@ -4690,7 +4697,7 @@ function drawmain() {
       pauseMenuMusic();
       instructions.fromMainMenu = true;
       instructions.page = 0;
-      menu.insanoTalkTicks = 250;
+      insano.talkTicks = 250;
       game.phase = PHASE.instructions;
     }
     if (
@@ -4743,7 +4750,7 @@ function drawmain() {
           pulsing: 0,
         })
       ) {
-        menu.insanoTalkTicks = 250;
+        insano.talkTicks = 250;
         game.phase = PHASE.resetQuestion;
       }
     }
@@ -4794,764 +4801,27 @@ function drawmain() {
   pulseButtons();
 }
 
-function gameinstructions() {
-  rd.fillStyle = "#000000";
-  rd.fillRect(0, 0, view.width, view.height);
-  if (instructions.fromMainMenu) {
-    var lefy = (view.width - 1280 * view.scaleY) / 2;
-    rd.drawImage(
-      images.menuBackground,
-      lefy,
-      0,
-      1280 * view.scaleY,
-      view.height,
-    );
-  } else {
-    rd.clearRect(0, 0, view.width, view.height);
-    var r = Math.floor(128 - 128 * scene.tint[0]);
-    if (r > 255) {
-      r = 255;
-    }
-    if (r < 0) {
-      r = 0;
-    }
-    var g = Math.floor(128 - 128 * scene.tint[1]);
-    if (g > 255) {
-      g = 255;
-    }
-    if (g < 0) {
-      g = 0;
-    }
-    var b = Math.floor(128 - 128 * scene.tint[2]);
-    if (b > 255) {
-      b = 255;
-    }
-    if (b < 0) {
-      b = 0;
-    }
-    var hsl = rgbToHsl(r, g, b);
-    var rgb = hslToRgb(hsl[0], 0.3, 0.2);
-    rd.fillStyle = cssRgb(rgb);
-    rd.globalAlpha = 0.7;
-    rd.fillRect(0, 0, view.width, view.height);
-    rd.globalAlpha = 1;
-  }
-  var fm = view.scaleX;
-  if (view.scaleX / view.scaleY > 1.2) {
-    fm *= 1.2 / (view.scaleX / view.scaleY);
-  }
-  if (blink.on) {
-    blink.on = false;
-  } else {
-    blink.on = true;
-  }
-  if (menu.insanoTalkTicks > 0) {
-    if (blink.on) {
-      menu.insanoPicture = Math.floor(random.fx() * 6);
-      if (menu.insanoPicture == 6) {
-        menu.insanoPicture = 5;
-      }
-    }
-    menu.insanoTalkTicks--;
-  } else {
-    menu.insanoPicture = 2;
-  }
-  rd.drawImage(
-    images.insano[menu.insanoPicture],
-    10 * fm,
-    260 * view.scaleY,
-    274 * fm * 0.7,
-    341 * fm * 0.7,
-  );
-  var topo = 260 * view.scaleY - 200 * fm;
-  rd.fillStyle = "#FFFFFF";
-  rd.globalAlpha = 0.7;
-  floatytalk(200 * fm, topo, 1060 * fm, 570 * fm, 20 * fm);
-  rd.globalAlpha = 1;
-  if (instructions.page == 0) {
-    rd.letterSpacing = "1px";
-    rd.font = "" + 30 * fm + "px junk";
-    rd.textBaseline = "middle";
-    rd.textAlign = "left";
-    rd.fillStyle = "#002748";
-    rd.fillText(
-      "Welcome to  Need for Madness !",
-      200 * fm + 20 * fm,
-      topo + 30 * fm,
-    );
-    rd.letterSpacing = "0px";
-    rd.font = "" + 30 * fm + "px verd";
-    rd.fillText(
-      "In this game there are two ways to complete a stage.",
-      200 * fm + 20 * fm,
-      topo + 76 * fm,
-    );
-    rd.fillText(
-      "One is by racing and finishing in first place, the other is by",
-      200 * fm + 20 * fm,
-      topo + 116 * fm,
-    );
-    rd.fillText(
-      "wasting and crashing all the other cars in the stage!",
-      200 * fm + 20 * fm,
-      topo + 156 * fm,
-    );
-    rd.letterSpacing = "1px";
-    rd.font = "" + 40 * fm + "px junk";
-    rd.fillText("Racing", 200 * fm + 80 * fm, topo + 220 * fm);
-    rd.fillText("Wasting", 200 * fm + 130 * fm + 485 * fm, topo + 220 * fm);
-    rd.font = "" + 35 * fm + "px junk";
-    rd.fillText("OR", 200 * fm + 511 * fm, topo + 340 * fm);
-    rd.drawImage(
-      images.instructions[0],
-      200 * fm + 20 * fm,
-      topo + 190 * fm,
-      485 * fm,
-      265 * fm,
-    );
-    rd.drawImage(
-      images.instructions[1],
-      200 * fm + 70 * fm + 485 * fm,
-      topo + 249 * fm,
-      485 * fm,
-      206 * fm,
-    );
-  }
-  if (instructions.page == 1) {
-    rd.letterSpacing = "0px";
-    rd.font = "" + 30 * fm + "px verd";
-    rd.textBaseline = "middle";
-    rd.textAlign = "left";
-    rd.fillStyle = "#002748";
-    rd.fillText(
-      "Whether you are racing or wasting, you will need to",
-      200 * fm + 20 * fm,
-      topo + 56 * fm,
-    );
-    rd.fillText("power up your car.", 200 * fm + 20 * fm, topo + 96 * fm);
-    rd.fillText(
-      "The more powered your car is, the stronger and faster",
-      200 * fm + 20 * fm,
-      topo + 136 * fm,
-    );
-    rd.fillText(
-      "it becomes! Which is helpful when racing or wasting.",
-      200 * fm + 20 * fm,
-      topo + 176 * fm,
-    );
-    rd.fillText(
-      "To power up your car (and keep it powered up) you will need to",
-      200 * fm + 20 * fm,
-      topo + 256 * fm,
-    );
-    rd.fillText("perform stunts!", 200 * fm + 20 * fm, topo + 296 * fm);
-    rd.font = "" + 50 * fm + "px verd";
-    rd.fillText("=", 770 * fm, topo + 310 * fm + 55 * view.scale);
-    rd.drawImage(
-      images.instructions[4],
-      200 * fm + 90 * fm,
-      topo + 300 * fm,
-      464 * fm,
-      150 * fm,
-    );
-    rd.letterSpacing = "1px";
-    rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
-    rd.textAlign = "right";
-    rd.fillStyle = "#000000";
-    rd.fillText(
-      "Power",
-      945 * fm - 15 * view.scale,
-      topo + 310 * fm + 55 * view.scale,
-    );
-    var r = 128;
-    var g = 190 + 70 * 0.37;
-    var b = 255;
-    drawMeter(
-      945 * fm,
-      topo + 310 * fm + 42 * view.scale,
-      "#00B0DC",
-      "#005C96",
-      "rgb(" + r + "," + g + "," + b + ")",
-      70 / 98,
-    );
-  }
-  if (instructions.page == 2) {
-    rd.letterSpacing = "0px";
-    rd.font = "" + 30 * fm + "px verd";
-    rd.textBaseline = "middle";
-    rd.textAlign = "left";
-    rd.fillStyle = "#002748";
-    rd.fillText(
-      "When wasting cars, to help you find the other cars in the stage,",
-      200 * fm + 20 * fm,
-      topo + 36 * fm,
-    );
-    rd.fillText(
-      "press the 'Arrow Target' button to toggle the guidance arrow",
-      200 * fm + 20 * fm,
-      topo + 76 * fm,
-    );
-    rd.fillText(
-      "from pointing to the track to pointing to the cars.",
-      200 * fm + 20 * fm,
-      topo + 116 * fm,
-    );
-    rd.fillText(
-      "When your car is damaged, you can fix it (and reset its 'Damage')",
-      200 * fm + 20 * fm,
-      topo + 156 * fm,
-    );
-    rd.fillText(
-      "by jumping through the electrified hoop.",
-      200 * fm + 20 * fm,
-      topo + 196 * fm,
-    );
-    rd.drawImage(
-      images.instructions[2],
-      200 * fm + 150 * fm,
-      topo + 233 * fm,
-      402 * fm,
-      231 * fm,
-    );
-    rd.drawImage(
-      images.instructions[3],
-      200 * fm + 600 * fm,
-      topo + 180 * fm,
-      376 * fm,
-      284 * fm,
-    );
-  }
-  if (instructions.page == 3) {
-    rd.letterSpacing = "0px";
-    rd.font = "" + 30 * fm + "px verd";
-    rd.textBaseline = "middle";
-    rd.textAlign = "left";
-    rd.fillStyle = "#002748";
-    if (!isPhone) {
-      rd.fillText(
-        "Drive your car using the keyboard arrows and also use the",
-        200 * fm + 20 * fm,
-        topo + 36 * fm,
-      );
-      rd.fillText(
-        "keyboard arrows when your car is in the air to perform stunts.",
-        200 * fm + 20 * fm,
-        topo + 76 * fm,
-      );
-      rd.fillText(
-        "Press Spacebar for Handbrakes to drift while turning and make",
-        200 * fm + 20 * fm,
-        topo + 116 * fm,
-      );
-      rd.fillText("quick 180 turns.", 200 * fm + 20 * fm, topo + 156 * fm);
-      rd.drawImage(
-        images.instructions[6],
-        200 * fm + 200 * fm,
-        topo + 220 * fm,
-        345 * fm,
-        77 * fm,
-      );
-      rd.drawImage(
-        images.instructions[5],
-        200 * fm + 670 * fm,
-        topo + 170 * fm,
-        220 * fm,
-        155 * fm,
-      );
-      rd.drawImage(
-        images.instructions[7],
-        200 * fm + 50 * fm,
-        topo + 380 * fm,
-        95 * fm,
-        65 * fm,
-      );
-      rd.fillText(
-        "(Gamepad & Joystick control is also possible.)",
-        200 * fm + 167 * fm,
-        topo + 420 * fm,
-      );
-    } else {
-      rd.fillText(
-        "Drive your car using the arrow buttons on the screen.",
-        200 * fm + 20 * fm,
-        topo + 36 * fm,
-      );
-      rd.fillText(
-        "Also use them when your car is in the air to perform stunts.",
-        200 * fm + 20 * fm,
-        topo + 76 * fm,
-      );
-      rd.drawImage(
-        images.touchControls[0],
-        200 * fm + 150 * fm,
-        topo + 110 * fm,
-        128 * fm,
-        128 * fm,
-      );
-      rd.drawImage(
-        images.touchControls[1],
-        200 * fm + 300 * fm,
-        topo + 110 * fm,
-        128 * fm,
-        128 * fm,
-      );
-      rd.drawImage(
-        images.touchControls[3],
-        200 * fm + 550 * fm,
-        topo + 110 * fm,
-        128 * fm,
-        128 * fm,
-      );
-      rd.drawImage(
-        images.touchControls[2],
-        200 * fm + 700 * fm,
-        topo + 110 * fm,
-        128 * fm,
-        128 * fm,
-      );
-      rd.fillText(
-        "Press the Handbrake button while turning to drift and make",
-        200 * fm + 20 * fm,
-        topo + 290 * fm,
-      );
-      rd.fillText("quick 180 turns.", 200 * fm + 20 * fm, topo + 330 * fm);
-      rd.drawImage(
-        images.touchControls[4],
-        200 * fm + 330 * fm,
-        topo + 330 * fm,
-        154 * fm,
-        111 * fm,
-      );
-    }
-  }
-  if (instructions.page == 4) {
-    rd.letterSpacing = "0px";
-    rd.font = "" + 30 * fm + "px verd";
-    rd.textBaseline = "middle";
-    rd.textAlign = "left";
-    rd.fillStyle = "#002748";
-    rd.fillText(
-      "And finally my name is Coach Insano, and I am here to help you",
-      200 * fm + 20 * fm,
-      topo + 36 * fm,
-    );
-    rd.fillText(
-      "and guide you to become the greatest Need for Madness driver",
-      200 * fm + 20 * fm,
-      topo + 76 * fm,
-    );
-    rd.fillText("you can be!", 200 * fm + 20 * fm, topo + 116 * fm);
-    rd.fillText(
-      "I will also offer you hints and tips on the ideal strategy to",
-      200 * fm + 20 * fm,
-      topo + 156 * fm,
-    );
-    rd.fillText(
-      "complete each stage. Good luck!",
-      200 * fm + 20 * fm,
-      topo + 196 * fm,
-    );
-    if (!isPhone) {
-      if (
-        drawButton({
-          id: 1,
-          x: 240 * fm + 285 * view.scale,
-          y: topo + 250 * fm,
-          width: 570,
-          height: 60,
-          faceTop: "#0075D8",
-          faceBottom: "#299DFF",
-          shadowTop: "#003F74",
-          shadowBottom: "#006AC4",
-          layout: BUTTON.textOnly,
-          text: "Additional Keyboard Controls",
-          fontSize: 18,
-          textOpacity: 0.9,
-          image: null,
-          imageOpacity: 0,
-          pulsing: false,
-        })
-      ) {
-        menu.insanoTalkTicks = 250;
-        instructions.page++;
-      }
-      if (
-        drawButton({
-          id: 2,
-          x: 240 * fm + 140 * view.scale,
-          y: topo + 350 * fm,
-          width: 280,
-          height: 60,
-          faceTop: "#0075D8",
-          faceBottom: "#299DFF",
-          shadowTop: "#003F74",
-          shadowBottom: "#006AC4",
-          layout: BUTTON.textOnly,
-          text: "Music Credits",
-          fontSize: 18,
-          textOpacity: 0.9,
-          image: null,
-          imageOpacity: 0,
-          pulsing: false,
-        })
-      ) {
-        menu.insanoTalkTicks = 250;
-        instructions.page += 2;
-      }
-    } else {
-      if (
-        drawButton({
-          id: 2,
-          x: 240 * fm + 140 * view.scale,
-          y: topo + 300 * fm,
-          width: 280,
-          height: 60,
-          faceTop: "#0075D8",
-          faceBottom: "#299DFF",
-          shadowTop: "#003F74",
-          shadowBottom: "#006AC4",
-          layout: BUTTON.textOnly,
-          text: "Music Credits",
-          fontSize: 18,
-          textOpacity: 0.9,
-          image: null,
-          imageOpacity: 0,
-          pulsing: false,
-        })
-      ) {
-        menu.insanoTalkTicks = 250;
-        instructions.page += 2;
-      }
-    }
-  }
-  if (instructions.page == 5) {
-    rd.letterSpacing = "0px";
-    rd.font = "" + 30 * fm + "px verd";
-    rd.textBaseline = "middle";
-    rd.textAlign = "left";
-    rd.fillStyle = "#002748";
-    rd.fillText(
-      "Additional Keyboard Controls",
-      200 * fm + 20 * fm,
-      topo + 36 * fm,
-    );
-    rd.fillText(
-      "[X] & [Z] to look back while driving.",
-      200 * fm + 20 * fm,
-      topo + 116 * fm,
-    );
-    rd.fillText(
-      "[Q] to toggle the guidance arrow by Keyboard.",
-      200 * fm + 20 * fm,
-      topo + 156 * fm,
-    );
-    rd.fillText(
-      "[R] to trigger time reversal and rewind time.",
-      200 * fm + 20 * fm,
-      topo + 196 * fm,
-    );
-    rd.fillText(
-      "[W], [A], [S] & [D] can also be used instead of Keyboard arrows.",
-      200 * fm + 20 * fm,
-      topo + 236 * fm,
-    );
-    rd.fillText(
-      "[V] for cinematic camera views while driving.",
-      200 * fm + 20 * fm,
-      topo + 276 * fm,
-    );
-    rd.fillText("[M] to mute music.", 200 * fm + 20 * fm, topo + 316 * fm);
-    rd.fillText(
-      "[N] to mute sound effects.",
-      200 * fm + 20 * fm,
-      topo + 356 * fm,
-    );
-    rd.fillText(
-      "[Enter] & [Esc] to navigate and pause game.",
-      200 * fm + 20 * fm,
-      topo + 396 * fm,
-    );
-    if (confirm.state == CONFIRM.pressed) {
-      instructions.page = 4;
-      menu.insanoTalkTicks = 250;
-      confirm.state = CONFIRM.used;
-    }
-  }
-  if (instructions.page == 6) {
-    rd.letterSpacing = "0px";
-    rd.font = "" + 30 * fm + "px verd";
-    rd.textBaseline = "middle";
-    rd.textAlign = "left";
-    rd.fillStyle = "#002748";
-    rd.fillText("Music Credits", 200 * fm + 20 * fm, topo + 36 * fm);
-    rd.fillText(
-      "Interface and Game Menus: Neon Nox - Shift",
-      200 * fm + 20 * fm,
-      topo + 76 * fm,
-    );
-    rd.fillText(
-      "Stage 1: Alpharisc - Video Disco",
-      200 * fm + 20 * fm,
-      topo + 116 * fm,
-    );
-    rd.fillText(
-      "Stage 2: Sferro & Tommy '86 - We Been 'Round",
-      200 * fm + 20 * fm,
-      topo + 156 * fm,
-    );
-    rd.fillText(
-      "Stage 3: Jeremiah Kane - All or Nothing",
-      200 * fm + 20 * fm,
-      topo + 196 * fm,
-    );
-    rd.fillText(
-      "Stage 4: Wolf and Raven - Cyber Samurai",
-      200 * fm + 20 * fm,
-      topo + 236 * fm,
-    );
-    rd.fillText(
-      "Stage 5: Bestrack - Burn the Night",
-      200 * fm + 20 * fm,
-      topo + 276 * fm,
-    );
-    rd.fillText(
-      "Stage 6: Midnight Fury - Arcade Hero",
-      200 * fm + 20 * fm,
-      topo + 316 * fm,
-    );
-    rd.fillText(
-      "Stage 7: DEADLIFE - Punished Survivor",
-      200 * fm + 20 * fm,
-      topo + 356 * fm,
-    );
-    rd.fillText(
-      "Stage 8: Jeremiah Kane - Street Warriors (feat. FAVORIT89)",
-      200 * fm + 20 * fm,
-      topo + 396 * fm,
-    );
-    if (
-      drawButton({
-        id: 1,
-        x: 1170 * fm - 75 * view.scale,
-        y: topo + 430 * fm,
-        width: 150,
-        height: 60,
-        faceTop: "#0075D8",
-        faceBottom: "#299DFF",
-        shadowTop: "#003F74",
-        shadowBottom: "#006AC4",
-        layout: BUTTON.textThenImage,
-        text: "Next ",
-        fontSize: 18,
-        textOpacity: 0.9,
-        image: images.buttons[2],
-        imageOpacity: 0.9,
-        pulsing: true,
-      })
-    ) {
-      menu.insanoTalkTicks = 250;
-      instructions.page++;
-    }
-    if (confirm.state == CONFIRM.pressed) {
-      instructions.page++;
-      menu.insanoTalkTicks = 250;
-      confirm.state = CONFIRM.used;
-    }
-  }
-  if (instructions.page == 7) {
-    rd.letterSpacing = "0px";
-    rd.font = "" + 30 * fm + "px verd";
-    rd.textBaseline = "middle";
-    rd.textAlign = "left";
-    rd.fillStyle = "#002748";
-    rd.fillText("Music Credits", 200 * fm + 20 * fm, topo + 36 * fm);
-    rd.fillText(
-      "Stage 9: DEADLIFE - We Are One & The Same",
-      200 * fm + 20 * fm,
-      topo + 76 * fm,
-    );
-    rd.fillText(
-      "Stage 10: Wice - Star Fighter",
-      200 * fm + 20 * fm,
-      topo + 116 * fm,
-    );
-    rd.fillText(
-      "Stage 11: Neon Nox - The Stash",
-      200 * fm + 20 * fm,
-      topo + 156 * fm,
-    );
-    rd.fillText(
-      "Stage 12: Neon Nox vs Powernerd - Dopamine",
-      200 * fm + 20 * fm,
-      topo + 196 * fm,
-    );
-    rd.fillText(
-      "Stage 13: Dreamhour - Small Town Vengeance",
-      200 * fm + 20 * fm,
-      topo + 236 * fm,
-    );
-    rd.fillText(
-      "Stage 14: LazerHawk - King of The Streets",
-      200 * fm + 20 * fm,
-      topo + 276 * fm,
-    );
-    rd.fillText(
-      "Stage 15: Jeremiah Kane - Vampirevania",
-      200 * fm + 20 * fm,
-      topo + 316 * fm,
-    );
-    rd.fillText(
-      "Stage 16: Jeremiah Kane - SPECTER",
-      200 * fm + 20 * fm,
-      topo + 356 * fm,
-    );
-    rd.fillText(
-      "Stage 17: Midnight Danger - Radio Hell",
-      200 * fm + 20 * fm,
-      topo + 396 * fm,
-    );
-    if (confirm.state == CONFIRM.pressed) {
-      instructions.page = 4;
-      menu.insanoTalkTicks = 250;
-      confirm.state = CONFIRM.used;
-    }
-  }
-  if (instructions.page > 0) {
-    if (
-      drawButton({
-        id: 4,
-        x: 240 * fm + 75 * view.scale,
-        y: topo + 560 * fm - 65 * view.scale,
-        width: 150,
-        height: 60,
-        faceTop: "#0075D8",
-        faceBottom: "#299DFF",
-        shadowTop: "#003F74",
-        shadowBottom: "#006AC4",
-        layout: BUTTON.imageThenText,
-        text: " Back",
-        fontSize: 18,
-        textOpacity: 0.9,
-        image: images.buttons[3],
-        imageOpacity: 0.9,
-        pulsing: false,
-      })
-    ) {
-      if (instructions.page == 7) {
-        instructions.page--;
-      }
-      if (instructions.page == 6) {
-        instructions.page--;
-      }
-      instructions.page--;
-      menu.insanoTalkTicks = 250;
-    }
-  }
-  if (instructions.page < 4) {
-    if (
-      drawButton({
-        id: 3,
-        x: 1280 * fm - 70 * fm - 100 * view.scale,
-        y: topo + 560 * fm - 65 * view.scale,
-        width: 200,
-        height: 60,
-        faceTop: "#0075D8",
-        faceBottom: "#299DFF",
-        shadowTop: "#003F74",
-        shadowBottom: "#006AC4",
-        layout: BUTTON.textThenImage,
-        text: "Next ",
-        fontSize: 20,
-        textOpacity: 0.9,
-        image: images.buttons[1],
-        imageOpacity: 0.9,
-        pulsing: true,
-      })
-    ) {
-      instructions.page++;
-      menu.insanoTalkTicks = 250;
-    }
-    if (confirm.state == CONFIRM.pressed) {
-      instructions.page++;
-      menu.insanoTalkTicks = 250;
-      confirm.state = CONFIRM.used;
-    }
-  }
-  if (instructions.page == 4) {
-    if (
-      drawButton({
-        id: 3,
-        x: 1280 * fm - 70 * fm - 110 * view.scale,
-        y: topo + 560 * fm - 65 * view.scale,
-        width: 220,
-        height: 60,
-        faceTop: "#0075D8",
-        faceBottom: "#299DFF",
-        shadowTop: "#003F74",
-        shadowBottom: "#006AC4",
-        layout: BUTTON.textThenImage,
-        text: "Finish ",
-        fontSize: 20,
-        textOpacity: 0.9,
-        image: images.buttons[1],
-        imageOpacity: 0.9,
-        pulsing: true,
-      })
-    ) {
-      if (instructions.fromMainMenu) {
-        game.phase = PHASE.mainMenu;
-        playMenuMusic();
-      } else {
-        game.phase = PHASE.paused;
-      }
-    }
-    if (confirm.state == CONFIRM.pressed) {
-      if (instructions.fromMainMenu) {
-        game.phase = PHASE.mainMenu;
-        playMenuMusic();
-      } else {
-        game.phase = PHASE.paused;
-      }
-      confirm.state = CONFIRM.used;
-    }
-  }
-  if (!anyButtonHeld() && pointer.down) {
-    if (instructions.fromMainMenu) {
-      game.phase = PHASE.mainMenu;
-      playMenuMusic();
-    } else {
-      game.phase = PHASE.paused;
-    }
-    pointer.down = false;
-  }
-}
 function resetgame() {
   rd.fillStyle = "#000000";
   rd.fillRect(0, 0, view.width, view.height);
   var lefy = (view.width - 1280 * view.scaleY) / 2;
   rd.drawImage(images.menuBackground, lefy, 0, 1280 * view.scaleY, view.height);
-  var fm = view.scaleX;
-  if (view.scaleX / view.scaleY > 1.2) {
-    fm *= 1.2 / (view.scaleX / view.scaleY);
-  }
+  var fm = insanoScale();
   if (blink.on) {
     blink.on = false;
   } else {
     blink.on = true;
   }
-  if (menu.insanoTalkTicks > 0) {
+  if (insano.talkTicks > 0) {
     if (blink.on) {
-      menu.insanoPicture = Math.floor(random.fx() * 6);
-      if (menu.insanoPicture == 6) {
-        menu.insanoPicture = 5;
-      }
+      pickTalkingPicture();
     }
-    menu.insanoTalkTicks--;
+    insano.talkTicks--;
   } else {
-    menu.insanoPicture = 2;
+    insano.picture = 2;
   }
   rd.drawImage(
-    images.insano[menu.insanoPicture],
+    images.insano[insano.picture],
     10 * fm,
     260 * view.scaleY,
     274 * fm * 0.7,
@@ -5560,7 +4830,7 @@ function resetgame() {
   var topo = 260 * view.scaleY - 200 * fm;
   rd.fillStyle = "#FFFFFF";
   rd.globalAlpha = 0.7;
-  floatytalk(200 * fm, topo, 1060 * fm, 570 * fm, 20 * fm);
+  fillSpeechBubble(200 * fm, topo, 1060 * fm, 570 * fm, 20 * fm);
   rd.globalAlpha = 1;
   rd.letterSpacing = "0px";
   rd.font = "" + 30 * fm + "px verd";
@@ -5690,10 +4960,7 @@ function drawloading() {
 }
 
 function drawonbordo() {
-  var fm = view.scaleX;
-  if (view.scaleX / view.scaleY > 1.2) {
-    fm *= 1.2 / (view.scaleX / view.scaleY);
-  }
+  var fm = insanoScale();
   var topo = 260 * view.scaleY;
   if (hud.powerBlink) {
     hud.powerBlink = false;
@@ -5702,16 +4969,13 @@ function drawonbordo() {
   }
   if (raceEvents.countdown > 130) {
     if (hud.powerBlink) {
-      menu.insanoPicture = Math.floor(random.fx() * 6);
-      if (menu.insanoPicture == 6) {
-        menu.insanoPicture = 5;
-      }
+      pickTalkingPicture();
     }
   } else {
-    menu.insanoPicture = 2;
+    insano.picture = 2;
   }
   rd.drawImage(
-    images.insano[menu.insanoPicture],
+    images.insano[insano.picture],
     10 * fm,
     topo,
     274 * fm * 0.7,
@@ -5723,7 +4987,7 @@ function drawonbordo() {
   if (track.stage == 4) {
     fldn = 280;
   }
-  floatytalk(200 * fm, topo, 1060 * fm, fldn * fm, 20 * fm);
+  fillSpeechBubble(200 * fm, topo, 1060 * fm, fldn * fm, 20 * fm);
   rd.globalAlpha = 1;
   rd.letterSpacing = "0px";
   rd.font = "" + 30 * fm + "px verd";
@@ -6392,8 +5656,8 @@ function stageloading() {
       createbordo();
       ontip = false;
       if (hastip) {
-        menu.insanoTalkTicks = 0;
-        menu.insanoPicture = 0;
+        insano.talkTicks = 0;
+        insano.picture = 0;
       }
       game.phase = PHASE.stageSelect;
     } else {
@@ -6462,21 +5726,18 @@ function drawstageselect() {
       } else {
         blink.on = true;
       }
-      if (menu.insanoTalkTicks > 50) {
+      if (insano.talkTicks > 50) {
         if (blink.on) {
-          menu.insanoPicture = Math.floor(random.fx() * 6);
-          if (menu.insanoPicture == 6) {
-            menu.insanoPicture = 5;
-          }
+          pickTalkingPicture();
         }
       }
-      menu.insanoTalkTicks++;
-      if (menu.insanoTalkTicks >= 67) {
-        menu.insanoTalkTicks = 0;
+      insano.talkTicks++;
+      if (insano.talkTicks >= 67) {
+        insano.talkTicks = 0;
       }
       rd.globalAlpha = 0.6;
       rd.drawImage(
-        images.insano[menu.insanoPicture],
+        images.insano[insano.picture],
         70 * view.scaleX,
         720 * view.scaleY - 222 * view.scale,
         274 * view.scale * 0.8,
@@ -6485,14 +5746,14 @@ function drawstageselect() {
       rd.globalAlpha = 1;
       rd.globalAlpha = 0.5;
       rd.fillStyle = "#FFFFFF";
-      floatythink(
+      fillRoundedRect(
         70 * view.scaleX + 207 * view.scale,
         720 * view.scaleY - 115 * view.scale,
         30 * view.scale,
         30 * view.scale,
         10 * view.scale,
       );
-      floatythink(
+      fillRoundedRect(
         70 * view.scaleX + 247 * view.scale,
         720 * view.scaleY - 170 * view.scale,
         225 * view.scale,
@@ -6738,7 +5999,7 @@ function drawstageselect() {
             })
           ) {
             ontip = true;
-            menu.insanoTalkTicks = 0;
+            insano.talkTicks = 0;
           }
         } else {
           if (track.stage == 1 || track.stage == 2) {
@@ -6862,29 +6123,23 @@ function drawstageselect() {
       }
       pulseButtons();
     } else {
-      var fm = view.scaleX;
-      if (view.scaleX / view.scaleY > 1.2) {
-        fm *= 1.2 / (view.scaleX / view.scaleY);
-      }
+      var fm = insanoScale();
       var topo = 260 * view.scaleY;
       if (blink.on) {
         blink.on = false;
       } else {
         blink.on = true;
       }
-      if (menu.insanoTalkTicks < 200) {
+      if (insano.talkTicks < 200) {
         if (blink.on) {
-          menu.insanoPicture = Math.floor(random.fx() * 6);
-          if (menu.insanoPicture == 6) {
-            menu.insanoPicture = 5;
-          }
+          pickTalkingPicture();
         }
-        menu.insanoTalkTicks++;
+        insano.talkTicks++;
       } else {
-        menu.insanoPicture = 2;
+        insano.picture = 2;
       }
       rd.drawImage(
-        images.insano[menu.insanoPicture],
+        images.insano[insano.picture],
         10 * fm,
         topo,
         274 * fm * 0.7,
@@ -6892,7 +6147,7 @@ function drawstageselect() {
       );
       rd.fillStyle = "#FFFFFF";
       rd.globalAlpha = 0.6;
-      floatytalk(200 * fm, topo, 990 * fm, 300 * fm, 20 * fm);
+      fillSpeechBubble(200 * fm, topo, 990 * fm, 300 * fm, 20 * fm);
       rd.globalAlpha = 1;
       rd.letterSpacing = "0px";
       rd.font = "" + 30 * fm + "px verd";
@@ -6927,7 +6182,7 @@ function drawstageselect() {
         })
       ) {
         ontip = false;
-        menu.insanoTalkTicks = 0;
+        insano.talkTicks = 0;
       }
     }
   } else {
@@ -7057,50 +6312,6 @@ function createbordo() {
   xsp[50] = xsp[0];
   ysp[50] = ysp[0];
 }
-function floatytalk(x, y, width, height, cornerRadius) {
-  rd.beginPath();
-  rd.moveTo(x + cornerRadius, y);
-  rd.lineTo(x + width - cornerRadius, y);
-  rd.quadraticCurveTo(x + width, y, x + width, y + cornerRadius);
-  rd.lineTo(x + width, y + height - cornerRadius);
-  rd.quadraticCurveTo(
-    x + width,
-    y + height,
-    x + width - cornerRadius,
-    y + height,
-  );
-  rd.lineTo(x + cornerRadius, y + height);
-  rd.quadraticCurveTo(x, y + height, x, y + height - cornerRadius);
-  var fm = view.scaleX;
-  if (view.scaleX / view.scaleY > 1.2) {
-    fm *= 1.2 / (view.scaleX / view.scaleY);
-  }
-  rd.lineTo(x, 260 * view.scaleY + 200 * fm);
-  rd.lineTo(150 * fm, 260 * view.scaleY + 200 * fm);
-  rd.lineTo(x, 260 * view.scaleY + 230 * fm);
-  rd.lineTo(x, y + cornerRadius);
-  rd.quadraticCurveTo(x, y, x + cornerRadius, y);
-  rd.fill();
-}
-function floatythink(x, y, width, height, cornerRadius) {
-  rd.beginPath();
-  rd.moveTo(x + cornerRadius, y);
-  rd.lineTo(x + width - cornerRadius, y);
-  rd.quadraticCurveTo(x + width, y, x + width, y + cornerRadius);
-  rd.lineTo(x + width, y + height - cornerRadius);
-  rd.quadraticCurveTo(
-    x + width,
-    y + height,
-    x + width - cornerRadius,
-    y + height,
-  );
-  rd.lineTo(x + cornerRadius, y + height);
-  rd.quadraticCurveTo(x, y + height, x, y + height - cornerRadius);
-  rd.lineTo(x, y + cornerRadius);
-  rd.quadraticCurveTo(x, y, x + cornerRadius, y);
-  rd.fill();
-}
-
 // Canvas, input and start-up (formerly the inline script of index.html).
 
 installPointer(canvas2D, {

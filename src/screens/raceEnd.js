@@ -18,6 +18,7 @@ import { images } from "../ui/images.js";
 import { rd, view } from "../ui/view.js";
 import { BUTTON, blink, drawButton } from "../ui/widgets.js";
 import { menu, showcase } from "./menuState.js";
+import { insano, pickTalkingPicture } from "../ui/insano.js";
 
 // menu.animation on this screen: it fades in until FADED_IN; an unlocked car is then
 // presented (see unlockedcar) while it is UNLOCKED_CAR_SHOWN.
@@ -70,10 +71,7 @@ export const loadConfetti = () => {
 
 export const startRaceEnd = () => {
   menu.animation = 0;
-  menu.insanoPicture = Math.floor(random.fx() * 6);
-  if (menu.insanoPicture == 6) {
-    menu.insanoPicture = 5;
-  }
+  pickTalkingPicture();
   tilt = random.fx();
   unlockedCar = -1;
   raceEvents.screenTicks = 0;
@@ -97,7 +95,7 @@ const drawInsanoAndSlogan = () => {
   rd.save();
   rd.rotate((-15 + tilt * 25) * (Math.PI / 180));
   rd.drawImage(
-    images.insano[menu.insanoPicture],
+    images.insano[insano.picture],
     110 * tilt - 60,
     200 * view.scaleY,
     274 * view.scale,

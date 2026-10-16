@@ -23,7 +23,9 @@ import {
   drawSlantedBar,
   pulseButtons,
 } from "../ui/widgets.js";
-import { instructions, menu } from "./menuState.js";
+import { PAGE, TALK_TICKS, instructions } from "./instructions.js";
+import { menu } from "./menuState.js";
+import { insano } from "../ui/insano.js";
 
 export const pauseMenu = {
   // the highlighted entry
@@ -157,8 +159,8 @@ const choose = (entry) => {
   if (entry == INSTRUCTIONS) {
     leaveMenu();
     instructions.fromMainMenu = false;
-    instructions.page = 0;
-    menu.insanoTalkTicks = 250;
+    instructions.page = PAGE.welcome;
+    insano.talkTicks = TALK_TICKS;
     game.phase = PHASE.instructions;
   }
   if (entry == QUIT) {

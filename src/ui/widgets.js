@@ -439,3 +439,28 @@ export const pulseButtons = () => {
     }
   }
 };
+
+export const fillRoundedRect = (x, y, width, height, cornerRadius) => {
+  rd.beginPath();
+  rd.moveTo(x + cornerRadius, y);
+  rd.lineTo(x + width - cornerRadius, y);
+  rd.quadraticCurveTo(x + width, y, x + width, y + cornerRadius);
+  rd.lineTo(x + width, y + height - cornerRadius);
+  rd.quadraticCurveTo(
+    x + width,
+    y + height,
+    x + width - cornerRadius,
+    y + height,
+  );
+  rd.lineTo(x + cornerRadius, y + height);
+  rd.quadraticCurveTo(x, y + height, x, y + height - cornerRadius);
+  rd.lineTo(x, y + cornerRadius);
+  rd.quadraticCurveTo(x, y, x + cornerRadius, y);
+  rd.fill();
+};
+
+// The menu background, as high as the screen and centred.
+export const drawMenuBackground = () => {
+  const left = (view.width - 1280 * view.scaleY) / 2;
+  rd.drawImage(images.menuBackground, left, 0, 1280 * view.scaleY, view.height);
+};
