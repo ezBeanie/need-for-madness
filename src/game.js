@@ -68,6 +68,7 @@ import {
   newParticleModel,
 } from "./render/models.js";
 import { canvas2D, rd, view } from "./ui/view.js";
+import { camera } from "./render/camera.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 var camrs, pyclos, pnext, pback, onycl;
@@ -907,11 +908,11 @@ function setwheelspos() {
     for (var j = 0; j < 4; j++) {
       whl[cn][j].dist = pyd(
         whl[cn][j].x,
-        camx,
+        camera.x,
         whl[cn][j].y,
-        camy,
+        camera.y,
         whl[cn][j].z,
-        camz,
+        camera.z,
       );
     }
   }
@@ -2216,8 +2217,8 @@ function cpanimate() {
   }
   if (onelec) {
     elec.mat = resetMatrix(elec.mat);
-    mat4.rotate(elec.mat, elec.mat, camxz * (Math.PI / 180), [0, -1, 0]);
-    mat4.rotate(elec.mat, elec.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
+    mat4.rotate(elec.mat, elec.mat, camera.yaw * (Math.PI / 180), [0, -1, 0]);
+    mat4.rotate(elec.mat, elec.mat, camera.pitch * (Math.PI / 180), [-1, 0, 0]);
     elec.ont++;
     if (elec.ont == 5) {
       elec.ont = 0;
@@ -2240,27 +2241,27 @@ function cpanimate() {
     }
     var flipit = false;
     if (Math.abs(cptext.mat[8]) > Math.abs(cptext.mat[10])) {
-      if (camx < cptext.x) {
+      if (camera.x < cptext.x) {
         cptext.x -= 6.7;
       } else {
         cptext.x += 6.7;
       }
-      if (cptext.mat[8] > 0 && camx < cptext.x) {
+      if (cptext.mat[8] > 0 && camera.x < cptext.x) {
         flipit = true;
       }
-      if (cptext.mat[8] < 0 && camx > cptext.x) {
+      if (cptext.mat[8] < 0 && camera.x > cptext.x) {
         flipit = true;
       }
     } else {
-      if (camz < cptext.z) {
+      if (camera.z < cptext.z) {
         cptext.z -= 6.7;
       } else {
         cptext.z += 6.7;
       }
-      if (cptext.mat[10] > 0 && camz < cptext.z) {
+      if (cptext.mat[10] > 0 && camera.z < cptext.z) {
         flipit = true;
       }
-      if (cptext.mat[10] < 0 && camz > cptext.z) {
+      if (cptext.mat[10] < 0 && camera.z > cptext.z) {
         flipit = true;
       }
     }
@@ -2649,21 +2650,21 @@ function dustfly() {
       var vfz = dust[i].sz * fct * dust[i].sz * fct;
       var mlt = 1;
       if (vfx > vfz) {
-        mlt = 1 + (1 - Math.abs(mcos(camxz) * mcos(camxz) - vfx));
+        mlt = 1 + (1 - Math.abs(mcos(camera.yaw) * mcos(camera.yaw) - vfx));
       } else {
-        mlt = 1 + (1 - Math.abs(msin(camxz) * msin(camxz) - vfz));
+        mlt = 1 + (1 - Math.abs(msin(camera.yaw) * msin(camera.yaw) - vfz));
       }
       dust[i].mat = resetMatrix(dust[i].mat);
       mat4.rotate(
         dust[i].mat,
         dust[i].mat,
-        camxz * (Math.PI / 180),
+        camera.yaw * (Math.PI / 180),
         [0, -1, 0],
       );
       mat4.rotate(
         dust[i].mat,
         dust[i].mat,
-        camzy * (Math.PI / 180),
+        camera.pitch * (Math.PI / 180),
         [-1, 0, 0],
       );
       mat4.rotate(
@@ -2709,7 +2710,14 @@ function dustfly() {
     var dustd = [];
     for (var i = 0; i < ndst; i++) {
       wer[i] = 0;
-      dustd[i] = pyd(dust[i].x, camx, dust[i].y, camy, dust[i].z, camz);
+      dustd[i] = pyd(
+        dust[i].x,
+        camera.x,
+        dust[i].y,
+        camera.y,
+        dust[i].z,
+        camera.z,
+      );
     }
     for (var i = 0; i < ndst; i++) {
       for (var j = i + 1; j < ndst; j++) {
@@ -2798,8 +2806,18 @@ function expburn() {
   for (var i = 0; i < nexp; i++) {
     if (exp[i].ani != -1) {
       exp[i].mat = resetMatrix(exp[i].mat);
-      mat4.rotate(exp[i].mat, exp[i].mat, camxz * (Math.PI / 180), [0, -1, 0]);
-      mat4.rotate(exp[i].mat, exp[i].mat, camzy * (Math.PI / 180), [-1, 0, 0]);
+      mat4.rotate(
+        exp[i].mat,
+        exp[i].mat,
+        camera.yaw * (Math.PI / 180),
+        [0, -1, 0],
+      );
+      mat4.rotate(
+        exp[i].mat,
+        exp[i].mat,
+        camera.pitch * (Math.PI / 180),
+        [-1, 0, 0],
+      );
       mat4.rotate(
         exp[i].mat,
         exp[i].mat,
@@ -2836,7 +2854,7 @@ function expburn() {
     var expd = [];
     for (var i = 0; i < nexp; i++) {
       wer[i] = 0;
-      expd[i] = pyd(exp[i].x, camx, exp[i].y, camy, exp[i].z, camz);
+      expd[i] = pyd(exp[i].x, camera.x, exp[i].y, camera.y, exp[i].z, camera.z);
     }
     for (var i = 0; i < nexp; i++) {
       for (var j = i + 1; j < nexp; j++) {
@@ -2852,24 +2870,7 @@ function expburn() {
     nexp = 0;
   }
 }
-var camx = 0,
-  camy = 0,
-  camz = 0;
-var camzy = 30,
-  camxz = -90;
-var cmat = null;
-var camode = 0;
-var cim = 0;
-var cim2 = 0;
-var lookback = 0;
-var bcxz = 0;
-var high = false;
-var vxz = 0;
-var adv = 50;
-var ronf = 0;
-var vert = false;
-var td = false;
-var htrns = 0;
+
 var updateframe = false;
 // Fase whose 3D scene has been drawn from a finished logic tick and may be redrawn every frame.
 var framefase = -1;
@@ -2878,8 +2879,8 @@ function gameworks() {
   var fieldOfView = (55 * Math.PI) / 180;
   var zNear = 0.1;
   var zFar = 7000;
-  cmat = mat4.create();
-  mat4.perspective(cmat, fieldOfView, view.aspect, zNear, zFar);
+  camera.matrix = mat4.create();
+  mat4.perspective(camera.matrix, fieldOfView, view.aspect, zNear, zFar);
   onelec = false;
   if (fase == 7) {
     if (starcnt == 0) {
@@ -2898,13 +2899,13 @@ function gameworks() {
       enginsnd();
     } else {
       if (starcnt == 186) {
-        adv = 190;
-        camzy = 40;
-        vxz = 250;
-        cim = 3;
-        high = true;
-        ronf = 0;
-        camode = 1;
+        camera.orbitHeight = 190;
+        camera.pitch = 40;
+        camera.orbitAngle = 250;
+        camera.target = 3;
+        camera.orbitHigh = true;
+        camera.orbitTilt = 0;
+        camera.mode = 1;
       }
       if (starcnt != 0) {
         starcnt--;
@@ -2978,13 +2979,13 @@ function gameworks() {
         }
       }
       if (starcnt == 65) {
-        vert = false;
-        adv = 90;
-        vxz = 0;
-        cim = 0;
-        high = false;
-        ronf = 0;
-        camode = 0;
+        camera.orbitDescending = false;
+        camera.orbitHeight = 90;
+        camera.orbitAngle = 0;
+        camera.target = 0;
+        camera.orbitHigh = false;
+        camera.orbitTilt = 0;
+        camera.mode = 0;
         revfase = 0;
         reqpbr = 1;
         rd.fillStyle = "#FFFFFF";
@@ -3038,70 +3039,70 @@ function gameworks() {
     cpanimate();
     drawrevtime();
   }
-  if (camode == 0) {
-    camzy = 10;
-    var bado = 2 + Math.abs(bcxz) / 4;
+  if (camera.mode == 0) {
+    camera.pitch = 10;
+    var bado = 2 + Math.abs(camera.lookBackYaw) / 4;
     if (bado > 20) {
       bado = 20;
     }
     bado *= m;
-    if (lookback != 0) {
-      if (lookback == 1) {
-        if (bcxz < 180) {
-          bcxz += bado;
+    if (camera.lookBack != 0) {
+      if (camera.lookBack == 1) {
+        if (camera.lookBackYaw < 180) {
+          camera.lookBackYaw += bado;
         }
-        if (bcxz > 180) {
-          bcxz = 180;
+        if (camera.lookBackYaw > 180) {
+          camera.lookBackYaw = 180;
         }
       }
-      if (lookback == -1) {
-        if (bcxz > -180) {
-          bcxz -= bado;
+      if (camera.lookBack == -1) {
+        if (camera.lookBackYaw > -180) {
+          camera.lookBackYaw -= bado;
         }
-        if (bcxz < -180) {
-          bcxz = -180;
+        if (camera.lookBackYaw < -180) {
+          camera.lookBackYaw = -180;
         }
       }
     } else {
-      if (Math.abs(bcxz) > bado) {
-        if (bcxz > 0) {
-          bcxz -= bado;
+      if (Math.abs(camera.lookBackYaw) > bado) {
+        if (camera.lookBackYaw > 0) {
+          camera.lookBackYaw -= bado;
         } else {
-          bcxz += bado;
+          camera.lookBackYaw += bado;
         }
       } else {
-        if (bcxz != 0) {
-          bcxz = 0;
+        if (camera.lookBackYaw != 0) {
+          camera.lookBackYaw = 0;
         }
       }
     }
-    var kcxz = cxz[cim] - 180 + bcxz;
-    camxz = kcxz;
-    camx = car[cim].x - 80 * msin(kcxz);
-    camz = car[cim].z + 80 * mcos(kcxz);
-    camy = car[cim].y + 25;
+    var kcxz = cxz[camera.target] - 180 + camera.lookBackYaw;
+    camera.yaw = kcxz;
+    camera.x = car[camera.target].x - 80 * msin(kcxz);
+    camera.z = car[camera.target].z + 80 * mcos(kcxz);
+    camera.y = car[camera.target].y + 25;
   }
-  if (camode == 1) {
-    if (!high) {
-      if (!vert) {
-        adv += 0.2 * m;
+  if (camera.mode == 1) {
+    if (!camera.orbitHigh) {
+      if (!camera.orbitDescending) {
+        camera.orbitHeight += 0.2 * m;
       } else {
-        adv -= 0.2 * m;
+        camera.orbitHeight -= 0.2 * m;
       }
-      if (adv > 90) {
-        vert = true;
+      if (camera.orbitHeight > 90) {
+        camera.orbitDescending = true;
       }
-      if (adv < -50) {
-        vert = false;
+      if (camera.orbitHeight < -50) {
+        camera.orbitDescending = false;
       }
     } else {
-      adv -= 1.4 * m;
-      if (adv < 61.7) {
-        adv = 61.7;
+      camera.orbitHeight -= 1.4 * m;
+      if (camera.orbitHeight < 61.7) {
+        camera.orbitHeight = 61.7;
       }
     }
-    var amp = 50 + adv;
-    if (high) {
+    var amp = 50 + camera.orbitHeight;
+    if (camera.orbitHigh) {
       if (amp < 130) {
         amp = 130;
       }
@@ -3109,77 +3110,85 @@ function gameworks() {
     if (amp < 100) {
       amp = 100;
     }
-    camy = car[cim].y + adv;
-    if (camy < 5) {
-      vert = false;
+    camera.y = car[camera.target].y + camera.orbitHeight;
+    if (camera.y < 5) {
+      camera.orbitDescending = false;
     }
-    camx = car[cim].x + amp * mcos(vxz);
-    camz = car[cim].z + amp * msin(vxz);
-    if (!high) {
-      vxz -= 2 * m;
+    camera.x = car[camera.target].x + amp * mcos(camera.orbitAngle);
+    camera.z = car[camera.target].z + amp * msin(camera.orbitAngle);
+    if (!camera.orbitHigh) {
+      camera.orbitAngle -= 2 * m;
     } else {
-      vxz -= 4 * m;
+      camera.orbitAngle -= 4 * m;
     }
     var ad = 0;
-    var ty = camy;
+    var ty = camera.y;
     if (ty < 0) {
       ty = 0;
     }
-    if (car[cim].y - ty < 0) {
+    if (car[camera.target].y - ty < 0) {
       ad = -180;
     }
     var max = Math.sqrt(
-      (car[cim].z - camz) * (car[cim].z - camz) +
-        (car[cim].x - camx) * (car[cim].x - camx),
+      (car[camera.target].z - camera.z) * (car[camera.target].z - camera.z) +
+        (car[camera.target].x - camera.x) * (car[camera.target].x - camera.x),
     );
     var rzy = -(
       90 +
       ad -
-      Math.atan(max / (car[cim].y - ty)) / 0.017453292519943295
+      Math.atan(max / (car[camera.target].y - ty)) / 0.017453292519943295
     );
-    camxz = -(-vxz + 90);
-    if (high) {
-      rzy -= ronf;
-      ronf += 0.2;
-      if (ronf > 15) {
-        ronf = 15;
+    camera.yaw = -(-camera.orbitAngle + 90);
+    if (camera.orbitHigh) {
+      rzy -= camera.orbitTilt;
+      camera.orbitTilt += 0.2;
+      if (camera.orbitTilt > 15) {
+        camera.orbitTilt = 15;
       }
     }
-    camzy += (rzy - camzy) / 10;
+    camera.pitch += (rzy - camera.pitch) / 10;
   }
-  if (camode == 2) {
-    if (td) {
+  if (camera.mode == 2) {
+    if (camera.relocate) {
       var sidn = 1;
       if (random.fx() > random.fx()) {
         sidn = -1;
       }
-      camy = car[cim].y + 10 + 160 * random.fx();
-      camx = car[cim].x + 40 * sidn * mcos(mxz[cim]) - 500 * msin(mxz[cim]);
-      camz = car[cim].z + 40 * sidn * msin(mxz[cim]) + 500 * mcos(mxz[cim]);
-      td = false;
+      camera.y = car[camera.target].y + 10 + 160 * random.fx();
+      camera.x =
+        car[camera.target].x +
+        40 * sidn * mcos(mxz[camera.target]) -
+        500 * msin(mxz[camera.target]);
+      camera.z =
+        car[camera.target].z +
+        40 * sidn * msin(mxz[camera.target]) +
+        500 * mcos(mxz[camera.target]);
+      camera.relocate = false;
     }
     var ad = 0;
-    if (car[cim].x - camx > 0) {
+    if (car[camera.target].x - camera.x > 0) {
       ad = 180;
     }
     var rxz = -(
       90 +
       ad +
-      Math.atan((car[cim].z - camz) / -(car[cim].x - camx)) /
+      Math.atan(
+        (car[camera.target].z - camera.z) / -(car[camera.target].x - camera.x),
+      ) /
         0.017453292519943295
     );
     ad = 0;
-    if (car[cim].y - camy < 0) {
+    if (car[camera.target].y - camera.y < 0) {
       ad = -180;
     }
     var max = Math.sqrt(
-      (car[cim].z - camz) * (car[cim].z - camz) +
-        (car[cim].x - camx) * (car[cim].x - camx),
+      (car[camera.target].z - camera.z) * (car[camera.target].z - camera.z) +
+        (car[camera.target].x - camera.x) * (car[camera.target].x - camera.x),
     );
     var rzy = -(
       90 +
       ad -
-      Math.atan(max / (car[cim].y - camy)) / 0.017453292519943295
+      Math.atan(max / (car[camera.target].y - camera.y)) / 0.017453292519943295
     );
     while (rxz < 0) {
       rxz += 360;
@@ -3187,46 +3196,56 @@ function gameworks() {
     while (rxz > 360) {
       rxz -= 360;
     }
-    camxz = rxz;
-    camzy += (rzy - camzy) / 5;
+    camera.yaw = rxz;
+    camera.pitch += (rzy - camera.pitch) / 5;
     if (
       Math.sqrt(
-        (car[cim].z - camz) * (car[cim].z - camz) +
-          (car[cim].x - camx) * (car[cim].x - camx) +
-          (car[cim].y - camy) * (car[cim].y - camy),
+        (car[camera.target].z - camera.z) * (car[camera.target].z - camera.z) +
+          (car[camera.target].x - camera.x) *
+            (car[camera.target].x - camera.x) +
+          (car[camera.target].y - camera.y) * (car[camera.target].y - camera.y),
       ) > 700
     ) {
-      td = true;
+      camera.relocate = true;
     }
   }
-  if (camode == 3) {
-    var trnx = (car[cim].x * (30 - htrns) + car[cim2].x * htrns) / 30;
-    var trny = (car[cim].y * (30 - htrns) + car[cim2].y * htrns) / 30;
-    var trnz = (car[cim].z * (30 - htrns) + car[cim2].z * htrns) / 30;
-    if (!vert) {
-      adv += 0.2 * m;
+  if (camera.mode == 3) {
+    var trnx =
+      (car[camera.target].x * (30 - camera.transition) +
+        car[camera.nextTarget].x * camera.transition) /
+      30;
+    var trny =
+      (car[camera.target].y * (30 - camera.transition) +
+        car[camera.nextTarget].y * camera.transition) /
+      30;
+    var trnz =
+      (car[camera.target].z * (30 - camera.transition) +
+        car[camera.nextTarget].z * camera.transition) /
+      30;
+    if (!camera.orbitDescending) {
+      camera.orbitHeight += 0.2 * m;
     } else {
-      adv -= 0.2 * m;
+      camera.orbitHeight -= 0.2 * m;
     }
-    if (adv > 90) {
-      vert = true;
+    if (camera.orbitHeight > 90) {
+      camera.orbitDescending = true;
     }
-    if (adv < -50) {
-      vert = false;
+    if (camera.orbitHeight < -50) {
+      camera.orbitDescending = false;
     }
-    var amp = 50 + adv;
+    var amp = 50 + camera.orbitHeight;
     if (amp < 100) {
       amp = 100;
     }
-    camy = trny + adv;
-    if (camy < 5) {
-      vert = false;
+    camera.y = trny + camera.orbitHeight;
+    if (camera.y < 5) {
+      camera.orbitDescending = false;
     }
-    camx = trnx + amp * mcos(vxz);
-    camz = trnz + amp * msin(vxz);
-    vxz -= 2 * m;
+    camera.x = trnx + amp * mcos(camera.orbitAngle);
+    camera.z = trnz + amp * msin(camera.orbitAngle);
+    camera.orbitAngle -= 2 * m;
     var ad = 0;
-    var ty = camy;
+    var ty = camera.y;
     if (ty < 0) {
       ty = 0;
     }
@@ -3234,21 +3253,32 @@ function gameworks() {
       ad = -180;
     }
     var max = Math.sqrt(
-      (trnz - camz) * (trnz - camz) + (trnx - camx) * (trnx - camx),
+      (trnz - camera.z) * (trnz - camera.z) +
+        (trnx - camera.x) * (trnx - camera.x),
     );
     var rzy = -(90 + ad - Math.atan(max / (trny - ty)) / 0.017453292519943295);
-    camxz = -(-vxz + 90);
-    camzy += (rzy - camzy) / 10;
+    camera.yaw = -(-camera.orbitAngle + 90);
+    camera.pitch += (rzy - camera.pitch) / 10;
   }
-  skydom.x = camx;
-  skydom.z = camz;
-  var skf = 0.6 + camy / 4000;
+  skydom.x = camera.x;
+  skydom.z = camera.z;
+  var skf = 0.6 + camera.y / 4000;
   skydom.mat = resetMatrix(skydom.mat);
   skydom.mat[4] *= skf;
   skydom.mat[5] *= skf;
   skydom.mat[6] *= skf;
-  mat4.rotate(cmat, cmat, camzy * (Math.PI / 180), [1, 0, 0]);
-  mat4.rotate(cmat, cmat, camxz * (Math.PI / 180), [0, 1, 0]);
+  mat4.rotate(
+    camera.matrix,
+    camera.matrix,
+    camera.pitch * (Math.PI / 180),
+    [1, 0, 0],
+  );
+  mat4.rotate(
+    camera.matrix,
+    camera.matrix,
+    camera.yaw * (Math.PI / 180),
+    [0, 1, 0],
+  );
   updateframe = true;
 }
 var csxz = 0,
@@ -3284,18 +3314,18 @@ function carselect() {
   var fieldOfView = (55 * Math.PI) / 180;
   var zNear = 0.1;
   var zFar = 7000;
-  cmat = mat4.create();
-  mat4.perspective(cmat, fieldOfView, view.aspect, zNear, zFar);
-  camx = 0;
-  camy = 0;
-  camz = 0;
-  camxz = 0;
-  camzy = -8;
+  camera.matrix = mat4.create();
+  mat4.perspective(camera.matrix, fieldOfView, view.aspect, zNear, zFar);
+  camera.x = 0;
+  camera.y = 0;
+  camera.z = 0;
+  camera.yaw = 0;
+  camera.pitch = -8;
   bg3D.x = 0;
   bg3D.y = 14;
   bg3D.z = -99;
   bg3D.mat = resetMatrix(bg3D.mat);
-  mat4.rotate(bg3D.mat, bg3D.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
+  mat4.rotate(bg3D.mat, bg3D.mat, camera.pitch * (Math.PI / 180), [-1, 0, 0]);
   for (var i = 0; i < 9; i++) {
     smoke[i].mat = resetMatrix(smoke[i].mat);
     smoke[i].x += smoke[i].sx;
@@ -3588,7 +3618,12 @@ function carselect() {
   shad[sel[0]].mat[5] = 1;
   shad[sel[0]].mat[9] = 0;
   shad[sel[0]].y = -21;
-  mat4.rotate(cmat, cmat, camzy * (Math.PI / 180), [1, 0, 0]);
+  mat4.rotate(
+    camera.matrix,
+    camera.matrix,
+    camera.pitch * (Math.PI / 180),
+    [1, 0, 0],
+  );
   drawcarselect();
   updateframe = true;
 }
@@ -3605,17 +3640,17 @@ function stageselect() {
   var fieldOfView = (55 * Math.PI) / 180;
   var zNear = 0.1;
   var zFar = 7000;
-  cmat = mat4.create();
-  mat4.perspective(cmat, fieldOfView, view.aspect, zNear, zFar);
-  camy = hit + 100;
-  camx = trx - 1700 * msin(camxz);
-  camz = trz + 1700 * mcos(camxz);
+  camera.matrix = mat4.create();
+  mat4.perspective(camera.matrix, fieldOfView, view.aspect, zNear, zFar);
+  camera.y = hit + 100;
+  camera.x = trx - 1700 * msin(camera.yaw);
+  camera.z = trz + 1700 * mcos(camera.yaw);
   if (hit > 500) {
     if (hit == 4500) {
       ptr = 0;
       nrnd = 0;
       ptcnt = 0;
-      camzy = 67;
+      camera.pitch = 67;
       atrx = (cp.x[0] - trx) / 116;
       atrz = (cp.z[0] - trz) / 116;
     }
@@ -3624,7 +3659,7 @@ function stageselect() {
     trx += atrx;
     trz += atrz;
     if (hit < 1760) {
-      camzy -= 2;
+      camera.pitch -= 2;
     }
     if (fallen > 50) {
       fallen = 50;
@@ -3633,9 +3668,9 @@ function stageselect() {
       hit = 500;
       fallen = 0;
     }
-    vxz += 3;
+    camera.orbitAngle += 3;
   } else {
-    vxz++;
+    camera.orbitAngle++;
     trx -= (trx - cp.x[ptr]) / 10;
     trz -= (trz - cp.z[ptr]) / 10;
     if (ptcnt == 10) {
@@ -3649,10 +3684,10 @@ function stageselect() {
       ptcnt++;
     }
   }
-  if (vxz > 360) {
-    vxz -= 360;
+  if (camera.orbitAngle > 360) {
+    camera.orbitAngle -= 360;
   }
-  camxz = vxz;
+  camera.yaw = camera.orbitAngle;
   for (var i = 0; i < nf; i++) {
     mat4.rotate(
       obo[fi[i]].mat,
@@ -3670,16 +3705,26 @@ function stageselect() {
     chkflk = 0;
   }
   bgst.mat = resetMatrix(bgst.mat);
-  mat4.rotate(bgst.mat, bgst.mat, camxz * (Math.PI / 180), [0, -1, 0]);
-  mat4.rotate(bgst.mat, bgst.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
+  mat4.rotate(bgst.mat, bgst.mat, camera.yaw * (Math.PI / 180), [0, -1, 0]);
+  mat4.rotate(bgst.mat, bgst.mat, camera.pitch * (Math.PI / 180), [-1, 0, 0]);
   bgst.mat[0] *= view.aspect * 0.5625;
   bgst.mat[1] *= view.aspect * 0.5625;
   bgst.mat[2] *= view.aspect * 0.5625;
-  bgst.x = camx - 106 * bgst.mat[8];
-  bgst.y = camy - 106 * bgst.mat[9];
-  bgst.z = camz - 106 * bgst.mat[10];
-  mat4.rotate(cmat, cmat, camzy * (Math.PI / 180), [1, 0, 0]);
-  mat4.rotate(cmat, cmat, camxz * (Math.PI / 180), [0, 1, 0]);
+  bgst.x = camera.x - 106 * bgst.mat[8];
+  bgst.y = camera.y - 106 * bgst.mat[9];
+  bgst.z = camera.z - 106 * bgst.mat[10];
+  mat4.rotate(
+    camera.matrix,
+    camera.matrix,
+    camera.pitch * (Math.PI / 180),
+    [1, 0, 0],
+  );
+  mat4.rotate(
+    camera.matrix,
+    camera.matrix,
+    camera.yaw * (Math.PI / 180),
+    [0, 1, 0],
+  );
   drawstageselect();
   updateframe = true;
 }
@@ -3688,13 +3733,13 @@ function unlockedcar() {
     var fieldOfView = (55 * Math.PI) / 180;
     var zNear = 0.1;
     var zFar = 7000;
-    cmat = mat4.create();
-    mat4.perspective(cmat, fieldOfView, view.aspect, zNear, zFar);
-    camx = 0;
-    camy = 0;
-    camz = 0;
-    camxz = 0;
-    camzy = 0;
+    camera.matrix = mat4.create();
+    mat4.perspective(camera.matrix, fieldOfView, view.aspect, zNear, zFar);
+    camera.x = 0;
+    camera.y = 0;
+    camera.z = 0;
+    camera.yaw = 0;
+    camera.pitch = 0;
     carobj[sel[0]].x = 0;
     carobj[sel[0]].y = wly[sel[0]][1] + 1.5 * wlh[sel[0]][1] - 17;
     carobj[sel[0]].z = -80;
@@ -3839,16 +3884,26 @@ function unlockedcar() {
       [0, 1, 0],
     );
     bgst.mat = resetMatrix(bgst.mat);
-    mat4.rotate(bgst.mat, bgst.mat, camxz * (Math.PI / 180), [0, -1, 0]);
-    mat4.rotate(bgst.mat, bgst.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
+    mat4.rotate(bgst.mat, bgst.mat, camera.yaw * (Math.PI / 180), [0, -1, 0]);
+    mat4.rotate(bgst.mat, bgst.mat, camera.pitch * (Math.PI / 180), [-1, 0, 0]);
     bgst.mat[0] *= view.aspect * 0.5625;
     bgst.mat[1] *= view.aspect * 0.5625;
     bgst.mat[2] *= view.aspect * 0.5625;
     bgst.x = 0;
     bgst.y = 0;
     bgst.z = -90;
-    mat4.rotate(cmat, cmat, camzy * (Math.PI / 180), [1, 0, 0]);
-    mat4.rotate(cmat, cmat, camxz * (Math.PI / 180), [0, 1, 0]);
+    mat4.rotate(
+      camera.matrix,
+      camera.matrix,
+      camera.pitch * (Math.PI / 180),
+      [1, 0, 0],
+    );
+    mat4.rotate(
+      camera.matrix,
+      camera.matrix,
+      camera.yaw * (Math.PI / 180),
+      [0, 1, 0],
+    );
     updateframe = true;
   }
 }
@@ -3858,7 +3913,7 @@ function render(now) {
     framefase = -1;
     renderedfase = fase;
   }
-  placeCamera(camx, camy, camz, cmat);
+  placeCamera(camera.x, camera.y, camera.z, camera.matrix);
   if (
     fase == 7 ||
     fase == 8 ||
@@ -10886,22 +10941,22 @@ function gameloop() {
               }
             }
             if (gp[i].buttons[6].pressed) {
-              lookback = -1;
+              camera.lookBack = -1;
               gpress[i] = 10;
             } else {
               if (gpress[i]) {
-                if (lookback == -1) {
-                  lookback = 0;
+                if (camera.lookBack == -1) {
+                  camera.lookBack = 0;
                 }
               }
             }
             if (gp[i].buttons[7].pressed) {
-              lookback = 1;
+              camera.lookBack = 1;
               gpress[i] = 10;
             } else {
               if (gpress[i]) {
-                if (lookback == 1) {
-                  lookback = 0;
+                if (camera.lookBack == 1) {
+                  camera.lookBack = 0;
                 }
               }
             }
@@ -13051,7 +13106,7 @@ var swingdir = false;
 function drawswitch() {
   rd.clearRect(0, 0, view.width, view.height);
   if (switcnt == 0) {
-    camode = -1;
+    camera.mode = -1;
     slide = 80;
     slideto = 180;
     slidedir = false;
@@ -13063,44 +13118,52 @@ function drawswitch() {
       swingto = -45;
       swingdir = true;
     }
-    cim2 = im;
-    cim2++;
-    if (cim2 == ncars) {
-      cim2 = 0;
+    camera.nextTarget = im;
+    camera.nextTarget++;
+    if (camera.nextTarget == ncars) {
+      camera.nextTarget = 0;
     }
-    while (dest[cim2]) {
-      cim2++;
-      if (cim2 == ncars) {
-        cim2 = 0;
+    while (dest[camera.nextTarget]) {
+      camera.nextTarget++;
+      if (camera.nextTarget == ncars) {
+        camera.nextTarget = 0;
       }
     }
     stopEngine();
   }
   if (switcnt < 20) {
-    camzy = 10;
-    var kcxz = cxz[cim] - 180 + swing;
-    camxz = kcxz;
-    camx = car[cim].x - slide * msin(kcxz);
-    camz = car[cim].z + slide * mcos(kcxz);
-    camy = car[cim].y + 25;
+    camera.pitch = 10;
+    var kcxz = cxz[camera.target] - 180 + swing;
+    camera.yaw = kcxz;
+    camera.x = car[camera.target].x - slide * msin(kcxz);
+    camera.z = car[camera.target].z + slide * mcos(kcxz);
+    camera.y = car[camera.target].y + 25;
   }
   if (switcnt >= 20 && switcnt < 100) {
     var fcs1 = 100 - switcnt;
     var fcs2 = switcnt - 20;
-    camzy = 10;
-    var kcxz = (cxz[cim] * fcs1 + cxz[cim2] * fcs2) / 80 - 180 + swing;
-    camxz = kcxz;
-    camx = (car[cim].x * fcs1 + car[cim2].x * fcs2) / 80 - slide * msin(kcxz);
-    camz = (car[cim].z * fcs1 + car[cim2].z * fcs2) / 80 + slide * mcos(kcxz);
-    camy = (car[cim].y * fcs1 + car[cim2].y * fcs2) / 80 + 25;
+    camera.pitch = 10;
+    var kcxz =
+      (cxz[camera.target] * fcs1 + cxz[camera.nextTarget] * fcs2) / 80 -
+      180 +
+      swing;
+    camera.yaw = kcxz;
+    camera.x =
+      (car[camera.target].x * fcs1 + car[camera.nextTarget].x * fcs2) / 80 -
+      slide * msin(kcxz);
+    camera.z =
+      (car[camera.target].z * fcs1 + car[camera.nextTarget].z * fcs2) / 80 +
+      slide * mcos(kcxz);
+    camera.y =
+      (car[camera.target].y * fcs1 + car[camera.nextTarget].y * fcs2) / 80 + 25;
   }
   if (switcnt >= 100) {
-    camzy = 10;
-    var kcxz = cxz[cim2] - 180 + swing;
-    camxz = kcxz;
-    camx = car[cim2].x - slide * msin(kcxz);
-    camz = car[cim2].z + slide * mcos(kcxz);
-    camy = car[cim2].y + 25;
+    camera.pitch = 10;
+    var kcxz = cxz[camera.nextTarget] - 180 + swing;
+    camera.yaw = kcxz;
+    camera.x = car[camera.nextTarget].x - slide * msin(kcxz);
+    camera.z = car[camera.nextTarget].z + slide * mcos(kcxz);
+    camera.y = car[camera.nextTarget].y + 25;
   }
   if (switcnt >= 100) {
     slide += (80 - slide) / 17;
@@ -13188,19 +13251,19 @@ function drawswitch() {
       missedcp[i] = 0;
       focus[i] = -1;
     }
-    u[cim2].left = u[im].left;
-    u[cim2].right = u[im].right;
-    u[cim2].up = u[im].up;
-    u[cim2].down = u[im].down;
-    u[cim2].handb = u[im].handb;
-    u[cim2].arrace = u[im].arrace;
+    u[camera.nextTarget].left = u[im].left;
+    u[camera.nextTarget].right = u[im].right;
+    u[camera.nextTarget].up = u[im].up;
+    u[camera.nextTarget].down = u[im].down;
+    u[camera.nextTarget].handb = u[im].handb;
+    u[camera.nextTarget].arrace = u[im].arrace;
     iclear = 0;
-    im = cim2;
-    cim = im;
+    im = camera.nextTarget;
+    camera.target = im;
     cp.switchtime += 134;
     timer = cp.switchtime;
     fase = 7;
-    camode = 0;
+    camera.mode = 0;
   }
 }
 function afterswitch() {
@@ -13263,8 +13326,18 @@ function drawrevtime() {
   }
   switcnt++;
   timetube.mat = resetMatrix(timetube.mat);
-  mat4.rotate(timetube.mat, timetube.mat, camxz * (Math.PI / 180), [0, -1, 0]);
-  mat4.rotate(timetube.mat, timetube.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
+  mat4.rotate(
+    timetube.mat,
+    timetube.mat,
+    camera.yaw * (Math.PI / 180),
+    [0, -1, 0],
+  );
+  mat4.rotate(
+    timetube.mat,
+    timetube.mat,
+    camera.pitch * (Math.PI / 180),
+    [-1, 0, 0],
+  );
   mat4.rotate(timetube.mat, timetube.mat, swing * (Math.PI / 180), [0, 0, 1]);
   if (Math.abs(fr - (429 - nrec)) > 100) {
     swing += 20;
@@ -13274,9 +13347,9 @@ function drawrevtime() {
   if (swing > 360) {
     swing -= 360;
   }
-  timetube.x = car[cim].x - timetube.mat[8] * 170;
-  timetube.y = car[cim].y - timetube.mat[9] * 170;
-  timetube.z = car[cim].z - timetube.mat[10] * 170;
+  timetube.x = car[camera.target].x - timetube.mat[8] * 170;
+  timetube.y = car[camera.target].y - timetube.mat[9] * 170;
+  timetube.z = car[camera.target].z - timetube.mat[10] * 170;
 }
 var wasu = false,
   wasd = false,
@@ -13359,8 +13432,8 @@ function inishinter() {
     dested[i] = 0;
   }
   holdcnt = 0;
-  camode = 0;
-  cim = 0;
+  camera.mode = 0;
+  camera.target = 0;
   onpausefr = false;
   cntwis = 0;
   dmcnt = 0;
@@ -13676,8 +13749,8 @@ function drawinter() {
     }
     if (onbreplay == 1) {
       cntreps = 0;
-      adv = Math.floor(90 * random.fx());
-      vxz = Math.floor(360 * random.fx());
+      camera.orbitHeight = Math.floor(90 * random.fx());
+      camera.orbitAngle = Math.floor(360 * random.fx());
       hrewindhreplay();
     }
     if (onbreplay) {
@@ -13733,7 +13806,7 @@ function drawinter() {
         cntan = 20;
       }
     }
-    if (!holdit && starcnt == 0 && camode == 0 && cp.stage != 16) {
+    if (!holdit && starcnt == 0 && camera.mode == 0 && cp.stage != 16) {
       arrow(point[im], missedcp[im], arrace);
       if (!arrace && auscnt == 45 && capcnt[im] == 0) {
         if (missedcp[im] > 0) {
@@ -14639,8 +14712,8 @@ function drawhreplay() {
     if (fr > hat && holdf != rmode) {
       holdf++;
     }
-    camode = 1;
-    cim = hcim;
+    camera.mode = 1;
+    camera.target = hcim;
     onpausefr = false;
     if (holdf == 0 || holdf == rmode) {
       fr++;
@@ -14667,8 +14740,8 @@ function drawhreplay() {
     if (fr > hat && holdf != rmode) {
       holdf++;
     }
-    camode = 1;
-    cim = hcim;
+    camera.mode = 1;
+    camera.target = hcim;
     onpausefr = false;
     if (holdf == 0 || holdf == rmode) {
       fr++;
@@ -14691,18 +14764,18 @@ function drawhreplay() {
       rd.globalAlpha = 1;
     }
     if (holdf == 0) {
-      camode = 1;
-      cim = hcim;
+      camera.mode = 1;
+      camera.target = hcim;
     }
     if (holdf > 0 && holdf < 30) {
-      camode = 3;
-      cim = hcim;
-      cim2 = hscar;
-      htrns = holdf;
+      camera.mode = 3;
+      camera.target = hcim;
+      camera.nextTarget = hscar;
+      camera.transition = holdf;
     }
     if (holdf == 30) {
-      camode = 1;
-      cim = hscar;
+      camera.mode = 1;
+      camera.target = hscar;
     }
     if (fr > hat && holdf != 30) {
       holdf++;
@@ -14723,38 +14796,38 @@ function drawhreplay() {
   if (htyp == 4) {
     drawcs(90, "Close Finish!", 0, 32, 64, 1);
     if (holdf == 0) {
-      camode = 1;
-      cim = hcim;
+      camera.mode = 1;
+      camera.target = hcim;
     }
     if (holdf > 0 && holdf < 30) {
-      camode = 3;
-      cim = hcim;
-      cim2 = hscar;
-      htrns = holdf;
+      camera.mode = 3;
+      camera.target = hcim;
+      camera.nextTarget = hscar;
+      camera.transition = holdf;
     }
     if (holdf == 30) {
-      camode = 1;
-      cim = hscar;
+      camera.mode = 1;
+      camera.target = hscar;
     }
     if (holdf > 30 && holdf < 60) {
-      camode = 3;
-      cim = hscar;
-      cim2 = 0;
-      htrns = holdf - 30;
+      camera.mode = 3;
+      camera.target = hscar;
+      camera.nextTarget = 0;
+      camera.transition = holdf - 30;
     }
     if (holdf == 60) {
-      camode = 1;
-      cim = hcim;
+      camera.mode = 1;
+      camera.target = hcim;
     }
     if (holdf > 60 && holdf < 90) {
-      camode = 3;
-      cim = hcim;
-      cim2 = hscar;
-      htrns = holdf - 60;
+      camera.mode = 3;
+      camera.target = hcim;
+      camera.nextTarget = hscar;
+      camera.transition = holdf - 60;
     }
     if (holdf == 90) {
-      camode = 1;
-      cim = hscar;
+      camera.mode = 1;
+      camera.target = hscar;
     }
     if (fr > 228 && holdf < 30) {
       holdf++;
@@ -14781,48 +14854,48 @@ function drawhreplay() {
   if (htyp == 5) {
     drawcs(90, "Close Finish!  Almost got it!", 0, 32, 64, 1);
     if (holdf == 0) {
-      camode = 1;
-      cim = hcim;
+      camera.mode = 1;
+      camera.target = hcim;
     }
     if (holdf > 0 && holdf < 30) {
-      camode = 3;
-      cim = hcim;
-      cim2 = hscar;
-      htrns = holdf;
+      camera.mode = 3;
+      camera.target = hcim;
+      camera.nextTarget = hscar;
+      camera.transition = holdf;
     }
     if (holdf == 30) {
-      camode = 1;
-      cim = hscar;
+      camera.mode = 1;
+      camera.target = hscar;
     }
     if (holdf > 30 && holdf < 60) {
-      camode = 3;
-      cim = hscar;
-      cim2 = 0;
-      htrns = holdf - 30;
+      camera.mode = 3;
+      camera.target = hscar;
+      camera.nextTarget = 0;
+      camera.transition = holdf - 30;
     }
     if (holdf == 60) {
-      camode = 1;
-      cim = hcim;
+      camera.mode = 1;
+      camera.target = hcim;
     }
     if (holdf > 60 && holdf < 90) {
-      camode = 3;
-      cim = hcim;
-      cim2 = hscar;
-      htrns = holdf - 60;
+      camera.mode = 3;
+      camera.target = hcim;
+      camera.nextTarget = hscar;
+      camera.transition = holdf - 60;
     }
     if (holdf == 90) {
-      camode = 1;
-      cim = hscar;
+      camera.mode = 1;
+      camera.target = hscar;
     }
     if (holdf > 90 && holdf < 120) {
-      camode = 3;
-      cim = hscar;
-      cim2 = 0;
-      htrns = holdf - 90;
+      camera.mode = 3;
+      camera.target = hscar;
+      camera.nextTarget = 0;
+      camera.transition = holdf - 90;
     }
     if (holdf == 120) {
-      camode = 1;
-      cim = hcim;
+      camera.mode = 1;
+      camera.target = hcim;
     }
     if (fr > 128 && holdf < 30) {
       holdf++;
@@ -16472,7 +16545,7 @@ function arrow(pnt, misdcp, pntcar) {
     drawcs(16, "[" + stspace + "]", 76, 67, 240, 1);
     drawcs(18, cd.names[car[pnti].typ], 0, 0, 0, 1);
   }
-  an += camxz;
+  an += camera.yaw;
   while (an < 0) {
     an += 360;
   }
@@ -16642,7 +16715,7 @@ function findonscreen() {
         }
       }
       if (isinfront) {
-        var onscpos = getonscreen(cmat, car[i]);
+        var onscpos = getonscreen(camera.matrix, car[i]);
         if (
           onscpos[0] > -(15 * view.scaleX) &&
           onscpos[0] < view.width + 15 * view.scaleX
@@ -17473,8 +17546,8 @@ var destnow = [];
 function rewindreplay() {
   fase = 9;
   fr = 0;
-  camode = 1;
-  cim = im;
+  camera.mode = 1;
+  camera.target = im;
   for (var c = 0; c < ncars; c++) {
     destnow[c] = false;
     cntdest[c] = 0;
@@ -17657,8 +17730,8 @@ function replay() {
   onlastcheck = reponlastcheck[fr];
   if (fr == 429) {
     fase = 11;
-    camode = 0;
-    cim = im;
+    camera.mode = 0;
+    camera.target = im;
     fr = 0;
   } else {
     fr++;
@@ -17707,8 +17780,8 @@ function fastforwardexit() {
     car[c].wzy = repcar[c].wzy[429];
     car[c].wxz = repcar[c].wxz[429];
   }
-  camode = 0;
-  cim = im;
+  camera.mode = 0;
+  camera.target = im;
   fase = 11;
 }
 function hrewindhreplay() {
@@ -17766,7 +17839,7 @@ function hrewindhreplay() {
   }
   if (htyp == 2) {
     rmode = 95;
-    vxz += 90;
+    camera.orbitAngle += 90;
   }
   fase = 10;
 }
@@ -17929,8 +18002,8 @@ function hreplay() {
 }
 function preprevtime() {
   fr = 429;
-  camode = 0;
-  cim = im;
+  camera.mode = 0;
+  camera.target = im;
   fase = 9;
   for (var c = 0; c < ncars; c++) {
     destnow[c] = false;
@@ -18156,15 +18229,15 @@ function onKey(action, pressed) {
     }
   }
   if (action == "lookBackLeft") {
-    lookback = pressed ? -1 : 0;
+    camera.lookBack = pressed ? -1 : 0;
   }
   if (action == "lookBackRight") {
-    lookback = pressed ? 1 : 0;
+    camera.lookBack = pressed ? 1 : 0;
   }
   if (!pressed && action == "nextCamera" && fase == 7) {
-    camode++;
-    if (camode == 3) {
-      camode = 0;
+    camera.mode++;
+    if (camera.mode == 3) {
+      camera.mode = 0;
     }
   }
   if (!pressed && action == "muteSound") {

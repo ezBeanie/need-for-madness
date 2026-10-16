@@ -61,7 +61,12 @@ describe("interpolated drawing in the menus", () => {
       step();
       for (const alpha of [0.25, 0.5, 0.75]) {
         ctx.interpolation.alpha = alpha;
-        ctx.placeCamera(ctx.camx, ctx.camy, ctx.camz, ctx.cmat);
+        ctx.placeCamera(
+          ctx.camera.x,
+          ctx.camera.y,
+          ctx.camera.z,
+          ctx.camera.matrix,
+        );
         const drawn = drawnMatrix(ctx, ctx.bgst, ctx.bgst);
         worst = Math.max(
           worst,
