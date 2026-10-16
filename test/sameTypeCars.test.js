@@ -39,7 +39,7 @@ test("cars of the same type are drawn with their own wheels and shadow", async (
       },
       [0, 0],
     );
-  expect(perBody(drawnAt(...ctx.tired[typ]))).toEqual([4, 4]);
+  expect(perBody(drawnAt(...ctx.wheelDisks[typ]))).toEqual([4, 4]);
   expect(perBody(drawnAt(ctx.carShadows[typ]))).toEqual([1, 1]);
 });
 

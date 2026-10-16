@@ -19,7 +19,7 @@ export const wheelsOnBody = (ctx, typ, body, wheels, alpha) => {
     drawnMatrix(ctx, ctx.carModels[typ], body),
   );
   return wheels.map((wheel, w) => {
-    const drawn = drawnMatrix(ctx, ctx.tired[typ][w >> 1], wheel);
+    const drawn = drawnMatrix(ctx, ctx.wheelDisks[typ][w >> 1], wheel);
     const onBody = mat4.multiply(mat4.create(), fromBody, drawn);
     return [onBody[12], onBody[13], onBody[14]];
   });

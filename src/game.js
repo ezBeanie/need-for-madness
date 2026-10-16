@@ -58,12 +58,7 @@ import {
   setWorld,
   textureGroups,
 } from "./render/renderer.js";
-import {
-  loadModel,
-  loadParticleModel,
-  newModel,
-  newParticleModel,
-} from "./render/models.js";
+import { loadModel, loadParticleModel } from "./render/models.js";
 import { canvas2D, rd, view } from "./ui/view.js";
 import { camera, faceCamera, startProjection } from "./render/camera.js";
 import { isLeftWheel, placeWheel } from "./render/wheels.js";
@@ -90,6 +85,12 @@ import {
   wheelDisk,
   wheelTread,
   wheelTreadLow,
+  dustTextures,
+  explosionModels,
+  spriteTextures,
+  wheelDisks,
+  wheelTreads,
+  wheelTreadsLow,
 } from "./render/scene.js";
 import {
   drawHighlightOverlay,
@@ -154,85 +155,58 @@ import { drawmain, resetgame } from "./screens/mainMenu.js";
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 function cartextures() {
   for (var i = 0; i < 19; i++) {
-    var loadthis = false;
-    if (loading.stanza == 0) {
-      loadthis = true;
-    }
-    if (loading.stanza == 1) {
-      for (var c = 0; c < game.carCount; c++) {
-        if (game.carTypes[c] == i) {
-          loadthis = true;
+    carModels[i].nt = 2;
+    carModels[i].texture = [];
+    carModels[i].texture[0] = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, carModels[i].texture[0]);
+    gl.texImage2D(
+      gl.TEXTURE_2D,
+      0,
+      gl.RGBA,
+      gl.RGBA,
+      gl.UNSIGNED_BYTE,
+      carTextures[i],
+    );
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    var framebuffer = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
+    gl.framebufferTexture2D(
+      gl.FRAMEBUFFER,
+      gl.COLOR_ATTACHMENT0,
+      gl.TEXTURE_2D,
+      carModels[i].texture[0],
+      0,
+    );
+    if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE) {
+      var pixels = new Uint8Array(256 * 256 * 4);
+      gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+      for (var p = 0; p < 256 * 256 * 4; p += 4) {
+        if (pixels[p] == 116 && pixels[p + 1] == 130 && pixels[p + 2] == 140) {
+          pixels[p] = 92;
+          pixels[p + 1] = 155;
+          pixels[p + 2] = 184;
+          pixels[p + 3] = 200;
         }
       }
-    }
-    if (loading.stanza == 2) {
-      loadthis = true;
-      for (var c = 0; c < game.carCount; c++) {
-        if (game.carTypes[c] == i) {
-          loadthis = false;
-        }
-      }
-    }
-    if (loadthis) {
-      carModels[i].nt = 2;
-      carModels[i].texture = [];
-      carModels[i].texture[0] = gl.createTexture();
       gl.bindTexture(gl.TEXTURE_2D, carModels[i].texture[0]);
       gl.texImage2D(
         gl.TEXTURE_2D,
         0,
         gl.RGBA,
+        256,
+        256,
+        0,
         gl.RGBA,
         gl.UNSIGNED_BYTE,
-        carTextures[i],
+        pixels,
       );
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      var framebuffer = gl.createFramebuffer();
-      gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-      gl.framebufferTexture2D(
-        gl.FRAMEBUFFER,
-        gl.COLOR_ATTACHMENT0,
-        gl.TEXTURE_2D,
-        carModels[i].texture[0],
-        0,
-      );
-      if (
-        gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE
-      ) {
-        var pixels = new Uint8Array(256 * 256 * 4);
-        gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-        for (var p = 0; p < 256 * 256 * 4; p += 4) {
-          if (
-            pixels[p] == 116 &&
-            pixels[p + 1] == 130 &&
-            pixels[p + 2] == 140
-          ) {
-            pixels[p] = 92;
-            pixels[p + 1] = 155;
-            pixels[p + 2] = 184;
-            pixels[p + 3] = 200;
-          }
-        }
-        gl.bindTexture(gl.TEXTURE_2D, carModels[i].texture[0]);
-        gl.texImage2D(
-          gl.TEXTURE_2D,
-          0,
-          gl.RGBA,
-          256,
-          256,
-          0,
-          gl.RGBA,
-          gl.UNSIGNED_BYTE,
-          pixels,
-        );
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      }
-      gl.deleteFramebuffer(framebuffer);
     }
+    gl.deleteFramebuffer(framebuffer);
   }
 }
 function gamecartextures() {
@@ -321,8 +295,8 @@ function groundtexture(n, r, g, b, huef, satf) {
     ground.texture = null;
     for (var i = 6; i < 9; i++) {
       for (var j = 0; j < 5; j++) {
-        gl.deleteTexture(dtexture[i][j]);
-        dtexture[i][j] = null;
+        gl.deleteTexture(dustTextures[i][j]);
+        dustTextures[i][j] = null;
       }
     }
   }
@@ -344,7 +318,7 @@ function groundtexture(n, r, g, b, huef, satf) {
     gl.RGBA,
     gl.RGBA,
     gl.UNSIGNED_BYTE,
-    grndimg[n],
+    images.ground[n],
   );
   gl.generateMipmap(gl.TEXTURE_2D);
   var framebuffer = gl.createFramebuffer();
@@ -407,10 +381,10 @@ function groundtexture(n, r, g, b, huef, satf) {
   }
   var rgb = hslToRgb(hsl[0], hsl[1], hsl[2]);
   for (var i = 6; i < 9; i++) {
-    dtexture[i] = [];
+    dustTextures[i] = [];
     for (var j = 0; j < 5; j++) {
-      dtexture[i][j] = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, dtexture[i][j]);
+      dustTextures[i][j] = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, dustTextures[i][j]);
       var ui = i - 6;
       gl.texImage2D(
         gl.TEXTURE_2D,
@@ -418,7 +392,7 @@ function groundtexture(n, r, g, b, huef, satf) {
         gl.RGBA,
         gl.RGBA,
         gl.UNSIGNED_BYTE,
-        spritexture[ui],
+        images.sprites[ui],
       );
       gl.generateMipmap(gl.TEXTURE_2D);
       var framebuffer = gl.createFramebuffer();
@@ -427,7 +401,7 @@ function groundtexture(n, r, g, b, huef, satf) {
         gl.FRAMEBUFFER,
         gl.COLOR_ATTACHMENT0,
         gl.TEXTURE_2D,
-        dtexture[i][j],
+        dustTextures[i][j],
         0,
       );
       if (
@@ -441,7 +415,7 @@ function groundtexture(n, r, g, b, huef, satf) {
           pixels[p + 2] = rgb[2];
           pixels[p + 3] *= 0.75 - j * 0.15;
         }
-        gl.bindTexture(gl.TEXTURE_2D, dtexture[i][j]);
+        gl.bindTexture(gl.TEXTURE_2D, dustTextures[i][j]);
         gl.texImage2D(
           gl.TEXTURE_2D,
           0,
@@ -467,7 +441,14 @@ function skytexture(skyc, fogc, cloudsc, cloudtyp) {
   }
   var tempt = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, tempt);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, haloimg);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    images.halo,
+  );
   var framebuffer = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
   gl.framebufferTexture2D(
@@ -491,7 +472,7 @@ function skytexture(skyc, fogc, cloudsc, cloudtyp) {
     gl.RGBA,
     gl.RGBA,
     gl.UNSIGNED_BYTE,
-    skyimg[cloudtyp],
+    images.sky[cloudtyp],
   );
   gl.generateMipmap(gl.TEXTURE_2D);
   framebuffer = gl.createFramebuffer();
@@ -542,14 +523,13 @@ function skytexture(skyc, fogc, cloudsc, cloudtyp) {
   gl.deleteFramebuffer(framebuffer);
   sky.loaded = 4;
 }
-var dtexture = [];
-var stexture = [];
+
 function creatdustextures() {
   for (var i = 0; i < 6; i++) {
-    dtexture[i] = [];
+    dustTextures[i] = [];
     for (var j = 0; j < 5; j++) {
-      dtexture[i][j] = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, dtexture[i][j]);
+      dustTextures[i][j] = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, dustTextures[i][j]);
       var ui = i;
       if (i >= 3) {
         ui = i - 3;
@@ -560,7 +540,7 @@ function creatdustextures() {
         gl.RGBA,
         gl.RGBA,
         gl.UNSIGNED_BYTE,
-        spritexture[ui],
+        images.sprites[ui],
       );
       gl.generateMipmap(gl.TEXTURE_2D);
       var framebuffer = gl.createFramebuffer();
@@ -569,7 +549,7 @@ function creatdustextures() {
         gl.FRAMEBUFFER,
         gl.COLOR_ATTACHMENT0,
         gl.TEXTURE_2D,
-        dtexture[i][j],
+        dustTextures[i][j],
         0,
       );
       if (
@@ -590,7 +570,7 @@ function creatdustextures() {
             pixels[p + 3] *= (5 - j) / 5;
           }
         }
-        gl.bindTexture(gl.TEXTURE_2D, dtexture[i][j]);
+        gl.bindTexture(gl.TEXTURE_2D, dustTextures[i][j]);
         gl.texImage2D(
           gl.TEXTURE_2D,
           0,
@@ -608,15 +588,15 @@ function creatdustextures() {
     }
   }
   for (var i = 0; i < 3; i++) {
-    stexture[i] = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, stexture[i]);
+    spriteTextures[i] = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, spriteTextures[i]);
     gl.texImage2D(
       gl.TEXTURE_2D,
       0,
       gl.RGBA,
       gl.RGBA,
       gl.UNSIGNED_BYTE,
-      spritexture[i],
+      images.sprites[i],
     );
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
     gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -627,7 +607,7 @@ function creatdustextures() {
       gl.FRAMEBUFFER,
       gl.COLOR_ATTACHMENT0,
       gl.TEXTURE_2D,
-      stexture[i],
+      spriteTextures[i],
       0,
     );
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE) {
@@ -639,7 +619,7 @@ function creatdustextures() {
         pixels[p + 2] = 255;
         pixels[p + 3] *= 0.5;
       }
-      gl.bindTexture(gl.TEXTURE_2D, stexture[i]);
+      gl.bindTexture(gl.TEXTURE_2D, spriteTextures[i]);
       gl.texImage2D(
         gl.TEXTURE_2D,
         0,
@@ -656,19 +636,6 @@ function creatdustextures() {
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
     }
     gl.deleteFramebuffer(framebuffer);
-  }
-}
-var tired = [];
-var tiren = [];
-var tirel = [];
-for (var i = 0; i < 19; i++) {
-  tired[i] = [];
-  tiren[i] = [];
-  tirel[i] = [];
-  for (var k = 0; k < 2; k++) {
-    tired[i][k] = newModel();
-    tiren[i][k] = newParticleModel();
-    tirel[i][k] = newParticleModel();
   }
 }
 
@@ -716,160 +683,141 @@ function createwheels() {
     [0.4, 0.4],
   ];
   for (var c = 0; c < 19; c++) {
-    var loadthis = false;
-    if (loading.stanza == 0) {
-      loadthis = true;
-    }
-    if (loading.stanza == 1) {
-      for (var i = 0; i < game.carCount; i++) {
-        if (game.carTypes[i] == c) {
-          loadthis = true;
+    for (var k = 0; k < 2; k++) {
+      wheelDisks[c][k].ni = wheelDisk.tri.length / 3;
+      var indice = [];
+      var vert = [];
+      var norm = [];
+      var texu = [];
+      for (var i = 0; i < wheelDisks[c][k].ni; i++) {
+        indice[i] = i;
+        vert[i * 3] =
+          wheelDisk.vrt[wheelDisk.tri[i * 3] * 3] * carStats.wlh[c][k] * 1.05;
+        vert[i * 3 + 1] =
+          wheelDisk.vrt[wheelDisk.tri[i * 3] * 3 + 1] *
+          carStats.wlh[c][k] *
+          1.05;
+        vert[i * 3 + 2] =
+          wheelDisk.vrt[wheelDisk.tri[i * 3] * 3 + 2] * wlw[c][k] * 1.1;
+        if (wheelDisk.tri[i * 3] == 12) {
+          vert[i * 3 + 2] += rmd[c][k];
         }
+        var tcrad = Math.sqrt(
+          vert[i * 3] * vert[i * 3] +
+            vert[i * 3 + 1] * vert[i * 3 + 1] +
+            vert[i * 3 + 2] * vert[i * 3 + 2],
+        );
+        if (tcrad > wheelDisks[c][k].colrad) {
+          wheelDisks[c][k].colrad = tcrad;
+        }
+        norm[i * 3] = wheelDisk.nrm[wheelDisk.tri[i * 3 + 1] * 3];
+        norm[i * 3 + 1] = wheelDisk.nrm[wheelDisk.tri[i * 3 + 1] * 3 + 1];
+        norm[i * 3 + 2] = wheelDisk.nrm[wheelDisk.tri[i * 3 + 1] * 3 + 2];
+        texu[i * 2] = wheelDisk.tex[wheelDisk.tri[i * 3 + 2] * 2];
+        texu[i * 2 + 1] = 1 - wheelDisk.tex[wheelDisk.tri[i * 3 + 2] * 2 + 1];
       }
-    }
-    if (loading.stanza == 2) {
-      loadthis = true;
-      for (var i = 0; i < game.carCount; i++) {
-        if (game.carTypes[i] == c) {
-          loadthis = false;
-        }
+      wheelDisks[c][k].vbuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, wheelDisks[c][k].vbuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vert), gl.STATIC_DRAW);
+      wheelDisks[c][k].nbuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, wheelDisks[c][k].nbuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(norm), gl.STATIC_DRAW);
+      wheelDisks[c][k].tbuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, wheelDisks[c][k].tbuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texu), gl.STATIC_DRAW);
+      wheelDisks[c][k].ibuf = gl.createBuffer();
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, wheelDisks[c][k].ibuf);
+      gl.bufferData(
+        gl.ELEMENT_ARRAY_BUFFER,
+        new Uint16Array(indice),
+        gl.STATIC_DRAW,
+      );
+      wheelDisks[c][k].nt = 1;
+      wheelDisks[c][k].mat = mat4.create();
+      wheelDisks[c][k].alpha = 1;
+      wheelDisks[c][k].texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, wheelDisks[c][k].texture);
+      gl.texImage2D(
+        gl.TEXTURE_2D,
+        0,
+        gl.RGBA,
+        gl.RGBA,
+        gl.UNSIGNED_BYTE,
+        images.tires[c],
+      );
+      if (
+        isPowerOf2(images.tires[0].width) &&
+        isPowerOf2(images.tires[0].height)
+      ) {
+        gl.generateMipmap(gl.TEXTURE_2D);
+      } else {
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
       }
-    }
-    if (loadthis) {
-      for (var k = 0; k < 2; k++) {
-        tired[c][k].ni = wheelDisk.tri.length / 3;
-        var indice = [];
-        var vert = [];
-        var norm = [];
-        var texu = [];
-        for (var i = 0; i < tired[c][k].ni; i++) {
-          indice[i] = i;
-          vert[i * 3] =
-            wheelDisk.vrt[wheelDisk.tri[i * 3] * 3] * carStats.wlh[c][k] * 1.05;
-          vert[i * 3 + 1] =
-            wheelDisk.vrt[wheelDisk.tri[i * 3] * 3 + 1] *
-            carStats.wlh[c][k] *
-            1.05;
-          vert[i * 3 + 2] =
-            wheelDisk.vrt[wheelDisk.tri[i * 3] * 3 + 2] * wlw[c][k] * 1.1;
-          if (wheelDisk.tri[i * 3] == 12) {
-            vert[i * 3 + 2] += rmd[c][k];
-          }
-          var tcrad = Math.sqrt(
-            vert[i * 3] * vert[i * 3] +
-              vert[i * 3 + 1] * vert[i * 3 + 1] +
-              vert[i * 3 + 2] * vert[i * 3 + 2],
-          );
-          if (tcrad > tired[c][k].colrad) {
-            tired[c][k].colrad = tcrad;
-          }
-          norm[i * 3] = wheelDisk.nrm[wheelDisk.tri[i * 3 + 1] * 3];
-          norm[i * 3 + 1] = wheelDisk.nrm[wheelDisk.tri[i * 3 + 1] * 3 + 1];
-          norm[i * 3 + 2] = wheelDisk.nrm[wheelDisk.tri[i * 3 + 1] * 3 + 2];
-          texu[i * 2] = wheelDisk.tex[wheelDisk.tri[i * 3 + 2] * 2];
-          texu[i * 2 + 1] = 1 - wheelDisk.tex[wheelDisk.tri[i * 3 + 2] * 2 + 1];
-        }
-        tired[c][k].vbuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, tired[c][k].vbuf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vert), gl.STATIC_DRAW);
-        tired[c][k].nbuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, tired[c][k].nbuf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(norm), gl.STATIC_DRAW);
-        tired[c][k].tbuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, tired[c][k].tbuf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texu), gl.STATIC_DRAW);
-        tired[c][k].ibuf = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tired[c][k].ibuf);
-        gl.bufferData(
-          gl.ELEMENT_ARRAY_BUFFER,
-          new Uint16Array(indice),
-          gl.STATIC_DRAW,
-        );
-        tired[c][k].nt = 1;
-        tired[c][k].mat = mat4.create();
-        tired[c][k].alpha = 1;
-        tired[c][k].texture = gl.createTexture();
-        gl.bindTexture(gl.TEXTURE_2D, tired[c][k].texture);
-        gl.texImage2D(
-          gl.TEXTURE_2D,
-          0,
-          gl.RGBA,
-          gl.RGBA,
-          gl.UNSIGNED_BYTE,
-          tireimg[c],
-        );
-        if (isPowerOf2(tireimg[0].width) && isPowerOf2(tireimg[0].height)) {
-          gl.generateMipmap(gl.TEXTURE_2D);
-        } else {
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        }
-        tired[c][k].loaded = 1;
-        tiren[c][k].ni = wheelTread.indice.length;
-        var vert = [];
-        var norm = [];
-        var col = [];
-        for (var i = 0; i < wheelTread.vert.length / 3; i++) {
-          vert[i * 3] = wheelTread.vert[i * 3] * 1.1 * carStats.wlh[c][k];
-          vert[i * 3 + 1] =
-            wheelTread.vert[i * 3 + 1] * 1.1 * carStats.wlh[c][k];
-          vert[i * 3 + 2] = wheelTread.vert[i * 3 + 2] * 1.1 * wlw[c][k];
-          norm[i * 3] = -1;
-          norm[i * 3 + 1] = 0;
-          norm[i * 3 + 2] = 0;
-          col[i * 4] = 0.02;
-          col[i * 4 + 1] = 0.02;
-          col[i * 4 + 2] = 0.02;
-          col[i * 4 + 3] = 1;
-        }
-        tiren[c][k].vbuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, tiren[c][k].vbuf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vert), gl.STATIC_DRAW);
-        tiren[c][k].nbuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, tiren[c][k].nbuf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(norm), gl.STATIC_DRAW);
-        tiren[c][k].cbuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, tiren[c][k].cbuf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
-        tiren[c][k].ibuf = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tiren[c][k].ibuf);
-        gl.bufferData(
-          gl.ELEMENT_ARRAY_BUFFER,
-          new Uint16Array(wheelTread.indice),
-          gl.STATIC_DRAW,
-        );
-        tiren[c][k].mat = mat4.create();
-        tiren[c][k].loaded = 1;
-        tirel[c][k].ni = wheelTreadLow.indice.length;
-        var vert = [];
-        var col = [];
-        for (var i = 0; i < wheelTreadLow.vert.length / 3; i++) {
-          vert[i * 3] = wheelTreadLow.vert[i * 3] * 1.1 * carStats.wlh[c][k];
-          vert[i * 3 + 1] =
-            wheelTreadLow.vert[i * 3 + 1] * 1.1 * carStats.wlh[c][k];
-          vert[i * 3 + 2] = wheelTreadLow.vert[i * 3 + 2] * 1.1 * wlw[c][k];
-          col[i * 4] = 0.02;
-          col[i * 4 + 1] = 0.02;
-          col[i * 4 + 2] = 0.02;
-          col[i * 4 + 3] = 1;
-        }
-        tirel[c][k].vbuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, tirel[c][k].vbuf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vert), gl.STATIC_DRAW);
-        tirel[c][k].cbuf = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, tirel[c][k].cbuf);
-        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
-        tirel[c][k].ibuf = gl.createBuffer();
-        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tirel[c][k].ibuf);
-        gl.bufferData(
-          gl.ELEMENT_ARRAY_BUFFER,
-          new Uint16Array(wheelTreadLow.indice),
-          gl.STATIC_DRAW,
-        );
-        tirel[c][k].mat = mat4.create();
-        tirel[c][k].loaded = 1;
+      wheelDisks[c][k].loaded = 1;
+      wheelTreads[c][k].ni = wheelTread.indice.length;
+      var vert = [];
+      var norm = [];
+      var col = [];
+      for (var i = 0; i < wheelTread.vert.length / 3; i++) {
+        vert[i * 3] = wheelTread.vert[i * 3] * 1.1 * carStats.wlh[c][k];
+        vert[i * 3 + 1] = wheelTread.vert[i * 3 + 1] * 1.1 * carStats.wlh[c][k];
+        vert[i * 3 + 2] = wheelTread.vert[i * 3 + 2] * 1.1 * wlw[c][k];
+        norm[i * 3] = -1;
+        norm[i * 3 + 1] = 0;
+        norm[i * 3 + 2] = 0;
+        col[i * 4] = 0.02;
+        col[i * 4 + 1] = 0.02;
+        col[i * 4 + 2] = 0.02;
+        col[i * 4 + 3] = 1;
       }
+      wheelTreads[c][k].vbuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, wheelTreads[c][k].vbuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vert), gl.STATIC_DRAW);
+      wheelTreads[c][k].nbuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, wheelTreads[c][k].nbuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(norm), gl.STATIC_DRAW);
+      wheelTreads[c][k].cbuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, wheelTreads[c][k].cbuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
+      wheelTreads[c][k].ibuf = gl.createBuffer();
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, wheelTreads[c][k].ibuf);
+      gl.bufferData(
+        gl.ELEMENT_ARRAY_BUFFER,
+        new Uint16Array(wheelTread.indice),
+        gl.STATIC_DRAW,
+      );
+      wheelTreads[c][k].mat = mat4.create();
+      wheelTreads[c][k].loaded = 1;
+      wheelTreadsLow[c][k].ni = wheelTreadLow.indice.length;
+      var vert = [];
+      var col = [];
+      for (var i = 0; i < wheelTreadLow.vert.length / 3; i++) {
+        vert[i * 3] = wheelTreadLow.vert[i * 3] * 1.1 * carStats.wlh[c][k];
+        vert[i * 3 + 1] =
+          wheelTreadLow.vert[i * 3 + 1] * 1.1 * carStats.wlh[c][k];
+        vert[i * 3 + 2] = wheelTreadLow.vert[i * 3 + 2] * 1.1 * wlw[c][k];
+        col[i * 4] = 0.02;
+        col[i * 4 + 1] = 0.02;
+        col[i * 4 + 2] = 0.02;
+        col[i * 4 + 3] = 1;
+      }
+      wheelTreadsLow[c][k].vbuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, wheelTreadsLow[c][k].vbuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vert), gl.STATIC_DRAW);
+      wheelTreadsLow[c][k].cbuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, wheelTreadsLow[c][k].cbuf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
+      wheelTreadsLow[c][k].ibuf = gl.createBuffer();
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, wheelTreadsLow[c][k].ibuf);
+      gl.bufferData(
+        gl.ELEMENT_ARRAY_BUFFER,
+        new Uint16Array(wheelTreadLow.indice),
+        gl.STATIC_DRAW,
+      );
+      wheelTreadsLow[c][k].mat = mat4.create();
+      wheelTreadsLow[c][k].loaded = 1;
     }
   }
 }
@@ -1120,130 +1068,81 @@ function colorcptext() {
 var impimg = new Image();
 impimg.src = "data/interface" + interfaceResolution + "/loading.png";
 
-var grndimg = [];
-
-var skyimg = [];
-var haloimg = null;
-
-var tireimg = [];
-
-var spritexture = [];
-var explode = [];
-for (var i = 0; i < 3; i++) {
-  explode[i] = newModel();
-}
-
 function loaddata() {
   if (gl) {
     drawloading();
     if (loading.step == 0) {
-      if (loading.stanza == 0) {
-        menu.continuesToCarSelect = false;
-        game.carTypes[0] = loadSetting("carsel");
-        if (game.carTypes[0] == -1) {
-          game.carTypes[0] = 5;
-          menu.continuesToCarSelect = true;
-          raceEvents.onautocorrect = 2;
-        }
-        game.unlocked = loadSetting("unlocked");
-        if (game.unlocked == -1) {
-          game.unlocked = 1;
-        }
-        game.raceCars = loadSetting("racecars");
-        if (!RACE_SIZES.includes(game.raceCars)) {
-          game.raceCars = 7;
-        }
-        track.stage = game.unlocked;
-        if (game.unlocked >= 5) {
-          hud.keyHintTicks = 200;
-        }
-        if (track.stage == 17) {
-          track.stage = Math.floor(3 + random.sim() * 13);
-          menu.resetOffered = true;
-        }
+      menu.continuesToCarSelect = false;
+      game.carTypes[0] = loadSetting("carsel");
+      if (game.carTypes[0] == -1) {
+        game.carTypes[0] = 5;
+        menu.continuesToCarSelect = true;
+        raceEvents.onautocorrect = 2;
+      }
+      game.unlocked = loadSetting("unlocked");
+      if (game.unlocked == -1) {
+        game.unlocked = 1;
+      }
+      game.raceCars = loadSetting("racecars");
+      if (!RACE_SIZES.includes(game.raceCars)) {
+        game.raceCars = 7;
+      }
+      track.stage = game.unlocked;
+      if (game.unlocked >= 5) {
+        hud.keyHintTicks = 200;
+      }
+      if (track.stage == 17) {
+        track.stage = Math.floor(3 + random.sim() * 13);
+        menu.resetOffered = true;
       }
     }
     if (loading.step == 1) {
-      var frm = 0,
-        tro = 3;
-      if (loading.stanza == 1) {
-        frm = 2;
-        tro = 3;
-      }
-      if (loading.stanza == 2) {
-        frm = 0;
-        tro = 2;
-      }
       loadModel("data/3D/ground.r3d", ground);
-      for (var i = frm; i < tro; i++) {
-        grndimg[i] = new Image();
-        grndimg[i].onload = function () {
+      for (var i = 0; i < 3; i++) {
+        images.ground[i] = new Image();
+        images.ground[i].onload = function () {
           loading.loaded += 17;
         };
-        grndimg[i].src = "data/3D/textures/ground" + (i + 1) + ".png";
+        images.ground[i].src = "data/3D/textures/ground" + (i + 1) + ".png";
       }
       loadModel("data/3D/skydom.r3d", sky);
-      for (var i = frm; i < tro; i++) {
-        skyimg[i] = new Image();
-        skyimg[i].onload = function () {
+      for (var i = 0; i < 3; i++) {
+        images.sky[i] = new Image();
+        images.sky[i].onload = function () {
           loading.loaded += 24;
         };
-        skyimg[i].src = "data/3D/textures/sky" + (i + 1) + ".png";
+        images.sky[i].src = "data/3D/textures/sky" + (i + 1) + ".png";
       }
-      haloimg = new Image();
-      haloimg.onload = function () {
+      images.halo = new Image();
+      images.halo.onload = function () {
         loading.loaded += 5;
       };
-      haloimg.src = "data/3D/textures/halo.png";
+      images.halo.src = "data/3D/textures/halo.png";
     }
     if (loading.step == 2) {
-      if (loading.stanza != 2) {
-        loadModel("data/3D/tiredisk.r3d", wheelDisk);
-        loadParticleModel("data/3D/tire.prt", wheelTread);
-        loadParticleModel("data/3D/tirelow.prt", wheelTreadLow);
-        loadParticleModel("data/3D/cptext.prt", checkpointText);
-        loadParticleModel("data/3D/fntext.prt", finishText);
-        loadParticleModel("data/3D/timetube.prt", timeTube);
-      }
-      if (loading.stanza != 1) {
-        loadParticleModel("data/3D/bg.prt", stageBackdrop);
-      }
+      loadModel("data/3D/tiredisk.r3d", wheelDisk);
+      loadParticleModel("data/3D/tire.prt", wheelTread);
+      loadParticleModel("data/3D/tirelow.prt", wheelTreadLow);
+      loadParticleModel("data/3D/cptext.prt", checkpointText);
+      loadParticleModel("data/3D/fntext.prt", finishText);
+      loadParticleModel("data/3D/timetube.prt", timeTube);
+
+      loadParticleModel("data/3D/bg.prt", stageBackdrop);
     }
     if (loading.step == 3) {
       for (var i = 0; i < 19; i++) {
-        var loadthis = false;
-        if (loading.stanza == 0) {
-          loadthis = true;
-        }
-        if (loading.stanza == 1) {
-          for (var c = 0; c < game.carCount; c++) {
-            if (game.carTypes[c] == i) {
-              loadthis = true;
-            }
-          }
-        }
-        if (loading.stanza == 2) {
-          loadthis = true;
-          for (var c = 0; c < game.carCount; c++) {
-            if (game.carTypes[c] == i) {
-              loadthis = false;
-            }
-          }
-        }
-        if (loadthis) {
-          loadModel("data/3D/car" + i + ".r3d", carModels[i]);
-          loadModel("data/3D/s" + i + ".r3d", carShadows[i]);
-          carTextures[i] = new Image();
-          carTextures[i].onload = function () {
-            loading.loaded += 9;
-          };
-          carTextures[i].src = "data/3D/textures/car" + i + ".png";
-          tireimg[i] = new Image();
-          tireimg[i].onload = function () {
-            loading.loaded += 2;
-          };
-          tireimg[i].src = "data/3D/textures/t" + i + ".png";
-        }
+        loadModel("data/3D/car" + i + ".r3d", carModels[i]);
+        loadModel("data/3D/s" + i + ".r3d", carShadows[i]);
+        carTextures[i] = new Image();
+        carTextures[i].onload = function () {
+          loading.loaded += 9;
+        };
+        carTextures[i].src = "data/3D/textures/car" + i + ".png";
+        images.tires[i] = new Image();
+        images.tires[i].onload = function () {
+          loading.loaded += 2;
+        };
+        images.tires[i].src = "data/3D/textures/t" + i + ".png";
       }
     }
     if (loading.step == 4) {
@@ -1315,170 +1214,113 @@ function loaddata() {
         "cac2",
         "cac3",
       ];
-      var onfrst = [
-        37, 0, 16, 30, 4, 12, 8, 9, 11, 5, 25, 31, 14, 6, 23, 59, 58, 57, 56,
-        55, 29,
-      ];
       for (var i = 0; i < 66; i++) {
         if (i != 40) {
-          var loadthis = false;
-          if (loading.stanza == 0) {
-            loadthis = true;
-          }
-          if (loading.stanza == 1) {
-            for (var k = 0; k < onfrst.length; k++) {
-              if (onfrst[k] == i) {
-                loadthis = true;
-              }
-            }
-          }
-          if (loading.stanza == 2) {
-            loadthis = true;
-            for (var k = 0; k < onfrst.length; k++) {
-              if (onfrst[k] == i) {
-                loadthis = false;
-              }
-            }
-          }
-          if (loadthis) {
-            loadModel("data/3D/" + defb[i] + ".r3d", pieceModels[i]);
-          }
+          loadModel("data/3D/" + defb[i] + ".r3d", pieceModels[i]);
         }
       }
     }
     if (loading.step == 5) {
-      if (loading.stanza != 2) {
-        loadModel("data/3D/sprite.r3d", dustSprite);
-        for (var i = 0; i < 3; i++) {
-          spritexture[i] = new Image();
-          spritexture[i].onload = function () {
-            loading.loaded++;
-          };
-          spritexture[i].src = "data/3D/textures/sp" + i + ".png";
-        }
-        loadModel("data/3D/fixdisk.r3d", fixHoop);
-        loadModel("data/3D/elec.r3d", electricity);
-        for (var i = 0; i < 3; i++) {
-          loadModel("data/3D/exp" + i + ".r3d", explode[i]);
-        }
+      loadModel("data/3D/sprite.r3d", dustSprite);
+      for (var i = 0; i < 3; i++) {
+        images.sprites[i] = new Image();
+        images.sprites[i].onload = function () {
+          loading.loaded++;
+        };
+        images.sprites[i].src = "data/3D/textures/sp" + i + ".png";
+      }
+      loadModel("data/3D/fixdisk.r3d", fixHoop);
+      loadModel("data/3D/elec.r3d", electricity);
+      for (var i = 0; i < 3; i++) {
+        loadModel("data/3D/exp" + i + ".r3d", explosionModels[i]);
       }
     }
     if (loading.step == 6) {
-      var onfrst = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 17, 18];
       for (var i = 0; i < 19; i++) {
-        var loadthis = false;
-        if (loading.stanza == 0) {
-          loadthis = true;
-        }
-        if (loading.stanza == 1) {
-          for (var k = 0; k < onfrst.length; k++) {
-            if (onfrst[k] == i) {
-              loadthis = true;
-            }
-          }
-        }
-        if (loading.stanza == 2) {
-          loadthis = true;
-          for (var k = 0; k < onfrst.length; k++) {
-            if (onfrst[k] == i) {
-              loadthis = false;
-            }
-          }
-        }
-        if (loadthis) {
-          loadTextureGroup(textureGroups[i], i);
-        }
+        loadTextureGroup(textureGroups[i], i);
       }
     }
     if (loading.step == 7) {
-      if (loading.stanza != 1) {
-        loadModel("data/3D/bg.r3d", menuBackdrop);
-      }
-      if (loading.stanza != 2) {
-        if (isPhone) {
-          for (var i = 0; i < 6; i++) {
-            images.touchControls[i] = new Image();
-            images.touchControls[i].onload = function () {
-              loading.loaded++;
-            };
-            images.touchControls[i].src =
-              "data/interface" + interfaceResolution + "/cn" + i + ".png";
-          }
-        }
-        for (var i = 0; i < 7; i++) {
-          images.buttons[i] = new Image();
-          images.buttons[i].onload = function () {
-            loading.loaded++;
-          };
-          images.buttons[i].src =
-            "data/interface" + interfaceResolution + "/btn" + (i + 1) + ".png";
-        }
+      loadModel("data/3D/bg.r3d", menuBackdrop);
+
+      if (isPhone) {
         for (var i = 0; i < 6; i++) {
-          images.soundToggles[i] = new Image();
-          images.soundToggles[i].onload = function () {
+          images.touchControls[i] = new Image();
+          images.touchControls[i].onload = function () {
             loading.loaded++;
           };
-          images.soundToggles[i].src =
-            "data/interface" + interfaceResolution + "/mu" + i + ".png";
+          images.touchControls[i].src =
+            "data/interface" + interfaceResolution + "/cn" + i + ".png";
         }
+      }
+      for (var i = 0; i < 7; i++) {
+        images.buttons[i] = new Image();
+        images.buttons[i].onload = function () {
+          loading.loaded++;
+        };
+        images.buttons[i].src =
+          "data/interface" + interfaceResolution + "/btn" + (i + 1) + ".png";
+      }
+      for (var i = 0; i < 6; i++) {
+        images.soundToggles[i] = new Image();
+        images.soundToggles[i].onload = function () {
+          loading.loaded++;
+        };
+        images.soundToggles[i].src =
+          "data/interface" + interfaceResolution + "/mu" + i + ".png";
       }
     }
     if (loading.step == 8) {
-      if (loading.stanza != 1) {
-        images.loadingBarLeft = new Image();
-        images.loadingBarLeft.onload = function () {
-          loading.loaded++;
-        };
-        images.loadingBarLeft.src =
-          "data/interface" + interfaceResolution + "/lbar.png";
-        images.loadingBarRight = new Image();
-        images.loadingBarRight.onload = function () {
-          loading.loaded++;
-        };
-        images.loadingBarRight.src =
-          "data/interface" + interfaceResolution + "/rbar.png";
-        images.locked = new Image();
-        images.locked.onload = function () {
-          loading.loaded++;
-        };
-        images.locked.src =
-          "data/interface" + interfaceResolution + "/locked.png";
-        images.menuBackground = new Image();
-        images.menuBackground.onload = function () {
-          loading.loaded += 402;
-        };
-        images.menuBackground.src =
-          "data/interface" + interfaceResolution + "/mainbg.png";
-        images.rider = new Image();
-        images.rider.onload = function () {
-          loading.loaded += 14;
-        };
-        images.rider.src =
-          "data/interface" + interfaceResolution + "/rider.png";
-        images.logo = new Image();
-        images.logo.onload = function () {
+      images.loadingBarLeft = new Image();
+      images.loadingBarLeft.onload = function () {
+        loading.loaded++;
+      };
+      images.loadingBarLeft.src =
+        "data/interface" + interfaceResolution + "/lbar.png";
+      images.loadingBarRight = new Image();
+      images.loadingBarRight.onload = function () {
+        loading.loaded++;
+      };
+      images.loadingBarRight.src =
+        "data/interface" + interfaceResolution + "/rbar.png";
+      images.locked = new Image();
+      images.locked.onload = function () {
+        loading.loaded++;
+      };
+      images.locked.src =
+        "data/interface" + interfaceResolution + "/locked.png";
+      images.menuBackground = new Image();
+      images.menuBackground.onload = function () {
+        loading.loaded += 402;
+      };
+      images.menuBackground.src =
+        "data/interface" + interfaceResolution + "/mainbg.png";
+      images.rider = new Image();
+      images.rider.onload = function () {
+        loading.loaded += 14;
+      };
+      images.rider.src = "data/interface" + interfaceResolution + "/rider.png";
+      images.logo = new Image();
+      images.logo.onload = function () {
+        loading.loaded += 20;
+      };
+      images.logo.src = "data/interface" + interfaceResolution + "/logo.png";
+
+      for (var i = 0; i < 6; i++) {
+        images.insano[i] = new Image();
+        images.insano[i].onload = function () {
           loading.loaded += 20;
         };
-        images.logo.src = "data/interface" + interfaceResolution + "/logo.png";
+        images.insano[i].src =
+          "data/interface" + interfaceResolution + "/insano" + i + ".png";
       }
-      if (loading.stanza != 2) {
-        for (var i = 0; i < 6; i++) {
-          images.insano[i] = new Image();
-          images.insano[i].onload = function () {
-            loading.loaded += 20;
+      for (var i = 0; i < 11; i++) {
+        if (i < 5 || !isPhone || i == 8 || i == 10) {
+          images.instructions[i] = new Image();
+          images.instructions[i].onload = function () {
+            loading.loaded += 13;
           };
-          images.insano[i].src =
-            "data/interface" + interfaceResolution + "/insano" + i + ".png";
-        }
-        for (var i = 0; i < 11; i++) {
-          if (i < 5 || !isPhone || i == 8 || i == 10) {
-            images.instructions[i] = new Image();
-            images.instructions[i].onload = function () {
-              loading.loaded += 13;
-            };
-            images.instructions[i].src =
-              "data/interface1/int" + (i + 1) + ".png";
-          }
+          images.instructions[i].src = "data/interface1/int" + (i + 1) + ".png";
         }
       }
     }
@@ -1556,9 +1398,12 @@ function loaddata() {
       electricity.loaded++;
     }
     for (var i = 0; i < 3; i++) {
-      if (explode[i].loaded && explode[i].loaded == explode[i].nt + 1) {
+      if (
+        explosionModels[i].loaded &&
+        explosionModels[i].loaded == explosionModels[i].nt + 1
+      ) {
         loading.loaded += 18;
-        explode[i].loaded++;
+        explosionModels[i].loaded++;
       }
     }
     if (menuBackdrop.loaded && menuBackdrop.loaded == menuBackdrop.nt + 1) {
@@ -1568,25 +1413,13 @@ function loaddata() {
     if (loading.loaded == loading.total) {
       cartextures();
       createwheels();
-      if (loading.stanza == 0 || loading.stanza == 1) {
-        creatdustextures();
-        for (var i = 0; i < 43; i++) {
-          loadSound(i);
-        }
+      creatdustextures();
+      for (var i = 0; i < 43; i++) {
+        loadSound(i);
       }
-      if (loading.stanza == 0) {
-        menu.animation = 0;
-        game.phase = PHASE.mainMenu;
-      }
-      if (loading.stanza == 1) {
-        stageLoad.after = AFTER_LOAD.race;
-        stageLoad.progress = STAGE_LOAD.requested;
-        game.phase = PHASE.stageLoading;
-      }
-      if (loading.stanza == 2) {
-        menu.animation = 0;
-        game.phase = PHASE.mainMenu;
-      }
+
+      menu.animation = 0;
+      game.phase = PHASE.mainMenu;
     }
   } else {
     rd.fillStyle = "#000000";
@@ -2537,17 +2370,17 @@ function render(now) {
             k = 1;
           }
           if (racers[c].wheels[w].dist < 250) {
-            tiren[car[c].typ][k].x = racers[c].wheels[w].x;
-            tiren[car[c].typ][k].y = racers[c].wheels[w].y;
-            tiren[car[c].typ][k].z = racers[c].wheels[w].z;
-            tiren[car[c].typ][k].mat = racers[c].wheels[w].mat;
-            drawParticle(tiren[car[c].typ][k]);
+            wheelTreads[car[c].typ][k].x = racers[c].wheels[w].x;
+            wheelTreads[car[c].typ][k].y = racers[c].wheels[w].y;
+            wheelTreads[car[c].typ][k].z = racers[c].wheels[w].z;
+            wheelTreads[car[c].typ][k].mat = racers[c].wheels[w].mat;
+            drawParticle(wheelTreads[car[c].typ][k]);
           } else {
-            tirel[car[c].typ][k].x = racers[c].wheels[w].x;
-            tirel[car[c].typ][k].y = racers[c].wheels[w].y;
-            tirel[car[c].typ][k].z = racers[c].wheels[w].z;
-            tirel[car[c].typ][k].mat = racers[c].wheels[w].mat;
-            drawParticle(tirel[car[c].typ][k]);
+            wheelTreadsLow[car[c].typ][k].x = racers[c].wheels[w].x;
+            wheelTreadsLow[car[c].typ][k].y = racers[c].wheels[w].y;
+            wheelTreadsLow[car[c].typ][k].z = racers[c].wheels[w].z;
+            wheelTreadsLow[car[c].typ][k].mat = racers[c].wheels[w].mat;
+            drawParticle(wheelTreadsLow[car[c].typ][k]);
           }
         }
         racers[c].body.x = car[c].x;
@@ -2560,11 +2393,11 @@ function render(now) {
           if (w >= 2) {
             k = 1;
           }
-          tired[car[c].typ][k].x = racers[c].wheels[w].x;
-          tired[car[c].typ][k].y = racers[c].wheels[w].y;
-          tired[car[c].typ][k].z = racers[c].wheels[w].z;
-          tired[car[c].typ][k].mat = racers[c].wheels[w].mat;
-          drawModel(tired[car[c].typ][k]);
+          wheelDisks[car[c].typ][k].x = racers[c].wheels[w].x;
+          wheelDisks[car[c].typ][k].y = racers[c].wheels[w].y;
+          wheelDisks[car[c].typ][k].z = racers[c].wheels[w].z;
+          wheelDisks[car[c].typ][k].mat = racers[c].wheels[w].mat;
+          drawModel(wheelDisks[car[c].typ][k]);
         }
       }
       if (raceEvents.onelec) {
@@ -2599,18 +2432,18 @@ function render(now) {
       }
       for (var i = 0; i < effects.nexp; i++) {
         if (effects.exp[effects.ewer[i]].ani != -1) {
-          explode[effects.exp[effects.ewer[i]].typ].x =
+          explosionModels[effects.exp[effects.ewer[i]].typ].x =
             effects.exp[effects.ewer[i]].x;
-          explode[effects.exp[effects.ewer[i]].typ].y =
+          explosionModels[effects.exp[effects.ewer[i]].typ].y =
             effects.exp[effects.ewer[i]].y;
-          explode[effects.exp[effects.ewer[i]].typ].z =
+          explosionModels[effects.exp[effects.ewer[i]].typ].z =
             effects.exp[effects.ewer[i]].z;
-          explode[effects.exp[effects.ewer[i]].typ].ont = Math.floor(
+          explosionModels[effects.exp[effects.ewer[i]].typ].ont = Math.floor(
             effects.exp[effects.ewer[i]].ani,
           );
-          explode[effects.exp[effects.ewer[i]].typ].mat =
+          explosionModels[effects.exp[effects.ewer[i]].typ].mat =
             effects.exp[effects.ewer[i]].mat;
-          drawModel(explode[effects.exp[effects.ewer[i]].typ]);
+          drawModel(explosionModels[effects.exp[effects.ewer[i]].typ]);
         }
       }
       for (var k = 0; k < effects.ndst; k++) {
@@ -2621,7 +2454,7 @@ function render(now) {
           dustSprite.z = effects.dust[i].z;
           dustSprite.mat = effects.dust[i].mat;
           dustSprite.texture =
-            dtexture[effects.dust[i].tx][Math.floor(effects.dust[i].ta)];
+            dustTextures[effects.dust[i].tx][Math.floor(effects.dust[i].ta)];
           drawModel(dustSprite);
         }
       }
@@ -2645,7 +2478,7 @@ function render(now) {
         while (ui >= 3) {
           ui -= 3;
         }
-        dustSprite.texture = stexture[ui];
+        dustSprite.texture = spriteTextures[ui];
         drawModel(dustSprite);
       }
       gl.enable(gl.DEPTH_TEST);
@@ -2662,12 +2495,15 @@ function render(now) {
         if (w >= 2) {
           k = 1;
         }
-        tiren[game.carTypes[0]][k].x = showcaseWheels[game.carTypes[0]][w].x;
-        tiren[game.carTypes[0]][k].y = showcaseWheels[game.carTypes[0]][w].y;
-        tiren[game.carTypes[0]][k].z = showcaseWheels[game.carTypes[0]][w].z;
-        tiren[game.carTypes[0]][k].mat =
+        wheelTreads[game.carTypes[0]][k].x =
+          showcaseWheels[game.carTypes[0]][w].x;
+        wheelTreads[game.carTypes[0]][k].y =
+          showcaseWheels[game.carTypes[0]][w].y;
+        wheelTreads[game.carTypes[0]][k].z =
+          showcaseWheels[game.carTypes[0]][w].z;
+        wheelTreads[game.carTypes[0]][k].mat =
           showcaseWheels[game.carTypes[0]][w].mat;
-        drawParticle(tiren[game.carTypes[0]][k]);
+        drawParticle(wheelTreads[game.carTypes[0]][k]);
       }
       drawModel(carModels[game.carTypes[0]]);
       for (var w = 0; w < 4; w++) {
@@ -2675,12 +2511,15 @@ function render(now) {
         if (w >= 2) {
           k = 1;
         }
-        tired[game.carTypes[0]][k].x = showcaseWheels[game.carTypes[0]][w].x;
-        tired[game.carTypes[0]][k].y = showcaseWheels[game.carTypes[0]][w].y;
-        tired[game.carTypes[0]][k].z = showcaseWheels[game.carTypes[0]][w].z;
-        tired[game.carTypes[0]][k].mat =
+        wheelDisks[game.carTypes[0]][k].x =
+          showcaseWheels[game.carTypes[0]][w].x;
+        wheelDisks[game.carTypes[0]][k].y =
+          showcaseWheels[game.carTypes[0]][w].y;
+        wheelDisks[game.carTypes[0]][k].z =
+          showcaseWheels[game.carTypes[0]][w].z;
+        wheelDisks[game.carTypes[0]][k].mat =
           showcaseWheels[game.carTypes[0]][w].mat;
-        drawModel(tired[game.carTypes[0]][k]);
+        drawModel(wheelDisks[game.carTypes[0]][k]);
       }
       menu.redraw = false;
     }
@@ -2750,12 +2589,15 @@ function render(now) {
         if (w >= 2) {
           k = 1;
         }
-        tiren[game.carTypes[0]][k].x = showcaseWheels[game.carTypes[0]][w].x;
-        tiren[game.carTypes[0]][k].y = showcaseWheels[game.carTypes[0]][w].y;
-        tiren[game.carTypes[0]][k].z = showcaseWheels[game.carTypes[0]][w].z;
-        tiren[game.carTypes[0]][k].mat =
+        wheelTreads[game.carTypes[0]][k].x =
+          showcaseWheels[game.carTypes[0]][w].x;
+        wheelTreads[game.carTypes[0]][k].y =
+          showcaseWheels[game.carTypes[0]][w].y;
+        wheelTreads[game.carTypes[0]][k].z =
+          showcaseWheels[game.carTypes[0]][w].z;
+        wheelTreads[game.carTypes[0]][k].mat =
           showcaseWheels[game.carTypes[0]][w].mat;
-        drawParticle(tiren[game.carTypes[0]][k]);
+        drawParticle(wheelTreads[game.carTypes[0]][k]);
       }
       drawModel(carModels[game.carTypes[0]]);
       for (var w = 0; w < 4; w++) {
@@ -2763,12 +2605,15 @@ function render(now) {
         if (w >= 2) {
           k = 1;
         }
-        tired[game.carTypes[0]][k].x = showcaseWheels[game.carTypes[0]][w].x;
-        tired[game.carTypes[0]][k].y = showcaseWheels[game.carTypes[0]][w].y;
-        tired[game.carTypes[0]][k].z = showcaseWheels[game.carTypes[0]][w].z;
-        tired[game.carTypes[0]][k].mat =
+        wheelDisks[game.carTypes[0]][k].x =
+          showcaseWheels[game.carTypes[0]][w].x;
+        wheelDisks[game.carTypes[0]][k].y =
+          showcaseWheels[game.carTypes[0]][w].y;
+        wheelDisks[game.carTypes[0]][k].z =
+          showcaseWheels[game.carTypes[0]][w].z;
+        wheelDisks[game.carTypes[0]][k].mat =
           showcaseWheels[game.carTypes[0]][w].mat;
-        drawModel(tired[game.carTypes[0]][k]);
+        drawModel(wheelDisks[game.carTypes[0]][k]);
       }
       menu.redraw = false;
     }
@@ -2922,9 +2767,8 @@ function inishcars() {
 // Chooses the opponents and puts all cars on the start grid.
 function setupcars() {
   track.insih();
-  if (loading.stanza != 1) {
-    sortcars(track.stage);
-  }
+  sortcars(track.stage);
+
   inishinter();
   inishcars();
   inishcontrol();

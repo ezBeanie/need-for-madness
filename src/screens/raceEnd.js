@@ -7,7 +7,6 @@ import { random } from "../core/random.js";
 import { PHASE, game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
-import { loading } from "../loading/progress.js";
 import { raceEvents } from "../race/events.js";
 import { fixcar } from "../race/physics.js";
 import { track } from "../race/track.js";
@@ -308,18 +307,9 @@ const leaveRaceEnd = () => {
       track.stage = Math.floor(3 + random.sim() * 13);
     }
   }
-  if (loading.stanza == 1) {
-    loading.step = 0;
-    loading.loaded = 500;
-    loading.total = 2458;
-    loading.stanza = 2;
-    menu.continuesToCarSelect = true;
-    game.phase = PHASE.loading;
-  } else {
-    menu.animation = 0;
-    menu.continuesToCarSelect = true;
-    game.phase = PHASE.mainMenu;
-  }
+  menu.animation = 0;
+  menu.continuesToCarSelect = true;
+  game.phase = PHASE.mainMenu;
 };
 
 // The unlocked car turns in front of the stage backdrop, rocking its nose up and down.

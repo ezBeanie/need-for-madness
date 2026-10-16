@@ -8,5 +8,4 @@ export const loading = {
   loaded: 500,
   total: isPhone ? 3770 : 3816,
   // 0 when the game loads, 2 when it loads again after a race or quitting (1 is unused)
-  stanza: 0,
 };

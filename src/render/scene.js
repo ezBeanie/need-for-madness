@@ -43,6 +43,18 @@ export const fixHoop = newModel();
 export const electricity = newModel();
 export const dustSprite = newModel();
 
+// per car type the front and the rear wheel: disk, tread, low-detail tread
+const perWheel = (create) =>
+  Array.from({ length: 19 }, () => [create(), create()]);
+export const wheelDisks = perWheel(newModel);
+export const wheelTreads = perWheel(newParticleModel);
+export const wheelTreadsLow = perWheel(newParticleModel);
+// dust: per kind (the first three on the ground, the others in the air) five fading
+// textures; the textures of the dust sprite
+export const dustTextures = [];
+export const spriteTextures = [];
+export const explosionModels = Array.from({ length: 3 }, newModel);
+
 // the car presented in the menus: its wheels, per car type
 export const showcaseWheels = Array.from({ length: 19 }, () =>
   Array.from({ length: 4 }, () => ({ x: 0, y: 0, z: 0, mat: null, dist: 0 })),
