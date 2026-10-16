@@ -110,6 +110,57 @@ const pauseMenuTour = () => {
   };
 };
 
+// Clicks with the mouse at 1280x720: the button is held for three frames, then released.
+const CLICK_FRAMES = 3;
+
+// Every page of the game instructions, opened from the pause menu and from the main menu:
+// Enter, the buttons of the coach page, Next, Back, closing with a click beside the
+// buttons and with Finish.
+const instructionsTour = () => {
+  const keys = keyTapper();
+  const taps = {
+    200: ENTER,
+    210: DOWN,
+    215: DOWN,
+    220: ENTER,
+    240: ENTER,
+    260: ENTER,
+    280: ENTER,
+    300: ENTER,
+    360: ENTER,
+    540: DOWN,
+    550: ENTER,
+    660: ENTER,
+    680: ENTER,
+    700: ENTER,
+    720: ENTER,
+    740: ENTER,
+  };
+  const clicks = {
+    320: [525, 344], // Additional Keyboard Controls
+    380: [380, 444], // Music Credits
+    420: [1095, 524], // Next to the second page of credits
+    460: [315, 589], // Back to the coach
+    480: [315, 589], // Back to the controls
+    500: [1110, 589], // Next to the coach
+    520: [700, 200], // beside the buttons: closes the instructions
+    620: [1050, 554], // Game Instructions in the main menu
+  };
+  let clickedAt = null;
+  return (ctx, frame, game) => {
+    keys.releaseAfterFrame(game);
+    Object.assign(ctx.racers[0].u, NO_INPUT);
+    if (taps[frame]) {
+      keys.tap(game, taps[frame]);
+    }
+    if (clicks[frame]) {
+      clickedAt = frame;
+      [ctx.pointer.x[0], ctx.pointer.y[0]] = clicks[frame];
+    }
+    ctx.pointer.down = clickedAt !== null && frame - clickedAt < CLICK_FRAMES;
+  };
+};
+
 // The touch controls of phones, where they are at 1280x720.
 const TOUCH = {
   left: [130, 558],
@@ -214,6 +265,20 @@ const flows = [
     stage: 2,
     frames: 1600,
     script: pauseMenuTour,
+  },
+  {
+    name: "instructions-stage-01",
+    stage: 1,
+    frames: 800,
+    script: instructionsTour,
+  },
+  {
+    // phones explain the touch controls and have no keyboard page
+    name: "instructions-phone-stage-01",
+    stage: 1,
+    frames: 800,
+    script: instructionsTour,
+    userAgent: "iPhone",
   },
   {
     name: "rewind-time-stage-02",
