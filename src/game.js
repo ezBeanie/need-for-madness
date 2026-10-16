@@ -22,14 +22,7 @@ import { installKeyboard } from "./input/keyboard.js";
 import { CONFIRM, confirm, pressConfirm } from "./input/confirm.js";
 import { saveSetting } from "./core/storage.js";
 import { images } from "./ui/images.js";
-import {
-  BUTTON,
-  TEXT,
-  buttons,
-  drawButton,
-  drawCenteredText,
-  drawMeter,
-} from "./ui/widgets.js";
+import { TEXT, buttons, drawCenteredText } from "./ui/widgets.js";
 import { installPointer, pointer } from "./input/pointer.js";
 import {
   attachTo,
@@ -79,7 +72,6 @@ import {
   drawRewindOverlay,
   drawSwitchScreen,
   drawinter,
-  hud,
   inishinter,
 } from "./ui/hud.js";
 import { menu } from "./screens/menuState.js";
@@ -122,12 +114,7 @@ import {
   unlockedcar,
 } from "./screens/raceEnd.js";
 import { pausedgame } from "./screens/pauseMenu.js";
-import {
-  fillSpeechBubble,
-  insano,
-  insanoScale,
-  pickTalkingPicture,
-} from "./ui/insano.js";
+import { drawStartHint } from "./ui/insano.js";
 import { drawmain, resetgame } from "./screens/mainMenu.js";
 import { gamecartextures } from "./render/generated.js";
 import { loaddata } from "./loading/assets.js";
@@ -432,10 +419,10 @@ function gameworks() {
         enginsnd();
       } else {
         if (track.stage == 2 && game.unlocked == 2) {
-          drawonbordo();
+          drawStartHint();
         }
         if (track.stage == 4 && game.unlocked == 4) {
-          drawonbordo();
+          drawStartHint();
         }
       }
       if (raceEvents.countdown > 65) {
@@ -1615,130 +1602,6 @@ function mainloop(now) {
 function checknplay() {
   unlockAudio(game.phase == PHASE.race);
 }
-function drawonbordo() {
-  var fm = insanoScale();
-  var topo = 260 * view.scaleY;
-  if (hud.powerBlink) {
-    hud.powerBlink = false;
-  } else {
-    hud.powerBlink = true;
-  }
-  if (raceEvents.countdown > 130) {
-    if (hud.powerBlink) {
-      pickTalkingPicture();
-    }
-  } else {
-    insano.picture = 2;
-  }
-  rd.drawImage(
-    images.insano[insano.picture],
-    10 * fm,
-    topo,
-    274 * fm * 0.7,
-    341 * fm * 0.7,
-  );
-  rd.fillStyle = "#FFFFFF";
-  rd.globalAlpha = 0.7;
-  var fldn = 250;
-  if (track.stage == 4) {
-    fldn = 280;
-  }
-  fillSpeechBubble(200 * fm, topo, 1060 * fm, fldn * fm, 20 * fm);
-  rd.globalAlpha = 1;
-  rd.letterSpacing = "0px";
-  rd.font = "" + 30 * fm + "px verd";
-  rd.textBaseline = "middle";
-  rd.textAlign = "left";
-  rd.fillStyle = "#002748";
-  if (track.stage == 2) {
-    rd.fillText(
-      "Preform stunts to power up your car!",
-      200 * fm + 20 * fm,
-      topo + 36 * fm,
-    );
-  }
-  if (track.stage == 4) {
-    rd.fillText(
-      "It is easier to just waste the other cars in this stage!",
-      200 * fm + 20 * fm,
-      topo + 36 * fm,
-    );
-    rd.fillText(
-      "Use the Arrow Target button",
-      200 * fm + 20 * fm,
-      topo + 96 * fm,
-    );
-  }
-  if (track.stage == 2) {
-    rd.font = "" + 50 * fm + "px verd";
-    rd.fillText("=", 770 * fm, topo + 80 * fm + 55 * view.scale);
-    rd.drawImage(
-      images.instructions[4],
-      200 * fm + 90 * fm,
-      topo + 70 * fm,
-      464 * fm,
-      150 * fm,
-    );
-    rd.letterSpacing = "1px";
-    rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
-    rd.textAlign = "right";
-    rd.fillStyle = "#000000";
-    rd.fillText(
-      "Power",
-      945 * fm - 15 * view.scale,
-      topo + 80 * fm + 55 * view.scale,
-    );
-    var r = 128;
-    var g = 190 + 70 * 0.37;
-    var b = 255;
-    drawMeter(
-      945 * fm,
-      topo + 80 * fm + 42 * view.scale,
-      "#00B0DC",
-      "#005C96",
-      "rgb(" + r + "," + g + "," + b + ")",
-      70 / 98,
-    );
-  }
-  if (track.stage == 4) {
-    if (!isPhone) {
-      drawButton({
-        id: 1,
-        x: 200 * fm + 240 * fm,
-        y: topo + 130 * fm,
-        width: 100,
-        height: 60,
-        faceTop: "#89C800",
-        faceBottom: "#CADC00",
-        shadowTop: "#4B6E00",
-        shadowBottom: "#778200",
-        layout: BUTTON.textThenImage,
-        text: "A",
-        fontSize: 22,
-        textOpacity: 0.76,
-        image: images.buttons[0],
-        imageOpacity: 1,
-        pulsing: false,
-      });
-    } else {
-      rd.drawImage(
-        images.touchControls[5],
-        200 * fm + 165 * fm,
-        topo + 130 * fm,
-        154 * view.scale,
-        111 * view.scale,
-      );
-    }
-    rd.drawImage(
-      images.instructions[8],
-      200 * fm + 530 * fm,
-      topo + 80 * fm,
-      382 * fm,
-      164 * fm,
-    );
-  }
-}
-
 // The original drew the tilt of the race end screen here, while loading; it is drawn again
 // before it shows. The draw stays so the randomness after it is as it was.
 random.fx();

@@ -10,6 +10,7 @@ import { backdropHue, cssRgb, hslToRgb } from "../ui/color.js";
 import { images } from "../ui/images.js";
 import {
   BUBBLE_INK,
+  drawStuntMeansPower,
   drawTalkingInsano,
   insano,
   insanoScale,
@@ -22,7 +23,6 @@ import {
   anyButtonHeld,
   drawBlueButton,
   drawMenuBackground,
-  drawMeter,
 } from "../ui/widgets.js";
 
 export const instructions = {
@@ -150,34 +150,7 @@ const drawPowerUp = (scale, top) => {
     [256, "To power up your car (and keep it powered up) you will need to"],
     [296, "perform stunts!"],
   ]);
-  // a stunt = a power meter at 70 of 98
-  const meterTop = top + 310 * scale;
-  rd.font = "" + 50 * scale + "px verd";
-  rd.fillText("=", 770 * scale, meterTop + 55 * view.scale);
-  rd.drawImage(
-    images.instructions[4],
-    200 * scale + 90 * scale,
-    top + 300 * scale,
-    464 * scale,
-    150 * scale,
-  );
-  rd.letterSpacing = "1px";
-  rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
-  rd.textAlign = "right";
-  rd.fillStyle = "#000000";
-  rd.fillText(
-    "Power",
-    945 * scale - 15 * view.scale,
-    meterTop + 55 * view.scale,
-  );
-  drawMeter(
-    945 * scale,
-    meterTop + 42 * view.scale,
-    "#00B0DC",
-    "#005C96",
-    cssRgb([128, 190 + 70 * 0.37, 255]),
-    70 / 98,
-  );
+  drawStuntMeansPower(scale, top, 310, 300);
 };
 
 const drawArrowAndHoop = (scale, top) => {
