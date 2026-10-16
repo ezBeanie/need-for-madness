@@ -24,6 +24,8 @@ export const recording = {
   catchfin: 0,
   // the highlight replay holds still on a frame
   onpausefr: false,
+  rmode: 0,
+  holdf: 0,
 };
 
 export function catchnow(hty) {

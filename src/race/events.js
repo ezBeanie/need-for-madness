@@ -7,4 +7,9 @@ export const raceEvents = {
   onelec: false,
   cntwis: 0,
   onautocorrect: 0,
+  holdcnt: 0,
+  auscnt: 45,
+  tcnt: 30,
+  iclear: 0,
+  switcnt: 0,
 };

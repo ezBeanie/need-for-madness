@@ -33,7 +33,7 @@ const finishAndPlayOn = () => {
     keys.releaseAfterFrame(game);
     if (finishedAt === null) {
       Object.assign(ctx.racers[0].u, drive(ctx));
-      if (ctx.holdcnt) {
+      if (ctx.raceEvents.holdcnt) {
         finishedAt = frame;
         Object.assign(ctx.racers[0].u, NO_INPUT);
       }

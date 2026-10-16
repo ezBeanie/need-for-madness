@@ -186,7 +186,7 @@ const flowState = (ctx) => ({
   stage: ctx.track.stage,
   unlocked: ctx.game.unlocked,
   winner: ctx.winner,
-  holdcnt: ctx.holdcnt,
+  holdcnt: ctx.raceEvents.holdcnt,
 });
 
 // Records a whole game flow, e.g. finishing a race and clicking through the menus.

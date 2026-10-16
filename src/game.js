@@ -4512,7 +4512,7 @@ function enginsnd() {
         }
       }
     }
-    if (holdcnt == 0) {
+    if (raceEvents.holdcnt == 0) {
       engine.volume.gain.value +=
         ((reqvol - 1) * 0.75 + 1 - engine.volume.gain.value) / 10;
     } else {
@@ -4535,7 +4535,7 @@ function enginsnd() {
     engine.source.playbackRate.value =
       1 + abo * carStats.engrev[game.carTypes[game.player]];
   } else {
-    if (!holdcnt) {
+    if (!raceEvents.holdcnt) {
       startEngine(game.carTypes[game.player], true);
     }
   }
@@ -6151,7 +6151,7 @@ function createswitches() {
     }
   }
 }
-var switcnt = 0;
+
 var slide = 80;
 var slideto = 0;
 var slidedir = false;
@@ -6160,7 +6160,7 @@ var swingto = 45;
 var swingdir = false;
 function drawswitch() {
   rd.clearRect(0, 0, view.width, view.height);
-  if (switcnt == 0) {
+  if (raceEvents.switcnt == 0) {
     camera.mode = -1;
     slide = 80;
     slideto = 180;
@@ -6186,7 +6186,7 @@ function drawswitch() {
     }
     stopEngine();
   }
-  if (switcnt < 20) {
+  if (raceEvents.switcnt < 20) {
     camera.pitch = 10;
     var kcxz = racers[camera.target].cxz - 180 + swing;
     camera.yaw = kcxz;
@@ -6194,9 +6194,9 @@ function drawswitch() {
     camera.z = car[camera.target].z + slide * mcos(kcxz);
     camera.y = car[camera.target].y + 25;
   }
-  if (switcnt >= 20 && switcnt < 100) {
-    var fcs1 = 100 - switcnt;
-    var fcs2 = switcnt - 20;
+  if (raceEvents.switcnt >= 20 && raceEvents.switcnt < 100) {
+    var fcs1 = 100 - raceEvents.switcnt;
+    var fcs2 = raceEvents.switcnt - 20;
     camera.pitch = 10;
     var kcxz =
       (racers[camera.target].cxz * fcs1 +
@@ -6214,7 +6214,7 @@ function drawswitch() {
     camera.y =
       (car[camera.target].y * fcs1 + car[camera.nextTarget].y * fcs2) / 80 + 25;
   }
-  if (switcnt >= 100) {
+  if (raceEvents.switcnt >= 100) {
     camera.pitch = 10;
     var kcxz = racers[camera.nextTarget].cxz - 180 + swing;
     camera.yaw = kcxz;
@@ -6222,7 +6222,7 @@ function drawswitch() {
     camera.z = car[camera.nextTarget].z + slide * mcos(kcxz);
     camera.y = car[camera.nextTarget].y + 25;
   }
-  if (switcnt >= 100) {
+  if (raceEvents.switcnt >= 100) {
     slide += (80 - slide) / 17;
     swing += -swing / 17;
   } else {
@@ -6253,10 +6253,10 @@ function drawswitch() {
       }
     }
   }
-  if (switcnt == 10) {
+  if (raceEvents.switcnt == 10) {
     playSound(38, 1);
   }
-  if (switcnt >= 10 && switcnt < 90) {
+  if (raceEvents.switcnt >= 10 && raceEvents.switcnt < 90) {
     if (tflk) {
       drawcs(132, "SWITCHING CARS", 0, 0, 0, 3);
       tflk = false;
@@ -6270,22 +6270,22 @@ function drawswitch() {
       drawcs(192, "Laps Reset, Time +10", 0, 128, 255, 1);
     }
     var duds = 0;
-    if (switcnt >= 10 && switcnt < 15) {
+    if (raceEvents.switcnt >= 10 && raceEvents.switcnt < 15) {
       duds = 5;
     }
-    if (switcnt >= 15 && switcnt < 20) {
+    if (raceEvents.switcnt >= 15 && raceEvents.switcnt < 20) {
       duds = 4;
     }
-    if (switcnt >= 20 && switcnt < 25) {
+    if (raceEvents.switcnt >= 20 && raceEvents.switcnt < 25) {
       duds = 3;
     }
-    if (switcnt >= 25 && switcnt < 30) {
+    if (raceEvents.switcnt >= 25 && raceEvents.switcnt < 30) {
       duds = 2;
     }
-    if (switcnt >= 30 && switcnt < 40) {
+    if (raceEvents.switcnt >= 30 && raceEvents.switcnt < 40) {
       duds = 1;
     }
-    if (switcnt >= 40) {
+    if (raceEvents.switcnt >= 40) {
       duds = 0;
     }
     rd.globalAlpha = 0.6;
@@ -6298,8 +6298,8 @@ function drawswitch() {
     );
     rd.globalAlpha = 1;
   }
-  switcnt++;
-  if (switcnt == 125) {
+  raceEvents.switcnt++;
+  if (raceEvents.switcnt == 125) {
     raceEvents.onlastcheck = false;
     for (var i = 0; i < game.carCount; i++) {
       racers[i].pcleared = track.pcs;
@@ -6314,7 +6314,7 @@ function drawswitch() {
     racers[camera.nextTarget].u.down = racers[game.player].u.down;
     racers[camera.nextTarget].u.handb = racers[game.player].u.handb;
     racers[camera.nextTarget].u.arrace = racers[game.player].u.arrace;
-    iclear = 0;
+    raceEvents.iclear = 0;
     game.player = camera.nextTarget;
     camera.target = game.player;
     track.switchtime += 134;
@@ -6325,10 +6325,10 @@ function drawswitch() {
 }
 function drawrevtime() {
   rd.clearRect(0, 0, view.width, view.height);
-  if (switcnt == 5) {
+  if (raceEvents.switcnt == 5) {
     playSound(41, 1);
   }
-  if (switcnt >= 10 && switcnt < 90) {
+  if (raceEvents.switcnt >= 10 && raceEvents.switcnt < 90) {
     if (tflk) {
       drawcs(132, "Reversing Time", 0, 0, 0, 3);
       tflk = false;
@@ -6337,22 +6337,22 @@ function drawrevtime() {
       tflk = true;
     }
     var duds = 0;
-    if (switcnt >= 10 && switcnt < 15) {
+    if (raceEvents.switcnt >= 10 && raceEvents.switcnt < 15) {
       duds = 5;
     }
-    if (switcnt >= 15 && switcnt < 20) {
+    if (raceEvents.switcnt >= 15 && raceEvents.switcnt < 20) {
       duds = 4;
     }
-    if (switcnt >= 20 && switcnt < 25) {
+    if (raceEvents.switcnt >= 20 && raceEvents.switcnt < 25) {
       duds = 3;
     }
-    if (switcnt >= 25 && switcnt < 30) {
+    if (raceEvents.switcnt >= 25 && raceEvents.switcnt < 30) {
       duds = 2;
     }
-    if (switcnt >= 30 && switcnt < 40) {
+    if (raceEvents.switcnt >= 30 && raceEvents.switcnt < 40) {
       duds = 1;
     }
-    if (switcnt >= 40) {
+    if (raceEvents.switcnt >= 40) {
       duds = 0;
     }
     rd.globalAlpha = 0.6;
@@ -6367,16 +6367,16 @@ function drawrevtime() {
   }
   if (Math.abs(recording.fr - (429 - recording.nrec)) > 30) {
     if (Math.abs(recording.fr - (429 - recording.nrec)) > 100) {
-      if (switcnt % 30 == 0) {
+      if (raceEvents.switcnt % 30 == 0) {
         playSound(42, 1);
       }
     } else {
-      if (switcnt % 50 == 0) {
+      if (raceEvents.switcnt % 50 == 0) {
         playSound(42, 1);
       }
     }
   }
-  switcnt++;
+  raceEvents.switcnt++;
   timetube.mat = resetMatrix(timetube.mat);
   mat4.rotate(
     timetube.mat,
@@ -6420,12 +6420,11 @@ var ana = 0,
 var flk = false;
 var winner = false;
 var starcnt = 0;
-var iclear = 0;
-var holdcnt = 0;
+
 var gocnt = 0;
 var gocntdrop = 0;
 var looped = 1;
-var tcnt = 30;
+
 var tflk = false;
 var say = "";
 var wasay = false;
@@ -6440,7 +6439,7 @@ var exlm = ["!", "!!", "!!!"];
 var loopin = "",
   spin = "",
   asay = "";
-var auscnt = 45;
+
 var aflk = false;
 var pwcnt = 0;
 var pwflk = false;
@@ -6465,20 +6464,20 @@ function inishinter() {
   ana = 0;
   cntan = 0;
   cntovn = 0;
-  tcnt = 30;
+  raceEvents.tcnt = 30;
   wasay = false;
   pwcnt = 0;
-  auscnt = 45;
+  raceEvents.auscnt = 45;
   pnext = 0;
   pback = 0;
   starcnt = 186;
   gocnt = 0;
   gocntdrop = 0;
-  iclear = 0;
+  raceEvents.iclear = 0;
   for (var i = 0; i < 7; i++) {
     dested[i] = 0;
   }
-  holdcnt = 0;
+  raceEvents.holdcnt = 0;
   camera.mode = 0;
   camera.target = 0;
   recording.onpausefr = false;
@@ -6750,7 +6749,7 @@ function drawinter() {
     }
   }
   if (holdit) {
-    if (holdcnt == 0) {
+    if (raceEvents.holdcnt == 0) {
       if (
         winner &&
         game.unlocked == track.stage &&
@@ -6760,9 +6759,9 @@ function drawinter() {
         saveInfo("unlocked", game.unlocked + 1);
       }
     }
-    holdcnt++;
+    raceEvents.holdcnt++;
     var exitnow = false;
-    if (racers[game.player].u.handb && holdcnt > 50) {
+    if (racers[game.player].u.handb && raceEvents.holdcnt > 50) {
       exitnow = true;
       racers[game.player].u.handb = false;
     }
@@ -6817,8 +6816,8 @@ function drawinter() {
       onbreplay--;
     }
   } else {
-    if (holdcnt != 0) {
-      holdcnt = 0;
+    if (raceEvents.holdcnt != 0) {
+      raceEvents.holdcnt = 0;
     }
     if (enter == 1 && starcnt <= 65) {
       enter = 2;
@@ -6844,7 +6843,7 @@ function drawinter() {
       if (timer == 0) {
         playSound(40, 1);
         createswitches();
-        switcnt = 0;
+        raceEvents.switcnt = 0;
         game.phase = PHASE.switchScreen;
       }
     }
@@ -6857,18 +6856,22 @@ function drawinter() {
       if (arrace) {
         wasay = true;
         say = " Arrow now pointing at >  CARS";
-        tcnt = -5;
+        raceEvents.tcnt = -5;
       }
       if (!arrace) {
         wasay = false;
         say = " Arrow now pointing at >  TRACK";
-        tcnt = -5;
+        raceEvents.tcnt = -5;
         cntan = 20;
       }
     }
     if (!holdit && starcnt == 0 && camera.mode == 0 && track.stage != 16) {
       arrow(racers[game.player].point, racers[game.player].missedcp, arrace);
-      if (!arrace && auscnt == 45 && racers[game.player].capcnt == 0) {
+      if (
+        !arrace &&
+        raceEvents.auscnt == 45 &&
+        racers[game.player].capcnt == 0
+      ) {
         if (racers[game.player].missedcp > 0) {
           if (
             racers[game.player].missedcp > 15 &&
@@ -7061,7 +7064,7 @@ function drawinter() {
     }
     g = 190 + racers[game.player].power * 0.37;
     b = 255;
-    if (auscnt < 45 && aflk) {
+    if (raceEvents.auscnt < 45 && aflk) {
       r = 128;
       g = 244;
       b = 255;
@@ -7249,8 +7252,8 @@ function drawinter() {
     }
     if (racers[game.player].power < 40) {
       if (
-        tcnt == 30 &&
-        auscnt == 45 &&
+        raceEvents.tcnt == 30 &&
+        raceEvents.auscnt == 45 &&
         racers[game.player].mtouch &&
         racers[game.player].capcnt == 0
       ) {
@@ -7308,7 +7311,7 @@ function drawinter() {
       }
     }
     if (racers[game.player].capcnt == 0) {
-      if (tcnt < 30) {
+      if (raceEvents.tcnt < 30) {
         if (tflk) {
           drawcs(167, say, 0, 0, 0, 1);
           tflk = false;
@@ -7321,14 +7324,14 @@ function drawinter() {
           tflk = true;
         }
         if (tick.fraction >= tick.scale) {
-          tcnt++;
+          raceEvents.tcnt++;
         }
       } else {
         if (wasay) {
           wasay = false;
         }
       }
-      if (auscnt < 45) {
+      if (raceEvents.auscnt < 45) {
         if (aflk) {
           drawcs(136, asay, 59, 156, 255, 0);
           aflk = false;
@@ -7337,7 +7340,7 @@ function drawinter() {
           aflk = true;
         }
         if (tick.fraction >= tick.scale) {
-          auscnt++;
+          raceEvents.auscnt++;
         }
       }
     } else {
@@ -7469,24 +7472,24 @@ function drawinter() {
         }
       }
       if (asay != "") {
-        auscnt -= 15;
+        raceEvents.auscnt -= 15;
       }
       if (loopin != "") {
-        auscnt -= 25;
+        raceEvents.auscnt -= 25;
       }
       if (spin != "") {
-        auscnt -= 25;
+        raceEvents.auscnt -= 25;
       }
       if (lp != 0) {
-        auscnt -= 25;
+        raceEvents.auscnt -= 25;
       }
-      if (auscnt < 45) {
+      if (raceEvents.auscnt < 45) {
         playSound(27, 1);
         if (raceEvents.onautocorrect) {
           raceEvents.onautocorrect--;
         }
-        if (auscnt < -20) {
-          auscnt = -20;
+        if (raceEvents.auscnt < -20) {
+          raceEvents.auscnt = -20;
         }
         var prp = 0;
         if (racers[game.player].powerup > 20) {
@@ -7507,7 +7510,7 @@ function drawinter() {
           asay = adj[prp][Math.floor(random.fx() * 2.99)];
         }
         if (!wasay) {
-          tcnt = auscnt;
+          raceEvents.tcnt = raceEvents.auscnt;
           if (racers[game.player].power != 98) {
             say =
               "POWER UP " +
@@ -7522,7 +7525,7 @@ function drawinter() {
     if (car[game.player].fcnt == 2) {
       if (!wasay) {
         say = "Car Fixed";
-        tcnt = 0;
+        raceEvents.tcnt = 0;
       }
     }
     if (game.carCount != 1) {
@@ -7532,22 +7535,25 @@ function drawinter() {
           if (dested[i] == 1) {
             wasay = true;
             say = "" + carStats.names[game.carTypes[i]] + " has been wasted!";
-            tcnt = -15;
+            raceEvents.tcnt = -15;
           }
           if (dested[i] == 2) {
             wasay = true;
             say = "You wasted " + carStats.names[game.carTypes[i]] + "!";
-            tcnt = -15;
+            raceEvents.tcnt = -15;
           }
         }
       }
     }
-    if (iclear != racers[game.player].clear && racers[game.player].clear != 0) {
+    if (
+      raceEvents.iclear != racers[game.player].clear &&
+      racers[game.player].clear != 0
+    ) {
       if (!wasay) {
         say = "Check Point";
-        tcnt = 15;
+        raceEvents.tcnt = 15;
       }
-      iclear = racers[game.player].clear;
+      raceEvents.iclear = racers[game.player].clear;
       playSound(28, 1);
       cntovn = 0;
       if (cntan != 0) {
@@ -7729,8 +7735,7 @@ function drawreplay() {
   }
 }
 var cntreps = 0;
-var rmode = 0;
-var holdf = 0;
+
 var lwit = false;
 
 function drawhreplay() {
@@ -7758,14 +7763,14 @@ function drawhreplay() {
     } else {
       drawcs(90, "Best Stunt!", 0, 32, 64, 1);
     }
-    if (rmode == 98) {
+    if (recording.rmode == 98) {
       if (
-        holdf == 4 ||
-        holdf == 7 ||
-        holdf == 44 ||
-        holdf == 47 ||
-        holdf == 94 ||
-        holdf == 97
+        recording.holdf == 4 ||
+        recording.holdf == 7 ||
+        recording.holdf == 44 ||
+        recording.holdf == 47 ||
+        recording.holdf == 94 ||
+        recording.holdf == 97
       ) {
         rd.globalAlpha = 0.5;
         rd.fillStyle = "#FFFFFF";
@@ -7773,9 +7778,9 @@ function drawhreplay() {
         rd.globalAlpha = 1;
       }
     }
-    if (rmode == 43) {
-      if (holdf >= 1 && holdf < 43) {
-        if (holdf % Math.floor(2 + random.fx() * 3) == 0 && !lwit) {
+    if (recording.rmode == 43) {
+      if (recording.holdf >= 1 && recording.holdf < 43) {
+        if (recording.holdf % Math.floor(2 + random.fx() * 3) == 0 && !lwit) {
           rd.globalAlpha = 0.5;
           rd.fillStyle = "#FFFFFF";
           rd.fillRect(0, 0, view.width, view.height);
@@ -7786,17 +7791,17 @@ function drawhreplay() {
         }
       }
     }
-    if (recording.fr > recording.hat && holdf != rmode) {
-      holdf++;
+    if (recording.fr > recording.hat && recording.holdf != recording.rmode) {
+      recording.holdf++;
     }
     camera.mode = 1;
     camera.target = recording.hcim;
     recording.onpausefr = false;
-    if (holdf == 0 || holdf == rmode) {
+    if (recording.holdf == 0 || recording.holdf == recording.rmode) {
       recording.fr++;
       if (recording.fr == 430) {
         recording.fr = 0;
-        holdf = 0;
+        recording.holdf = 0;
         hrewindhreplay();
         cntreps++;
       }
@@ -7806,25 +7811,29 @@ function drawhreplay() {
   }
   if (recording.htyp == 2) {
     drawcs(90, "Wasted!", 0, 32, 64, 1);
-    if (rmode == 95) {
-      if (holdf == 4 || holdf == 44 || holdf == 94) {
+    if (recording.rmode == 95) {
+      if (
+        recording.holdf == 4 ||
+        recording.holdf == 44 ||
+        recording.holdf == 94
+      ) {
         rd.globalAlpha = 0.5;
         rd.fillStyle = "#FFFFFF";
         rd.fillRect(0, 0, view.width, view.height);
         rd.globalAlpha = 1;
       }
     }
-    if (recording.fr > recording.hat && holdf != rmode) {
-      holdf++;
+    if (recording.fr > recording.hat && recording.holdf != recording.rmode) {
+      recording.holdf++;
     }
     camera.mode = 1;
     camera.target = recording.hcim;
     recording.onpausefr = false;
-    if (holdf == 0 || holdf == rmode) {
+    if (recording.holdf == 0 || recording.holdf == recording.rmode) {
       recording.fr++;
       if (recording.fr == 430) {
         recording.fr = 0;
-        holdf = 0;
+        recording.holdf = 0;
         hrewindhreplay();
         cntreps++;
       }
@@ -7834,35 +7843,35 @@ function drawhreplay() {
   }
   if (recording.htyp == 3) {
     drawcs(90, "You Wasted'em!", 0, 32, 64, 1);
-    if (holdf == 13 || holdf == 16) {
+    if (recording.holdf == 13 || recording.holdf == 16) {
       rd.globalAlpha = 0.5;
       rd.fillStyle = "#FFFFFF";
       rd.fillRect(0, 0, view.width, view.height);
       rd.globalAlpha = 1;
     }
-    if (holdf == 0) {
+    if (recording.holdf == 0) {
       camera.mode = 1;
       camera.target = recording.hcim;
     }
-    if (holdf > 0 && holdf < 30) {
+    if (recording.holdf > 0 && recording.holdf < 30) {
       camera.mode = 3;
       camera.target = recording.hcim;
       camera.nextTarget = recording.hscar;
-      camera.transition = holdf;
+      camera.transition = recording.holdf;
     }
-    if (holdf == 30) {
+    if (recording.holdf == 30) {
       camera.mode = 1;
       camera.target = recording.hscar;
     }
-    if (recording.fr > recording.hat && holdf != 30) {
-      holdf++;
+    if (recording.fr > recording.hat && recording.holdf != 30) {
+      recording.holdf++;
     }
     recording.onpausefr = false;
-    if (holdf == 0 || holdf == 30) {
+    if (recording.holdf == 0 || recording.holdf == 30) {
       recording.fr++;
       if (recording.fr == 430) {
         recording.fr = 0;
-        holdf = 0;
+        recording.holdf = 0;
         hrewindhreplay();
         cntreps++;
       }
@@ -7872,55 +7881,60 @@ function drawhreplay() {
   }
   if (recording.htyp == 4) {
     drawcs(90, "Close Finish!", 0, 32, 64, 1);
-    if (holdf == 0) {
+    if (recording.holdf == 0) {
       camera.mode = 1;
       camera.target = recording.hcim;
     }
-    if (holdf > 0 && holdf < 30) {
+    if (recording.holdf > 0 && recording.holdf < 30) {
       camera.mode = 3;
       camera.target = recording.hcim;
       camera.nextTarget = recording.hscar;
-      camera.transition = holdf;
+      camera.transition = recording.holdf;
     }
-    if (holdf == 30) {
+    if (recording.holdf == 30) {
       camera.mode = 1;
       camera.target = recording.hscar;
     }
-    if (holdf > 30 && holdf < 60) {
+    if (recording.holdf > 30 && recording.holdf < 60) {
       camera.mode = 3;
       camera.target = recording.hscar;
       camera.nextTarget = 0;
-      camera.transition = holdf - 30;
+      camera.transition = recording.holdf - 30;
     }
-    if (holdf == 60) {
+    if (recording.holdf == 60) {
       camera.mode = 1;
       camera.target = recording.hcim;
     }
-    if (holdf > 60 && holdf < 90) {
+    if (recording.holdf > 60 && recording.holdf < 90) {
       camera.mode = 3;
       camera.target = recording.hcim;
       camera.nextTarget = recording.hscar;
-      camera.transition = holdf - 60;
+      camera.transition = recording.holdf - 60;
     }
-    if (holdf == 90) {
+    if (recording.holdf == 90) {
       camera.mode = 1;
       camera.target = recording.hscar;
     }
-    if (recording.fr > 228 && holdf < 30) {
-      holdf++;
+    if (recording.fr > 228 && recording.holdf < 30) {
+      recording.holdf++;
     }
-    if (recording.fr > 328 && holdf < 60) {
-      holdf++;
+    if (recording.fr > 328 && recording.holdf < 60) {
+      recording.holdf++;
     }
-    if (recording.fr > 400 && holdf < 90) {
-      holdf++;
+    if (recording.fr > 400 && recording.holdf < 90) {
+      recording.holdf++;
     }
     recording.onpausefr = false;
-    if (holdf == 0 || holdf == 30 || holdf == 60 || holdf == 90) {
+    if (
+      recording.holdf == 0 ||
+      recording.holdf == 30 ||
+      recording.holdf == 60 ||
+      recording.holdf == 90
+    ) {
       recording.fr++;
       if (recording.fr == 430) {
         recording.fr = 0;
-        holdf = 0;
+        recording.holdf = 0;
         hrewindhreplay();
         cntreps++;
       }
@@ -7930,74 +7944,74 @@ function drawhreplay() {
   }
   if (recording.htyp == 5) {
     drawcs(90, "Close Finish!  Almost got it!", 0, 32, 64, 1);
-    if (holdf == 0) {
+    if (recording.holdf == 0) {
       camera.mode = 1;
       camera.target = recording.hcim;
     }
-    if (holdf > 0 && holdf < 30) {
+    if (recording.holdf > 0 && recording.holdf < 30) {
       camera.mode = 3;
       camera.target = recording.hcim;
       camera.nextTarget = recording.hscar;
-      camera.transition = holdf;
+      camera.transition = recording.holdf;
     }
-    if (holdf == 30) {
+    if (recording.holdf == 30) {
       camera.mode = 1;
       camera.target = recording.hscar;
     }
-    if (holdf > 30 && holdf < 60) {
+    if (recording.holdf > 30 && recording.holdf < 60) {
       camera.mode = 3;
       camera.target = recording.hscar;
       camera.nextTarget = 0;
-      camera.transition = holdf - 30;
+      camera.transition = recording.holdf - 30;
     }
-    if (holdf == 60) {
+    if (recording.holdf == 60) {
       camera.mode = 1;
       camera.target = recording.hcim;
     }
-    if (holdf > 60 && holdf < 90) {
+    if (recording.holdf > 60 && recording.holdf < 90) {
       camera.mode = 3;
       camera.target = recording.hcim;
       camera.nextTarget = recording.hscar;
-      camera.transition = holdf - 60;
+      camera.transition = recording.holdf - 60;
     }
-    if (holdf == 90) {
+    if (recording.holdf == 90) {
       camera.mode = 1;
       camera.target = recording.hscar;
     }
-    if (holdf > 90 && holdf < 120) {
+    if (recording.holdf > 90 && recording.holdf < 120) {
       camera.mode = 3;
       camera.target = recording.hscar;
       camera.nextTarget = 0;
-      camera.transition = holdf - 90;
+      camera.transition = recording.holdf - 90;
     }
-    if (holdf == 120) {
+    if (recording.holdf == 120) {
       camera.mode = 1;
       camera.target = recording.hcim;
     }
-    if (recording.fr > 128 && holdf < 30) {
-      holdf++;
+    if (recording.fr > 128 && recording.holdf < 30) {
+      recording.holdf++;
     }
-    if (recording.fr > 228 && holdf < 60) {
-      holdf++;
+    if (recording.fr > 228 && recording.holdf < 60) {
+      recording.holdf++;
     }
-    if (recording.fr > 328 && holdf < 90) {
-      holdf++;
+    if (recording.fr > 328 && recording.holdf < 90) {
+      recording.holdf++;
     }
-    if (recording.fr > 400 && holdf < 120) {
-      holdf++;
+    if (recording.fr > 400 && recording.holdf < 120) {
+      recording.holdf++;
     }
     recording.onpausefr = false;
     if (
-      holdf == 0 ||
-      holdf == 30 ||
-      holdf == 60 ||
-      holdf == 90 ||
-      holdf == 120
+      recording.holdf == 0 ||
+      recording.holdf == 30 ||
+      recording.holdf == 60 ||
+      recording.holdf == 90 ||
+      recording.holdf == 120
     ) {
       recording.fr++;
       if (recording.fr == 430) {
         recording.fr = 0;
-        holdf = 0;
+        recording.holdf = 0;
         hrewindhreplay();
         cntreps++;
       }
@@ -8059,7 +8073,7 @@ function iniend() {
   }
   morgn = random.fx();
   unlcar = -1;
-  switcnt = 0;
+  raceEvents.switcnt = 0;
   if (winner && game.unlocked == track.stage && game.carCount != 1) {
     if (track.stage == 2) {
       unlcar = 11;
@@ -8301,8 +8315,8 @@ function endgame() {
         afterend();
       }
     } else {
-      switcnt++;
-      if (switcnt == 30) {
+      raceEvents.switcnt++;
+      if (raceEvents.switcnt == 30) {
         stopStageMusic();
         afterend();
       }
@@ -10438,7 +10452,7 @@ function inishrecord() {
   recording.catchfin = 0;
 }
 function record() {
-  if (holdcnt < 100) {
+  if (raceEvents.holdcnt < 100) {
     for (var c = 0; c < game.carCount; c++) {
       for (var i = 0; i < 429; i++) {
         recording.repcar[c].x[i] = recording.repcar[c].x[i + 1];
@@ -10840,17 +10854,17 @@ function hrewindhreplay() {
       }
     }
   }
-  holdf = 0;
-  rmode = 0;
+  recording.holdf = 0;
+  recording.rmode = 0;
   if (recording.htyp == 1) {
     if (random.fx() > random.fx()) {
-      rmode = 98;
+      recording.rmode = 98;
     } else {
-      rmode = 43;
+      recording.rmode = 43;
     }
   }
   if (recording.htyp == 2) {
-    rmode = 95;
+    recording.rmode = 95;
     camera.orbitAngle += 90;
   }
   game.phase = PHASE.highlights;
@@ -11057,7 +11071,7 @@ function preprevtime() {
     }
   }
   resumeStageMusic();
-  switcnt = 0;
+  raceEvents.switcnt = 0;
   game.phase = PHASE.timeRewind;
 }
 function revtime() {
@@ -11163,9 +11177,9 @@ function revtime() {
       }
     }
     raceEvents.cntwis = 0;
-    iclear = racers[game.player].clear;
-    tcnt = 30;
-    auscnt = 45;
+    raceEvents.iclear = racers[game.player].clear;
+    raceEvents.tcnt = 30;
+    raceEvents.auscnt = 45;
     track.haltall = false;
     game.phase = PHASE.race;
     recording.nrec = 0;
