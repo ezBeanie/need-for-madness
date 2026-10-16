@@ -31,8 +31,7 @@ import {
   recording,
 } from "../race/recording.js";
 import { track } from "../race/track.js";
-import { camera } from "../render/camera.js";
-import { resetMatrix } from "../render/interpolation.js";
+import { camera, faceCamera } from "../render/camera.js";
 import { newParticleModel } from "../render/models.js";
 import { gl } from "../render/renderer.js";
 import { scene, timeTube } from "../render/scene.js";
@@ -409,19 +408,7 @@ export function drawRewindOverlay() {
     }
   }
   raceEvents.screenTicks++;
-  timeTube.mat = resetMatrix(timeTube.mat);
-  mat4.rotate(
-    timeTube.mat,
-    timeTube.mat,
-    camera.yaw * (Math.PI / 180),
-    [0, -1, 0],
-  );
-  mat4.rotate(
-    timeTube.mat,
-    timeTube.mat,
-    camera.pitch * (Math.PI / 180),
-    [-1, 0, 0],
-  );
+  faceCamera(timeTube);
   mat4.rotate(timeTube.mat, timeTube.mat, swing * (Math.PI / 180), [0, 0, 1]);
   swing += ticksToGo > 100 ? 20 : 10;
   if (swing > 360) {

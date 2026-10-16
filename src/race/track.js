@@ -1,5 +1,7 @@
 import { MAX_CARS } from "../core/state.js";
+import { tick } from "../core/tick.js";
 import { newModel } from "../render/models.js";
+import { fixHoop } from "../render/scene.js";
 
 // The loaded stage: its path points (used by the AI and the race positions), the race
 // standings on it, and the pieces placed on it.
@@ -59,3 +61,20 @@ export const pieceModels = Array.from({ length: 66 }, newModel);
 // The pieces placed on the stage (count of them in count), and which of them are fix
 // hoops (the first fixCount entries of fixes are indices into list).
 export const pieces = { count: 0, list: [], fixCount: 0, fixes: [] };
+
+// The hoops that fix cars spin, and their electricity flickers through five textures.
+export const spinFixHoops = () => {
+  for (let i = 0; i < pieces.fixCount; i++) {
+    const hoop = pieces.list[pieces.fixes[i]];
+    mat4.rotate(
+      hoop.mat,
+      hoop.mat,
+      11 * tick.scale * (Math.PI / 180),
+      [0, 0, 1],
+    );
+  }
+  fixHoop.ont++;
+  if (fixHoop.ont == 5) {
+    fixHoop.ont = 0;
+  }
+};

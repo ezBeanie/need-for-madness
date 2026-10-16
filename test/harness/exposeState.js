@@ -16,6 +16,14 @@ const topLevelNames = (source) => {
     if (node.type === "FunctionDeclaration") {
       functions.add(node.id.name);
     }
+    if (node.type === "ExportNamedDeclaration") {
+      if (node.declaration?.type === "FunctionDeclaration") {
+        functions.add(node.declaration.id.name);
+      }
+      if (node.declaration?.type === "VariableDeclaration") {
+        node.declaration.declarations.forEach((d) => functions.add(d.id.name));
+      }
+    }
     if (node.type === "ImportDeclaration") {
       node.specifiers.forEach((s) => functions.add(s.local.name));
     }

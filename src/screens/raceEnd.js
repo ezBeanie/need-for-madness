@@ -11,8 +11,11 @@ import { loading } from "../loading/progress.js";
 import { raceEvents } from "../race/events.js";
 import { fixcar } from "../race/physics.js";
 import { track } from "../race/track.js";
-import { gl } from "../render/renderer.js";
-import { carModels, checkpointText, stageBackdrop } from "../render/scene.js";
+import {
+  carModels,
+  colorStageBackdrop,
+  stageBackdrop,
+} from "../render/scene.js";
 import { backdropHue, cssRgb, hslToRgb } from "../ui/color.js";
 import { images } from "../ui/images.js";
 import { rd, view } from "../ui/view.js";
@@ -20,8 +23,7 @@ import { BUTTON, blink, drawButton } from "../ui/widgets.js";
 import { menu } from "./menuState.js";
 import { poseShowcaseCar, showcase } from "./showcase.js";
 import { insano, pickTalkingPicture } from "../ui/insano.js";
-import { camera, startProjection } from "../render/camera.js";
-import { resetMatrix } from "../render/interpolation.js";
+import { camera, faceCamera, startProjection } from "../render/camera.js";
 
 // menu.animation on this screen: it fades in until FADED_IN; an unlocked car is then
 // presented (see unlockedcar) while it is UNLOCKED_CAR_SHOWN.
@@ -42,23 +44,8 @@ const unlocksStage = () =>
 
 // Colours the stage backdrop dark in the stage's hue, behind the unlocked car.
 const colorBackdropForUnlockedCar = () => {
-  gl.deleteBuffer(stageBackdrop.cbuf);
-  stageBackdrop.cbuf = null;
   const hue = backdropHue();
-  const first = hslToRgb(hue, 0.4, 0.15);
-  first[3] = 255;
-  const others = hslToRgb(hue, 0.4, 0.1);
-  others[3] = 255;
-  const colors = [];
-  // as in the original, as many colours as the checkpoint text has vertices
-  for (let i = 0; i < checkpointText.vert.length / 3; i++) {
-    for (let k = 0; k < 4; k++) {
-      colors[i * 4 + k] = (i == 0 ? first : others)[k] / 255;
-    }
-  }
-  stageBackdrop.cbuf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, stageBackdrop.cbuf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+  colorStageBackdrop(hslToRgb(hue, 0.4, 0.15), hslToRgb(hue, 0.4, 0.1));
 };
 
 export const loadConfetti = () => {
@@ -377,19 +364,7 @@ export function unlockedcar() {
       showcase.dropSpeed = 100;
     }
     poseShowcaseCar(type);
-    stageBackdrop.mat = resetMatrix(stageBackdrop.mat);
-    mat4.rotate(
-      stageBackdrop.mat,
-      stageBackdrop.mat,
-      camera.yaw * (Math.PI / 180),
-      [0, -1, 0],
-    );
-    mat4.rotate(
-      stageBackdrop.mat,
-      stageBackdrop.mat,
-      camera.pitch * (Math.PI / 180),
-      [-1, 0, 0],
-    );
+    faceCamera(stageBackdrop);
     stageBackdrop.mat[0] *= view.aspect * 0.5625;
     stageBackdrop.mat[1] *= view.aspect * 0.5625;
     stageBackdrop.mat[2] *= view.aspect * 0.5625;

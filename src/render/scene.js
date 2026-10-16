@@ -1,4 +1,5 @@
 import { newModel, newParticleModel } from "./models.js";
+import { gl } from "./renderer.js";
 
 // One model and one shadow per car type.
 export const carModels = Array.from({ length: 19 }, newModel);
@@ -48,3 +49,21 @@ export const showcaseWheels = Array.from({ length: 19 }, () =>
 );
 // the smoke drifting behind the car select
 export const menuSmoke = [];
+
+// Colours the stage backdrop behind menus: its first vertex `top`, the others `rest` (RGB,
+// 0..255). As in the original, as many colours as the checkpoint text has vertices.
+export const colorStageBackdrop = (top, rest) => {
+  gl.deleteBuffer(stageBackdrop.cbuf);
+  stageBackdrop.cbuf = null;
+  const colors = [];
+  for (let i = 0; i < checkpointText.vert.length / 3; i++) {
+    const color = i == 0 ? top : rest;
+    for (let k = 0; k < 3; k++) {
+      colors[i * 4 + k] = color[k] / 255;
+    }
+    colors[i * 4 + 3] = 1;
+  }
+  stageBackdrop.cbuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, stageBackdrop.cbuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+};

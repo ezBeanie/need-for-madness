@@ -1,4 +1,5 @@
 import { view } from "../ui/view.js";
+import { resetMatrix } from "./interpolation.js";
 
 // The camera, as the game logic moves it every tick (drawing interpolates it, see
 // interpolation.js).
@@ -37,4 +38,11 @@ export const camera = {
 export const startProjection = () => {
   camera.matrix = mat4.create();
   mat4.perspective(camera.matrix, (55 * Math.PI) / 180, view.aspect, 0.1, 7000);
+};
+
+// Turns a flat model (a sprite) to face the camera.
+export const faceCamera = (model) => {
+  model.mat = resetMatrix(model.mat);
+  mat4.rotate(model.mat, model.mat, camera.yaw * (Math.PI / 180), [0, -1, 0]);
+  mat4.rotate(model.mat, model.mat, camera.pitch * (Math.PI / 180), [-1, 0, 0]);
 };

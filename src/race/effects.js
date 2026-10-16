@@ -5,8 +5,7 @@ import { random } from "../core/random.js";
 import { PHASE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
-import { camera } from "../render/camera.js";
-import { resetMatrix } from "../render/interpolation.js";
+import { camera, faceCamera } from "../render/camera.js";
 import { newModel } from "../render/models.js";
 import { gl } from "../render/renderer.js";
 import { car, racers } from "./racers.js";
@@ -408,19 +407,7 @@ export function dustfly() {
       } else {
         mlt = 1 + (1 - Math.abs(sinDeg(camera.yaw) * sinDeg(camera.yaw) - vfz));
       }
-      effects.dust[i].mat = resetMatrix(effects.dust[i].mat);
-      mat4.rotate(
-        effects.dust[i].mat,
-        effects.dust[i].mat,
-        camera.yaw * (Math.PI / 180),
-        [0, -1, 0],
-      );
-      mat4.rotate(
-        effects.dust[i].mat,
-        effects.dust[i].mat,
-        camera.pitch * (Math.PI / 180),
-        [-1, 0, 0],
-      );
+      faceCamera(effects.dust[i]);
       mat4.rotate(
         effects.dust[i].mat,
         effects.dust[i].mat,
@@ -556,19 +543,7 @@ export function expburn() {
   var nfly = false;
   for (var i = 0; i < effects.nexp; i++) {
     if (effects.exp[i].ani != -1) {
-      effects.exp[i].mat = resetMatrix(effects.exp[i].mat);
-      mat4.rotate(
-        effects.exp[i].mat,
-        effects.exp[i].mat,
-        camera.yaw * (Math.PI / 180),
-        [0, -1, 0],
-      );
-      mat4.rotate(
-        effects.exp[i].mat,
-        effects.exp[i].mat,
-        camera.pitch * (Math.PI / 180),
-        [-1, 0, 0],
-      );
+      faceCamera(effects.exp[i]);
       mat4.rotate(
         effects.exp[i].mat,
         effects.exp[i].mat,
