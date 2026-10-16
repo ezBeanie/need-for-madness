@@ -109,6 +109,7 @@ import {
 import { SHOWCASE, menu, showcase } from "./screens/menuState.js";
 import { gameinstructions } from "./screens/instructions.js";
 import { loading } from "./loading/progress.js";
+import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "./loading/stageLoad.js";
 import { game, MAX_CARS, PHASE } from "./core/state.js";
 import { tick } from "./core/tick.js";
 import { car, racers } from "./race/racers.js";
@@ -1789,8 +1790,8 @@ function loaddata() {
         game.phase = PHASE.mainMenu;
       }
       if (loading.stanza == 1) {
-        stageloadtyp = 2;
-        stageload = -1;
+        stageLoad.after = AFTER_LOAD.race;
+        stageLoad.progress = STAGE_LOAD.requested;
         game.phase = PHASE.stageLoading;
       }
       if (loading.stanza == 2) {
@@ -1835,9 +1836,8 @@ function newobo() {
   return { typ: 0, x: 0, z: 0, mat: null, bnd: [0, 0, 0, 0], iscp: 0 };
 }
 
-var stageload = 0;
 function loadstage() {
-  stageload = 1;
+  stageLoad.progress = STAGE_LOAD.loading;
   var rawFile = new XMLHttpRequest();
   rawFile.open("GET", "data/stages/" + track.stage + ".txt", true);
   rawFile.onreadystatechange = function () {
@@ -2144,7 +2144,7 @@ function loadstage() {
         effects.nspr = 0;
         effects.ndst = 0;
         effects.nexp = 0;
-        if (stageloadtyp != 2) {
+        if (stageLoad.after != AFTER_LOAD.race) {
           var opsnap = [
             -(scene.tint[0] * 3),
             -(scene.tint[1] * 3),
@@ -2154,7 +2154,7 @@ function loadstage() {
         } else {
           setWorld(scene.tint, fogc, lvx, lvy, lvz, fogdist);
         }
-        stageload = 2;
+        stageLoad.progress = STAGE_LOAD.loaded;
       }
     }
   };
@@ -5002,8 +5002,8 @@ function drawcarselect() {
           track.stage = game.unlocked;
           game.mode = 0;
         }
-        stageloadtyp = 0;
-        stageload = -1;
+        stageLoad.after = AFTER_LOAD.stageSelect;
+        stageLoad.progress = STAGE_LOAD.requested;
         game.phase = PHASE.stageLoading;
       }
       if (game.unlocked == 1) {
@@ -5036,8 +5036,8 @@ function drawcarselect() {
           saveSetting("carsel", game.carTypes[0]);
           pauseMenuMusic();
           track.stage = 2;
-          stageloadtyp = 2;
-          stageload = -1;
+          stageLoad.after = AFTER_LOAD.race;
+          stageLoad.progress = STAGE_LOAD.requested;
           game.phase = PHASE.stageLoading;
           handson = 167;
         }
@@ -5057,8 +5057,8 @@ function drawcarselect() {
           saveSetting("carsel", game.carTypes[0]);
           pauseMenuMusic();
           track.stage = 2;
-          stageloadtyp = 2;
-          stageload = -1;
+          stageLoad.after = AFTER_LOAD.race;
+          stageLoad.progress = STAGE_LOAD.requested;
           game.phase = PHASE.stageLoading;
           handson = 167;
         }
@@ -5072,8 +5072,8 @@ function drawcarselect() {
             track.stage = game.unlocked;
             game.mode = 0;
           }
-          stageloadtyp = 0;
-          stageload = -1;
+          stageLoad.after = AFTER_LOAD.stageSelect;
+          stageLoad.progress = STAGE_LOAD.requested;
           game.phase = PHASE.stageLoading;
         }
       }
@@ -5084,21 +5084,27 @@ function drawcarselect() {
 }
 var alipha = 0;
 var bgsload = null;
-var stageloadtyp = 0;
+
 function stageloading() {
   rd.clearRect(0, 0, view.width, view.height);
-  if (stageload == 0 && (menu.redraw || stageloadtyp == 2)) {
-    stageload = 0;
+  if (
+    stageLoad.progress == STAGE_LOAD.screenShown &&
+    (menu.redraw || stageLoad.after == AFTER_LOAD.race)
+  ) {
+    stageLoad.progress = STAGE_LOAD.screenShown;
     loadstage();
     if (!isEngineLoaded(game.carTypes[0])) {
       loadEngine(game.carTypes[0]);
     }
   }
-  if (stageload == -1) {
+  if (stageLoad.progress == STAGE_LOAD.requested) {
     alipha = 0.2;
-    stageload = 0;
+    stageLoad.progress = STAGE_LOAD.screenShown;
   }
-  if (stageloadtyp == 0 || stageloadtyp == 2) {
+  if (
+    stageLoad.after == AFTER_LOAD.stageSelect ||
+    stageLoad.after == AFTER_LOAD.race
+  ) {
     rd.globalAlpha = alipha;
     rd.fillStyle = "#9FD3FF";
     rd.fillRect(0, 0, view.width, view.height);
@@ -5113,7 +5119,7 @@ function stageloading() {
     rd.textBaseline = "middle";
     rd.strokeStyle = "#2D9FFF";
     rd.lineWidth = 10 * view.scale;
-    if (stageloadtyp == 0) {
+    if (stageLoad.after == AFTER_LOAD.stageSelect) {
       rd.strokeText(
         "Loading Stage " + track.stage + "",
         640 * view.scaleX,
@@ -5123,7 +5129,7 @@ function stageloading() {
       rd.strokeText("Loading Stage...", 640 * view.scaleX, 330 * view.scaleY);
     }
     rd.fillStyle = "#C1E3FF";
-    if (stageloadtyp == 0) {
+    if (stageLoad.after == AFTER_LOAD.stageSelect) {
       rd.fillText(
         "Loading Stage " + track.stage + "",
         640 * view.scaleX,
@@ -5133,11 +5139,11 @@ function stageloading() {
       rd.fillText("Loading Stage...", 640 * view.scaleX, 330 * view.scaleY);
     }
   }
-  if (stageloadtyp == 1) {
+  if (stageLoad.after == AFTER_LOAD.nextStage) {
     rd.drawImage(bgsload, 0, 0);
   }
-  if (stageload == 2) {
-    if (stageloadtyp != 2) {
+  if (stageLoad.progress == STAGE_LOAD.loaded) {
+    if (stageLoad.after != AFTER_LOAD.race) {
       flkun = 0;
       flkpl = 0;
       hit = 4500;
@@ -5169,7 +5175,7 @@ function drawstageselect() {
     rd.fillStyle = "#9FD3FF";
     rd.fillRect(0, 0, view.width, view.height);
     rd.globalAlpha = 1;
-    if (stageload != -1) {
+    if (stageLoad.progress != STAGE_LOAD.requested) {
       rd.letterSpacing = "1px";
       rd.font = "" + 22 * (view.scaleY + view.scaleX) + "px junk";
       rd.textAlign = "center";
@@ -5340,7 +5346,7 @@ function drawstageselect() {
         if (track.stage < 17) {
           if (track.stage != game.unlocked) {
             track.stage++;
-            stageload = -1;
+            stageLoad.progress = STAGE_LOAD.requested;
             flkun = 1;
           } else {
             flkun = 1;
@@ -5351,7 +5357,7 @@ function drawstageselect() {
       if (racers[0].u.left) {
         if (track.stage > 1) {
           track.stage--;
-          stageload = -1;
+          stageLoad.progress = STAGE_LOAD.requested;
           flkun = 1;
         }
         racers[0].u.left = false;
@@ -5431,7 +5437,7 @@ function drawstageselect() {
           })
         ) {
           track.stage--;
-          stageload = -1;
+          stageLoad.progress = STAGE_LOAD.requested;
           flkun = 1;
         }
       }
@@ -5458,7 +5464,7 @@ function drawstageselect() {
         ) {
           if (track.stage != game.unlocked) {
             track.stage++;
-            stageload = -1;
+            stageLoad.progress = STAGE_LOAD.requested;
             flkun = 1;
           } else {
             flkun = 1;
@@ -5675,10 +5681,10 @@ function drawstageselect() {
       }
     }
   } else {
-    if (stageload == -1) {
+    if (stageLoad.progress == STAGE_LOAD.requested) {
       bgsload = new Image();
       bgsload.src = canvas2D.toDataURL("image/png");
-      stageloadtyp = 1;
+      stageLoad.after = AFTER_LOAD.nextStage;
       game.phase = PHASE.stageLoading;
     }
   }

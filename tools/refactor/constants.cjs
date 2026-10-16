@@ -14,11 +14,21 @@ const ast = parse(src, { ecmaVersion: "latest", sourceType: "module" });
 const isTarget = (n) => src.slice(n.start, n.end) === target;
 const edits = [];
 const unknown = new Set();
-const take = (lit) => {
-  if (lit.type !== "Literal" || typeof lit.value !== "number") return;
-  const name = names[lit.value];
-  if (!name) return unknown.add(lit.value);
-  edits.push([lit.start, lit.end, `${constants}.${name}`]);
+// a number literal, also a negative one, or undefined
+const numberOf = (n) => {
+  if (n.type === "Literal" && typeof n.value === "number") return n.value;
+  if (n.type === "UnaryExpression" && n.operator === "-") {
+    const value = numberOf(n.argument);
+    return value === undefined ? undefined : -value;
+  }
+  return undefined;
+};
+const take = (n) => {
+  const value = numberOf(n);
+  if (value === undefined) return;
+  const name = names[value];
+  if (!name) return unknown.add(value);
+  edits.push([n.start, n.end, `${constants}.${name}`]);
 };
 walk.simple(ast, {
   BinaryExpression(n) {
