@@ -43,7 +43,7 @@ const createWebGLStub = (glNames) => {
   // here, so textures made from them read back as zeros.
   let texture = null;
   let framebuffer = null;
-  return Object.assign(gl, {
+  Object.assign(gl, {
     bindTexture: (target, t) => {
       texture = t;
     },
@@ -53,6 +53,10 @@ const createWebGLStub = (glNames) => {
         texture.pixels = ArrayBuffer.isView(data)
           ? Uint8Array.from(data)
           : null;
+        // what the texture shows, for the WebGL recorder
+        texture.label = ArrayBuffer.isView(data)
+          ? `pixels ${args[3]}x${args[4]}`
+          : (args[5]?.src ?? `${args[3]}x${args[4]}`);
       }
     },
     bindFramebuffer: (target, f) => {
@@ -76,10 +80,22 @@ const createWebGLStub = (glNames) => {
     getShaderInfoLog: () => "",
     getProgramInfoLog: () => "",
     getAttribLocation: () => 0,
-    getUniformLocation: handle,
+    getUniformLocation: (program, name) => ({ uniform: name }),
     checkFramebufferStatus: () => gl.FRAMEBUFFER_COMPLETE,
   });
+  for (const [name, fn] of Object.entries(gl)) {
+    if (typeof fn === "function") {
+      gl[name] = (...args) => {
+        glCalls.listener?.(name, args);
+        return fn(...args);
+      };
+    }
+  }
+  return gl;
 };
+
+// Set listener to hear every WebGL call: listener(name, args) (see canvasRecorder.js).
+export const glCalls = { listener: null };
 
 // Set listener to hear every call on a 2D canvas: listener(name, args, call) returns what
 // the call returns (see canvasRecorder.js).

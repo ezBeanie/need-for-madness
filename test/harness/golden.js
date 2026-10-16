@@ -66,21 +66,27 @@ export const expectMatchesGolden = (name, meta, recording) => {
   expect(recording.frames).toBe(golden.frames);
 };
 
-// Compares what was drawn on the 2D canvases, frame by frame, with its golden master.
-export const expectDrawingMatchesGolden = (name, recording) => {
-  const golden = goldenOrWrite(`${name}-drawing`, {
-    frames: recording.frames,
-    hashes: recording.drawings.join(" "),
+const expectFramesMatchGolden = (name, hashes, what) => {
+  const golden = goldenOrWrite(name, {
+    frames: hashes.length,
+    hashes: hashes.join(" "),
   });
   if (golden === null) {
     return;
   }
   const goldenHashes = golden.hashes.split(" ");
-  const firstDiff = recording.drawings.findIndex(
+  const firstDiff = hashes.findIndex(
     (hash, frame) => hash !== goldenHashes[frame],
   );
   if (firstDiff !== -1) {
-    expect.fail(`the drawing differs from frame ${firstDiff} on`);
+    expect.fail(`${what} differs from frame ${firstDiff} on`);
   }
-  expect(recording.drawings.length).toBe(goldenHashes.length);
+  expect(hashes.length).toBe(goldenHashes.length);
+};
+
+// Compares what was drawn on the 2D canvases and with WebGL, frame by frame, with the
+// golden masters.
+export const expectDrawingMatchesGolden = (name, recording) => {
+  expectFramesMatchGolden(`${name}-drawing`, recording.drawings, "the drawing");
+  expectFramesMatchGolden(`${name}-scene`, recording.scenes, "the 3D scene");
 };

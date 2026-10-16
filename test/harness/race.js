@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { PHASE } from "../../src/core/state.js";
-import { recordCanvas } from "./canvasRecorder.js";
+import { recordCanvas, recordWebGL } from "./canvasRecorder.js";
 import { loadGame } from "./loadGame.js";
 
 const KEY = { up: 38, down: 40, left: 37, right: 39, handb: 32 };
@@ -176,7 +176,9 @@ export const recordRace = async ({
   const { ctx, step, key } = await startRace({ stage, car, seed, fxSeed });
   const states = [];
   const canvas = recordCanvas();
+  const webgl = recordWebGL();
   const drawings = [];
+  const scenes = [];
   let held = { ...NO_INPUT };
   for (
     let frame = 0;
@@ -193,9 +195,11 @@ export const recordRace = async ({
     step();
     states.push(raceState(ctx));
     drawings.push(canvas.take());
+    scenes.push(webgl.take());
   }
   canvas.stop();
-  return summarize(states, drawings);
+  webgl.stop();
+  return summarize(states, drawings, scenes);
 };
 
 // The race state plus where the game flow is: menus, results, unlocked stages.
@@ -227,21 +231,27 @@ export const recordFlow = async ({
   const game = await startRace({ stage, car, seed, userAgent });
   const states = [];
   const canvas = recordCanvas();
+  const webgl = recordWebGL();
   const drawings = [];
+  const scenes = [];
   for (let frame = 0; frame < frames; frame++) {
     script(game.ctx, frame, game);
     game.step();
     states.push(flowState(game.ctx));
     drawings.push(canvas.take());
+    scenes.push(webgl.take());
   }
   canvas.stop();
-  return summarize(states, drawings);
+  webgl.stop();
+  return summarize(states, drawings, scenes);
 };
 
-// drawings: per frame a hash of what was drawn on the 2D canvases (see canvasRecorder.js)
-const summarize = (states, drawings) => ({
+// drawings and scenes: per frame a hash of what was drawn on the 2D canvases and with
+// WebGL (see canvasRecorder.js)
+const summarize = (states, drawings, scenes) => ({
   frames: states.length,
   drawings,
+  scenes,
   hashes: states.map(hashState),
   samples: Object.fromEntries(
     states
