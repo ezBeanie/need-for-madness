@@ -7,19 +7,13 @@ import {
 import {
   cosDeg as mcos,
   distance as pyd,
-  distanceSquared as rpy,
   distanceSquaredXZ as pyo,
   distanceXZ as py,
   rotateAxes as rotomat,
   rotatePoints as rotate,
   sinDeg as msin,
 } from "./core/math.js";
-import {
-  interfaceResolution,
-  isFirefox,
-  isIos,
-  isPhone,
-} from "./core/platform.js";
+import { interfaceResolution, isFirefox, isPhone } from "./core/platform.js";
 import { random } from "./core/random.js";
 import {
   audio,
@@ -39,23 +33,13 @@ import {
   stopStageMusic,
   unlockAudio,
 } from "./audio/audio.js";
-import {
-  bumpSound,
-  coolDownCarSounds,
-  crashSound,
-  groundScrapeSound,
-  scrapeSound,
-  skidSound,
-} from "./audio/carSounds.js";
+import { coolDownCarSounds } from "./audio/carSounds.js";
 import { installKeyboard } from "./input/keyboard.js";
 import { installPointer, pointer } from "./input/pointer.js";
 import {
   attachTo,
-  drawCamera,
-  drawMatrix,
   interpolation,
   placeCamera,
-  placeModel,
   resetMatrix,
 } from "./render/interpolation.js";
 import {
@@ -88,34 +72,29 @@ import { tick } from "./core/tick.js";
 import { car, racers } from "./race/racers.js";
 import { carStats } from "./data/carStats.js";
 import { pieceModels, pieces, track } from "./race/track.js";
-import { catchnow, recording } from "./race/recording.js";
-import { raceEvents } from "./race/events.js";
-import { control, inishcontrol, resetPursuit } from "./race/ai.js";
 import {
-  burn,
-  chipaway,
-  chipburn,
-  chipsfly,
-  dustfly,
-  dustup,
-  expburn,
-  firexp,
-  sprks,
-  sprksfly,
-  effects,
-} from "./race/effects.js";
-import { drive, fixcar, inishmad, regn } from "./race/physics.js";
-import {
+  catchnow,
   fastforwardexit,
   hreplay,
   hrewindhreplay,
   inishrecord,
   preprevtime,
   record,
+  recording,
   replay,
   revtime,
   rewindreplay,
 } from "./race/recording.js";
+import { raceEvents } from "./race/events.js";
+import { control, inishcontrol } from "./race/ai.js";
+import {
+  chipsfly,
+  dustfly,
+  expburn,
+  sprksfly,
+  effects,
+} from "./race/effects.js";
+import { drive, fixcar, inishmad } from "./race/physics.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 var camrs, pnext, pback, onycl;

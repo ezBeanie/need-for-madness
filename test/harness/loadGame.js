@@ -88,6 +88,11 @@ export const loadGame = async ({ seed = 1, fxSeed = seed + 1000 } = {}) => {
   }
   ctx.random.sim = seededRandom(seed);
   ctx.random.fx = fxrandom;
+  // the drawing helpers of the game's own module instance, for the drawing tests
+  const { drawMatrix, placeModel } = await import(
+    "../../src/render/interpolation.js"
+  );
+  Object.assign(ctx, { drawMatrix, placeModel });
 
   let frame = 0;
   const step = () => {
