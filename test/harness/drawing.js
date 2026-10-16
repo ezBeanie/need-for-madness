@@ -16,7 +16,7 @@ export const wheelsOnBody = (ctx, typ, body, alpha) => {
   ctx.interpolation.alpha = alpha;
   const fromBody = mat4.invert(
     mat4.create(),
-    drawnMatrix(ctx, ctx.carobj[typ], body),
+    drawnMatrix(ctx, ctx.carModels[typ], body),
   );
   return ctx.whl[typ].map((wheel, w) => {
     const drawn = drawnMatrix(ctx, ctx.tired[typ][w >> 1], wheel);

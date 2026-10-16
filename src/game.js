@@ -77,6 +77,7 @@ import {
 } from "./render/models.js";
 import { canvas2D, rd, view } from "./ui/view.js";
 import { camera } from "./render/camera.js";
+import { carModels, carShadows, scene, sparkModels } from "./render/scene.js";
 import { game, PHASE } from "./core/state.js";
 import { tick } from "./core/tick.js";
 import { car, racers } from "./race/racers.js";
@@ -110,10 +111,10 @@ function cartextures() {
       }
     }
     if (loadthis) {
-      carobj[i].nt = 2;
-      carobj[i].texture = [];
-      carobj[i].texture[0] = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, carobj[i].texture[0]);
+      carModels[i].nt = 2;
+      carModels[i].texture = [];
+      carModels[i].texture[0] = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, carModels[i].texture[0]);
       gl.texImage2D(
         gl.TEXTURE_2D,
         0,
@@ -131,7 +132,7 @@ function cartextures() {
         gl.FRAMEBUFFER,
         gl.COLOR_ATTACHMENT0,
         gl.TEXTURE_2D,
-        carobj[i].texture[0],
+        carModels[i].texture[0],
         0,
       );
       if (
@@ -151,7 +152,7 @@ function cartextures() {
             pixels[p + 3] = 200;
           }
         }
-        gl.bindTexture(gl.TEXTURE_2D, carobj[i].texture[0]);
+        gl.bindTexture(gl.TEXTURE_2D, carModels[i].texture[0]);
         gl.texImage2D(
           gl.TEXTURE_2D,
           0,
@@ -173,12 +174,12 @@ function cartextures() {
 }
 function gamecartextures() {
   for (var c = 0; c < game.carCount; c++) {
-    if (carobj[car[c].typ].loaded == 4) {
-      gl.deleteTexture(carobj[car[c].typ].texture[1]);
-      carobj[car[c].typ].texture[1] = null;
+    if (carModels[car[c].typ].loaded == 4) {
+      gl.deleteTexture(carModels[car[c].typ].texture[1]);
+      carModels[car[c].typ].texture[1] = null;
     }
-    carobj[car[c].typ].texture[1] = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, carobj[car[c].typ].texture[1]);
+    carModels[car[c].typ].texture[1] = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, carModels[car[c].typ].texture[1]);
     gl.texImage2D(
       gl.TEXTURE_2D,
       0,
@@ -194,7 +195,7 @@ function gamecartextures() {
       gl.FRAMEBUFFER,
       gl.COLOR_ATTACHMENT0,
       gl.TEXTURE_2D,
-      carobj[car[c].typ].texture[1],
+      carModels[car[c].typ].texture[1],
       0,
     );
     if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE) {
@@ -202,13 +203,13 @@ function gamecartextures() {
       gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
       for (var p = 0; p < 256 * 256 * 4; p += 4) {
         if (pixels[p] == 116 && pixels[p + 1] == 130 && pixels[p + 2] == 140) {
-          pixels[p] = skyglass[0];
-          pixels[p + 1] = skyglass[1];
-          pixels[p + 2] = skyglass[2];
+          pixels[p] = scene.glassColor[0];
+          pixels[p + 1] = scene.glassColor[1];
+          pixels[p + 2] = scene.glassColor[2];
           pixels[p + 3] = 210;
         }
       }
-      gl.bindTexture(gl.TEXTURE_2D, carobj[car[c].typ].texture[1]);
+      gl.bindTexture(gl.TEXTURE_2D, carModels[car[c].typ].texture[1]);
       gl.texImage2D(
         gl.TEXTURE_2D,
         0,
@@ -223,8 +224,8 @@ function gamecartextures() {
       gl.generateMipmap(gl.TEXTURE_2D);
     }
     gl.deleteFramebuffer(framebuffer);
-    carobj[car[c].typ].ont = 1;
-    carobj[car[c].typ].loaded = 4;
+    carModels[car[c].typ].ont = 1;
+    carModels[car[c].typ].loaded = 4;
   }
 }
 function groundtexture(n, r, g, b, huef, satf) {
@@ -942,57 +943,64 @@ function shadoworks() {
     }
     if (Math.abs(car[c].mat[5]) < cat) {
       if (Math.abs(car[c].mat[9]) > Math.abs(car[c].mat[1])) {
-        shad[car[c].typ].x = car[c].x;
-        shad[car[c].typ].z = car[c].z;
-        shad[car[c].typ].ont = 2;
-        shad[car[c].typ].mat[0] = car[c].mat[0];
-        shad[car[c].typ].mat[2] = car[c].mat[2];
-        shad[car[c].typ].mat[4] = car[c].mat[8];
-        shad[car[c].typ].mat[6] = car[c].mat[10];
-        shad[car[c].typ].mat[8] = -car[c].mat[4];
-        shad[car[c].typ].mat[10] = -car[c].mat[6];
+        carShadows[car[c].typ].x = car[c].x;
+        carShadows[car[c].typ].z = car[c].z;
+        carShadows[car[c].typ].ont = 2;
+        carShadows[car[c].typ].mat[0] = car[c].mat[0];
+        carShadows[car[c].typ].mat[2] = car[c].mat[2];
+        carShadows[car[c].typ].mat[4] = car[c].mat[8];
+        carShadows[car[c].typ].mat[6] = car[c].mat[10];
+        carShadows[car[c].typ].mat[8] = -car[c].mat[4];
+        carShadows[car[c].typ].mat[10] = -car[c].mat[6];
       } else {
-        shad[car[c].typ].x = car[c].x - shadadj[car[c].typ] * car[c].mat[8];
-        shad[car[c].typ].z = car[c].z - shadadj[car[c].typ] * car[c].mat[10];
-        shad[car[c].typ].ont = 1;
-        shad[car[c].typ].mat[0] = car[c].mat[8];
-        shad[car[c].typ].mat[2] = car[c].mat[10];
-        shad[car[c].typ].mat[4] = car[c].mat[0];
-        shad[car[c].typ].mat[6] = car[c].mat[2];
-        shad[car[c].typ].mat[8] = -car[c].mat[4];
-        shad[car[c].typ].mat[10] = -car[c].mat[6];
+        carShadows[car[c].typ].x =
+          car[c].x - shadadj[car[c].typ] * car[c].mat[8];
+        carShadows[car[c].typ].z =
+          car[c].z - shadadj[car[c].typ] * car[c].mat[10];
+        carShadows[car[c].typ].ont = 1;
+        carShadows[car[c].typ].mat[0] = car[c].mat[8];
+        carShadows[car[c].typ].mat[2] = car[c].mat[10];
+        carShadows[car[c].typ].mat[4] = car[c].mat[0];
+        carShadows[car[c].typ].mat[6] = car[c].mat[2];
+        carShadows[car[c].typ].mat[8] = -car[c].mat[4];
+        carShadows[car[c].typ].mat[10] = -car[c].mat[6];
       }
     } else {
-      shad[car[c].typ].x = car[c].x - shadadj[car[c].typ] * car[c].mat[8];
-      shad[car[c].typ].z = car[c].z - shadadj[car[c].typ] * car[c].mat[10];
-      shad[car[c].typ].ont = 0;
-      shad[car[c].typ].mat[0] = car[c].mat[8];
-      shad[car[c].typ].mat[2] = car[c].mat[10];
-      shad[car[c].typ].mat[4] = car[c].mat[4];
-      shad[car[c].typ].mat[6] = car[c].mat[6];
-      shad[car[c].typ].mat[8] = car[c].mat[0];
-      shad[car[c].typ].mat[10] = car[c].mat[2];
+      carShadows[car[c].typ].x = car[c].x - shadadj[car[c].typ] * car[c].mat[8];
+      carShadows[car[c].typ].z =
+        car[c].z - shadadj[car[c].typ] * car[c].mat[10];
+      carShadows[car[c].typ].ont = 0;
+      carShadows[car[c].typ].mat[0] = car[c].mat[8];
+      carShadows[car[c].typ].mat[2] = car[c].mat[10];
+      carShadows[car[c].typ].mat[4] = car[c].mat[4];
+      carShadows[car[c].typ].mat[6] = car[c].mat[6];
+      carShadows[car[c].typ].mat[8] = car[c].mat[0];
+      carShadows[car[c].typ].mat[10] = car[c].mat[2];
     }
-    shad[car[c].typ].intershad = false;
-    shad[car[c].typ].y = 0.4;
-    shad[car[c].typ].mat[1] = 0;
-    shad[car[c].typ].mat[5] = 1;
-    shad[car[c].typ].mat[9] = 0;
+    carShadows[car[c].typ].intershad = false;
+    carShadows[car[c].typ].y = 0.4;
+    carShadows[car[c].typ].mat[1] = 0;
+    carShadows[car[c].typ].mat[5] = 1;
+    carShadows[car[c].typ].mat[9] = 0;
     for (var i = 0; i < pieces.count; i++) {
       if (pieceModels[pieces.list[i].typ].intershad) {
         pieceModels[pieces.list[i].typ].x = pieces.list[i].x;
         pieceModels[pieces.list[i].typ].y = pieces.list[i].y;
         pieceModels[pieces.list[i].typ].z = pieces.list[i].z;
         pieceModels[pieces.list[i].typ].mat = pieces.list[i].mat;
-        shadowmap(car[c], shad[car[c].typ], pieceModels[pieces.list[i].typ]);
+        shadowmap(
+          car[c],
+          carShadows[car[c].typ],
+          pieceModels[pieces.list[i].typ],
+        );
       }
     }
   }
 }
 function shadowmap(crft, shd, rad) {
   if (
-    Math.abs(crft.x - rad.x) < carobj[crft.typ].colrad + rad.colrad &&
-    Math.abs(crft.z - rad.z) < carobj[crft.typ].colrad + rad.colrad
+    Math.abs(crft.x - rad.x) < carModels[crft.typ].colrad + rad.colrad &&
+    Math.abs(crft.z - rad.z) < carModels[crft.typ].colrad + rad.colrad
   ) {
     var snormx = 0;
     var snormy = 0;
@@ -1084,20 +1092,16 @@ function shadowmap(crft, shd, rad) {
     }
   }
 }
-var spark = [];
-for (var s = 0; s < 6; s++) {
-  spark[s] = newParticleModel();
-}
 function createsparks() {
   var neg = 1;
   for (var s = 0; s < 6; s++) {
-    if (spark[s].loaded == 1) {
-      gl.deleteBuffer(spark[s].vbuf);
-      spark[s].vbuf = null;
-      gl.deleteBuffer(spark[s].cbuf);
-      spark[s].cbuf = null;
-      gl.deleteBuffer(spark[s].ibuf);
-      spark[s].ibuf = null;
+    if (sparkModels[s].loaded == 1) {
+      gl.deleteBuffer(sparkModels[s].vbuf);
+      sparkModels[s].vbuf = null;
+      gl.deleteBuffer(sparkModels[s].cbuf);
+      sparkModels[s].cbuf = null;
+      gl.deleteBuffer(sparkModels[s].ibuf);
+      sparkModels[s].ibuf = null;
     }
     var vert = [];
     var indice = [];
@@ -1123,38 +1127,38 @@ function createsparks() {
       vert[i * 3 + 2] = oz[i];
     }
     var col = [
-      1 + 1 * snap[0],
-      0.77 + 0.77 * snap[1],
+      1 + 1 * scene.tint[0],
+      0.77 + 0.77 * scene.tint[1],
       0,
       1,
-      1 + 1 * snap[0],
-      0.77 + 0.77 * snap[1],
+      1 + 1 * scene.tint[0],
+      0.77 + 0.77 * scene.tint[1],
       0,
       1,
-      1 + 1 * snap[0],
+      1 + 1 * scene.tint[0],
       0,
       0,
       0.4,
     ];
-    spark[s].ni = 3;
-    spark[s].vbuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, spark[s].vbuf);
+    sparkModels[s].ni = 3;
+    sparkModels[s].vbuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, sparkModels[s].vbuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vert), gl.STATIC_DRAW);
-    spark[s].cbuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, spark[s].cbuf);
+    sparkModels[s].cbuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, sparkModels[s].cbuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
-    spark[s].ibuf = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, spark[s].ibuf);
+    sparkModels[s].ibuf = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sparkModels[s].ibuf);
     gl.bufferData(
       gl.ELEMENT_ARRAY_BUFFER,
       new Uint16Array(indice),
       gl.STATIC_DRAW,
     );
-    spark[s].alpha = true;
-    spark[s].mat = mat4.create();
-    spark[s].x = s * 10;
-    spark[s].y = 5;
-    spark[s].loaded = 1;
+    sparkModels[s].alpha = true;
+    sparkModels[s].mat = mat4.create();
+    sparkModels[s].x = s * 10;
+    sparkModels[s].y = 5;
+    sparkModels[s].loaded = 1;
   }
 }
 function colorcptext() {
@@ -1163,14 +1167,14 @@ function colorcptext() {
   var cupr = [62, 160, 252, 192];
   var cdnr = [211, 234, 255, 192];
   for (var k = 0; k < 3; k++) {
-    cupr[i] += cupr[i] * snap[i];
+    cupr[i] += cupr[i] * scene.tint[i];
     if (cupr[i] < 0) {
       cupr[i] = 0;
     }
     if (cupr[i] > 255) {
       cupr[i] = 255;
     }
-    cdnr[i] += cdnr[i] * snap[i];
+    cdnr[i] += cdnr[i] * scene.tint[i];
     if (cdnr[i] < 0) {
       cdnr[i] = 0;
     }
@@ -1197,21 +1201,21 @@ function colorcptext() {
 function colorbgst() {
   gl.deleteBuffer(bgst.cbuf);
   bgst.cbuf = null;
-  var r = Math.floor(128 - 128 * snap[0]);
+  var r = Math.floor(128 - 128 * scene.tint[0]);
   if (r > 255) {
     r = 255;
   }
   if (r < 0) {
     r = 0;
   }
-  var g = Math.floor(128 - 128 * snap[1]);
+  var g = Math.floor(128 - 128 * scene.tint[1]);
   if (g > 255) {
     g = 255;
   }
   if (g < 0) {
     g = 0;
   }
-  var b = Math.floor(128 - 128 * snap[2]);
+  var b = Math.floor(128 - 128 * scene.tint[2]);
   if (b > 255) {
     b = 255;
   }
@@ -1242,21 +1246,21 @@ function colorbgst() {
 function colorbgstforend() {
   gl.deleteBuffer(bgst.cbuf);
   bgst.cbuf = null;
-  var r = Math.floor(128 - 128 * snap[0]);
+  var r = Math.floor(128 - 128 * scene.tint[0]);
   if (r > 255) {
     r = 255;
   }
   if (r < 0) {
     r = 0;
   }
-  var g = Math.floor(128 - 128 * snap[1]);
+  var g = Math.floor(128 - 128 * scene.tint[1]);
   if (g > 255) {
     g = 255;
   }
   if (g < 0) {
     g = 0;
   }
-  var b = Math.floor(128 - 128 * snap[2]);
+  var b = Math.floor(128 - 128 * scene.tint[2]);
   if (b > 255) {
     b = 255;
   }
@@ -1354,12 +1358,6 @@ var grndimg = [];
 var skydom = newModel();
 var skyimg = [];
 var haloimg = null;
-var carobj = [];
-var shad = [];
-for (var i = 0; i < 19; i++) {
-  carobj[i] = newModel();
-  shad[i] = newModel();
-}
 var cartexture = [];
 var tireimg = [];
 var tiredisk = newModel();
@@ -1498,8 +1496,8 @@ function loaddata() {
           }
         }
         if (loadthis) {
-          loadModel("data/3D/car" + i + ".r3d", carobj[i]);
-          loadModel("data/3D/s" + i + ".r3d", shad[i]);
+          loadModel("data/3D/car" + i + ".r3d", carModels[i]);
+          loadModel("data/3D/s" + i + ".r3d", carShadows[i]);
           cartexture[i] = new Image();
           cartexture[i].onload = function () {
             dataload += 9;
@@ -1783,9 +1781,9 @@ function loaddata() {
       skydom.loaded++;
     }
     for (var i = 0; i < 19; i++) {
-      if (carobj[i].loaded && carobj[i].loaded == carobj[i].nt + 1) {
+      if (carModels[i].loaded && carModels[i].loaded == carModels[i].nt + 1) {
         dataload += 31;
-        carobj[i].loaded++;
+        carModels[i].loaded++;
       }
     }
     for (var i = 0; i < 66; i++) {
@@ -1882,13 +1880,11 @@ var limro = 0,
   limto = 0,
   limbo = 0;
 var adod = 0;
-var snap = [0, 0, 0];
 var lvx = 0,
   lvy = 1,
   lvz = 0;
 var fogdist = 10700;
 var fogc = [];
-var skyglass = [];
 var hastip = 0;
 var tip = [];
 function newobo() {
@@ -1909,7 +1905,7 @@ function loadstage() {
         pieces.count = 0;
         pieces.fixCount = 0;
         adod = 0;
-        snap = [0, 0, 0];
+        scene.tint = [0, 0, 0];
         var skyc = [];
         var cloudsc = [];
         var cloudtyp = 0;
@@ -1935,9 +1931,9 @@ function loadstage() {
             adod = v("count");
           }
           if (e.command == "snap") {
-            snap[0] = v("r") / 100;
-            snap[1] = v("g") / 100;
-            snap[2] = v("b") / 100;
+            scene.tint[0] = v("r") / 100;
+            scene.tint[1] = v("g") / 100;
+            scene.tint[2] = v("b") / 100;
           }
           if (e.command == "sky") {
             skyc[0] = v("r");
@@ -2203,7 +2199,7 @@ function loadstage() {
         inishrecord();
         skytexture(skyc, fogc, cloudsc, cloudtyp);
         for (var i = 0; i < 3; i++) {
-          skyglass[i] = Math.round((skyc[i] * 2 + 70) / 3);
+          scene.glassColor[i] = Math.round((skyc[i] * 2 + 70) / 3);
         }
         gamecartextures();
         createsparks();
@@ -2213,10 +2209,14 @@ function loadstage() {
         effects.ndst = 0;
         effects.nexp = 0;
         if (stageloadtyp != 2) {
-          var opsnap = [-(snap[0] * 3), -(snap[1] * 3), -(snap[2] * 3)];
+          var opsnap = [
+            -(scene.tint[0] * 3),
+            -(scene.tint[1] * 3),
+            -(scene.tint[2] * 3),
+          ];
           setWorld(opsnap, fogc, 0, 1, 0, 10700);
         } else {
-          setWorld(snap, fogc, lvx, lvy, lvz, fogdist);
+          setWorld(scene.tint, fogc, lvx, lvy, lvz, fogdist);
         }
         stageload = 2;
       }
@@ -2425,7 +2425,7 @@ function chipaway(c, x, y, z, ctmag) {
       gl.STATIC_DRAW,
     );
     effects.chip[ui].mat = mat4.create();
-    effects.chip[ui].texture = carobj[car[c].typ].texture[1];
+    effects.chip[ui].texture = carModels[car[c].typ].texture[1];
     effects.chip[ui].loaded = 1;
   }
 }
@@ -2794,7 +2794,7 @@ function firexp(c, vsx, vsy, vsz) {
     ui = effects.nexp;
     effects.nexp++;
   }
-  var rad = carobj[car[c].typ];
+  var rad = carModels[car[c].typ];
   var ir = Math.floor(rad.ni * random.fx());
   if (ir == rad.ni) {
     ir = 0;
@@ -3488,11 +3488,11 @@ function carselect() {
       }
     }
   }
-  carobj[game.carTypes[0]].x = 0;
-  carobj[game.carTypes[0]].y =
+  carModels[game.carTypes[0]].x = 0;
+  carModels[game.carTypes[0]].y =
     wly[game.carTypes[0]][1] + 1.5 * wlh[game.carTypes[0]][1] + carmy;
-  carobj[game.carTypes[0]].z = -98;
-  carobj[game.carTypes[0]].ont = 0;
+  carModels[game.carTypes[0]].z = -98;
+  carModels[game.carTypes[0]].ont = 0;
   csxz += 5;
   if (csxz > 360) {
     csxz -= 360;
@@ -3502,33 +3502,33 @@ function carselect() {
   var zmt = [0, 0, 1];
   rotomat(ymt, zmt, cszy);
   rotomat(xmt, zmt, csxz);
-  carobj[game.carTypes[0]].mat[0] = xmt[0];
-  carobj[game.carTypes[0]].mat[1] = ymt[0];
-  carobj[game.carTypes[0]].mat[2] = zmt[0];
-  carobj[game.carTypes[0]].mat[4] = xmt[1];
-  carobj[game.carTypes[0]].mat[5] = ymt[1];
-  carobj[game.carTypes[0]].mat[6] = zmt[1];
-  carobj[game.carTypes[0]].mat[8] = xmt[2];
-  carobj[game.carTypes[0]].mat[9] = ymt[2];
-  carobj[game.carTypes[0]].mat[10] = zmt[2];
+  carModels[game.carTypes[0]].mat[0] = xmt[0];
+  carModels[game.carTypes[0]].mat[1] = ymt[0];
+  carModels[game.carTypes[0]].mat[2] = zmt[0];
+  carModels[game.carTypes[0]].mat[4] = xmt[1];
+  carModels[game.carTypes[0]].mat[5] = ymt[1];
+  carModels[game.carTypes[0]].mat[6] = zmt[1];
+  carModels[game.carTypes[0]].mat[8] = xmt[2];
+  carModels[game.carTypes[0]].mat[9] = ymt[2];
+  carModels[game.carTypes[0]].mat[10] = zmt[2];
   whl[game.carTypes[0]][0].x =
-    carobj[game.carTypes[0]].x -
-    wlx[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[0] -
-    wly[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[4] +
-    wlz[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[8];
+    carModels[game.carTypes[0]].x -
+    wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[0] -
+    wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[4] +
+    wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[8];
   whl[game.carTypes[0]][0].y =
-    carobj[game.carTypes[0]].y -
-    wlx[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[1] -
-    wly[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[5] +
-    wlz[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[9];
+    carModels[game.carTypes[0]].y -
+    wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[1] -
+    wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[5] +
+    wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[9];
   whl[game.carTypes[0]][0].z =
-    carobj[game.carTypes[0]].z -
-    wlx[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[2] -
-    wly[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[6] +
-    wlz[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[10];
+    carModels[game.carTypes[0]].z -
+    wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[2] -
+    wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[6] +
+    wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[10];
   whl[game.carTypes[0]][0].mat = resetMatrix(whl[game.carTypes[0]][0].mat);
   for (var k = 0; k < 12; k++) {
-    whl[game.carTypes[0]][0].mat[k] = carobj[game.carTypes[0]].mat[k];
+    whl[game.carTypes[0]][0].mat[k] = carModels[game.carTypes[0]].mat[k];
   }
   mat4.rotate(
     whl[game.carTypes[0]][0].mat,
@@ -3537,23 +3537,23 @@ function carselect() {
     [0, 1, 0],
   );
   whl[game.carTypes[0]][1].x =
-    carobj[game.carTypes[0]].x +
-    wlx[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[0] -
-    wly[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[4] +
-    wlz[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[8];
+    carModels[game.carTypes[0]].x +
+    wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[0] -
+    wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[4] +
+    wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[8];
   whl[game.carTypes[0]][1].y =
-    carobj[game.carTypes[0]].y +
-    wlx[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[1] -
-    wly[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[5] +
-    wlz[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[9];
+    carModels[game.carTypes[0]].y +
+    wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[1] -
+    wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[5] +
+    wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[9];
   whl[game.carTypes[0]][1].z =
-    carobj[game.carTypes[0]].z +
-    wlx[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[2] -
-    wly[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[6] +
-    wlz[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[10];
+    carModels[game.carTypes[0]].z +
+    wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[2] -
+    wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[6] +
+    wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[10];
   whl[game.carTypes[0]][1].mat = resetMatrix(whl[game.carTypes[0]][1].mat);
   for (var k = 0; k < 12; k++) {
-    whl[game.carTypes[0]][1].mat[k] = carobj[game.carTypes[0]].mat[k];
+    whl[game.carTypes[0]][1].mat[k] = carModels[game.carTypes[0]].mat[k];
   }
   mat4.rotate(
     whl[game.carTypes[0]][1].mat,
@@ -3562,23 +3562,23 @@ function carselect() {
     [0, 1, 0],
   );
   whl[game.carTypes[0]][2].x =
-    carobj[game.carTypes[0]].x -
-    wlx[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[0] -
-    wly[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[4] +
-    wlz[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[8];
+    carModels[game.carTypes[0]].x -
+    wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[0] -
+    wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[4] +
+    wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[8];
   whl[game.carTypes[0]][2].y =
-    carobj[game.carTypes[0]].y -
-    wlx[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[1] -
-    wly[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[5] +
-    wlz[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[9];
+    carModels[game.carTypes[0]].y -
+    wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[1] -
+    wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[5] +
+    wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[9];
   whl[game.carTypes[0]][2].z =
-    carobj[game.carTypes[0]].z -
-    wlx[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[2] -
-    wly[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[6] +
-    wlz[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[10];
+    carModels[game.carTypes[0]].z -
+    wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[2] -
+    wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[6] +
+    wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[10];
   whl[game.carTypes[0]][2].mat = resetMatrix(whl[game.carTypes[0]][2].mat);
   for (var k = 0; k < 12; k++) {
-    whl[game.carTypes[0]][2].mat[k] = carobj[game.carTypes[0]].mat[k];
+    whl[game.carTypes[0]][2].mat[k] = carModels[game.carTypes[0]].mat[k];
   }
   mat4.rotate(
     whl[game.carTypes[0]][2].mat,
@@ -3587,23 +3587,23 @@ function carselect() {
     [0, 1, 0],
   );
   whl[game.carTypes[0]][3].x =
-    carobj[game.carTypes[0]].x +
-    wlx[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[0] -
-    wly[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[4] +
-    wlz[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[8];
+    carModels[game.carTypes[0]].x +
+    wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[0] -
+    wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[4] +
+    wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[8];
   whl[game.carTypes[0]][3].y =
-    carobj[game.carTypes[0]].y +
-    wlx[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[1] -
-    wly[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[5] +
-    wlz[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[9];
+    carModels[game.carTypes[0]].y +
+    wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[1] -
+    wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[5] +
+    wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[9];
   whl[game.carTypes[0]][3].z =
-    carobj[game.carTypes[0]].z +
-    wlx[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[2] -
-    wly[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[6] +
-    wlz[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[10];
+    carModels[game.carTypes[0]].z +
+    wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[2] -
+    wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[6] +
+    wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[10];
   whl[game.carTypes[0]][3].mat = resetMatrix(whl[game.carTypes[0]][3].mat);
   for (var k = 0; k < 12; k++) {
-    whl[game.carTypes[0]][3].mat[k] = carobj[game.carTypes[0]].mat[k];
+    whl[game.carTypes[0]][3].mat[k] = carModels[game.carTypes[0]].mat[k];
   }
   mat4.rotate(
     whl[game.carTypes[0]][3].mat,
@@ -3613,59 +3613,61 @@ function carselect() {
   );
   var cat = 0.5;
   if (
-    Math.abs(carobj[game.carTypes[0]].mat[9]) >
-    Math.abs(carobj[game.carTypes[0]].mat[1])
+    Math.abs(carModels[game.carTypes[0]].mat[9]) >
+    Math.abs(carModels[game.carTypes[0]].mat[1])
   ) {
     cat = 0.4;
   }
-  if (Math.abs(carobj[game.carTypes[0]].mat[5]) < cat) {
+  if (Math.abs(carModels[game.carTypes[0]].mat[5]) < cat) {
     if (
-      Math.abs(carobj[game.carTypes[0]].mat[9]) >
-      Math.abs(carobj[game.carTypes[0]].mat[1])
+      Math.abs(carModels[game.carTypes[0]].mat[9]) >
+      Math.abs(carModels[game.carTypes[0]].mat[1])
     ) {
-      shad[game.carTypes[0]].ont = 2;
-      shad[game.carTypes[0]].x = carobj[game.carTypes[0]].x;
-      shad[game.carTypes[0]].z = carobj[game.carTypes[0]].z;
-      shad[game.carTypes[0]].mat[0] = carobj[game.carTypes[0]].mat[0];
-      shad[game.carTypes[0]].mat[2] = carobj[game.carTypes[0]].mat[2];
-      shad[game.carTypes[0]].mat[4] = carobj[game.carTypes[0]].mat[8];
-      shad[game.carTypes[0]].mat[6] = carobj[game.carTypes[0]].mat[10];
-      shad[game.carTypes[0]].mat[8] = -carobj[game.carTypes[0]].mat[4];
-      shad[game.carTypes[0]].mat[10] = -carobj[game.carTypes[0]].mat[6];
+      carShadows[game.carTypes[0]].ont = 2;
+      carShadows[game.carTypes[0]].x = carModels[game.carTypes[0]].x;
+      carShadows[game.carTypes[0]].z = carModels[game.carTypes[0]].z;
+      carShadows[game.carTypes[0]].mat[0] = carModels[game.carTypes[0]].mat[0];
+      carShadows[game.carTypes[0]].mat[2] = carModels[game.carTypes[0]].mat[2];
+      carShadows[game.carTypes[0]].mat[4] = carModels[game.carTypes[0]].mat[8];
+      carShadows[game.carTypes[0]].mat[6] = carModels[game.carTypes[0]].mat[10];
+      carShadows[game.carTypes[0]].mat[8] = -carModels[game.carTypes[0]].mat[4];
+      carShadows[game.carTypes[0]].mat[10] =
+        -carModels[game.carTypes[0]].mat[6];
     } else {
-      shad[game.carTypes[0]].ont = 1;
-      shad[game.carTypes[0]].x =
-        carobj[game.carTypes[0]].x -
-        shadadj[game.carTypes[0]] * carobj[game.carTypes[0]].mat[8];
-      shad[game.carTypes[0]].z =
-        carobj[game.carTypes[0]].z -
-        shadadj[game.carTypes[0]] * carobj[game.carTypes[0]].mat[10];
-      shad[game.carTypes[0]].mat[0] = carobj[game.carTypes[0]].mat[8];
-      shad[game.carTypes[0]].mat[2] = carobj[game.carTypes[0]].mat[10];
-      shad[game.carTypes[0]].mat[4] = carobj[game.carTypes[0]].mat[0];
-      shad[game.carTypes[0]].mat[6] = carobj[game.carTypes[0]].mat[2];
-      shad[game.carTypes[0]].mat[8] = -carobj[game.carTypes[0]].mat[4];
-      shad[game.carTypes[0]].mat[10] = -carobj[game.carTypes[0]].mat[6];
+      carShadows[game.carTypes[0]].ont = 1;
+      carShadows[game.carTypes[0]].x =
+        carModels[game.carTypes[0]].x -
+        shadadj[game.carTypes[0]] * carModels[game.carTypes[0]].mat[8];
+      carShadows[game.carTypes[0]].z =
+        carModels[game.carTypes[0]].z -
+        shadadj[game.carTypes[0]] * carModels[game.carTypes[0]].mat[10];
+      carShadows[game.carTypes[0]].mat[0] = carModels[game.carTypes[0]].mat[8];
+      carShadows[game.carTypes[0]].mat[2] = carModels[game.carTypes[0]].mat[10];
+      carShadows[game.carTypes[0]].mat[4] = carModels[game.carTypes[0]].mat[0];
+      carShadows[game.carTypes[0]].mat[6] = carModels[game.carTypes[0]].mat[2];
+      carShadows[game.carTypes[0]].mat[8] = -carModels[game.carTypes[0]].mat[4];
+      carShadows[game.carTypes[0]].mat[10] =
+        -carModels[game.carTypes[0]].mat[6];
     }
   } else {
-    shad[game.carTypes[0]].ont = 0;
-    shad[game.carTypes[0]].x =
-      carobj[game.carTypes[0]].x -
-      shadadj[game.carTypes[0]] * carobj[game.carTypes[0]].mat[8];
-    shad[game.carTypes[0]].z =
-      carobj[game.carTypes[0]].z -
-      shadadj[game.carTypes[0]] * carobj[game.carTypes[0]].mat[10];
-    shad[game.carTypes[0]].mat[0] = carobj[game.carTypes[0]].mat[8];
-    shad[game.carTypes[0]].mat[2] = carobj[game.carTypes[0]].mat[10];
-    shad[game.carTypes[0]].mat[4] = carobj[game.carTypes[0]].mat[4];
-    shad[game.carTypes[0]].mat[6] = carobj[game.carTypes[0]].mat[6];
-    shad[game.carTypes[0]].mat[8] = carobj[game.carTypes[0]].mat[0];
-    shad[game.carTypes[0]].mat[10] = carobj[game.carTypes[0]].mat[2];
+    carShadows[game.carTypes[0]].ont = 0;
+    carShadows[game.carTypes[0]].x =
+      carModels[game.carTypes[0]].x -
+      shadadj[game.carTypes[0]] * carModels[game.carTypes[0]].mat[8];
+    carShadows[game.carTypes[0]].z =
+      carModels[game.carTypes[0]].z -
+      shadadj[game.carTypes[0]] * carModels[game.carTypes[0]].mat[10];
+    carShadows[game.carTypes[0]].mat[0] = carModels[game.carTypes[0]].mat[8];
+    carShadows[game.carTypes[0]].mat[2] = carModels[game.carTypes[0]].mat[10];
+    carShadows[game.carTypes[0]].mat[4] = carModels[game.carTypes[0]].mat[4];
+    carShadows[game.carTypes[0]].mat[6] = carModels[game.carTypes[0]].mat[6];
+    carShadows[game.carTypes[0]].mat[8] = carModels[game.carTypes[0]].mat[0];
+    carShadows[game.carTypes[0]].mat[10] = carModels[game.carTypes[0]].mat[2];
   }
-  shad[game.carTypes[0]].mat[1] = 0;
-  shad[game.carTypes[0]].mat[5] = 1;
-  shad[game.carTypes[0]].mat[9] = 0;
-  shad[game.carTypes[0]].y = -21;
+  carShadows[game.carTypes[0]].mat[1] = 0;
+  carShadows[game.carTypes[0]].mat[5] = 1;
+  carShadows[game.carTypes[0]].mat[9] = 0;
+  carShadows[game.carTypes[0]].y = -21;
   mat4.rotate(
     camera.matrix,
     camera.matrix,
@@ -3788,11 +3790,11 @@ function unlockedcar() {
     camera.z = 0;
     camera.yaw = 0;
     camera.pitch = 0;
-    carobj[game.carTypes[0]].x = 0;
-    carobj[game.carTypes[0]].y =
+    carModels[game.carTypes[0]].x = 0;
+    carModels[game.carTypes[0]].y =
       wly[game.carTypes[0]][1] + 1.5 * wlh[game.carTypes[0]][1] - 17;
-    carobj[game.carTypes[0]].z = -80;
-    carobj[game.carTypes[0]].ont = 0;
+    carModels[game.carTypes[0]].z = -80;
+    carModels[game.carTypes[0]].ont = 0;
     csxz += 2;
     if (csxz > 360) {
       csxz -= 360;
@@ -3823,33 +3825,33 @@ function unlockedcar() {
     var zmt = [0, 0, 1];
     rotomat(ymt, zmt, cszy);
     rotomat(xmt, zmt, csxz);
-    carobj[game.carTypes[0]].mat[0] = xmt[0];
-    carobj[game.carTypes[0]].mat[1] = ymt[0];
-    carobj[game.carTypes[0]].mat[2] = zmt[0];
-    carobj[game.carTypes[0]].mat[4] = xmt[1];
-    carobj[game.carTypes[0]].mat[5] = ymt[1];
-    carobj[game.carTypes[0]].mat[6] = zmt[1];
-    carobj[game.carTypes[0]].mat[8] = xmt[2];
-    carobj[game.carTypes[0]].mat[9] = ymt[2];
-    carobj[game.carTypes[0]].mat[10] = zmt[2];
+    carModels[game.carTypes[0]].mat[0] = xmt[0];
+    carModels[game.carTypes[0]].mat[1] = ymt[0];
+    carModels[game.carTypes[0]].mat[2] = zmt[0];
+    carModels[game.carTypes[0]].mat[4] = xmt[1];
+    carModels[game.carTypes[0]].mat[5] = ymt[1];
+    carModels[game.carTypes[0]].mat[6] = zmt[1];
+    carModels[game.carTypes[0]].mat[8] = xmt[2];
+    carModels[game.carTypes[0]].mat[9] = ymt[2];
+    carModels[game.carTypes[0]].mat[10] = zmt[2];
     whl[game.carTypes[0]][0].x =
-      carobj[game.carTypes[0]].x -
-      wlx[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[0] -
-      wly[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[4] +
-      wlz[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[8];
+      carModels[game.carTypes[0]].x -
+      wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[0] -
+      wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[4] +
+      wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[8];
     whl[game.carTypes[0]][0].y =
-      carobj[game.carTypes[0]].y -
-      wlx[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[1] -
-      wly[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[5] +
-      wlz[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[9];
+      carModels[game.carTypes[0]].y -
+      wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[1] -
+      wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[5] +
+      wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[9];
     whl[game.carTypes[0]][0].z =
-      carobj[game.carTypes[0]].z -
-      wlx[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[2] -
-      wly[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[6] +
-      wlz[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[10];
+      carModels[game.carTypes[0]].z -
+      wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[2] -
+      wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[6] +
+      wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[10];
     whl[game.carTypes[0]][0].mat = resetMatrix(whl[game.carTypes[0]][0].mat);
     for (var k = 0; k < 12; k++) {
-      whl[game.carTypes[0]][0].mat[k] = carobj[game.carTypes[0]].mat[k];
+      whl[game.carTypes[0]][0].mat[k] = carModels[game.carTypes[0]].mat[k];
     }
     mat4.rotate(
       whl[game.carTypes[0]][0].mat,
@@ -3858,23 +3860,23 @@ function unlockedcar() {
       [0, 1, 0],
     );
     whl[game.carTypes[0]][1].x =
-      carobj[game.carTypes[0]].x +
-      wlx[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[0] -
-      wly[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[4] +
-      wlz[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[8];
+      carModels[game.carTypes[0]].x +
+      wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[0] -
+      wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[4] +
+      wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[8];
     whl[game.carTypes[0]][1].y =
-      carobj[game.carTypes[0]].y +
-      wlx[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[1] -
-      wly[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[5] +
-      wlz[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[9];
+      carModels[game.carTypes[0]].y +
+      wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[1] -
+      wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[5] +
+      wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[9];
     whl[game.carTypes[0]][1].z =
-      carobj[game.carTypes[0]].z +
-      wlx[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[2] -
-      wly[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[6] +
-      wlz[game.carTypes[0]][0] * carobj[game.carTypes[0]].mat[10];
+      carModels[game.carTypes[0]].z +
+      wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[2] -
+      wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[6] +
+      wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[10];
     whl[game.carTypes[0]][1].mat = resetMatrix(whl[game.carTypes[0]][1].mat);
     for (var k = 0; k < 12; k++) {
-      whl[game.carTypes[0]][1].mat[k] = carobj[game.carTypes[0]].mat[k];
+      whl[game.carTypes[0]][1].mat[k] = carModels[game.carTypes[0]].mat[k];
     }
     mat4.rotate(
       whl[game.carTypes[0]][1].mat,
@@ -3883,23 +3885,23 @@ function unlockedcar() {
       [0, 1, 0],
     );
     whl[game.carTypes[0]][2].x =
-      carobj[game.carTypes[0]].x -
-      wlx[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[0] -
-      wly[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[4] +
-      wlz[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[8];
+      carModels[game.carTypes[0]].x -
+      wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[0] -
+      wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[4] +
+      wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[8];
     whl[game.carTypes[0]][2].y =
-      carobj[game.carTypes[0]].y -
-      wlx[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[1] -
-      wly[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[5] +
-      wlz[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[9];
+      carModels[game.carTypes[0]].y -
+      wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[1] -
+      wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[5] +
+      wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[9];
     whl[game.carTypes[0]][2].z =
-      carobj[game.carTypes[0]].z -
-      wlx[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[2] -
-      wly[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[6] +
-      wlz[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[10];
+      carModels[game.carTypes[0]].z -
+      wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[2] -
+      wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[6] +
+      wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[10];
     whl[game.carTypes[0]][2].mat = resetMatrix(whl[game.carTypes[0]][2].mat);
     for (var k = 0; k < 12; k++) {
-      whl[game.carTypes[0]][2].mat[k] = carobj[game.carTypes[0]].mat[k];
+      whl[game.carTypes[0]][2].mat[k] = carModels[game.carTypes[0]].mat[k];
     }
     mat4.rotate(
       whl[game.carTypes[0]][2].mat,
@@ -3908,23 +3910,23 @@ function unlockedcar() {
       [0, 1, 0],
     );
     whl[game.carTypes[0]][3].x =
-      carobj[game.carTypes[0]].x +
-      wlx[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[0] -
-      wly[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[4] +
-      wlz[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[8];
+      carModels[game.carTypes[0]].x +
+      wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[0] -
+      wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[4] +
+      wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[8];
     whl[game.carTypes[0]][3].y =
-      carobj[game.carTypes[0]].y +
-      wlx[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[1] -
-      wly[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[5] +
-      wlz[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[9];
+      carModels[game.carTypes[0]].y +
+      wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[1] -
+      wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[5] +
+      wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[9];
     whl[game.carTypes[0]][3].z =
-      carobj[game.carTypes[0]].z +
-      wlx[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[2] -
-      wly[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[6] +
-      wlz[game.carTypes[0]][1] * carobj[game.carTypes[0]].mat[10];
+      carModels[game.carTypes[0]].z +
+      wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[2] -
+      wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[6] +
+      wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[10];
     whl[game.carTypes[0]][3].mat = resetMatrix(whl[game.carTypes[0]][3].mat);
     for (var k = 0; k < 12; k++) {
-      whl[game.carTypes[0]][3].mat[k] = carobj[game.carTypes[0]].mat[k];
+      whl[game.carTypes[0]][3].mat[k] = carModels[game.carTypes[0]].mat[k];
     }
     mat4.rotate(
       whl[game.carTypes[0]][3].mat,
@@ -4015,19 +4017,19 @@ function render(now) {
       }
       for (var i = 0; i < effects.nspr; i++) {
         if (effects.sprk[i].stat != 0) {
-          spark[effects.sprk[i].typ].x = effects.sprk[i].x;
-          spark[effects.sprk[i].typ].y = effects.sprk[i].y;
-          spark[effects.sprk[i].typ].z = effects.sprk[i].z;
-          spark[effects.sprk[i].typ].mat = effects.sprk[i].mat;
-          drawParticle(spark[effects.sprk[i].typ]);
+          sparkModels[effects.sprk[i].typ].x = effects.sprk[i].x;
+          sparkModels[effects.sprk[i].typ].y = effects.sprk[i].y;
+          sparkModels[effects.sprk[i].typ].z = effects.sprk[i].z;
+          sparkModels[effects.sprk[i].typ].mat = effects.sprk[i].mat;
+          drawParticle(sparkModels[effects.sprk[i].typ]);
         }
       }
       for (var c = 0; c < game.carCount; c++) {
-        if (shad[car[c].typ].intershad) {
+        if (carShadows[car[c].typ].intershad) {
           gl.disable(gl.DEPTH_TEST);
         }
-        drawModel(shad[car[c].typ]);
-        if (shad[car[c].typ].intershad) {
+        drawModel(carShadows[car[c].typ]);
+        if (carShadows[car[c].typ].intershad) {
           gl.enable(gl.DEPTH_TEST);
         }
       }
@@ -4063,11 +4065,11 @@ function render(now) {
             drawParticle(tirel[car[c].typ][k]);
           }
         }
-        carobj[car[c].typ].x = car[c].x;
-        carobj[car[c].typ].y = car[c].y;
-        carobj[car[c].typ].z = car[c].z;
-        carobj[car[c].typ].mat = car[c].mat;
-        drawModel(carobj[car[c].typ]);
+        carModels[car[c].typ].x = car[c].x;
+        carModels[car[c].typ].y = car[c].y;
+        carModels[car[c].typ].z = car[c].z;
+        carModels[car[c].typ].mat = car[c].mat;
+        drawModel(carModels[car[c].typ]);
         for (var w = 0; w < 4; w++) {
           var k = 0;
           if (w >= 2) {
@@ -4163,9 +4165,9 @@ function render(now) {
       }
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
-      drawModel(shad[game.carTypes[0]]);
+      drawModel(carShadows[game.carTypes[0]]);
       for (var w = 0; w < 4; w++) {
-        attachTo(whl[game.carTypes[0]][w].mat, carobj[game.carTypes[0]]);
+        attachTo(whl[game.carTypes[0]][w].mat, carModels[game.carTypes[0]]);
       }
       for (var w = 0; w < 4; w++) {
         var k = 0;
@@ -4178,7 +4180,7 @@ function render(now) {
         tiren[game.carTypes[0]][k].mat = whl[game.carTypes[0]][w].mat;
         drawParticle(tiren[game.carTypes[0]][k]);
       }
-      drawModel(carobj[game.carTypes[0]]);
+      drawModel(carModels[game.carTypes[0]]);
       for (var w = 0; w < 4; w++) {
         var k = 0;
         if (w >= 2) {
@@ -4245,7 +4247,7 @@ function render(now) {
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
       for (var w = 0; w < 4; w++) {
-        attachTo(whl[game.carTypes[0]][w].mat, carobj[game.carTypes[0]]);
+        attachTo(whl[game.carTypes[0]][w].mat, carModels[game.carTypes[0]]);
       }
       for (var w = 0; w < 4; w++) {
         var k = 0;
@@ -4258,7 +4260,7 @@ function render(now) {
         tiren[game.carTypes[0]][k].mat = whl[game.carTypes[0]][w].mat;
         drawParticle(tiren[game.carTypes[0]][k]);
       }
-      drawModel(carobj[game.carTypes[0]]);
+      drawModel(carModels[game.carTypes[0]]);
       for (var w = 0; w < 4; w++) {
         var k = 0;
         if (w >= 2) {
@@ -5639,11 +5641,11 @@ function drive() {
       ) {
         if (
           Math.abs(car[c].x - pieces.list[o].x) <
-            pieceModels[pieces.list[o].typ].colrad + carobj[cn].colrad &&
+            pieceModels[pieces.list[o].typ].colrad + carModels[cn].colrad &&
           Math.abs(car[c].y - pieces.list[o].y) <
-            pieceModels[pieces.list[o].typ].colrad + carobj[cn].colrad &&
+            pieceModels[pieces.list[o].typ].colrad + carModels[cn].colrad &&
           Math.abs(car[c].z - pieces.list[o].z) <
-            pieceModels[pieces.list[o].typ].colrad + carobj[cn].colrad
+            pieceModels[pieces.list[o].typ].colrad + carModels[cn].colrad
         ) {
           pieceModels[pieces.list[o].typ].x = pieces.list[o].x;
           pieceModels[pieces.list[o].typ].y = pieces.list[o].y;
@@ -7011,7 +7013,7 @@ function drive() {
         }
         if (racers[c].cntdest < 6) {
           if (racers[c].embos == 0) {
-            carobj[car[c].typ].alpha = 1;
+            carModels[car[c].typ].alpha = 1;
             racers[c].embodir = Math.floor(random.fx() * 3);
             if (racers[c].embodir == 3) {
               racers[c].embodir = 0;
@@ -7019,7 +7021,7 @@ function drive() {
             racers[c].embomag = 1.2 + random.fx() * 0.2;
           }
           if (racers[c].embos == 1) {
-            carobj[car[c].typ].alpha = 2;
+            carModels[car[c].typ].alpha = 2;
           }
           racers[c].embos++;
           if (racers[c].embos == 2) {
@@ -7028,7 +7030,7 @@ function drive() {
           }
         } else {
           if (racers[c].cntdest == 6) {
-            carobj[car[c].typ].alpha = 1;
+            carModels[car[c].typ].alpha = 1;
             racers[c].embodir = 0;
             chipburn(c);
             racers[c].embos = 0;
@@ -7298,13 +7300,13 @@ function drive() {
         }
       } else {
         onelec = true;
-        carobj[car[c].typ].alpha = 1;
+        carModels[car[c].typ].alpha = 1;
         if (car[c].fcnt % 2 == 0) {
           if (random.fx() > 0.333) {
             if (random.fx() > random.fx()) {
-              carobj[car[c].typ].alpha = 3;
+              carModels[car[c].typ].alpha = 3;
             } else {
-              carobj[car[c].typ].alpha = 2;
+              carModels[car[c].typ].alpha = 2;
             }
           }
         }
@@ -7602,8 +7604,8 @@ function colide(c, xc) {
   rotate(xkx, xkz, car[xc].x, car[xc].z, car[xc].xz, 4);
   if (
     rpy(car[c].x, car[xc].x, car[c].y, car[xc].y, car[c].z, car[xc].z) <
-    (carobj[car[c].typ].colrad * carobj[car[c].typ].colrad +
-      carobj[car[xc].typ].colrad * carobj[car[xc].typ].colrad) *
+    (carModels[car[c].typ].colrad * carModels[car[c].typ].colrad +
+      carModels[car[xc].typ].colrad * carModels[car[xc].typ].colrad) *
       1.5
   ) {
     if (
@@ -8030,7 +8032,7 @@ function regn(nr, k, mag, c) {
         crashSound(mag, 0);
       }
     }
-    var rad = carobj[car[c].typ];
+    var rad = carModels[car[c].typ];
     if (!nr2stop) {
       if (rad.iscar == 1) {
         rad.dvert = [];
@@ -8193,9 +8195,9 @@ function regn(nr, k, mag, c) {
                 }
               } else {
                 if (
-                  pixels[pp] == skyglass[0] &&
-                  pixels[pp + 1] == skyglass[1] &&
-                  pixels[pp + 2] == skyglass[2]
+                  pixels[pp] == scene.glassColor[0] &&
+                  pixels[pp + 1] == scene.glassColor[1] &&
+                  pixels[pp + 2] == scene.glassColor[2]
                 ) {
                   if (!glass) {
                     if (random.fx() > 0.95) {
@@ -8281,7 +8283,7 @@ function regn(nr, k, mag, c) {
   }
 }
 function burn(c) {
-  var rad = carobj[car[c].typ];
+  var rad = carModels[car[c].typ];
   var framebuffer = gl.createFramebuffer();
   gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
   gl.framebufferTexture2D(
@@ -8321,7 +8323,7 @@ function burn(c) {
   }
 }
 function chipburn(c) {
-  var rad = carobj[car[c].typ];
+  var rad = carModels[car[c].typ];
   for (var i = 0; i < rad.ni; i++) {
     if (random.fx() > random.fx() && random.fx() > random.fx()) {
       car[c].ctxl[0] = random.fx();
@@ -8337,7 +8339,7 @@ function chipburn(c) {
   }
 }
 function fixcar(c) {
-  var rad = carobj[car[c].typ];
+  var rad = carModels[car[c].typ];
   rad.alpha = 1;
   rad.dvert = [];
   for (var i = 0; i < rad.ni; i++) {
@@ -8379,9 +8381,9 @@ function fixcar(c) {
     gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
     for (var p = 0; p < 256 * 256 * 4; p += 4) {
       if (pixels[p] == 116 && pixels[p + 1] == 130 && pixels[p + 2] == 140) {
-        pixels[p] = skyglass[0];
-        pixels[p + 1] = skyglass[1];
-        pixels[p + 2] = skyglass[2];
+        pixels[p] = scene.glassColor[0];
+        pixels[p + 1] = scene.glassColor[1];
+        pixels[p + 2] = scene.glassColor[2];
         pixels[p + 3] = 210;
       }
     }
@@ -8936,21 +8938,21 @@ var playedforeplay = false;
 function pausedgame() {
   stopEngine();
   rd.clearRect(0, 0, view.width, view.height);
-  var r = Math.floor(128 - 128 * snap[0]);
+  var r = Math.floor(128 - 128 * scene.tint[0]);
   if (r > 255) {
     r = 255;
   }
   if (r < 0) {
     r = 0;
   }
-  var g = Math.floor(128 - 128 * snap[1]);
+  var g = Math.floor(128 - 128 * scene.tint[1]);
   if (g > 255) {
     g = 255;
   }
   if (g < 0) {
     g = 0;
   }
-  var b = Math.floor(128 - 128 * snap[2]);
+  var b = Math.floor(128 - 128 * scene.tint[2]);
   if (b > 255) {
     b = 255;
   }
@@ -9461,13 +9463,13 @@ function drawmain() {
       flyout = 1;
       carms = 0;
       carmy = 100;
-      snap = [0, -0.05, 0.6];
+      scene.tint = [0, -0.05, 0.6];
       var fogc = [0, 0, 0];
       var lvx = 0,
         lvy = 0.866,
         lvz = -0.5;
       var fogdist = 10700;
-      setWorld(snap, fogc, lvx, lvy, lvz, fogdist);
+      setWorld(scene.tint, fogc, lvx, lvy, lvz, fogdist);
       game.phase = PHASE.carSelect;
     }
   }
@@ -9510,21 +9512,21 @@ function gameinstructions() {
     rd.drawImage(mainbg, lefy, 0, 1280 * view.scaleY, view.height);
   } else {
     rd.clearRect(0, 0, view.width, view.height);
-    var r = Math.floor(128 - 128 * snap[0]);
+    var r = Math.floor(128 - 128 * scene.tint[0]);
     if (r > 255) {
       r = 255;
     }
     if (r < 0) {
       r = 0;
     }
-    var g = Math.floor(128 - 128 * snap[1]);
+    var g = Math.floor(128 - 128 * scene.tint[1]);
     if (g > 255) {
       g = 255;
     }
     if (g < 0) {
       g = 0;
     }
-    var b = Math.floor(128 - 128 * snap[2]);
+    var b = Math.floor(128 - 128 * scene.tint[2]);
     if (b > 255) {
       b = 255;
     }
@@ -10405,14 +10407,14 @@ function createswitches() {
   var cgr1 = [200, 200, 200, 192];
   var cgr2 = [200, 200, 200, 64];
   for (var i = 0; i < 3; i++) {
-    cgr1[i] += cgr1[i] * snap[i];
+    cgr1[i] += cgr1[i] * scene.tint[i];
     if (cgr1[i] > 255) {
       cgr1[i] = 255;
     }
     if (cgr1[i] < 0) {
       cgr1[i] = 0;
     }
-    cgr2[i] += cgr2[i] * snap[i];
+    cgr2[i] += cgr2[i] * scene.tint[i];
     if (cgr2[i] > 255) {
       cgr2[i] = 255;
     }
@@ -12476,21 +12478,21 @@ function endgame() {
   rd.restore();
   rd.globalAlpha = 1;
   if (fredo != 76) {
-    var r = Math.floor(128 - 128 * snap[0]);
+    var r = Math.floor(128 - 128 * scene.tint[0]);
     if (r > 255) {
       r = 255;
     }
     if (r < 0) {
       r = 0;
     }
-    var g = Math.floor(128 - 128 * snap[1]);
+    var g = Math.floor(128 - 128 * scene.tint[1]);
     if (g > 255) {
       g = 255;
     }
     if (g < 0) {
       g = 0;
     }
-    var b = Math.floor(128 - 128 * snap[2]);
+    var b = Math.floor(128 - 128 * scene.tint[2]);
     if (b > 255) {
       b = 255;
     }
@@ -13399,21 +13401,21 @@ function drawstageselect() {
       rd.globalAlpha = 1;
     }
   }
-  var r = Math.floor(128 - 128 * snap[0]);
+  var r = Math.floor(128 - 128 * scene.tint[0]);
   if (r > 255) {
     r = 255;
   }
   if (r < 0) {
     r = 0;
   }
-  var g = Math.floor(128 - 128 * snap[1]);
+  var g = Math.floor(128 - 128 * scene.tint[1]);
   if (g > 255) {
     g = 255;
   }
   if (g < 0) {
     g = 0;
   }
-  var b = Math.floor(128 - 128 * snap[2]);
+  var b = Math.floor(128 - 128 * scene.tint[2]);
   if (b > 255) {
     b = 255;
   }
@@ -13523,13 +13525,13 @@ function drawstageselect() {
           false,
         )
       ) {
-        snap = [0, -0.05, 0.6];
+        scene.tint = [0, -0.05, 0.6];
         var fogc = [0, 0, 0];
         var lvx = 0,
           lvy = 0.866,
           lvz = -0.5;
         var fogdist = 10700;
-        setWorld(snap, fogc, lvx, lvy, lvz, fogdist);
+        setWorld(scene.tint, fogc, lvx, lvy, lvz, fogdist);
         game.phase = PHASE.carSelect;
         rd.fillStyle = "#FFFFFF";
         rd.fillRect(0, 0, view.width, view.height);
@@ -13671,21 +13673,21 @@ function drawstageselect() {
         }
       }
       if (flkpl > 30) {
-        r = Math.floor(128 + 128 * snap[0]);
+        r = Math.floor(128 + 128 * scene.tint[0]);
         if (r > 255) {
           r = 255;
         }
         if (r < 0) {
           r = 0;
         }
-        g = Math.floor(128 + 128 * snap[1]);
+        g = Math.floor(128 + 128 * scene.tint[1]);
         if (g > 255) {
           g = 255;
         }
         if (g < 0) {
           g = 0;
         }
-        b = Math.floor(128 + 128 * snap[2]);
+        b = Math.floor(128 + 128 * scene.tint[2]);
         if (b > 255) {
           b = 255;
         }
@@ -13847,7 +13849,7 @@ function startflash() {
 }
 function aftersparkstart() {
   playStageMusic(track.stage);
-  setWorld(snap, fogc, lvx, lvy, lvz, fogdist);
+  setWorld(scene.tint, fogc, lvx, lvy, lvz, fogdist);
   if (game.mode == 1) {
     for (var c = 1; c < game.carCount; c++) {
       if (!isEngineLoaded(game.carTypes[c])) {
@@ -15008,7 +15010,7 @@ function rewindreplay() {
     racers[c].nbsq = 0;
     car[c].fcnt = 0;
     fixcar(c);
-    carobj[car[c].typ].alpha = 1;
+    carModels[car[c].typ].alpha = 1;
     if (recording.repcar[c].destat < 0) {
       racers[c].destnow = true;
       racers[c].cntdest = 7;
@@ -15050,7 +15052,7 @@ function replay() {
     if (racers[c].destnow) {
       if (racers[c].cntdest < 6) {
         if (racers[c].embos == 0) {
-          carobj[car[c].typ].alpha = 1;
+          carModels[car[c].typ].alpha = 1;
           racers[c].embodir = Math.floor(random.fx() * 3);
           if (racers[c].embodir == 3) {
             racers[c].embodir = 0;
@@ -15058,7 +15060,7 @@ function replay() {
           racers[c].embomag = 1.2 + random.fx() * 0.2;
         }
         if (racers[c].embos == 1) {
-          carobj[car[c].typ].alpha = 2;
+          carModels[car[c].typ].alpha = 2;
         }
         racers[c].embos++;
         if (racers[c].embos == 2) {
@@ -15067,7 +15069,7 @@ function replay() {
         }
       } else {
         if (racers[c].cntdest == 6) {
-          carobj[car[c].typ].alpha = 1;
+          carModels[car[c].typ].alpha = 1;
           racers[c].embodir = 0;
           chipburn(c);
           racers[c].embos = 0;
@@ -15097,13 +15099,13 @@ function replay() {
       }
     } else {
       onelec = true;
-      carobj[car[c].typ].alpha = 1;
+      carModels[car[c].typ].alpha = 1;
       if (car[c].fcnt % 2 == 0) {
         if (random.fx() > 0.333) {
           if (random.fx() > random.fx()) {
-            carobj[car[c].typ].alpha = 3;
+            carModels[car[c].typ].alpha = 3;
           } else {
-            carobj[car[c].typ].alpha = 2;
+            carModels[car[c].typ].alpha = 2;
           }
         }
       }
@@ -15267,7 +15269,7 @@ function hrewindhreplay() {
     racers[c].nbsq = 0;
     car[c].fcnt = 0;
     fixcar(c);
-    carobj[car[c].typ].alpha = 1;
+    carModels[car[c].typ].alpha = 1;
     if (recording.hrepcar[c].destat < 0) {
       racers[c].destnow = true;
       racers[c].cntdest = 7;
@@ -15322,7 +15324,7 @@ function hreplay() {
     if (racers[c].destnow) {
       if (racers[c].cntdest < 6) {
         if (racers[c].embos == 0) {
-          carobj[car[c].typ].alpha = 1;
+          carModels[car[c].typ].alpha = 1;
           racers[c].embodir = Math.floor(random.fx() * 3);
           if (racers[c].embodir == 3) {
             racers[c].embodir = 0;
@@ -15330,7 +15332,7 @@ function hreplay() {
           racers[c].embomag = 1.2 + random.fx() * 0.2;
         }
         if (racers[c].embos == 1) {
-          carobj[car[c].typ].alpha = 2;
+          carModels[car[c].typ].alpha = 2;
         }
         racers[c].embos++;
         if (racers[c].embos == 2) {
@@ -15341,7 +15343,7 @@ function hreplay() {
         }
       } else {
         if (racers[c].cntdest == 6) {
-          carobj[car[c].typ].alpha = 1;
+          carModels[car[c].typ].alpha = 1;
           racers[c].embodir = 0;
           chipburn(c);
           racers[c].embos = 0;
@@ -15371,13 +15373,13 @@ function hreplay() {
       }
     } else {
       onelec = true;
-      carobj[car[c].typ].alpha = 1;
+      carModels[car[c].typ].alpha = 1;
       if (car[c].fcnt % 2 == 0) {
         if (random.fx() > 0.333) {
           if (random.fx() > random.fx()) {
-            carobj[car[c].typ].alpha = 3;
+            carModels[car[c].typ].alpha = 3;
           } else {
-            carobj[car[c].typ].alpha = 2;
+            carModels[car[c].typ].alpha = 2;
           }
         }
       }
@@ -15482,7 +15484,7 @@ function preprevtime() {
     racers[c].nbsq = 0;
     car[c].fcnt = 0;
     fixcar(c);
-    carobj[car[c].typ].alpha = 1;
+    carModels[car[c].typ].alpha = 1;
     if (recording.repcar[c].destat < 0) {
       for (var i = 0; i < 16; i++) {
         burn(c);
@@ -15540,13 +15542,13 @@ function revtime() {
       }
     } else {
       onelec = true;
-      carobj[car[c].typ].alpha = 1;
+      carModels[car[c].typ].alpha = 1;
       if (car[c].fcnt % 2 == 0) {
         if (random.fx() > 0.333) {
           if (random.fx() > random.fx()) {
-            carobj[car[c].typ].alpha = 3;
+            carModels[car[c].typ].alpha = 3;
           } else {
-            carobj[car[c].typ].alpha = 2;
+            carModels[car[c].typ].alpha = 2;
           }
         }
       }
@@ -15615,7 +15617,7 @@ function revtime() {
       racers[c].focus = -1;
       racers[c].missedcp = 0;
       racers[c].nofocus = false;
-      carobj[car[c].typ].alpha = 1;
+      carModels[car[c].typ].alpha = 1;
       if (recording.repcar[c].destat > 0) {
         racers[c].dest = false;
         recording.repcar[c].destat = 700;

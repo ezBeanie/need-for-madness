@@ -47,8 +47,8 @@ describe("interpolated drawing in a real race", () => {
     const offset = (ctx, c, alpha) => {
       ctx.interpolation.alpha = alpha;
       const typ = ctx.car[c].typ;
-      const body = drawnMatrix(ctx, ctx.carobj[typ], ctx.car[c]);
-      const shadow = drawnMatrix(ctx, ctx.shad[typ], ctx.shad[typ]);
+      const body = drawnMatrix(ctx, ctx.carModels[typ], ctx.car[c]);
+      const shadow = drawnMatrix(ctx, ctx.carShadows[typ], ctx.carShadows[typ]);
       return [shadow[12] - body[12], shadow[14] - body[14]];
     };
     let checked = 0;

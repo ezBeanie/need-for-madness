@@ -47,7 +47,7 @@ describe("interpolated drawing in the menus", () => {
     let worst = 0;
     for (let i = 0; i < 100; i++) {
       step();
-      worst = Math.max(worst, wheelSlip(ctx, typ, ctx.carobj[typ]));
+      worst = Math.max(worst, wheelSlip(ctx, typ, ctx.carModels[typ]));
     }
     expect(worst).toBeLessThan(0.05);
   });

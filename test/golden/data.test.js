@@ -67,7 +67,7 @@ describe("car data matches the golden master", () => {
       Object.entries(ctx.carStats).filter(([, v]) => Array.isArray(v)),
     );
     const cars = Array.from({ length: CAR_COUNT }, (_, i) => {
-      const model = ctx.carobj[i];
+      const model = ctx.carModels[i];
       return {
         name: ctx.carStats.names[i],
         wheels: { x: ctx.wlx[i], y: ctx.wly[i], z: ctx.wlz[i], h: ctx.wlh[i] },
