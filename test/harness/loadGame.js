@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
+import { actionFor } from "../../src/input/keyboard.js";
 import { createBrowserGlobals, createTaskQueue } from "./browserStubs.js";
 
 const PROJECT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -97,12 +98,11 @@ export const loadGame = async ({ seed = 1, fxSeed = seed + 1000 } = {}) => {
     );
   };
 
+  // like a key event in the browser: through the game's key bindings
   const key = (keyCode, down) => {
-    const event = { keyCode, preventDefault: () => {} };
-    if (down) {
-      ctx.Keydown(event);
-    } else {
-      ctx.Keyup(event);
+    const action = actionFor(keyCode);
+    if (action) {
+      ctx.onKey(action, down);
     }
   };
 

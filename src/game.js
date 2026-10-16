@@ -42,6 +42,8 @@ import {
   stopStageMusic,
   unlockAudio,
 } from "./audio/audio.js";
+import { installKeyboard } from "./input/keyboard.js";
+import { installPointer, pointer } from "./input/pointer.js";
 import {
   attachTo,
   drawCamera,
@@ -4132,7 +4134,7 @@ function gameworks() {
         }
       }
       if (starcnt > 65) {
-        if (enter == 1 || u[0].handb || mdown) {
+        if (enter == 1 || u[0].handb || pointer.down) {
           starcnt = 65;
           if (enter == 1) {
             enter = 2;
@@ -13925,7 +13927,7 @@ function gameinstructions() {
     }
   }
   var onabtn = false;
-  var mnms = nms;
+  var mnms = pointer.count;
   if (mnms < 1) {
     mnms = 1;
   }
@@ -13934,14 +13936,14 @@ function gameinstructions() {
       onabtn = true;
     }
   }
-  if (!onabtn && mdown) {
+  if (!onabtn && pointer.down) {
     if (instmain) {
       fase = 1;
       playMenuMusic();
     } else {
       fase = 11;
     }
-    mdown = false;
+    pointer.down = false;
   }
 }
 function resetgame() {
@@ -14625,8 +14627,8 @@ function drawinter() {
       wash = false;
     }
     var notwast = 0;
-    if (mdown) {
-      for (var i = 0; i < nms; i++) {
+    if (pointer.down) {
+      for (var i = 0; i < pointer.count; i++) {
         var onkbt = false;
         var onkb = -1;
         var xpr = [
@@ -14654,7 +14656,7 @@ function drawinter() {
           nkb = 5;
         }
         for (var k = 0; k < nkb; k++) {
-          var pypr = py(xpr[k], xm[i], ypr[k], ym[i]);
+          var pypr = py(xpr[k], pointer.x[i], ypr[k], pointer.y[i]);
           if (pypr < pyclos) {
             pyclos = pypr;
             onkb = k;
@@ -14696,7 +14698,7 @@ function drawinter() {
         notwast++;
       }
     }
-    if (notwast == nms) {
+    if (notwast == pointer.count) {
       wast = false;
     }
   }
@@ -16003,7 +16005,7 @@ function drawhreplay() {
       0.7,
       false,
     ) ||
-    (mdown && cp.stage == 1 && unlocked == 1)
+    (pointer.down && cp.stage == 1 && unlocked == 1)
   ) {
     iniend();
     fase = 12;
@@ -17770,18 +17772,18 @@ function drawbutton(
   var ybd = yb + 4 * avm;
   var clknow = false;
   var hasonx = false;
-  var mnms = nms;
+  var mnms = pointer.count;
   if (mnms < 1) {
     mnms = 1;
   }
   for (var i = 0; i < mnms; i++) {
     if (
-      xm[i] > xbd - hb * 0.3 &&
-      xm[i] < xbd + wb + hb * 0.3 &&
-      ym[i] > ybd &&
-      ym[i] < ybd + hb
+      pointer.x[i] > xbd - hb * 0.3 &&
+      pointer.x[i] < xbd + wb + hb * 0.3 &&
+      pointer.y[i] > ybd &&
+      pointer.y[i] < ybd + hb
     ) {
-      if (mdown) {
+      if (pointer.down) {
         wasonit[i] = onx;
         hasonx = true;
       } else {
@@ -17926,13 +17928,18 @@ function drawbutton(
 }
 function oncla(onx, xa, ya, wa, ha) {
   var oncl = 0;
-  var mnms = nms;
+  var mnms = pointer.count;
   if (mnms < 1) {
     mnms = 1;
   }
   for (var i = 0; i < mnms; i++) {
-    if (xm[i] > xa && xm[i] < xa + wa && ym[i] > ya && ym[i] < ya + ha) {
-      if (mdown) {
+    if (
+      pointer.x[i] > xa &&
+      pointer.x[i] < xa + wa &&
+      pointer.y[i] > ya &&
+      pointer.y[i] < ya + ha
+    ) {
+      if (pointer.down) {
         wasonit[i] = onx;
         oncl = 1;
       } else {
@@ -19085,210 +19092,94 @@ var gl =
   canvas3D.getContext("webgl") || canvas3D.getContext("experimental-webgl");
 
 var canvas2D = document.querySelector("#canvas2D");
-canvas2D.addEventListener("mousedown", msdown, false);
-canvas2D.addEventListener("mousemove", msmove, false);
-canvas2D.addEventListener("mouseup", msup, false);
-canvas2D.addEventListener("mouseout", msup, false);
-canvas2D.addEventListener("touchmove", frmove, false);
-canvas2D.addEventListener("touchstart", frdown, false);
-canvas2D.addEventListener("touchend", frup, false);
 var rd = canvas2D.getContext("2d");
+installPointer(canvas2D, {
+  onRelease: checknplay,
+  keepPressedWhileTouching: () => fase == 7,
+});
 
-var xm = [];
-var ym = [];
-var nms = 0;
-var mdown = false;
 var enter = 0;
 
-function msmove(evt) {
-  var rect = canvas2D.getBoundingClientRect();
-  xm[0] = evt.clientX - rect.left;
-  ym[0] = evt.clientY - rect.top;
-  nms = 1;
-}
-
-function msdown(evt) {
-  var rect = canvas2D.getBoundingClientRect();
-  xm[0] = evt.clientX - rect.left;
-  ym[0] = evt.clientY - rect.top;
-  nms = 1;
-  mdown = true;
-}
-
-function msup(evt) {
-  mdown = false;
-  checknplay();
-}
-
-function frmove(evt) {
-  evt.preventDefault();
-  var rect = canvas2D.getBoundingClientRect();
-
-  nms = 0;
-  for (var i = 0; i < evt.touches.length; i++) {
-    xm[nms] = evt.touches[i].clientX - rect.left;
-    ym[nms] = evt.touches[i].clientY - rect.top;
-    nms++;
-  }
-}
-
-function frdown(evt) {
-  evt.preventDefault();
-  var rect = canvas2D.getBoundingClientRect();
-
-  nms = 0;
-  for (var i = 0; i < evt.touches.length; i++) {
-    xm[nms] = evt.touches[i].clientX - rect.left;
-    ym[nms] = evt.touches[i].clientY - rect.top;
-    mdown = true;
-    nms++;
-  }
-}
-
-function frup(evt) {
-  evt.preventDefault();
-  var rect = canvas2D.getBoundingClientRect();
-
-  nms = 0;
-  for (var i = 0; i < evt.touches.length; i++) {
-    xm[nms] = evt.touches[i].clientX - rect.left;
-    ym[nms] = evt.touches[i].clientY - rect.top;
-    nms++;
-  }
-
-  if (fase == 7) {
-    if (nms == 0) {
-      mdown = false;
-      checknplay();
-    }
-  } else {
-    mdown = false;
-    checknplay();
-  }
-}
-
 var pbr = 1;
-function Keydown(evt) {
-  evt.preventDefault();
-
-  var k = evt.keyCode;
-
-  if (k == 38 || k == 87) {
-    u[im].up = true;
+// Enter, escape (and the handbrake outside races) confirm in the menus.
+function confirmkey(pressed) {
+  if (pressed && !enter) {
+    enter = 1;
   }
-  if (k == 40 || k == 83) {
-    u[im].down = true;
-  }
-  if (k == 37 || k == 65) {
-    u[im].left = true;
-  }
-  if (k == 39 || k == 68) {
-    u[im].right = true;
-  }
-  if (k == 32) {
-    u[im].handb = true;
-    if (fase != 7) {
-      if (!enter) {
-        enter = 1;
-      }
-    }
-  }
-  if (k == 13 || k == 27) {
-    if (!enter) {
-      enter = 1;
-    }
-  }
-  if (k == 81) {
-    if (fase == 7) {
-      keyonx = 1;
-    }
-  }
-  if (k == 82) {
-    if (fase == 7 && starcnt == 0) {
-      keyonx = 11;
-    }
-  }
-  if (k == 90) {
-    lookback = -1;
-  }
-  if (k == 88) {
-    lookback = 1;
+  if (!pressed && enter) {
+    enter = 0;
   }
 }
-
-function Keyup(evt) {
-  evt.preventDefault();
-
-  var k = evt.keyCode;
-
-  if (k == 38 || k == 87) {
-    u[im].up = false;
+// What the keys do (see input/keyboard.js).
+function onKey(action, pressed) {
+  if (action == "accelerate") {
+    u[im].up = pressed;
   }
-  if (k == 40 || k == 83) {
-    u[im].down = false;
+  if (action == "brake") {
+    u[im].down = pressed;
   }
-  if (k == 37 || k == 65) {
-    u[im].left = false;
+  if (action == "steerLeft") {
+    u[im].left = pressed;
   }
-  if (k == 39 || k == 68) {
-    u[im].right = false;
+  if (action == "steerRight") {
+    u[im].right = pressed;
   }
-  if (k == 32) {
-    u[im].handb = false;
+  if (action == "handbrake") {
+    u[im].handb = pressed;
     if (fase != 7) {
-      if (enter) {
-        enter = 0;
+      confirmkey(pressed);
+    }
+  }
+  if (action == "confirm") {
+    confirmkey(pressed);
+  }
+  if (action == "toggleArrow") {
+    if (pressed) {
+      if (fase == 7) {
+        keyonx = 1;
       }
-    }
-  }
-  if (k == 13 || k == 27) {
-    if (enter) {
-      enter = 0;
-    }
-  }
-  if (k == 81) {
-    if (u[im].arrace) {
-      u[im].arrace = false;
     } else {
-      u[im].arrace = true;
+      u[im].arrace = !u[im].arrace;
+      keyonx = 0;
     }
-    keyonx = 0;
   }
-  if (k == 82) {
+  if (action == "rewind") {
     if (fase == 7 && starcnt == 0) {
-      stopEngine();
-      stopStageMusic();
-      preprevtime();
-    }
-    keyonx = 0;
-  }
-  if (k == 90 || k == 88) {
-    lookback = 0;
-  }
-  if (k == 86) {
-    if (fase == 7) {
-      camode++;
-      if (camode == 3) {
-        camode = 0;
+      if (pressed) {
+        keyonx = 11;
+      } else {
+        stopEngine();
+        stopStageMusic();
+        preprevtime();
       }
     }
+    if (!pressed) {
+      keyonx = 0;
+    }
   }
-  if (k == 78) {
-    if (!audio.muteSound) {
-      audio.muteSound = true;
+  if (action == "lookBackLeft") {
+    lookback = pressed ? -1 : 0;
+  }
+  if (action == "lookBackRight") {
+    lookback = pressed ? 1 : 0;
+  }
+  if (!pressed && action == "nextCamera" && fase == 7) {
+    camode++;
+    if (camode == 3) {
+      camode = 0;
+    }
+  }
+  if (!pressed && action == "muteSound") {
+    audio.muteSound = !audio.muteSound;
+    if (audio.muteSound) {
       stopEngine();
-    } else {
-      audio.muteSound = false;
     }
   }
-  if (k == 77) {
-    if (!audio.muteMusic) {
-      audio.muteMusic = true;
-    } else {
-      audio.muteMusic = false;
-    }
+  if (!pressed && action == "muteMusic") {
+    audio.muteMusic = !audio.muteMusic;
   }
 }
+installKeyboard(onKey);
 
 function init() {
   gotGamepads();
@@ -19323,9 +19214,6 @@ function getInfo(iname) {
   }
   return retivalue;
 }
-
-window.addEventListener("keydown", Keydown, false);
-window.addEventListener("keyup", Keyup, false);
 
 document.addEventListener("visibilitychange", function () {
   if (document.visibilityState == "visible") {
