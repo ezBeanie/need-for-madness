@@ -8,18 +8,16 @@ import { isPhone } from "./core/platform.js";
 import { random } from "./core/random.js";
 import {
   audio,
-  engine,
   isEngineLoaded,
   loadEngine,
   pauseMusic,
   playStageMusic,
   resumeMusic,
-  startEngine,
   stopEngine,
   stopStageMusic,
   unlockAudio,
 } from "./audio/audio.js";
-import { coolDownCarSounds } from "./audio/carSounds.js";
+import { enginsnd, resetEngineSound } from "./audio/engineSound.js";
 import { installKeyboard } from "./input/keyboard.js";
 import { CONFIRM, confirm, pressConfirm } from "./input/confirm.js";
 import { saveSetting } from "./core/storage.js";
@@ -461,8 +459,7 @@ function gameworks() {
         camera.orbitHigh = false;
         camera.orbitTilt = 0;
         camera.mode = 0;
-        revfase = 0;
-        reqpbr = 1;
+        resetEngineSound();
         rd.fillStyle = "#FFFFFF";
         rd.fillRect(0, 0, view.width, view.height);
       }
@@ -1618,233 +1615,6 @@ function mainloop(now) {
 function checknplay() {
   unlockAudio(game.phase == PHASE.race);
 }
-var flexr = 2;
-var flexm = 0.2;
-var revfase = 0,
-  revat = 0,
-  revto = 0,
-  revup = 0,
-  revdn = 0,
-  revfr = 0,
-  revout = 0;
-var doublerev = 0;
-var reqvol = 1;
-var reqpbr = 1;
-var ringr = 10;
-function enginsnd() {
-  if (engine.started) {
-    var atmax = false;
-    var pedl = false;
-    if (
-      (racers[game.player].u.up && racers[game.player].speed > 0) ||
-      (racers[game.player].u.down && racers[game.player].speed < 0)
-    ) {
-      pedl = true;
-    }
-    if (racers[game.player].wtouch && !racers[game.player].capsized) {
-      if (racers[game.player].mtouch) {
-        var flexd =
-          (racers[game.player].skid == 1 && racers[game.player].u.handb) ||
-          Math.abs(
-            racers[game.player].scz[0] -
-              (racers[game.player].scz[1] +
-                racers[game.player].scz[0] +
-                racers[game.player].scz[2] +
-                racers[game.player].scz[3]) /
-                4,
-          ) > 0.1 ||
-          Math.abs(
-            racers[game.player].scx[0] -
-              (racers[game.player].scx[1] +
-                racers[game.player].scx[0] +
-                racers[game.player].scx[2] +
-                racers[game.player].scx[3]) /
-                4,
-          ) > 0.1;
-        if (!flexd) {
-          if (pedl) {
-            if (
-              Math.abs(racers[game.player].speed) > 0 &&
-              Math.abs(racers[game.player].speed) <=
-                carStats.swits[game.carTypes[game.player]][0]
-            ) {
-              var amp =
-                Math.abs(racers[game.player].speed) /
-                carStats.swits[game.carTypes[game.player]][0];
-              amp *= amp;
-              reqvol = 1 + amp;
-              reqpbr = 1 + amp;
-            }
-            if (
-              Math.abs(racers[game.player].speed) >
-                carStats.swits[game.carTypes[game.player]][0] &&
-              Math.abs(racers[game.player].speed) <=
-                carStats.swits[game.carTypes[game.player]][1]
-            ) {
-              var amp =
-                (Math.abs(racers[game.player].speed) -
-                  carStats.swits[game.carTypes[game.player]][0]) /
-                (carStats.swits[game.carTypes[game.player]][1] -
-                  carStats.swits[game.carTypes[game.player]][0]);
-              amp *= amp;
-              reqvol = 1 + amp;
-              reqpbr = 1.2 + amp;
-              if (reqpbr > 2.1) {
-                reqpbr = 2.1;
-              }
-            }
-            if (
-              Math.abs(racers[game.player].speed) >
-                carStats.swits[game.carTypes[game.player]][1] &&
-              Math.abs(racers[game.player].speed) <=
-                carStats.swits[game.carTypes[game.player]][2]
-            ) {
-              var amp =
-                (Math.abs(racers[game.player].speed) -
-                  carStats.swits[game.carTypes[game.player]][1]) /
-                (carStats.swits[game.carTypes[game.player]][2] -
-                  carStats.swits[game.carTypes[game.player]][1]);
-              amp *= amp;
-              reqvol = 1 + amp;
-              reqpbr = 1.6 + amp;
-              if (reqpbr > 2.2) {
-                reqpbr = 2.2;
-                atmax = true;
-              }
-            }
-          } else {
-            var amp =
-              Math.abs(racers[game.player].speed) /
-              carStats.swits[game.carTypes[game.player]][2];
-            reqvol = 1 + amp * 0.5;
-            reqpbr = 1 + amp;
-          }
-          if (flexr != 1 + 1.1 * carStats.engrev[game.carTypes[game.player]]) {
-            flexr = 1 + 1.1 * carStats.engrev[game.carTypes[game.player]];
-            flexm = 0.02 + 0.16 * random.fx();
-          }
-        } else {
-          reqvol = flexr;
-          if (reqvol > 2) {
-            reqvol = 2;
-          }
-          reqpbr = flexr;
-          flexr -= flexm;
-          if (flexr < 1 + 0.5 * carStats.engrev[game.carTypes[game.player]]) {
-            flexr = 1 + 1.1 * carStats.engrev[game.carTypes[game.player]];
-            flexm = 0.02 + 0.16 * random.fx();
-          }
-        }
-        if (revfase != 0) {
-          if (revout == 0) {
-            revfase = 0;
-          } else {
-            revout--;
-          }
-        }
-      }
-    } else {
-      if (revfase == 0) {
-        revout = 20;
-        revat = reqpbr;
-        revto = revat + 0.3 + 0.2 * random.fx();
-        if (revto < 2) {
-          revto = 2;
-        }
-        revup = 0.1 + 0.3 * random.fx();
-        revdn = 0.1 + 0.2 * random.fx();
-        revfr = Math.floor(5 + 5 * random.fx());
-        revfase = 1;
-        if (random.fx() > random.fx()) {
-          doublerev = revto * (0.8 + 0.15 * random.fx());
-        } else {
-          doublerev = 0;
-        }
-      }
-      if (revfase == 1) {
-        revat += revup;
-        reqvol = revat;
-        if (reqvol > 2) {
-          reqvol = 2;
-        }
-        reqpbr = revat;
-        if (revat > revto) {
-          revfase = 2;
-        }
-      }
-      if (revfase == 2) {
-        revfr--;
-        if (revfr == 0) {
-          revfase = 3;
-        }
-      }
-      if (revfase == 3) {
-        revat -= revdn;
-        if (revat < doublerev) {
-          revat = revto;
-          doublerev = 0;
-        }
-        if (revat < 0.5) {
-          revat = 0.5;
-          revfase = 4;
-        }
-        reqvol = revat;
-        if (reqvol > 2) {
-          reqvol = 2;
-        }
-        reqpbr = revat;
-        if (reqpbr < 1.4) {
-          reqpbr = 1.4;
-        }
-      }
-      if (revfase == 4 && racers[game.player].mtouch) {
-        if (pedl) {
-          reqpbr += 0.1;
-        } else {
-          reqpbr -= 0.2;
-        }
-        if (reqpbr > 2) {
-          reqpbr = 2;
-        }
-        if (reqpbr < 1.4) {
-          reqpbr = 1.4;
-        }
-        reqvol = (reqpbr - 1.4) * 2.5 + 0.5;
-        if (reqvol > 2) {
-          reqvol = 2;
-        }
-      }
-    }
-    if (raceEvents.raceOverTicks == 0) {
-      engine.volume.gain.value +=
-        ((reqvol - 1) * 0.75 + 1 - engine.volume.gain.value) / 10;
-    } else {
-      if (engine.volume.gain.value > 0.3) {
-        engine.volume.gain.value -= 0.01;
-      }
-    }
-    if (atmax) {
-      if (ringr == 0) {
-        reqpbr *= 1.06;
-        ringr = Math.floor(random.fx() * 50);
-      } else {
-        ringr--;
-      }
-    }
-    var abo = reqpbr - 1;
-    if (abo < 0) {
-      abo = 0;
-    }
-    engine.source.playbackRate.value =
-      1 + abo * carStats.engrev[game.carTypes[game.player]];
-  } else {
-    if (!raceEvents.raceOverTicks) {
-      startEngine(game.carTypes[game.player], true);
-    }
-  }
-  coolDownCarSounds();
-}
-
 function drawonbordo() {
   var fm = insanoScale();
   var topo = 260 * view.scaleY;
