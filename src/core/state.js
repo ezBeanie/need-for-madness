@@ -1,9 +1,31 @@
+// The screens and modes the game switches between (game.phase). The numbers are the
+// original ones; 6, 14 and 17 are gone.
+export const PHASE = {
+  loading: 0,
+  mainMenu: 1,
+  carSelect: 2,
+  stageLoading: 3,
+  stageSelect: 4,
+  instructions: 5,
+  race: 7,
+  replay: 8,
+  // one tick while a replay winds back to its start
+  replayRewind: 9,
+  // the highlight replay shown after a race
+  highlights: 10,
+  paused: 11,
+  raceEnd: 12,
+  resetQuestion: 13,
+  startFlash: 15,
+  // the screen between stages in switch mode
+  switchScreen: 16,
+  // the player winding back time during a race
+  timeRewind: 18,
+};
+
 // What the game is doing: the screen it shows, the race setup and the player's progress.
 export const game = {
-  // 0 loading, 1 main menu, 2 car select, 3 loading a stage, 4 stage select,
-  // 5 instructions, 7 racing, 8/9/10 replays, 11 paused, 12 race end, 13 reset question,
-  // 15 start flash, 16 switching to the next stage, 18 rewinding
-  phase: 0,
+  phase: PHASE.loading,
   // 0 the regular championship, 1 "switch" mode (stage after stage without menus)
   mode: 0,
   // stages the player can pick (1..17)

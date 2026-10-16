@@ -69,7 +69,7 @@ import {
 } from "./render/models.js";
 import { canvas2D, rd, view } from "./ui/view.js";
 import { camera } from "./render/camera.js";
-import { game } from "./core/state.js";
+import { game, PHASE } from "./core/state.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 var camrs, pyclos, pnext, pback, onycl;
@@ -1822,16 +1822,16 @@ function loaddata() {
       }
       if (stanza == 0) {
         fredo = 0;
-        game.phase = 1;
+        game.phase = PHASE.mainMenu;
       }
       if (stanza == 1) {
         stageloadtyp = 2;
         stageload = -1;
-        game.phase = 3;
+        game.phase = PHASE.stageLoading;
       }
       if (stanza == 2) {
         fredo = 0;
-        game.phase = 1;
+        game.phase = PHASE.mainMenu;
       }
     }
   } else {
@@ -2471,7 +2471,7 @@ var sprk = [];
 function sprks(cn, x, y, z, sx, sy, sz, cap) {
   var vdist = Math.sqrt(sx * sx + sy * sy + sz * sz);
   if (vdist > 5 && !onpausefr) {
-    if (game.phase == 7) {
+    if (game.phase == PHASE.race) {
       recordsprks(cn, x, y, z, sx, sy, sz, cap);
     }
     var oli = 1;
@@ -2580,7 +2580,7 @@ function dustup(tskd, c, mst, x, y, z, sx, sz, smag, tlt, capsz) {
     bk = 1;
   }
   if (bk > 0.2 && !tilted && !onpausefr) {
-    if (game.phase == 7) {
+    if (game.phase == PHASE.race) {
       recordust(tskd, c, mst, x, y, z, sx, sz, smag, tlt, capsz);
     }
     var ui = -1;
@@ -2883,7 +2883,7 @@ function gameworks() {
   camera.matrix = mat4.create();
   mat4.perspective(camera.matrix, fieldOfView, view.aspect, zNear, zFar);
   onelec = false;
-  if (game.phase == 7) {
+  if (game.phase == PHASE.race) {
     if (starcnt == 0) {
       drive();
       setwheelspos();
@@ -3002,7 +3002,7 @@ function gameworks() {
       }
     }
   }
-  if (game.phase == 8) {
+  if (game.phase == PHASE.replay) {
     replay();
     setwheelspos();
     shadoworks();
@@ -3013,7 +3013,7 @@ function gameworks() {
     cpanimate();
     drawreplay();
   }
-  if (game.phase == 10) {
+  if (game.phase == PHASE.highlights) {
     hreplay();
     setwheelspos();
     shadoworks();
@@ -3026,10 +3026,10 @@ function gameworks() {
     cpanimate();
     drawhreplay();
   }
-  if (game.phase == 16) {
+  if (game.phase == PHASE.switchScreen) {
     drawswitch();
   }
-  if (game.phase == 18) {
+  if (game.phase == PHASE.timeRewind) {
     revtime();
     setwheelspos();
     shadoworks();
@@ -3929,12 +3929,12 @@ function render(now) {
   }
   placeCamera(camera.x, camera.y, camera.z, camera.matrix);
   if (
-    game.phase == 7 ||
-    game.phase == 8 ||
-    game.phase == 9 ||
-    game.phase == 10 ||
-    game.phase == 16 ||
-    game.phase == 18
+    game.phase == PHASE.race ||
+    game.phase == PHASE.replay ||
+    game.phase == PHASE.replayRewind ||
+    game.phase == PHASE.highlights ||
+    game.phase == PHASE.switchScreen ||
+    game.phase == PHASE.timeRewind
   ) {
     if (updateframe || framefase == game.phase) {
       framefase = game.phase;
@@ -3944,7 +3944,7 @@ function render(now) {
       gl.disable(gl.DEPTH_TEST);
       drawModel(ground);
       drawModel(skydom);
-      if (game.phase == 18) {
+      if (game.phase == PHASE.timeRewind) {
         drawParticle(timetube);
       }
       gl.enable(gl.DEPTH_TEST);
@@ -4070,7 +4070,7 @@ function render(now) {
           drawModel(fixdisk);
         }
       }
-      if (game.phase == 16) {
+      if (game.phase == PHASE.switchScreen) {
         for (var c = 0; c < game.carCount; c++) {
           drawParticle(switchp[c]);
         }
@@ -4099,7 +4099,7 @@ function render(now) {
       updateframe = false;
     }
   }
-  if (game.phase == 2) {
+  if (game.phase == PHASE.carSelect) {
     if (updateframe || framefase == game.phase) {
       framefase = game.phase;
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -4151,7 +4151,7 @@ function render(now) {
       updateframe = false;
     }
   }
-  if (game.phase == 4) {
+  if (game.phase == PHASE.stageSelect) {
     if (updateframe || framefase == game.phase) {
       framefase = game.phase;
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -4192,7 +4192,7 @@ function render(now) {
       updateframe = false;
     }
   }
-  if (game.phase == 12 && fredo == 76) {
+  if (game.phase == PHASE.raceEnd && fredo == 76) {
     if (updateframe || framefase == game.phase) {
       framefase = game.phase;
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -10429,11 +10429,11 @@ function colide(c, xc) {
 }
 var colidim = [false, false, false, false, false, false, false];
 function regn(nr, k, mag, c) {
-  if (game.phase == 7) {
+  if (game.phase == PHASE.race) {
     mag *= cd.dammult[car[c].typ];
   }
   if (Math.abs(mag) > 10) {
-    if (game.phase == 7) {
+    if (game.phase == PHASE.race) {
       repcar[c].regat[repcar[c].nreg] = 430;
       repcar[c].regnr[repcar[c].nreg] = nr;
       repcar[c].regk[repcar[c].nreg] = k;
@@ -10490,11 +10490,11 @@ function regn(nr, k, mag, c) {
           nbsq[c]++;
         }
       }
-      if (game.phase == 7 && (c == game.player || colidim[c])) {
+      if (game.phase == PHASE.race && (c == game.player || colidim[c])) {
         crashsnd(mag, xsing * zsing);
       }
     } else {
-      if (game.phase == 7 && (c == game.player || colidim[c])) {
+      if (game.phase == PHASE.race && (c == game.player || colidim[c])) {
         crashsnd(mag, 0);
       }
     }
@@ -10556,7 +10556,7 @@ function regn(nr, k, mag, c) {
           }
           if (Math.abs(tmag) > 0.1) {
             if (random.fx() > 0.91) {
-              if (game.phase != 9) {
+              if (game.phase != PHASE.replayRewind) {
                 chipaway(
                   c,
                   rad.dvert[i * 3],
@@ -10567,7 +10567,7 @@ function regn(nr, k, mag, c) {
               }
             }
           }
-          if (game.phase == 7) {
+          if (game.phase == PHASE.race) {
             hitmag[c] += Math.abs(tmag) * 0.667;
           }
           modpix = 1;
@@ -10585,7 +10585,7 @@ function regn(nr, k, mag, c) {
           nsq++;
           if (Math.abs(tmag) > 0.1) {
             if (random.fx() > 0.91) {
-              if (game.phase != 9) {
+              if (game.phase != PHASE.replayRewind) {
                 chipaway(
                   c,
                   rad.dvert[i * 3],
@@ -10596,7 +10596,7 @@ function regn(nr, k, mag, c) {
               }
             }
           }
-          if (game.phase == 7) {
+          if (game.phase == PHASE.race) {
             hitmag[c] += Math.abs(tmag) * 0.667;
           }
           modpix = 2;
@@ -11047,58 +11047,50 @@ function gameloop() {
       }
     }
   }
-  if (game.phase == 0) {
+  if (game.phase == PHASE.loading) {
     loaddata();
   }
-  if (game.phase == 1) {
+  if (game.phase == PHASE.mainMenu) {
     drawmain();
   }
-  if (game.phase == 2) {
+  if (game.phase == PHASE.carSelect) {
     carselect();
   }
-  if (game.phase == 3) {
+  if (game.phase == PHASE.stageLoading) {
     stageloading();
   }
-  if (game.phase == 4) {
+  if (game.phase == PHASE.stageSelect) {
     stageselect();
   }
-  if (game.phase == 5) {
+  if (game.phase == PHASE.instructions) {
     gameinstructions();
   }
   if (
-    game.phase == 7 ||
-    game.phase == 8 ||
-    game.phase == 9 ||
-    game.phase == 10 ||
-    game.phase == 16 ||
-    game.phase == 18
+    game.phase == PHASE.race ||
+    game.phase == PHASE.replay ||
+    game.phase == PHASE.replayRewind ||
+    game.phase == PHASE.highlights ||
+    game.phase == PHASE.switchScreen ||
+    game.phase == PHASE.timeRewind
   ) {
     gameworks();
   }
-  if (game.phase == 11) {
+  if (game.phase == PHASE.paused) {
     pausedgame();
   }
-  if (game.phase == 12) {
+  if (game.phase == PHASE.raceEnd) {
     endgame();
     unlockedcar();
   }
-  if (game.phase == 13) {
+  if (game.phase == PHASE.resetQuestion) {
     resetgame();
   }
-  if (game.phase == 15) {
+  if (game.phase == PHASE.startFlash) {
     rd.fillStyle = "#FFFFFF";
     rd.fillRect(0, 0, view.width, view.height);
     cntspark--;
     if (cntspark == 0) {
       aftersparkstart();
-    }
-  }
-  if (game.phase == 17) {
-    rd.fillStyle = "#15190D";
-    rd.fillRect(0, 0, view.width, view.height);
-    cntspark--;
-    if (cntspark == 0) {
-      afterswitch();
     }
   }
   if (audio.muteMusic) {
@@ -11134,7 +11126,7 @@ function mainloop(now) {
 }
 // A click or touch allows audio (see unlockAudio).
 function checknplay() {
-  unlockAudio(game.phase == 7);
+  unlockAudio(game.phase == PHASE.race);
 }
 var bfgscrape = 0;
 function grndscrapesnd(typ, sx, sy, sz) {
@@ -11696,7 +11688,7 @@ function pausedgame() {
     } else {
       playedforeplay = false;
     }
-    game.phase = 7;
+    game.phase = PHASE.race;
   }
   on = 0;
   if (onhip == 1) {
@@ -11763,7 +11755,7 @@ function pausedgame() {
     instmain = false;
     ifase = 0;
     dudo = 250;
-    game.phase = 5;
+    game.phase = PHASE.instructions;
   }
   on = 0;
   if (onhip == 3) {
@@ -11845,7 +11837,7 @@ function pausedgame() {
       } else {
         playedforeplay = false;
       }
-      game.phase = 7;
+      game.phase = PHASE.race;
       noten = 0;
     }
     if (onhip == 1) {
@@ -11867,7 +11859,7 @@ function pausedgame() {
       instmain = false;
       ifase = 0;
       dudo = 250;
-      game.phase = 5;
+      game.phase = PHASE.instructions;
     }
     if (onhip == 3) {
       for (var c = 0; c < game.carCount; c++) {
@@ -11916,11 +11908,11 @@ function afterquitgame() {
     datacnt = 2458;
     stanza = 2;
     onskip = false;
-    game.phase = 0;
+    game.phase = PHASE.loading;
   } else {
     fredo = 0;
     onskip = false;
-    game.phase = 1;
+    game.phase = PHASE.mainMenu;
   }
 }
 var fredo = 0;
@@ -12055,7 +12047,7 @@ function drawmain() {
       instmain = true;
       ifase = 0;
       dudo = 250;
-      game.phase = 5;
+      game.phase = PHASE.instructions;
     }
     if (
       drawbutton(
@@ -12109,7 +12101,7 @@ function drawmain() {
         )
       ) {
         dudo = 250;
-        game.phase = 13;
+        game.phase = PHASE.resetQuestion;
       }
     }
     musictog();
@@ -12153,7 +12145,7 @@ function drawmain() {
         lvz = -0.5;
       var fogdist = 10700;
       setWorld(snap, fogc, lvx, lvy, lvz, fogdist);
-      game.phase = 2;
+      game.phase = PHASE.carSelect;
     }
   }
   if (!flwg) {
@@ -12886,18 +12878,18 @@ function gameinstructions() {
       )
     ) {
       if (instmain) {
-        game.phase = 1;
+        game.phase = PHASE.mainMenu;
         playMenuMusic();
       } else {
-        game.phase = 11;
+        game.phase = PHASE.paused;
       }
     }
     if (enter == 1) {
       if (instmain) {
-        game.phase = 1;
+        game.phase = PHASE.mainMenu;
         playMenuMusic();
       } else {
-        game.phase = 11;
+        game.phase = PHASE.paused;
       }
       enter = 2;
     }
@@ -12914,10 +12906,10 @@ function gameinstructions() {
   }
   if (!onabtn && pointer.down) {
     if (instmain) {
-      game.phase = 1;
+      game.phase = PHASE.mainMenu;
       playMenuMusic();
     } else {
-      game.phase = 11;
+      game.phase = PHASE.paused;
     }
     pointer.down = false;
   }
@@ -13011,7 +13003,7 @@ function resetgame() {
     game.carTypes[0] = 5;
     saveInfo("carsel", game.carTypes[0]);
     canreset = false;
-    game.phase = 1;
+    game.phase = PHASE.mainMenu;
   }
   if (
     drawbutton(
@@ -13033,7 +13025,7 @@ function resetgame() {
       false,
     )
   ) {
-    game.phase = 1;
+    game.phase = PHASE.mainMenu;
   }
 }
 function drawloading() {
@@ -13348,14 +13340,9 @@ function drawswitch() {
     camera.target = game.player;
     cp.switchtime += 134;
     timer = cp.switchtime;
-    game.phase = 7;
+    game.phase = PHASE.race;
     camera.mode = 0;
   }
-}
-function afterswitch() {
-  resumeStageMusic();
-  updateframe = false;
-  game.phase = 16;
 }
 function drawrevtime() {
   rd.clearRect(0, 0, view.width, view.height);
@@ -13830,7 +13817,7 @@ function drawinter() {
         onbreplay = 2;
       } else {
         iniend();
-        game.phase = 12;
+        game.phase = PHASE.raceEnd;
       }
       stopEngine();
     }
@@ -13856,7 +13843,7 @@ function drawinter() {
       onhip = 0;
       stopStageMusic();
       stopEngine();
-      game.phase = 11;
+      game.phase = PHASE.paused;
     }
   }
   if (starcnt <= 65) {
@@ -13876,7 +13863,7 @@ function drawinter() {
         playSound(40, 1);
         createswitches();
         switcnt = 0;
-        game.phase = 16;
+        game.phase = PHASE.switchScreen;
       }
     }
     if (
@@ -14125,7 +14112,7 @@ function drawinter() {
         onhip = 0;
         stopStageMusic();
         stopEngine();
-        game.phase = 11;
+        game.phase = PHASE.paused;
       }
     }
     onycl = oncla(
@@ -15032,12 +15019,12 @@ function drawhreplay() {
   }
   if (cntreps == 2 && fr == 427) {
     iniend();
-    game.phase = 12;
+    game.phase = PHASE.raceEnd;
   }
   if (enter == 1) {
     enter = 2;
     iniend();
-    game.phase = 12;
+    game.phase = PHASE.raceEnd;
   }
   if (
     drawbutton(
@@ -15061,7 +15048,7 @@ function drawhreplay() {
     (pointer.down && cp.stage == 1 && game.unlocked == 1)
   ) {
     iniend();
-    game.phase = 12;
+    game.phase = PHASE.raceEnd;
   }
   if (fr >= 428) {
     rd.globalAlpha = 0.7;
@@ -15365,11 +15352,11 @@ function afterend() {
     datacnt = 2458;
     stanza = 2;
     onskip = true;
-    game.phase = 0;
+    game.phase = PHASE.loading;
   } else {
     fredo = 0;
     onskip = true;
-    game.phase = 1;
+    game.phase = PHASE.mainMenu;
   }
 }
 var lastsel = 0;
@@ -15801,7 +15788,7 @@ function drawcarselect() {
         }
         stageloadtyp = 0;
         stageload = -1;
-        game.phase = 3;
+        game.phase = PHASE.stageLoading;
       }
       if (game.unlocked == 1) {
         if (handson != 167) {
@@ -15835,7 +15822,7 @@ function drawcarselect() {
           cp.stage = 2;
           stageloadtyp = 2;
           stageload = -1;
-          game.phase = 3;
+          game.phase = PHASE.stageLoading;
           handson = 167;
         }
         if (
@@ -15856,7 +15843,7 @@ function drawcarselect() {
           cp.stage = 2;
           stageloadtyp = 2;
           stageload = -1;
-          game.phase = 3;
+          game.phase = PHASE.stageLoading;
           handson = 167;
         }
       } else {
@@ -15871,7 +15858,7 @@ function drawcarselect() {
           }
           stageloadtyp = 0;
           stageload = -1;
-          game.phase = 3;
+          game.phase = PHASE.stageLoading;
         }
       }
     }
@@ -15970,12 +15957,12 @@ function stageloading() {
         dudo = 0;
         ondud = 0;
       }
-      game.phase = 4;
+      game.phase = PHASE.stageSelect;
     } else {
       game.carCount = 1;
       pauseMenuMusic();
       playStageMusic(cp.stage);
-      game.phase = 7;
+      game.phase = PHASE.race;
     }
   }
 }
@@ -16204,7 +16191,7 @@ function drawstageselect() {
           lvz = -0.5;
         var fogdist = 10700;
         setWorld(snap, fogc, lvx, lvy, lvz, fogdist);
-        game.phase = 2;
+        game.phase = PHASE.carSelect;
         rd.fillStyle = "#FFFFFF";
         rd.fillRect(0, 0, view.width, view.height);
       }
@@ -16510,14 +16497,14 @@ function drawstageselect() {
       bgsload = new Image();
       bgsload.src = canvas2D.toDataURL("image/png");
       stageloadtyp = 1;
-      game.phase = 3;
+      game.phase = PHASE.stageLoading;
     }
   }
   musictog();
 }
 function startflash() {
   cntspark = 2;
-  game.phase = 15;
+  game.phase = PHASE.startFlash;
 }
 function aftersparkstart() {
   playStageMusic(cp.stage);
@@ -16531,7 +16518,7 @@ function aftersparkstart() {
     cp.nlaps = 1;
   }
   updateframe = false;
-  game.phase = 7;
+  game.phase = PHASE.race;
 }
 function spPolygon(stx, sty, xd, yd, fm, to, enx, eny) {
   rd.beginPath();
@@ -17667,7 +17654,7 @@ function catchnow(hty) {
 var fr = 0;
 var destnow = [];
 function rewindreplay() {
-  game.phase = 9;
+  game.phase = PHASE.replayRewind;
   fr = 0;
   camera.mode = 1;
   camera.target = game.player;
@@ -17707,7 +17694,7 @@ function rewindreplay() {
       }
     }
   }
-  game.phase = 8;
+  game.phase = PHASE.replay;
 }
 function replay() {
   for (var c = 0; c < game.carCount; c++) {
@@ -17852,7 +17839,7 @@ function replay() {
   oncheckpoint = reponcheckpoint[fr];
   onlastcheck = reponlastcheck[fr];
   if (fr == 429) {
-    game.phase = 11;
+    game.phase = PHASE.paused;
     camera.mode = 0;
     camera.target = game.player;
     fr = 0;
@@ -17861,7 +17848,7 @@ function replay() {
   }
 }
 function fastforwardexit() {
-  game.phase = 9;
+  game.phase = PHASE.replayRewind;
   for (var c = 0; c < game.carCount; c++) {
     if (repcar[c].destat != 700 && repcar[c].destat >= fr) {
       embos[c] = 0;
@@ -17905,10 +17892,10 @@ function fastforwardexit() {
   }
   camera.mode = 0;
   camera.target = game.player;
-  game.phase = 11;
+  game.phase = PHASE.paused;
 }
 function hrewindhreplay() {
-  game.phase = 9;
+  game.phase = PHASE.replayRewind;
   fr = 0;
   for (var c = 0; c < game.carCount; c++) {
     destnow[c] = false;
@@ -17964,7 +17951,7 @@ function hrewindhreplay() {
     rmode = 95;
     camera.orbitAngle += 90;
   }
-  game.phase = 10;
+  game.phase = PHASE.highlights;
 }
 function hreplay() {
   for (var c = 0; c < game.carCount; c++) {
@@ -18127,7 +18114,7 @@ function preprevtime() {
   fr = 429;
   camera.mode = 0;
   camera.target = game.player;
-  game.phase = 9;
+  game.phase = PHASE.replayRewind;
   for (var c = 0; c < game.carCount; c++) {
     destnow[c] = false;
     cntdest[c] = 0;
@@ -18167,7 +18154,7 @@ function preprevtime() {
   }
   resumeStageMusic();
   switcnt = 0;
-  game.phase = 18;
+  game.phase = PHASE.timeRewind;
 }
 function revtime() {
   for (var c = 0; c < game.carCount; c++) {
@@ -18279,7 +18266,7 @@ function revtime() {
     tcnt = 30;
     auscnt = 45;
     cp.haltall = false;
-    game.phase = 7;
+    game.phase = PHASE.race;
     nrec = 0;
     fr = 0;
   }
@@ -18289,7 +18276,7 @@ function revtime() {
 
 installPointer(canvas2D, {
   onRelease: checknplay,
-  keepPressedWhileTouching: () => game.phase == 7,
+  keepPressedWhileTouching: () => game.phase == PHASE.race,
 });
 
 var enter = 0;
@@ -18320,7 +18307,7 @@ function onKey(action, pressed) {
   }
   if (action == "handbrake") {
     u[game.player].handb = pressed;
-    if (game.phase != 7) {
+    if (game.phase != PHASE.race) {
       confirmkey(pressed);
     }
   }
@@ -18329,7 +18316,7 @@ function onKey(action, pressed) {
   }
   if (action == "toggleArrow") {
     if (pressed) {
-      if (game.phase == 7) {
+      if (game.phase == PHASE.race) {
         keyonx = 1;
       }
     } else {
@@ -18338,7 +18325,7 @@ function onKey(action, pressed) {
     }
   }
   if (action == "rewind") {
-    if (game.phase == 7 && starcnt == 0) {
+    if (game.phase == PHASE.race && starcnt == 0) {
       if (pressed) {
         keyonx = 11;
       } else {
@@ -18357,7 +18344,7 @@ function onKey(action, pressed) {
   if (action == "lookBackRight") {
     camera.lookBack = pressed ? 1 : 0;
   }
-  if (!pressed && action == "nextCamera" && game.phase == 7) {
+  if (!pressed && action == "nextCamera" && game.phase == PHASE.race) {
     camera.mode++;
     if (camera.mode == 3) {
       camera.mode = 0;

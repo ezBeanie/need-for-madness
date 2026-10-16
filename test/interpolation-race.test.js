@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { drawnMatrix, wheelSlip } from "./harness/drawing.js";
 import { NO_INPUT, autopilot, startRace } from "./harness/race.js";
+import { PHASE } from "../src/core/state.js";
 
 // Fast driving, stunts, flips back onto the wheels, crashes and dust on stage 1;
 // opponents wrecking each other (explosions) on stage 5.
@@ -14,7 +15,11 @@ const wrecks = { stage: 5, car: 15, input: autopilot, frames: 3000 };
 
 const raceFrames = async ({ stage, car, input, frames }, onFrame) => {
   const { ctx, step } = await startRace({ stage, car });
-  for (let frame = 0; frame < frames && ctx.game.phase === 7; frame++) {
+  for (
+    let frame = 0;
+    frame < frames && ctx.game.phase === PHASE.race;
+    frame++
+  ) {
     Object.assign(ctx.u[0], input(ctx));
     step();
     onFrame(ctx, frame);

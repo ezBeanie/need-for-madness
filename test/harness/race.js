@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { PHASE } from "../../src/core/state.js";
 import { loadGame } from "./loadGame.js";
 
 const KEY = { up: 38, down: 40, left: 37, right: 39, handb: 32 };
@@ -14,9 +15,9 @@ const DEG = 0.017453292519943295;
 export const openCarSelect = async ({ seed = 1, fxSeed } = {}) => {
   const game = await loadGame({ seed, fxSeed });
   const { ctx, stepUntil, key } = game;
-  stepUntil(() => ctx.game.phase === 1, 400, "main menu");
+  stepUntil(() => ctx.game.phase === PHASE.mainMenu, 400, "main menu");
   key(13, true);
-  stepUntil(() => ctx.game.phase === 2, 300, "car select");
+  stepUntil(() => ctx.game.phase === PHASE.carSelect, 300, "car select");
   key(13, false);
   return game;
 };
@@ -30,7 +31,7 @@ export const openStageSelect = async ({
 }) => {
   const game = await loadGame({ seed, fxSeed });
   const { ctx, stepUntil } = game;
-  stepUntil(() => ctx.game.phase === 1, 400, "main menu");
+  stepUntil(() => ctx.game.phase === PHASE.mainMenu, 400, "main menu");
 
   // Same state the car select screen leaves behind before "PLAY".
   ctx.game.carTypes[0] = car;
@@ -39,8 +40,8 @@ export const openStageSelect = async ({
   ctx.stageloadtyp = 0;
   ctx.stageload = 0;
   ctx.updateframe = true;
-  ctx.game.phase = 3;
-  stepUntil(() => ctx.game.phase === 4, 100, "stage select");
+  ctx.game.phase = PHASE.stageLoading;
+  stepUntil(() => ctx.game.phase === PHASE.stageSelect, 100, "stage select");
   return game;
 };
 
@@ -55,7 +56,7 @@ export const startRace = async ({
   const { ctx, stepUntil } = game;
   ctx.game.mode = 0;
   ctx.startflash();
-  stepUntil(() => ctx.game.phase === 7, 10, "race");
+  stepUntil(() => ctx.game.phase === PHASE.race, 10, "race");
   return game;
 };
 
@@ -161,7 +162,11 @@ export const recordRace = async ({
   const { ctx, step, key } = await startRace({ stage, car, seed, fxSeed });
   const states = [];
   let held = { ...NO_INPUT };
-  for (let frame = 0; frame < frames && ctx.game.phase === 7; frame++) {
+  for (
+    let frame = 0;
+    frame < frames && ctx.game.phase === PHASE.race;
+    frame++
+  ) {
     const wanted = input(ctx, frame);
     for (const name of Object.keys(KEY)) {
       if (wanted[name] !== held[name]) {
