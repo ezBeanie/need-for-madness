@@ -112,9 +112,9 @@ export const loadGame = async ({
 
   let frame = 0;
   const step = () => {
-    ctx.gameloop();
+    ctx.runTick();
     queue.flush();
-    ctx.render(frame * FRAME_MS);
+    ctx.render();
     queue.flush();
     frame++;
   };

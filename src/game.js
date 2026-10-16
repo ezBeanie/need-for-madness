@@ -1,28 +1,24 @@
+// Need for Madness: every 35 ms one logic tick of whatever is on screen, every display
+// frame one drawing, and the start-up.
+
 import { random } from "./core/random.js";
 import {
   audio,
-  isEngineLoaded,
-  loadEngine,
   pauseMusic,
-  playStageMusic,
   resumeMusic,
   stopEngine,
-  stopStageMusic,
   unlockAudio,
 } from "./audio/audio.js";
 import { enginsnd } from "./audio/engineSound.js";
 import { installKeyboard } from "./input/keyboard.js";
-import { pressConfirm } from "./input/confirm.js";
-import { buttons } from "./ui/widgets.js";
 import { installPointer } from "./input/pointer.js";
 import { interpolation } from "./render/interpolation.js";
-import { canvas3D, gl, setWorld } from "./render/renderer.js";
-import { canvas2D, rd, view } from "./ui/view.js";
-import { CAMERA, camera, startProjection, turnView } from "./render/camera.js";
+import { canvas3D, gl } from "./render/renderer.js";
+import { canvas2D, view } from "./ui/view.js";
+import { startProjection, turnView } from "./render/camera.js";
 import { moveCamera } from "./render/cameraMoves.js";
 import { render } from "./render/drawFrame.js";
 import { lookForGamepads, pollGamepads } from "./input/gamepad.js";
-import { scene } from "./render/scene.js";
 import {
   drawHighlightOverlay,
   drawReplayOverlay,
@@ -34,13 +30,10 @@ import { menu } from "./screens/menuState.js";
 import { carselect, scatterMenuSmoke } from "./screens/carSelect.js";
 import { stageloading, stageselect } from "./screens/stageSelect.js";
 import { gameinstructions } from "./screens/instructions.js";
-import { PHASE, game } from "./core/state.js";
+import { PHASE, RACE_PHASES, game } from "./core/state.js";
 import { tick } from "./core/tick.js";
-import { racers } from "./race/racers.js";
-import { track } from "./race/track.js";
 import {
   hreplay,
-  preprevtime,
   record,
   recording,
   replay,
@@ -55,23 +48,24 @@ import { pausedgame } from "./screens/pauseMenu.js";
 import { drawmain, resetgame } from "./screens/mainMenu.js";
 import { loaddata } from "./loading/assets.js";
 import { checkstat } from "./race/standings.js";
-import { nextRaceSize } from "./race/field.js";
 import { animateTrack, castShadows, placeWheels } from "./render/raceScene.js";
-import { countDown } from "./race/countdown.js";
+import { countDown, flashTick } from "./race/countdown.js";
+import { onKey } from "./input/controls.js";
 
-function gameworks() {
+// The logic runs in fixed ticks, whatever the display's refresh rate (see tick.js).
+const TICK_MS = 35;
+// how much time is caught up after a stall, e.g. while the tab was in the background
+const MAX_CATCH_UP_MS = 250;
+
+// The race and everything that replays it: the cars drive (or replay), wheels, shadows,
+// effects and the track follow, the overlay is drawn over it, the camera moves.
+function raceTick() {
   startProjection();
   raceEvents.onelec = false;
   if (game.phase == PHASE.race) {
     if (raceEvents.countdown == 0) {
       drive();
-      placeWheels();
-      castShadows();
-      chipsfly();
-      sprksfly();
-      dustfly();
-      expburn();
-      animateTrack();
+      moveScenery(true);
       record();
       checkstat();
       control();
@@ -83,26 +77,13 @@ function gameworks() {
   }
   if (game.phase == PHASE.replay) {
     replay();
-    placeWheels();
-    castShadows();
-    chipsfly();
-    sprksfly();
-    dustfly();
-    expburn();
-    animateTrack();
+    moveScenery(true);
     drawReplayOverlay();
   }
   if (game.phase == PHASE.highlights) {
     hreplay();
-    placeWheels();
-    castShadows();
-    if (!recording.onpausefr) {
-      chipsfly();
-      sprksfly();
-    }
-    dustfly();
-    expburn();
-    animateTrack();
+    // a highlight held still keeps chips and sparks where they are
+    moveScenery(!recording.onpausefr);
     drawHighlightOverlay();
   }
   if (game.phase == PHASE.switchScreen) {
@@ -110,13 +91,7 @@ function gameworks() {
   }
   if (game.phase == PHASE.timeRewind) {
     revtime();
-    placeWheels();
-    castShadows();
-    chipsfly();
-    sprksfly();
-    dustfly();
-    expburn();
-    animateTrack();
+    moveScenery(true);
     drawRewindOverlay();
   }
   moveCamera();
@@ -124,97 +99,57 @@ function gameworks() {
   menu.redraw = true;
 }
 
-// its random draws belong here, between the others made while loading
-scatterMenuSmoke();
-var mutedmusic = false;
-var omutemusic = false;
-var omutegame = false;
-var cntspark = 0;
-// The game logic runs in fixed ticks, independent of the display refresh rate (see tick.js).
-var tickms = 35;
-// Caps how much time is caught up after a stall, e.g. when the tab was in the background.
-var maxcatchup = 250;
-var ticktime = 0,
-  lasttick = -1;
-
-view.height;
-
-function gameloop() {
-  if (view.width != window.innerWidth || view.height != window.innerHeight) {
-    view.width = window.innerWidth;
-    view.height = window.innerHeight;
-    view.aspect = view.width / view.height;
-    view.scaleX = view.width / 1280;
-    view.scaleY = view.height / 720;
-    view.scale = (view.scaleX + view.scaleY) / 2;
-    view.widescreenShift = (view.width / view.height - 1.777) * 76;
-    canvas3D.width = view.width;
-    canvas3D.height = view.height;
-    canvas3D.style.width = "" + view.width + "px";
-    canvas3D.style.height = "" + view.height + "px";
-    canvas2D.width = view.width;
-    canvas2D.height = view.height;
-    canvas2D.style.width = "" + view.width + "px";
-    canvas2D.style.height = "" + view.height + "px";
-    gl.viewport(0, 0, view.width, view.height);
+const moveScenery = (chipsAndSparksFly) => {
+  placeWheels();
+  castShadows();
+  if (chipsAndSparksFly) {
+    chipsfly();
+    sprksfly();
   }
+  dustfly();
+  expburn();
+  animateTrack();
+};
+
+// What runs in a logic tick, by phase, in this order: when one changes the phase, the
+// next one runs in the same tick.
+const TICKS = [
+  [[PHASE.loading], loaddata],
+  [[PHASE.mainMenu], drawmain],
+  [[PHASE.carSelect], carselect],
+  [[PHASE.stageLoading], stageloading],
+  [[PHASE.stageSelect], stageselect],
+  [[PHASE.instructions], gameinstructions],
+  [RACE_PHASES, raceTick],
+  [[PHASE.paused], pausedgame],
+  [
+    [PHASE.raceEnd],
+    () => {
+      raceEndScreen();
+      unlockedcar();
+    },
+  ],
+  [[PHASE.resetQuestion], resetgame],
+  [[PHASE.startFlash], flashTick],
+];
+
+let musicPaused = false;
+
+export function runTick() {
+  fitToWindow();
   pollGamepads();
-  if (game.phase == PHASE.loading) {
-    loaddata();
-  }
-  if (game.phase == PHASE.mainMenu) {
-    drawmain();
-  }
-  if (game.phase == PHASE.carSelect) {
-    carselect();
-  }
-  if (game.phase == PHASE.stageLoading) {
-    stageloading();
-  }
-  if (game.phase == PHASE.stageSelect) {
-    stageselect();
-  }
-  if (game.phase == PHASE.instructions) {
-    gameinstructions();
-  }
-  if (
-    game.phase == PHASE.race ||
-    game.phase == PHASE.replay ||
-    game.phase == PHASE.replayRewind ||
-    game.phase == PHASE.highlights ||
-    game.phase == PHASE.switchScreen ||
-    game.phase == PHASE.timeRewind
-  ) {
-    gameworks();
-  }
-  if (game.phase == PHASE.paused) {
-    pausedgame();
-  }
-  if (game.phase == PHASE.raceEnd) {
-    raceEndScreen();
-    unlockedcar();
-  }
-  if (game.phase == PHASE.resetQuestion) {
-    resetgame();
-  }
-  if (game.phase == PHASE.startFlash) {
-    rd.fillStyle = "#FFFFFF";
-    rd.fillRect(0, 0, view.width, view.height);
-    cntspark--;
-    if (cntspark == 0) {
-      aftersparkstart();
+  for (const [phases, run] of TICKS) {
+    if (phases.includes(game.phase)) {
+      run();
     }
   }
-  if (audio.muteMusic) {
-    if (!mutedmusic) {
-      pauseMusic();
-      mutedmusic = true;
-    }
-  } else {
-    if (mutedmusic) {
-      resumeMusic();
-      mutedmusic = false;
-    }
+  if (audio.muteMusic && !musicPaused) {
+    pauseMusic();
+    musicPaused = true;
+  }
+  if (!audio.muteMusic && musicPaused) {
+    resumeMusic();
+    musicPaused = false;
   }
   if (tick.fraction >= tick.scale) {
     tick.fraction -= 1;
@@ -222,151 +157,75 @@ function gameloop() {
   tick.fraction += tick.scale;
   interpolation.tick++;
 }
-function mainloop(now) {
-  if (lasttick == -1) {
-    lasttick = now - tickms;
+
+const fitToWindow = () => {
+  if (view.width == window.innerWidth && view.height == window.innerHeight) {
+    return;
   }
-  ticktime += Math.min(now - lasttick, maxcatchup);
-  lasttick = now;
-  while (ticktime >= tickms) {
-    gameloop();
-    ticktime -= tickms;
+  view.width = window.innerWidth;
+  view.height = window.innerHeight;
+  view.aspect = view.width / view.height;
+  view.scaleX = view.width / 1280;
+  view.scaleY = view.height / 720;
+  view.scale = (view.scaleX + view.scaleY) / 2;
+  view.widescreenShift = (view.width / view.height - 1.777) * 76;
+  for (const canvas of [canvas3D, canvas2D]) {
+    canvas.width = view.width;
+    canvas.height = view.height;
+    canvas.style.width = "" + view.width + "px";
+    canvas.style.height = "" + view.height + "px";
   }
-  interpolation.alpha = ticktime / tickms;
-  render(now);
-  requestAnimationFrame(mainloop);
+  gl.viewport(0, 0, view.width, view.height);
+};
+
+// time not run as logic ticks yet, and when the last frame came
+let pendingMs = 0;
+let lastFrameTime = -1;
+
+export function runFrame(now) {
+  if (lastFrameTime == -1) {
+    lastFrameTime = now - TICK_MS;
+  }
+  pendingMs += Math.min(now - lastFrameTime, MAX_CATCH_UP_MS);
+  lastFrameTime = now;
+  while (pendingMs >= TICK_MS) {
+    runTick();
+    pendingMs -= TICK_MS;
+  }
+  interpolation.alpha = pendingMs / TICK_MS;
+  render();
+  requestAnimationFrame(runFrame);
 }
-// A click or touch allows audio (see unlockAudio).
-function checknplay() {
-  unlockAudio(game.phase == PHASE.race);
-}
+
+// its random draws belong here, between the others made while loading
+scatterMenuSmoke();
 // The original drew the tilt of the race end screen here, while loading; it is drawn again
 // before it shows. The draw stays so the randomness after it is as it was.
 random.fx();
 
-export function startflash() {
-  cntspark = 2;
-  game.phase = PHASE.startFlash;
-}
-function aftersparkstart() {
-  playStageMusic(track.stage);
-  setWorld(
-    scene.tint,
-    scene.fog,
-    scene.light[0],
-    scene.light[1],
-    scene.light[2],
-    scene.fogDistance,
-  );
-  if (game.mode == 1) {
-    for (var c = 1; c < game.carCount; c++) {
-      if (!isEngineLoaded(game.carTypes[c])) {
-        loadEngine(game.carTypes[c]);
-      }
-    }
-    track.nlaps = 1;
-  }
-  menu.redraw = false;
-  game.phase = PHASE.race;
-}
-// Canvas, input and start-up (formerly the inline script of index.html).
-
 installPointer(canvas2D, {
-  onRelease: checknplay,
+  // a click or touch allows audio (see unlockAudio)
+  onRelease: () => unlockAudio(game.phase == PHASE.race),
   keepPressedWhileTouching: () => game.phase == PHASE.race,
 });
-
-// What the keys do (see input/keyboard.js).
-function onKey(action, pressed) {
-  if (action == "accelerate") {
-    racers[game.player].u.up = pressed;
-  }
-  if (action == "brake") {
-    racers[game.player].u.down = pressed;
-  }
-  if (action == "steerLeft") {
-    racers[game.player].u.left = pressed;
-  }
-  if (action == "steerRight") {
-    racers[game.player].u.right = pressed;
-  }
-  if (action == "handbrake") {
-    racers[game.player].u.handb = pressed;
-    if (game.phase != PHASE.race) {
-      pressConfirm(pressed);
-    }
-  }
-  if (action == "confirm") {
-    pressConfirm(pressed);
-  }
-  if (action == "toggleArrow") {
-    if (pressed) {
-      if (game.phase == PHASE.race) {
-        buttons.pressedByKey = 1;
-      }
-    } else {
-      racers[game.player].u.arrace = !racers[game.player].u.arrace;
-      buttons.pressedByKey = 0;
-    }
-  }
-  if (action == "rewind") {
-    if (game.phase == PHASE.race && raceEvents.countdown == 0) {
-      if (pressed) {
-        buttons.pressedByKey = 11;
-      } else {
-        stopEngine();
-        stopStageMusic();
-        preprevtime();
-      }
-    }
-    if (!pressed) {
-      buttons.pressedByKey = 0;
-    }
-  }
-  if (action == "lookBackLeft") {
-    camera.lookBack = pressed ? -1 : 0;
-  }
-  if (action == "lookBackRight") {
-    camera.lookBack = pressed ? 1 : 0;
-  }
-  if (!pressed && action == "nextCamera" && game.phase == PHASE.race) {
-    camera.mode++;
-    if (camera.mode == CAMERA.flyTo) {
-      camera.mode = CAMERA.behind;
-    }
-  }
-  if (!pressed && action == "muteSound") {
-    audio.muteSound = !audio.muteSound;
-    if (audio.muteSound) {
-      stopEngine();
-    }
-  }
-  if (!pressed && action == "muteMusic") {
-    audio.muteMusic = !audio.muteMusic;
-  }
-  if (!pressed && action == "raceCars" && game.phase == PHASE.stageSelect) {
-    nextRaceSize();
-  }
-}
 installKeyboard(onKey);
 
-function init() {
-  lookForGamepads();
-  document.getElementById("loading").style.visibility = "hidden";
-  requestAnimationFrame(mainloop);
-}
-
-document.addEventListener("visibilitychange", function () {
+// A hidden tab is silent and gets its sound settings back when it shows again.
+let mutedBeforeHiding = { music: false, sound: false };
+document.addEventListener("visibilitychange", () => {
   if (document.visibilityState == "visible") {
-    audio.muteMusic = omutemusic;
-    audio.muteSound = omutegame;
+    audio.muteMusic = mutedBeforeHiding.music;
+    audio.muteSound = mutedBeforeHiding.sound;
   } else {
-    omutemusic = audio.muteMusic;
-    omutegame = audio.muteSound;
+    mutedBeforeHiding = { music: audio.muteMusic, sound: audio.muteSound };
     audio.muteMusic = true;
     audio.muteSound = true;
     stopEngine();
   }
 });
 
-window.addEventListener("load", init);
+window.addEventListener("load", () => {
+  lookForGamepads();
+  document.getElementById("loading").style.visibility = "hidden";
+  requestAnimationFrame(runFrame);
+});

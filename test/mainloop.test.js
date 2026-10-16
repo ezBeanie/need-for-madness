@@ -5,7 +5,7 @@ import { loadGame } from "./harness/loadGame.js";
 const ticksAfter = async (frameTimes) => {
   const { ctx } = await loadGame();
   const { loading } = await import("../src/loading/progress.js");
-  frameTimes.forEach((now) => ctx.mainloop(now));
+  frameTimes.forEach((now) => ctx.runFrame(now));
   return loading.step;
 };
 

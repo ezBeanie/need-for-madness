@@ -10,7 +10,6 @@ import {
 import { cosDeg, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
 import { PHASE, game } from "../core/state.js";
-import { startflash } from "../game.js";
 import { applyracecars, nextRaceSize } from "../race/field.js";
 import {
   AFTER_LOAD,
@@ -19,6 +18,7 @@ import {
   stageLoad,
 } from "../loading/stageLoad.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
+import { flashIntoRace } from "../race/countdown.js";
 import { raceEvents } from "../race/events.js";
 import { racers } from "../race/racers.js";
 import { spinFixHoops, track } from "../race/track.js";
@@ -582,7 +582,7 @@ const drawPracticeButton = (colors) => {
   ) {
     game.carCount = 1;
     pauseMenuMusic();
-    startflash();
+    flashIntoRace();
   }
 };
 
@@ -607,7 +607,7 @@ const drawPlaySwitchButton = (colors) => {
     applyracecars();
     game.mode = 1;
     pauseMenuMusic();
-    startflash();
+    flashIntoRace();
   }
 };
 
@@ -653,7 +653,7 @@ const play = () => {
   applyracecars();
   game.mode = 0;
   pauseMenuMusic();
-  startflash();
+  flashIntoRace();
 };
 
 // Insano tells his tip in a big speech bubble.

@@ -2,12 +2,16 @@
 // players, then the camera drops behind the player's car and the numbers count down. The
 // player can skip to that drop.
 
+import { isEngineLoaded, loadEngine, playStageMusic } from "../audio/audio.js";
 import { enginsnd, resetEngineSound } from "../audio/engineSound.js";
 import { isPhone } from "../core/platform.js";
-import { game } from "../core/state.js";
+import { PHASE, game } from "../core/state.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { pointer } from "../input/pointer.js";
 import { CAMERA, camera } from "../render/camera.js";
+import { setWorld } from "../render/renderer.js";
+import { scene } from "../render/scene.js";
+import { menu } from "../screens/menuState.js";
 import { animateTrack, castShadows, placeWheels } from "../render/raceScene.js";
 import { drawinter } from "../ui/hud.js";
 import { images } from "../ui/images.js";
@@ -21,6 +25,46 @@ import { track } from "./track.js";
 // raceEvents.countdown: where it starts, where the race has faded in from white, and from
 // where the camera is behind the car with the numbers counting down to 0
 export const COUNTDOWN = { start: 186, fadedIn: 185, behindTheCar: 65 };
+
+// The race starts with two white frames, then its world lights up and the countdown runs.
+let flashTicks = 0;
+
+export const flashIntoRace = () => {
+  flashTicks = 2;
+  game.phase = PHASE.startFlash;
+};
+
+export const flashTick = () => {
+  rd.fillStyle = "#FFFFFF";
+  rd.fillRect(0, 0, view.width, view.height);
+  flashTicks--;
+  if (flashTicks == 0) {
+    beginRace();
+  }
+};
+
+const beginRace = () => {
+  playStageMusic(track.stage);
+  setWorld(
+    scene.tint,
+    scene.fog,
+    scene.light[0],
+    scene.light[1],
+    scene.light[2],
+    scene.fogDistance,
+  );
+  // switch mode: the player can drive every car, in one lap
+  if (game.mode == 1) {
+    for (let c = 1; c < game.carCount; c++) {
+      if (!isEngineLoaded(game.carTypes[c])) {
+        loadEngine(game.carTypes[c]);
+      }
+    }
+    track.nlaps = 1;
+  }
+  menu.redraw = false;
+  game.phase = PHASE.race;
+};
 
 export function countDown() {
   if (raceEvents.countdown == COUNTDOWN.start) {

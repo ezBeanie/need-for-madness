@@ -23,6 +23,16 @@ export const PHASE = {
   timeRewind: 18,
 };
 
+// the phases that show the race (live, replayed or rewinding)
+export const RACE_PHASES = [
+  PHASE.race,
+  PHASE.replay,
+  PHASE.replayRewind,
+  PHASE.highlights,
+  PHASE.switchScreen,
+  PHASE.timeRewind,
+];
+
 // The most cars a race can have; the championship races with 7.
 export const MAX_CARS = 20;
 // the field sizes the stage select offers, 7 as in the original

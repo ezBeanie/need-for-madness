@@ -69,7 +69,7 @@ export const startRace = async ({
   });
   const { ctx, stepUntil } = game;
   ctx.game.mode = 0;
-  ctx.startflash();
+  ctx.flashIntoRace();
   stepUntil(() => ctx.game.phase === PHASE.race, 10, "race");
   return game;
 };

@@ -19,9 +19,10 @@ const racing = async (page, frames = 200) => {
   });
   await game.advanceUntil(PHASE.stageSelect);
   await page.waitForLoadState("networkidle");
-  await page.evaluate(() => {
+  await page.evaluate(async () => {
     window.gameState.game.mode = 0;
-    window.gameState.startflash();
+    const { flashIntoRace } = await import("/src/race/countdown.js");
+    flashIntoRace();
   });
   await game.advanceUntil(PHASE.race);
   await game.advance(frames);

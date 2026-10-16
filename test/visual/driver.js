@@ -1,7 +1,23 @@
 // Drives the real game in the browser deterministically: seeded randomness and frames
 // that only advance when the test says so, each exactly one logic tick long.
 
+import { readdirSync } from "node:fs";
+import { join, relative } from "node:path";
+import { fileURLToPath } from "node:url";
+
 const TICK_MS = 35;
+
+const PROJECT_ROOT = fileURLToPath(new URL("../..", import.meta.url));
+
+// every module of the game, as the dev server serves it
+const gameModules = (dir = join(PROJECT_ROOT, "src")) =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((entry) =>
+    entry.isDirectory()
+      ? gameModules(join(dir, entry.name))
+      : entry.name.endsWith(".js")
+        ? ["/" + relative(PROJECT_ROOT, join(dir, entry.name))]
+        : [],
+  );
 
 // Runs in the page before the game: everything that makes a run repeatable.
 const prepareBrowser = ({ seed, storage }) => {
@@ -40,13 +56,21 @@ export const openGame = async (page, { storage = {} } = {}) => {
   await page.goto("/");
   await page.waitForFunction(() => window.advanceFrames !== undefined);
   // the dev server serves the game with the test plugin that exports its state
-  await page.evaluate(async () => {
+  await page.evaluate(async (modules) => {
     window.gameState = (await import("/src/game.js")).__state;
+    // what game.js does not import itself, from the other modules
+    for (const path of modules.sort()) {
+      for (const [name, value] of Object.entries(await import(path))) {
+        if (!(name in window.gameState)) {
+          window.gameState[name] = value;
+        }
+      }
+    }
     await Promise.all([
       document.fonts.load("20px junk"),
       document.fonts.load("20px verd"),
     ]);
-  });
+  }, gameModules());
   const game = {
     phase: () => page.evaluate(() => window.gameState.game.phase),
     advance: (frames = 1, ms = TICK_MS) =>

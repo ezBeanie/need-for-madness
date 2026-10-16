@@ -3,7 +3,7 @@
 // is drawn once a logic tick has moved it (menu.redraw), then every frame of its phase.
 
 import { random } from "../core/random.js";
-import { PHASE, game } from "../core/state.js";
+import { PHASE, RACE_PHASES, game } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
 import { effects } from "../race/effects.js";
 import { paintDents } from "../race/physics.js";
@@ -45,15 +45,6 @@ const SCRATCH_STEPS_PER_FRAME = 100000;
 const NEAR_WHEEL = 250;
 // the walls around a stage are drawn from inside
 const WALL = 29;
-
-const RACE_PHASES = [
-  PHASE.race,
-  PHASE.replay,
-  PHASE.replayRewind,
-  PHASE.highlights,
-  PHASE.switchScreen,
-  PHASE.timeRewind,
-];
 
 // the phase whose scene was drawn from a finished logic tick, and the phase of the last
 // frame
