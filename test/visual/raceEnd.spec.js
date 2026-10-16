@@ -26,12 +26,14 @@ const endRace = async (page, { stage, unlocked, winner, cars = 7 }) => {
   await game.advanceUntil(PHASE.race);
   await game.advance(20);
   await page.evaluate(
-    ({ unlocked, winner, cars, raceEnd }) => {
+    async ({ unlocked, winner, cars, raceEnd }) => {
       const s = window.gameState;
+      // the module the game uses, as the dev server serves it
+      const { startRaceEnd } = await import("/src/screens/raceEnd.js");
       s.game.unlocked = unlocked;
       s.raceEvents.winner = winner;
       s.game.carCount = cars;
-      s.startRaceEnd();
+      startRaceEnd();
       s.game.phase = raceEnd;
     },
     { unlocked, winner, cars, raceEnd: PHASE.raceEnd },
