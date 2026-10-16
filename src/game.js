@@ -1423,6 +1423,10 @@ function loaddata() {
         if (game.unlocked == -1) {
           game.unlocked = 1;
         }
+        game.raceCars = getInfo("racecars");
+        if (!RACE_SIZES.includes(game.raceCars)) {
+          game.raceCars = 7;
+        }
         track.stage = game.unlocked;
         if (game.unlocked >= 5) {
           cntkeys = 200;
@@ -9165,6 +9169,28 @@ function drawstageselect() {
         rd.fillStyle = "#FFFFFF";
         rd.fillRect(0, 0, view.width, view.height);
       }
+      if (
+        drawbutton(
+          11,
+          view.width - 210 * view.scale,
+          130 * view.scaleY,
+          190,
+          56,
+          "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
+          "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
+          "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
+          "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+          1,
+          `${game.raceCars} Cars  [C]`,
+          20,
+          0.7,
+          null,
+          0,
+          false,
+        )
+      ) {
+        nextRaceSize();
+      }
       if (track.stage > 1) {
         if (
           drawbutton(
@@ -10377,6 +10403,9 @@ function onKey(action, pressed) {
   if (!pressed && action == "muteMusic") {
     audio.muteMusic = !audio.muteMusic;
   }
+  if (!pressed && action == "raceCars" && game.phase == PHASE.stageSelect) {
+    nextRaceSize();
+  }
 }
 installKeyboard(onKey);
 
@@ -10384,6 +10413,14 @@ function init() {
   gotGamepads();
   document.getElementById("loading").style.visibility = "hidden";
   requestAnimationFrame(mainloop);
+}
+
+// The field sizes the stage select offers, 7 as in the original.
+var RACE_SIZES = [7, 10, 15, 20];
+function nextRaceSize() {
+  game.raceCars =
+    RACE_SIZES[(RACE_SIZES.indexOf(game.raceCars) + 1) % RACE_SIZES.length];
+  saveInfo("racecars", game.raceCars);
 }
 
 function saveInfo(iname, ivalue) {

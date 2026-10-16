@@ -19,6 +19,7 @@ const ACTIONS = {
   86: "nextCamera", // V
   78: "muteSound", // N
   77: "muteMusic", // M
+  67: "raceCars", // C: how many cars race, in the stage select
 };
 
 export const actionFor = (keyCode) => ACTIONS[keyCode];

@@ -1,5 +1,5 @@
-import { describe, expect, test } from "vitest";
-import { autopilot, startRace } from "./harness/race.js";
+import { afterEach, describe, expect, test, vi } from "vitest";
+import { autopilot, openStageSelect, startRace } from "./harness/race.js";
 import { PHASE } from "../src/core/state.js";
 
 const range = (n) => Array.from({ length: n }, (_, i) => i);
@@ -49,4 +49,27 @@ describe("races with 20 cars", () => {
       expect(driven[c]).toBeGreaterThan(300);
     }
   });
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+});
+
+test("C in the stage select cycles the field size and remembers it", async () => {
+  const stored = new Map();
+  vi.stubGlobal("Storage", class {});
+  vi.stubGlobal("localStorage", {
+    getItem: (name) => stored.get(name) ?? null,
+    setItem: (name, value) => stored.set(name, String(value)),
+  });
+  const { ctx, key, step } = await openStageSelect({ stage: 3, car: 5 });
+  const sizes = [];
+  for (let i = 0; i < 4; i++) {
+    key(67, true);
+    key(67, false);
+    step();
+    sizes.push(ctx.game.raceCars);
+  }
+  expect(sizes).toEqual([10, 15, 20, 7]);
+  expect(stored.get("racecars")).toBe("7");
 });
