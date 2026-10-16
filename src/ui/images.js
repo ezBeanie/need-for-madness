@@ -4,7 +4,7 @@ export const images = {
   buttons: [],
   // the touch controls on phones
   touchControls: [],
-  // the music and sound toggles
+  // the corner buttons: pause, pause held, sound on, sound off, music on, music off
   soundToggles: [],
   // Insano, who explains the game
   insano: [],

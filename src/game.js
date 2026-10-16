@@ -13,7 +13,7 @@ import {
   rotatePoints as rotate,
   sinDeg as msin,
 } from "./core/math.js";
-import { interfaceResolution, isFirefox, isPhone } from "./core/platform.js";
+import { interfaceResolution, isPhone } from "./core/platform.js";
 import { random } from "./core/random.js";
 import {
   audio,
@@ -38,6 +38,21 @@ import { installKeyboard } from "./input/keyboard.js";
 import { CONFIRM, confirm, pressConfirm } from "./input/confirm.js";
 import { loadSetting, saveSetting } from "./core/storage.js";
 import { images } from "./ui/images.js";
+import {
+  BUTTON,
+  TEXT,
+  anyButtonHeld,
+  buttons,
+  drawButton,
+  drawCenteredText,
+  drawMeter,
+  drawMusicToggle,
+  fillPolygon,
+  fillScaledShape,
+  strokePolygon,
+  strokeScaledPolygon,
+  touchArea,
+} from "./ui/widgets.js";
 import { installPointer, pointer } from "./input/pointer.js";
 import {
   attachTo,
@@ -101,7 +116,6 @@ import {
 import { drive, fixcar, inishmad, paintDents } from "./race/physics.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
-var onycl;
 function cartextures() {
   for (var i = 0; i < 19; i++) {
     var loadthis = false;
@@ -2368,8 +2382,8 @@ function gameworks() {
       cpanimate();
       drawinter();
       if (game.mode == 1 && starcnt < 180 && starcnt > 80) {
-        drawcs(132, "SWITCH MODE", 0, 0, 0, 3);
-        drawcs(192, "1 Lap, No Fixing", 0, 64, 128, 1);
+        drawCenteredText(132, "SWITCH MODE", 0, 0, 0, TEXT.title);
+        drawCenteredText(192, "1 Lap, No Fixing", 0, 64, 128, TEXT.label);
       }
       if (
         starcnt > 65 &&
@@ -4658,24 +4672,24 @@ function pausedgame() {
     on = 1;
   }
   if (
-    drawbutton(
-      1,
-      640 * view.scaleX,
-      95 * view.scaleY + 35 * view.scale,
-      350,
-      60,
-      bton[on][0],
-      bton[on][1],
-      bton[on][2],
-      bton[on][3],
-      0,
-      "Resume Game ",
-      20,
-      0.8,
-      images.buttons[1],
-      0.8,
-      on,
-    )
+    drawButton({
+      id: 1,
+      x: 640 * view.scaleX,
+      y: 95 * view.scaleY + 35 * view.scale,
+      width: 350,
+      height: 60,
+      faceTop: bton[on][0],
+      faceBottom: bton[on][1],
+      shadowTop: bton[on][2],
+      shadowBottom: bton[on][3],
+      layout: BUTTON.textThenImage,
+      text: "Resume Game ",
+      fontSize: 20,
+      textOpacity: 0.8,
+      image: images.buttons[1],
+      imageOpacity: 0.8,
+      pulsing: on,
+    })
   ) {
     noten = 0;
     if (!playedforeplay) {
@@ -4690,24 +4704,24 @@ function pausedgame() {
     on = 1;
   }
   if (
-    drawbutton(
-      2,
-      640 * view.scaleX,
-      95 * view.scaleY + 125 * view.scale,
-      350,
-      60,
-      bton[on][0],
-      bton[on][1],
-      bton[on][2],
-      bton[on][3],
-      1,
-      "Instant Replay",
-      20,
-      0.8,
-      null,
-      0,
-      on,
-    )
+    drawButton({
+      id: 2,
+      x: 640 * view.scaleX,
+      y: 95 * view.scaleY + 125 * view.scale,
+      width: 350,
+      height: 60,
+      faceTop: bton[on][0],
+      faceBottom: bton[on][1],
+      shadowTop: bton[on][2],
+      shadowBottom: bton[on][3],
+      layout: BUTTON.textOnly,
+      text: "Instant Replay",
+      fontSize: 20,
+      textOpacity: 0.8,
+      image: null,
+      imageOpacity: 0,
+      pulsing: on,
+    })
   ) {
     if (recording.nrec >= 430) {
       onbreplay = 2;
@@ -4723,24 +4737,24 @@ function pausedgame() {
     on = 1;
   }
   if (
-    drawbutton(
-      3,
-      640 * view.scaleX,
-      95 * view.scaleY + 215 * view.scale,
-      380,
-      60,
-      bton[on][0],
-      bton[on][1],
-      bton[on][2],
-      bton[on][3],
-      1,
-      "Game Instructions",
-      20,
-      0.8,
-      null,
-      0,
-      on,
-    )
+    drawButton({
+      id: 3,
+      x: 640 * view.scaleX,
+      y: 95 * view.scaleY + 215 * view.scale,
+      width: 380,
+      height: 60,
+      faceTop: bton[on][0],
+      faceBottom: bton[on][1],
+      shadowTop: bton[on][2],
+      shadowBottom: bton[on][3],
+      layout: BUTTON.textOnly,
+      text: "Game Instructions",
+      fontSize: 20,
+      textOpacity: 0.8,
+      image: null,
+      imageOpacity: 0,
+      pulsing: on,
+    })
   ) {
     noten = 0;
     if (playedforeplay) {
@@ -4757,24 +4771,24 @@ function pausedgame() {
     on = 1;
   }
   if (
-    drawbutton(
-      4,
-      640 * view.scaleX,
-      95 * view.scaleY + 305 * view.scale,
-      250,
-      60,
-      bton[on][0],
-      bton[on][1],
-      bton[on][2],
-      bton[on][3],
-      1,
-      "x Quit Game",
-      20,
-      0.8,
-      null,
-      0,
-      on,
-    )
+    drawButton({
+      id: 4,
+      x: 640 * view.scaleX,
+      y: 95 * view.scaleY + 305 * view.scale,
+      width: 250,
+      height: 60,
+      faceTop: bton[on][0],
+      faceBottom: bton[on][1],
+      shadowTop: bton[on][2],
+      shadowBottom: bton[on][3],
+      layout: BUTTON.textOnly,
+      text: "x Quit Game",
+      fontSize: 20,
+      textOpacity: 0.8,
+      image: null,
+      imageOpacity: 0,
+      pulsing: on,
+    })
   ) {
     for (var c = 0; c < game.carCount; c++) {
       fixcar(c);
@@ -4808,13 +4822,13 @@ function pausedgame() {
       rgb = hslToRgb(hsl[0], 1, 0.6);
       aflk = true;
     }
-    drawcs(
+    drawCenteredText(
       600,
       "Not enough gameplay was recorded yet!",
       rgb[0],
       rgb[1],
       rgb[2],
-      0,
+      TEXT.small,
     );
     noten--;
   }
@@ -4870,28 +4884,28 @@ function pausedgame() {
     confirm.state = CONFIRM.used;
   }
   if (!flwg) {
-    flw -= 0.03;
-    if (flw < 0.5) {
-      flw = 0.5;
+    buttons.pulseWidth -= 0.03;
+    if (buttons.pulseWidth < 0.5) {
+      buttons.pulseWidth = 0.5;
       flwg = true;
     }
   } else {
-    flw += 0.03;
-    if (flw > 2) {
-      flw = 2;
+    buttons.pulseWidth += 0.03;
+    if (buttons.pulseWidth > 2) {
+      buttons.pulseWidth = 2;
       flwg = false;
     }
   }
   if (!flhg) {
-    flh -= 0.5;
-    if (flh < 0.1) {
-      flh = 0.1;
+    buttons.pulseHeight -= 0.5;
+    if (buttons.pulseHeight < 0.1) {
+      buttons.pulseHeight = 0.1;
       flhg = true;
     }
   } else {
-    flh += 0.5;
-    if (flh > 2) {
-      flh = 2;
+    buttons.pulseHeight += 0.5;
+    if (buttons.pulseHeight > 2) {
+      buttons.pulseHeight = 2;
       flhg = false;
     }
   }
@@ -5025,24 +5039,24 @@ function drawmain() {
   }
   if (!onskip) {
     if (
-      drawbutton(
-        1,
-        rigy - 230 * view.scale,
-        720 * view.scaleY - 200 * view.scale,
-        360,
-        60,
-        "#FF1301",
-        "#FF8A01",
-        "#780800",
-        "#784100",
-        1,
-        "Game Instructions",
-        19,
-        0.9,
-        null,
-        0,
-        false,
-      )
+      drawButton({
+        id: 1,
+        x: rigy - 230 * view.scale,
+        y: 720 * view.scaleY - 200 * view.scale,
+        width: 360,
+        height: 60,
+        faceTop: "#FF1301",
+        faceBottom: "#FF8A01",
+        shadowTop: "#780800",
+        shadowBottom: "#784100",
+        layout: BUTTON.textOnly,
+        text: "Game Instructions",
+        fontSize: 19,
+        textOpacity: 0.9,
+        image: null,
+        imageOpacity: 0,
+        pulsing: false,
+      })
     ) {
       pauseMenuMusic();
       instmain = true;
@@ -5051,24 +5065,24 @@ function drawmain() {
       game.phase = PHASE.instructions;
     }
     if (
-      drawbutton(
-        3,
-        rigy - 150 * view.scale,
-        720 * view.scaleY - 100 * view.scale,
-        200,
-        70,
-        "#FF3D01",
-        "#FFB401",
-        "#771D01",
-        "#775401",
-        0,
-        "PLAY ",
-        25,
-        0.9,
-        images.buttons[1],
-        0.9,
-        true,
-      )
+      drawButton({
+        id: 3,
+        x: rigy - 150 * view.scale,
+        y: 720 * view.scaleY - 100 * view.scale,
+        width: 200,
+        height: 70,
+        faceTop: "#FF3D01",
+        faceBottom: "#FFB401",
+        shadowTop: "#771D01",
+        shadowBottom: "#775401",
+        layout: BUTTON.textThenImage,
+        text: "PLAY ",
+        fontSize: 25,
+        textOpacity: 0.9,
+        image: images.buttons[1],
+        imageOpacity: 0.9,
+        pulsing: true,
+      })
     ) {
       fredo = 29;
       cnf = 25;
@@ -5081,31 +5095,30 @@ function drawmain() {
     }
     if (canreset) {
       if (
-        drawbutton(
-          7,
-          rigy - 450 * view.scale,
-          720 * view.scaleY - 90 * view.scale,
-          280,
-          60,
-          "#FF1301",
-          "#FF8A01",
-          "#780800",
-          "#784100",
-          1,
-          "Reset Game",
-          22,
-          0.9,
-          null,
-          0,
-          0,
-          false,
-        )
+        drawButton({
+          id: 7,
+          x: rigy - 450 * view.scale,
+          y: 720 * view.scaleY - 90 * view.scale,
+          width: 280,
+          height: 60,
+          faceTop: "#FF1301",
+          faceBottom: "#FF8A01",
+          shadowTop: "#780800",
+          shadowBottom: "#784100",
+          layout: BUTTON.textOnly,
+          text: "Reset Game",
+          fontSize: 22,
+          textOpacity: 0.9,
+          image: null,
+          imageOpacity: 0,
+          pulsing: 0,
+        })
       ) {
         dudo = 250;
         game.phase = PHASE.resetQuestion;
       }
     }
-    musictog();
+    drawMusicToggle();
   }
   if (!onskip) {
     if (fredo != 15) {
@@ -5150,28 +5163,28 @@ function drawmain() {
     }
   }
   if (!flwg) {
-    flw -= 0.03;
-    if (flw < 0.5) {
-      flw = 0.5;
+    buttons.pulseWidth -= 0.03;
+    if (buttons.pulseWidth < 0.5) {
+      buttons.pulseWidth = 0.5;
       flwg = true;
     }
   } else {
-    flw += 0.03;
-    if (flw > 2) {
-      flw = 2;
+    buttons.pulseWidth += 0.03;
+    if (buttons.pulseWidth > 2) {
+      buttons.pulseWidth = 2;
       flwg = false;
     }
   }
   if (!flhg) {
-    flh -= 0.5;
-    if (flh < 0.1) {
-      flh = 0.1;
+    buttons.pulseHeight -= 0.5;
+    if (buttons.pulseHeight < 0.1) {
+      buttons.pulseHeight = 0.1;
       flhg = true;
     }
   } else {
-    flh += 0.5;
-    if (flh > 2) {
-      flh = 2;
+    buttons.pulseHeight += 0.5;
+    if (buttons.pulseHeight > 2) {
+      buttons.pulseHeight = 2;
       flhg = false;
     }
   }
@@ -5352,7 +5365,7 @@ function gameinstructions() {
     var r = 128;
     var g = 190 + 70 * 0.37;
     var b = 255;
-    drawbar(
+    drawMeter(
       945 * fm,
       topo + 310 * fm + 42 * view.scale,
       "#00B0DC",
@@ -5539,71 +5552,71 @@ function gameinstructions() {
     );
     if (!isPhone) {
       if (
-        drawbutton(
-          1,
-          240 * fm + 285 * view.scale,
-          topo + 250 * fm,
-          570,
-          60,
-          "#0075D8",
-          "#299DFF",
-          "#003F74",
-          "#006AC4",
-          1,
-          "Additional Keyboard Controls",
-          18,
-          0.9,
-          null,
-          0,
-          false,
-        )
+        drawButton({
+          id: 1,
+          x: 240 * fm + 285 * view.scale,
+          y: topo + 250 * fm,
+          width: 570,
+          height: 60,
+          faceTop: "#0075D8",
+          faceBottom: "#299DFF",
+          shadowTop: "#003F74",
+          shadowBottom: "#006AC4",
+          layout: BUTTON.textOnly,
+          text: "Additional Keyboard Controls",
+          fontSize: 18,
+          textOpacity: 0.9,
+          image: null,
+          imageOpacity: 0,
+          pulsing: false,
+        })
       ) {
         dudo = 250;
         ifase++;
       }
       if (
-        drawbutton(
-          2,
-          240 * fm + 140 * view.scale,
-          topo + 350 * fm,
-          280,
-          60,
-          "#0075D8",
-          "#299DFF",
-          "#003F74",
-          "#006AC4",
-          1,
-          "Music Credits",
-          18,
-          0.9,
-          null,
-          0,
-          false,
-        )
+        drawButton({
+          id: 2,
+          x: 240 * fm + 140 * view.scale,
+          y: topo + 350 * fm,
+          width: 280,
+          height: 60,
+          faceTop: "#0075D8",
+          faceBottom: "#299DFF",
+          shadowTop: "#003F74",
+          shadowBottom: "#006AC4",
+          layout: BUTTON.textOnly,
+          text: "Music Credits",
+          fontSize: 18,
+          textOpacity: 0.9,
+          image: null,
+          imageOpacity: 0,
+          pulsing: false,
+        })
       ) {
         dudo = 250;
         ifase += 2;
       }
     } else {
       if (
-        drawbutton(
-          2,
-          240 * fm + 140 * view.scale,
-          topo + 300 * fm,
-          280,
-          60,
-          "#0075D8",
-          "#299DFF",
-          "#003F74",
-          "#006AC4",
-          1,
-          "Music Credits",
-          18,
-          0.9,
-          null,
-          0,
-          false,
-        )
+        drawButton({
+          id: 2,
+          x: 240 * fm + 140 * view.scale,
+          y: topo + 300 * fm,
+          width: 280,
+          height: 60,
+          faceTop: "#0075D8",
+          faceBottom: "#299DFF",
+          shadowTop: "#003F74",
+          shadowBottom: "#006AC4",
+          layout: BUTTON.textOnly,
+          text: "Music Credits",
+          fontSize: 18,
+          textOpacity: 0.9,
+          image: null,
+          imageOpacity: 0,
+          pulsing: false,
+        })
       ) {
         dudo = 250;
         ifase += 2;
@@ -5716,24 +5729,24 @@ function gameinstructions() {
       topo + 396 * fm,
     );
     if (
-      drawbutton(
-        1,
-        1170 * fm - 75 * view.scale,
-        topo + 430 * fm,
-        150,
-        60,
-        "#0075D8",
-        "#299DFF",
-        "#003F74",
-        "#006AC4",
-        0,
-        "Next ",
-        18,
-        0.9,
-        images.buttons[2],
-        0.9,
-        true,
-      )
+      drawButton({
+        id: 1,
+        x: 1170 * fm - 75 * view.scale,
+        y: topo + 430 * fm,
+        width: 150,
+        height: 60,
+        faceTop: "#0075D8",
+        faceBottom: "#299DFF",
+        shadowTop: "#003F74",
+        shadowBottom: "#006AC4",
+        layout: BUTTON.textThenImage,
+        text: "Next ",
+        fontSize: 18,
+        textOpacity: 0.9,
+        image: images.buttons[2],
+        imageOpacity: 0.9,
+        pulsing: true,
+      })
     ) {
       dudo = 250;
       ifase++;
@@ -5804,24 +5817,24 @@ function gameinstructions() {
   }
   if (ifase > 0) {
     if (
-      drawbutton(
-        4,
-        240 * fm + 75 * view.scale,
-        topo + 560 * fm - 65 * view.scale,
-        150,
-        60,
-        "#0075D8",
-        "#299DFF",
-        "#003F74",
-        "#006AC4",
-        3,
-        " Back",
-        18,
-        0.9,
-        images.buttons[3],
-        0.9,
-        false,
-      )
+      drawButton({
+        id: 4,
+        x: 240 * fm + 75 * view.scale,
+        y: topo + 560 * fm - 65 * view.scale,
+        width: 150,
+        height: 60,
+        faceTop: "#0075D8",
+        faceBottom: "#299DFF",
+        shadowTop: "#003F74",
+        shadowBottom: "#006AC4",
+        layout: BUTTON.imageThenText,
+        text: " Back",
+        fontSize: 18,
+        textOpacity: 0.9,
+        image: images.buttons[3],
+        imageOpacity: 0.9,
+        pulsing: false,
+      })
     ) {
       if (ifase == 7) {
         ifase--;
@@ -5835,24 +5848,24 @@ function gameinstructions() {
   }
   if (ifase < 4) {
     if (
-      drawbutton(
-        3,
-        1280 * fm - 70 * fm - 100 * view.scale,
-        topo + 560 * fm - 65 * view.scale,
-        200,
-        60,
-        "#0075D8",
-        "#299DFF",
-        "#003F74",
-        "#006AC4",
-        0,
-        "Next ",
-        20,
-        0.9,
-        images.buttons[1],
-        0.9,
-        true,
-      )
+      drawButton({
+        id: 3,
+        x: 1280 * fm - 70 * fm - 100 * view.scale,
+        y: topo + 560 * fm - 65 * view.scale,
+        width: 200,
+        height: 60,
+        faceTop: "#0075D8",
+        faceBottom: "#299DFF",
+        shadowTop: "#003F74",
+        shadowBottom: "#006AC4",
+        layout: BUTTON.textThenImage,
+        text: "Next ",
+        fontSize: 20,
+        textOpacity: 0.9,
+        image: images.buttons[1],
+        imageOpacity: 0.9,
+        pulsing: true,
+      })
     ) {
       ifase++;
       dudo = 250;
@@ -5865,24 +5878,24 @@ function gameinstructions() {
   }
   if (ifase == 4) {
     if (
-      drawbutton(
-        3,
-        1280 * fm - 70 * fm - 110 * view.scale,
-        topo + 560 * fm - 65 * view.scale,
-        220,
-        60,
-        "#0075D8",
-        "#299DFF",
-        "#003F74",
-        "#006AC4",
-        0,
-        "Finish ",
-        20,
-        0.9,
-        images.buttons[1],
-        0.9,
-        true,
-      )
+      drawButton({
+        id: 3,
+        x: 1280 * fm - 70 * fm - 110 * view.scale,
+        y: topo + 560 * fm - 65 * view.scale,
+        width: 220,
+        height: 60,
+        faceTop: "#0075D8",
+        faceBottom: "#299DFF",
+        shadowTop: "#003F74",
+        shadowBottom: "#006AC4",
+        layout: BUTTON.textThenImage,
+        text: "Finish ",
+        fontSize: 20,
+        textOpacity: 0.9,
+        image: images.buttons[1],
+        imageOpacity: 0.9,
+        pulsing: true,
+      })
     ) {
       if (instmain) {
         game.phase = PHASE.mainMenu;
@@ -5901,17 +5914,7 @@ function gameinstructions() {
       confirm.state = CONFIRM.used;
     }
   }
-  var onabtn = false;
-  var mnms = pointer.count;
-  if (mnms < 1) {
-    mnms = 1;
-  }
-  for (var i = 0; i < mnms; i++) {
-    if (wasonit[i] != 0) {
-      onabtn = true;
-    }
-  }
-  if (!onabtn && pointer.down) {
+  if (!anyButtonHeld() && pointer.down) {
     if (instmain) {
       game.phase = PHASE.mainMenu;
       playMenuMusic();
@@ -5985,24 +5988,24 @@ function resetgame() {
     topo + 276 * fm,
   );
   if (
-    drawbutton(
-      3,
-      730 * fm,
-      topo + 410 * fm - 65 * view.scale,
-      500,
-      60,
-      "#0075D8",
-      "#299DFF",
-      "#003F74",
-      "#006AC4",
-      1,
-      "Yes!  Reset my game now",
-      20,
-      0.9,
-      null,
-      0,
-      false,
-    )
+    drawButton({
+      id: 3,
+      x: 730 * fm,
+      y: topo + 410 * fm - 65 * view.scale,
+      width: 500,
+      height: 60,
+      faceTop: "#0075D8",
+      faceBottom: "#299DFF",
+      shadowTop: "#003F74",
+      shadowBottom: "#006AC4",
+      layout: BUTTON.textOnly,
+      text: "Yes!  Reset my game now",
+      fontSize: 20,
+      textOpacity: 0.9,
+      image: null,
+      imageOpacity: 0,
+      pulsing: false,
+    })
   ) {
     game.unlocked = 1;
     track.stage = game.unlocked;
@@ -6013,24 +6016,24 @@ function resetgame() {
     game.phase = PHASE.mainMenu;
   }
   if (
-    drawbutton(
-      4,
-      240 * fm + 100 * view.scale,
-      topo + 560 * fm - 65 * view.scale,
-      200,
-      60,
-      "#0075D8",
-      "#299DFF",
-      "#003F74",
-      "#006AC4",
-      3,
-      " Cancel",
-      18,
-      0.9,
-      images.buttons[3],
-      0.9,
-      false,
-    )
+    drawButton({
+      id: 4,
+      x: 240 * fm + 100 * view.scale,
+      y: topo + 560 * fm - 65 * view.scale,
+      width: 200,
+      height: 60,
+      faceTop: "#0075D8",
+      faceBottom: "#299DFF",
+      shadowTop: "#003F74",
+      shadowBottom: "#006AC4",
+      layout: BUTTON.imageThenText,
+      text: " Cancel",
+      fontSize: 18,
+      textOpacity: 0.9,
+      image: images.buttons[3],
+      imageOpacity: 0.9,
+      pulsing: false,
+    })
   ) {
     game.phase = PHASE.mainMenu;
   }
@@ -6288,16 +6291,16 @@ function drawswitch() {
   }
   if (raceEvents.switcnt >= 10 && raceEvents.switcnt < 90) {
     if (tflk) {
-      drawcs(132, "SWITCHING CARS", 0, 0, 0, 3);
+      drawCenteredText(132, "SWITCHING CARS", 0, 0, 0, TEXT.title);
       tflk = false;
     } else {
-      drawcs(132, "SWITCHING CARS", 0, 64, 128, 3);
+      drawCenteredText(132, "SWITCHING CARS", 0, 64, 128, TEXT.title);
       tflk = true;
     }
     if (tflk) {
-      drawcs(192, "Laps Reset, Time +10", 0, 0, 0, 1);
+      drawCenteredText(192, "Laps Reset, Time +10", 0, 0, 0, TEXT.label);
     } else {
-      drawcs(192, "Laps Reset, Time +10", 0, 128, 255, 1);
+      drawCenteredText(192, "Laps Reset, Time +10", 0, 128, 255, TEXT.label);
     }
     var duds = 0;
     if (raceEvents.switcnt >= 10 && raceEvents.switcnt < 15) {
@@ -6360,10 +6363,10 @@ function drawrevtime() {
   }
   if (raceEvents.switcnt >= 10 && raceEvents.switcnt < 90) {
     if (tflk) {
-      drawcs(132, "Reversing Time", 0, 0, 0, 3);
+      drawCenteredText(132, "Reversing Time", 0, 0, 0, TEXT.title);
       tflk = false;
     } else {
-      drawcs(132, "Reversing Time", 0, 64, 128, 3);
+      drawCenteredText(132, "Reversing Time", 0, 64, 128, TEXT.title);
       tflk = true;
     }
     var duds = 0;
@@ -6478,8 +6481,7 @@ var dmflk = false;
 
 var dested = [];
 var onbreplay = 0;
-var flw = 2;
-var flh = 1;
+
 var flwg = false;
 var flhg = false;
 var cntkeys = 0;
@@ -6512,8 +6514,8 @@ function inishinter() {
   raceEvents.cntwis = 0;
   dmcnt = 0;
   onbreplay = 0;
-  flw = 2;
-  flh = 0.5;
+  buttons.pulseWidth = 2;
+  buttons.pulseHeight = 0.5;
   for (var i = 0; i < MAX_CARS; i++) {
     racers[i].u.arrace = false;
     racers[i].u.zyinv = false;
@@ -6695,12 +6697,26 @@ function drawinter() {
   }
   var holdit = false;
   if (track.wasted == game.carCount - 1 && game.carCount != 1) {
-    drawcs(132, "You Wasted'em!", 0, 0, 0, 3);
+    drawCenteredText(132, "You Wasted'em!", 0, 0, 0, TEXT.title);
     if (aflk) {
-      drawcs(192, "You Won, all cars have been wasted!", 0, 0, 0, 0);
+      drawCenteredText(
+        192,
+        "You Won, all cars have been wasted!",
+        0,
+        0,
+        0,
+        TEXT.small,
+      );
       aflk = false;
     } else {
-      drawcs(192, "You Won, all cars have been wasted!", 0, 128, 255, 0);
+      drawCenteredText(
+        192,
+        "You Won, all cars have been wasted!",
+        0,
+        128,
+        255,
+        TEXT.small,
+      );
       aflk = true;
     }
     if (!track.haltall) {
@@ -6712,7 +6728,7 @@ function drawinter() {
   }
   if (!holdit) {
     if (racers[game.player].dest && raceEvents.cntwis == 16) {
-      drawcs(132, "You're Wasted!", 0, 0, 0, 3);
+      drawCenteredText(132, "You're Wasted!", 0, 0, 0, TEXT.title);
       holdit = true;
       winner = false;
     }
@@ -6730,12 +6746,26 @@ function drawinter() {
     for (var i = 0; i < game.carCount; i++) {
       if (track.clear[i] == track.nlaps * track.nsp && track.pos[i] == 0) {
         if (i == game.player) {
-          drawcs(132, "You Won!", 0, 0, 0, 3);
+          drawCenteredText(132, "You Won!", 0, 0, 0, TEXT.title);
           if (aflk) {
-            drawcs(192, "You finished first, nice job!", 0, 0, 0, 0);
+            drawCenteredText(
+              192,
+              "You finished first, nice job!",
+              0,
+              0,
+              0,
+              TEXT.small,
+            );
             aflk = false;
           } else {
-            drawcs(192, "You finished first, nice job!", 0, 128, 255, 0);
+            drawCenteredText(
+              192,
+              "You finished first, nice job!",
+              0,
+              128,
+              255,
+              TEXT.small,
+            );
             aflk = true;
           }
           winner = true;
@@ -6743,9 +6773,9 @@ function drawinter() {
             playSound(32, 1);
           }
         } else {
-          drawcs(132, "You Lost!", 0, 0, 0, 3);
+          drawCenteredText(132, "You Lost!", 0, 0, 0, TEXT.title);
           if (aflk) {
-            drawcs(
+            drawCenteredText(
               192,
               "" +
                 carStats.names[game.carTypes[i]] +
@@ -6753,11 +6783,11 @@ function drawinter() {
               0,
               0,
               0,
-              0,
+              TEXT.small,
             );
             aflk = false;
           } else {
-            drawcs(
+            drawCenteredText(
               192,
               "" +
                 carStats.names[game.carTypes[i]] +
@@ -6765,7 +6795,7 @@ function drawinter() {
               0,
               128,
               255,
-              0,
+              TEXT.small,
             );
             aflk = true;
           }
@@ -6798,24 +6828,24 @@ function drawinter() {
       confirm.state = CONFIRM.used;
     }
     if (
-      drawbutton(
-        7,
-        640 * view.scaleX,
-        view.height - 60 * view.scale - 40 * view.scaleY,
-        250,
-        60,
-        "#019DFF",
-        "#01BAFF",
-        "#004A78",
-        "#015777",
-        0,
-        "Continue ",
-        20,
-        0.8,
-        images.buttons[1],
-        0.8,
-        false,
-      )
+      drawButton({
+        id: 7,
+        x: 640 * view.scaleX,
+        y: view.height - 60 * view.scale - 40 * view.scaleY,
+        width: 250,
+        height: 60,
+        faceTop: "#019DFF",
+        faceBottom: "#01BAFF",
+        shadowTop: "#004A78",
+        shadowBottom: "#015777",
+        layout: BUTTON.textThenImage,
+        text: "Continue ",
+        fontSize: 20,
+        textOpacity: 0.8,
+        image: images.buttons[1],
+        imageOpacity: 0.8,
+        pulsing: false,
+      })
     ) {
       exitnow = true;
     }
@@ -6864,7 +6894,14 @@ function drawinter() {
       if (seconds < 10) {
         adlz = "0";
       }
-      drawcs(670, "0" + minutes + ":" + adlz + "" + seconds, 0, 0, 0, 4);
+      drawCenteredText(
+        670,
+        "0" + minutes + ":" + adlz + "" + seconds,
+        0,
+        0,
+        0,
+        TEXT.heading,
+      );
       if (timer == 120 || timer == 90 || timer == 60 || timer == 30) {
         playSound(39, 1);
       }
@@ -6906,9 +6943,23 @@ function drawinter() {
             racers[game.player].missedcp < 50
           ) {
             if (flk) {
-              drawcs(112, "Check Point Missed!", 255, 0, 0, 1);
+              drawCenteredText(
+                112,
+                "Check Point Missed!",
+                255,
+                0,
+                0,
+                TEXT.label,
+              );
             } else {
-              drawcs(112, "Check Point Missed!", 255, 128, 0, 2);
+              drawCenteredText(
+                112,
+                "Check Point Missed!",
+                255,
+                128,
+                0,
+                TEXT.faintLabel,
+              );
             }
           }
           if (tick.fraction >= tick.scale) {
@@ -6934,10 +6985,10 @@ function drawinter() {
               }
               cntan = 40;
               if (flk) {
-                drawcs(112, "Wrong Way!", 255, 128, 0, 1);
+                drawCenteredText(112, "Wrong Way!", 255, 128, 0, TEXT.label);
                 flk = false;
               } else {
-                drawcs(112, "Wrong Way!", 255, 0, 0, 2);
+                drawCenteredText(112, "Wrong Way!", 255, 0, 0, TEXT.faintLabel);
                 flk = true;
               }
             }
@@ -6996,47 +7047,47 @@ function drawinter() {
     ) {
       if (arrace) {
         if (
-          drawbutton(
-            1,
-            80 * view.scale,
-            90 * view.scale,
-            100,
-            60,
-            "#7DBDFF",
-            "#7872FF",
-            "#1767B9",
-            "#2018C2",
-            0,
-            "A",
-            22,
-            0.76,
-            images.buttons[0],
-            1,
-            false,
-          )
+          drawButton({
+            id: 1,
+            x: 80 * view.scale,
+            y: 90 * view.scale,
+            width: 100,
+            height: 60,
+            faceTop: "#7DBDFF",
+            faceBottom: "#7872FF",
+            shadowTop: "#1767B9",
+            shadowBottom: "#2018C2",
+            layout: BUTTON.textThenImage,
+            text: "A",
+            fontSize: 22,
+            textOpacity: 0.76,
+            image: images.buttons[0],
+            imageOpacity: 1,
+            pulsing: false,
+          })
         ) {
           racers[game.player].u.arrace = false;
         }
       } else {
         if (
-          drawbutton(
-            1,
-            80 * view.scale,
-            90 * view.scale,
-            100,
-            60,
-            "#89C800",
-            "#CADC00",
-            "#4B6E00",
-            "#778200",
-            0,
-            "A",
-            22,
-            0.76,
-            images.buttons[0],
-            1,
-            false,
-          )
+          drawButton({
+            id: 1,
+            x: 80 * view.scale,
+            y: 90 * view.scale,
+            width: 100,
+            height: 60,
+            faceTop: "#89C800",
+            faceBottom: "#CADC00",
+            shadowTop: "#4B6E00",
+            shadowBottom: "#778200",
+            layout: BUTTON.textThenImage,
+            text: "A",
+            fontSize: 22,
+            textOpacity: 0.76,
+            image: images.buttons[0],
+            imageOpacity: 1,
+            pulsing: false,
+          })
         ) {
           racers[game.player].u.arrace = true;
         }
@@ -7078,7 +7129,7 @@ function drawinter() {
         dmcnt = 0;
       }
     }
-    drawbar(
+    drawMeter(
       lalign,
       6 * view.scale,
       "#FC4D00",
@@ -7097,7 +7148,7 @@ function drawinter() {
       g = 244;
       b = 255;
     }
-    drawbar(
+    drawMeter(
       lalign,
       42 * view.scale,
       "#00B0DC",
@@ -7109,7 +7160,7 @@ function drawinter() {
     if (view.width / view.height < 1.3) {
       adwn = 76 * view.scale;
     }
-    var onycl = oncla(
+    var onycl = touchArea(
       2,
       view.width - 87 * view.scale,
       10 * view.scale + adwn,
@@ -7132,7 +7183,7 @@ function drawinter() {
         game.phase = PHASE.paused;
       }
     }
-    onycl = oncla(
+    onycl = touchArea(
       3,
       view.width - 77.5 * view.scale,
       73 * view.scale + adwn,
@@ -7163,7 +7214,7 @@ function drawinter() {
       42 * view.scale,
     );
     rd.globalAlpha = 1;
-    onycl = oncla(
+    onycl = touchArea(
       4,
       view.width - 77.5 * view.scale,
       125 * view.scale + adwn,
@@ -7260,9 +7311,9 @@ function drawinter() {
     }
     if (gocntdrop != 0) {
       if (gocnt != 0) {
-        drawcs(100, "" + gocnt, 0, 0, 0, 3);
+        drawCenteredText(100, "" + gocnt, 0, 0, 0, TEXT.title);
       } else {
-        drawcs(100, "Go!", 0, 0, 0, 3);
+        drawCenteredText(100, "Go!", 0, 0, 0, TEXT.title);
       }
       gocntdrop--;
     }
@@ -7288,33 +7339,47 @@ function drawinter() {
         if (looped != 3) {
           if (pwcnt < 70 || (pwcnt < 100 && looped != 0)) {
             if (pwflk) {
-              drawcs(176, "Power low, perform stunt!", 0, 0, 200, 0);
+              drawCenteredText(
+                176,
+                "Power low, perform stunt!",
+                0,
+                0,
+                200,
+                TEXT.small,
+              );
               pwflk = false;
             } else {
-              drawcs(176, "Power low, perform stunt!", 255, 100, 0, 0);
+              drawCenteredText(
+                176,
+                "Power low, perform stunt!",
+                255,
+                100,
+                0,
+                TEXT.small,
+              );
               pwflk = true;
             }
           }
         } else {
           if (pwcnt < 100) {
             if (pwflk) {
-              drawcs(
+              drawCenteredText(
                 176,
                 "Try to flip your car in the air to preform stunts!",
                 0,
                 0,
                 200,
-                0,
+                TEXT.small,
               );
               pwflk = false;
             } else {
-              drawcs(
+              drawCenteredText(
                 176,
                 "Try to flip your car in the air to preform stunts!",
                 255,
                 100,
                 0,
-                0,
+                TEXT.small,
               );
               pwflk = true;
             }
@@ -7341,13 +7406,13 @@ function drawinter() {
     if (racers[game.player].capcnt == 0) {
       if (raceEvents.tcnt < 30) {
         if (tflk) {
-          drawcs(167, say, 0, 0, 0, 1);
+          drawCenteredText(167, say, 0, 0, 0, TEXT.label);
           tflk = false;
         } else {
           if (!wasay) {
-            drawcs(167, say, 0, 128, 255, 1);
+            drawCenteredText(167, say, 0, 128, 255, TEXT.label);
           } else {
-            drawcs(167, say, 255, 128, 0, 1);
+            drawCenteredText(167, say, 255, 128, 0, TEXT.label);
           }
           tflk = true;
         }
@@ -7361,10 +7426,10 @@ function drawinter() {
       }
       if (raceEvents.auscnt < 45) {
         if (aflk) {
-          drawcs(136, asay, 59, 156, 255, 0);
+          drawCenteredText(136, asay, 59, 156, 255, TEXT.small);
           aflk = false;
         } else {
-          drawcs(136, asay, 0, 107, 216, 0);
+          drawCenteredText(136, asay, 0, 107, 216, TEXT.small);
           aflk = true;
         }
         if (tick.fraction >= tick.scale) {
@@ -7373,10 +7438,10 @@ function drawinter() {
       }
     } else {
       if (tflk) {
-        drawcs(176, "Bad Landing!", 0, 0, 200, 1);
+        drawCenteredText(176, "Bad Landing!", 0, 0, 200, TEXT.label);
         tflk = false;
       } else {
-        drawcs(176, "Bad Landing!", 255, 100, 0, 1);
+        drawCenteredText(176, "Bad Landing!", 255, 100, 0, TEXT.label);
         tflk = true;
       }
     }
@@ -7672,7 +7737,7 @@ function drawonbordo() {
     var r = 128;
     var g = 190 + 70 * 0.37;
     var b = 255;
-    drawbar(
+    drawMeter(
       945 * fm,
       topo + 80 * fm + 42 * view.scale,
       "#00B0DC",
@@ -7683,24 +7748,24 @@ function drawonbordo() {
   }
   if (track.stage == 4) {
     if (!isPhone) {
-      drawbutton(
-        1,
-        200 * fm + 240 * fm,
-        topo + 130 * fm,
-        100,
-        60,
-        "#89C800",
-        "#CADC00",
-        "#4B6E00",
-        "#778200",
-        0,
-        "A",
-        22,
-        0.76,
-        images.buttons[0],
-        1,
-        false,
-      );
+      drawButton({
+        id: 1,
+        x: 200 * fm + 240 * fm,
+        y: topo + 130 * fm,
+        width: 100,
+        height: 60,
+        faceTop: "#89C800",
+        faceBottom: "#CADC00",
+        shadowTop: "#4B6E00",
+        shadowBottom: "#778200",
+        layout: BUTTON.textThenImage,
+        text: "A",
+        fontSize: 22,
+        textOpacity: 0.76,
+        image: images.buttons[0],
+        imageOpacity: 1,
+        pulsing: false,
+      });
     } else {
       rd.drawImage(
         images.touchControls[5],
@@ -7728,24 +7793,24 @@ function drawreplay() {
   rd.fillStyle = "rgb(0,32,64)";
   rd.fillText("REPLAY", 20 * view.scaleX, 35 * view.scaleY);
   if (
-    drawbutton(
-      1,
-      view.width - 100 * view.scale - 30 * view.scaleX,
-      view.height - 60 * view.scale - 30 * view.scaleY,
-      170,
-      60,
-      "#019DFF",
-      "#01EAFF",
-      "#004A78",
-      "#016D77",
-      0,
-      "Exit ",
-      20,
-      0.7,
-      images.buttons[1],
-      0.7,
-      false,
-    )
+    drawButton({
+      id: 1,
+      x: view.width - 100 * view.scale - 30 * view.scaleX,
+      y: view.height - 60 * view.scale - 30 * view.scaleY,
+      width: 170,
+      height: 60,
+      faceTop: "#019DFF",
+      faceBottom: "#01EAFF",
+      shadowTop: "#004A78",
+      shadowBottom: "#016D77",
+      layout: BUTTON.textThenImage,
+      text: "Exit ",
+      fontSize: 20,
+      textOpacity: 0.7,
+      image: images.buttons[1],
+      imageOpacity: 0.7,
+      pulsing: false,
+    })
   ) {
     onbreplay = 2;
   }
@@ -7793,9 +7858,9 @@ function drawhreplay() {
   rd.strokeText("Game Highlight", 640 * view.scaleX, 40 * view.scaleY);
   if (recording.htyp == 1) {
     if (track.stage > 2) {
-      drawcs(90, "Stunts!", 0, 32, 64, 1);
+      drawCenteredText(90, "Stunts!", 0, 32, 64, TEXT.label);
     } else {
-      drawcs(90, "Best Stunt!", 0, 32, 64, 1);
+      drawCenteredText(90, "Best Stunt!", 0, 32, 64, TEXT.label);
     }
     if (recording.rmode == 98) {
       if (
@@ -7844,7 +7909,7 @@ function drawhreplay() {
     }
   }
   if (recording.htyp == 2) {
-    drawcs(90, "Wasted!", 0, 32, 64, 1);
+    drawCenteredText(90, "Wasted!", 0, 32, 64, TEXT.label);
     if (recording.rmode == 95) {
       if (
         recording.holdf == 4 ||
@@ -7876,7 +7941,7 @@ function drawhreplay() {
     }
   }
   if (recording.htyp == 3) {
-    drawcs(90, "You Wasted'em!", 0, 32, 64, 1);
+    drawCenteredText(90, "You Wasted'em!", 0, 32, 64, TEXT.label);
     if (recording.holdf == 13 || recording.holdf == 16) {
       rd.globalAlpha = 0.5;
       rd.fillStyle = "#FFFFFF";
@@ -7914,7 +7979,7 @@ function drawhreplay() {
     }
   }
   if (recording.htyp == 4) {
-    drawcs(90, "Close Finish!", 0, 32, 64, 1);
+    drawCenteredText(90, "Close Finish!", 0, 32, 64, TEXT.label);
     if (recording.holdf == 0) {
       camera.mode = 1;
       camera.target = recording.hcim;
@@ -7977,7 +8042,14 @@ function drawhreplay() {
     }
   }
   if (recording.htyp == 5) {
-    drawcs(90, "Close Finish!  Almost got it!", 0, 32, 64, 1);
+    drawCenteredText(
+      90,
+      "Close Finish!  Almost got it!",
+      0,
+      32,
+      64,
+      TEXT.label,
+    );
     if (recording.holdf == 0) {
       camera.mode = 1;
       camera.target = recording.hcim;
@@ -8063,24 +8135,24 @@ function drawhreplay() {
     game.phase = PHASE.raceEnd;
   }
   if (
-    drawbutton(
-      1,
-      view.width - 100 * view.scale - 30 * view.scaleX,
-      view.height - 60 * view.scale - 30 * view.scaleY,
-      170,
-      60,
-      "#019DFF",
-      "#01BAFF",
-      "#004A78",
-      "#015777",
-      0,
-      "Skip ",
-      20,
-      0.7,
-      images.buttons[1],
-      0.7,
-      false,
-    ) ||
+    drawButton({
+      id: 1,
+      x: view.width - 100 * view.scale - 30 * view.scaleX,
+      y: view.height - 60 * view.scale - 30 * view.scaleY,
+      width: 170,
+      height: 60,
+      faceTop: "#019DFF",
+      faceBottom: "#01BAFF",
+      shadowTop: "#004A78",
+      shadowBottom: "#015777",
+      layout: BUTTON.textThenImage,
+      text: "Skip ",
+      fontSize: 20,
+      textOpacity: 0.7,
+      image: images.buttons[1],
+      imageOpacity: 0.7,
+      pulsing: false,
+    }) ||
     (pointer.down && track.stage == 1 && game.unlocked == 1)
   ) {
     iniend();
@@ -8326,24 +8398,24 @@ function endgame() {
         confirm.state = CONFIRM.used;
       }
       if (
-        drawbutton(
-          7,
-          640 * view.scaleX,
-          view.height - 60 * view.scale - 40 * view.scaleY,
-          250,
-          60,
-          "#FF1301",
-          "#FF8A01",
-          "#780800",
-          "#784100",
-          0,
-          "Continue ",
-          20,
-          0.8,
-          images.buttons[1],
-          0.8,
-          false,
-        )
+        drawButton({
+          id: 7,
+          x: 640 * view.scaleX,
+          y: view.height - 60 * view.scale - 40 * view.scaleY,
+          width: 250,
+          height: 60,
+          faceTop: "#FF1301",
+          faceBottom: "#FF8A01",
+          shadowTop: "#780800",
+          shadowBottom: "#784100",
+          layout: BUTTON.textThenImage,
+          text: "Continue ",
+          fontSize: 20,
+          textOpacity: 0.8,
+          image: images.buttons[1],
+          imageOpacity: 0.8,
+          pulsing: false,
+        })
       ) {
         stopStageMusic();
         afterend();
@@ -8448,24 +8520,24 @@ function drawcarselect() {
     }
     if (game.carTypes[0] != 0) {
       if (
-        drawbutton(
-          1,
-          lefy + 120 * view.scale,
-          430 * view.scaleY,
-          140,
-          47,
-          "#4B00F6",
-          "#CB81FF",
-          "#0600F6",
-          "#5700F6",
-          3,
-          " Prev",
-          15,
-          0.9,
-          images.buttons[3],
-          0.9,
-          false,
-        )
+        drawButton({
+          id: 1,
+          x: lefy + 120 * view.scale,
+          y: 430 * view.scaleY,
+          width: 140,
+          height: 47,
+          faceTop: "#4B00F6",
+          faceBottom: "#CB81FF",
+          shadowTop: "#0600F6",
+          shadowBottom: "#5700F6",
+          layout: BUTTON.imageThenText,
+          text: " Prev",
+          fontSize: 15,
+          textOpacity: 0.9,
+          image: images.buttons[3],
+          imageOpacity: 0.9,
+          pulsing: false,
+        })
       ) {
         nextc = -1;
         flyout = 2;
@@ -8482,24 +8554,24 @@ function drawcarselect() {
     }
     if (game.carTypes[0] != 18) {
       if (
-        drawbutton(
-          2,
-          rigy - 120 * view.scale,
-          430 * view.scaleY,
-          140,
-          47,
-          "#4B00F6",
-          "#CB81FF",
-          "#0600F6",
-          "#5700F6",
-          0,
-          "Next ",
-          15,
-          0.9,
-          images.buttons[2],
-          0.9,
-          false,
-        )
+        drawButton({
+          id: 2,
+          x: rigy - 120 * view.scale,
+          y: 430 * view.scaleY,
+          width: 140,
+          height: 47,
+          faceTop: "#4B00F6",
+          faceBottom: "#CB81FF",
+          shadowTop: "#0600F6",
+          shadowBottom: "#5700F6",
+          layout: BUTTON.textThenImage,
+          text: "Next ",
+          fontSize: 15,
+          textOpacity: 0.9,
+          image: images.buttons[2],
+          imageOpacity: 0.9,
+          pulsing: false,
+        })
       ) {
         nextc = 1;
         flyout = 2;
@@ -8718,7 +8790,7 @@ function drawcarselect() {
       rd.globalAlpha = 1;
       rd.strokeStyle = "#002748";
       rd.lineWidth = 2 * view.scaleY;
-      drawPolygon(xp, yp, 4);
+      strokePolygon(xp, yp, 4);
       var xp = [
         640 * view.scaleX + 120 * view.scaleY - 3 * view.scaleY,
         640 * view.scaleX + 120 * view.scaleY - 3 * view.scaleY,
@@ -8737,7 +8809,7 @@ function drawcarselect() {
       rd.globalAlpha = 1;
       rd.strokeStyle = "#002748";
       rd.lineWidth = 2 * view.scaleY;
-      drawPolygon(xp, yp, 4);
+      strokePolygon(xp, yp, 4);
       var xp = [
         640 * view.scaleX + 300 * view.scaleY - 3 * view.scaleY,
         640 * view.scaleX + 300 * view.scaleY - 3 * view.scaleY,
@@ -8756,7 +8828,7 @@ function drawcarselect() {
       rd.globalAlpha = 1;
       rd.strokeStyle = "#002748";
       rd.lineWidth = 2 * view.scaleY;
-      drawPolygon(xp, yp, 4);
+      strokePolygon(xp, yp, 4);
       rd.drawImage(
         images.loadingBarLeft,
         640 * view.scaleX - 300 * view.scaleY - 3 * view.scaleY,
@@ -8795,24 +8867,24 @@ function drawcarselect() {
     }
     if (!clocked) {
       if (
-        drawbutton(
-          3,
-          rigy - 150 * view.scale,
-          720 * view.scaleY - 100 * view.scale,
-          200,
-          70,
-          "#0057E6",
-          "#65EFFF",
-          "#440078",
-          "#2F00A8",
-          0,
-          "PLAY ",
-          25,
-          0.9,
-          images.buttons[1],
-          0.9,
-          true,
-        )
+        drawButton({
+          id: 3,
+          x: rigy - 150 * view.scale,
+          y: 720 * view.scaleY - 100 * view.scale,
+          width: 200,
+          height: 70,
+          faceTop: "#0057E6",
+          faceBottom: "#65EFFF",
+          shadowTop: "#440078",
+          shadowBottom: "#2F00A8",
+          layout: BUTTON.textThenImage,
+          text: "PLAY ",
+          fontSize: 25,
+          textOpacity: 0.9,
+          image: images.buttons[1],
+          imageOpacity: 0.9,
+          pulsing: true,
+        })
       ) {
         saveSetting("carsel", game.carTypes[0]);
         if (track.stage > game.unlocked) {
@@ -8834,24 +8906,24 @@ function drawcarselect() {
           }
         }
         if (
-          drawbutton(
-            5,
-            640 * view.scaleX,
-            720 * view.scaleY - 90 * view.scale,
-            220,
-            60,
-            "#0057E6",
-            "#65EFFF",
-            "#440078",
-            "#2F00A8",
-            1,
-            "Practice ",
-            22,
-            0.9,
-            null,
-            0,
-            false,
-          )
+          drawButton({
+            id: 5,
+            x: 640 * view.scaleX,
+            y: 720 * view.scaleY - 90 * view.scale,
+            width: 220,
+            height: 60,
+            faceTop: "#0057E6",
+            faceBottom: "#65EFFF",
+            shadowTop: "#440078",
+            shadowBottom: "#2F00A8",
+            layout: BUTTON.textOnly,
+            text: "Practice ",
+            fontSize: 22,
+            textOpacity: 0.9,
+            image: null,
+            imageOpacity: 0,
+            pulsing: false,
+          })
         ) {
           saveSetting("carsel", game.carTypes[0]);
           pauseMenuMusic();
@@ -8900,32 +8972,32 @@ function drawcarselect() {
     }
   }
   if (!flwg) {
-    flw -= 0.03;
-    if (flw < 0.5) {
-      flw = 0.5;
+    buttons.pulseWidth -= 0.03;
+    if (buttons.pulseWidth < 0.5) {
+      buttons.pulseWidth = 0.5;
       flwg = true;
     }
   } else {
-    flw += 0.03;
-    if (flw > 2) {
-      flw = 2;
+    buttons.pulseWidth += 0.03;
+    if (buttons.pulseWidth > 2) {
+      buttons.pulseWidth = 2;
       flwg = false;
     }
   }
   if (!flhg) {
-    flh -= 0.5;
-    if (flh < 0.1) {
-      flh = 0.1;
+    buttons.pulseHeight -= 0.5;
+    if (buttons.pulseHeight < 0.1) {
+      buttons.pulseHeight = 0.1;
       flhg = true;
     }
   } else {
-    flh += 0.5;
-    if (flh > 2) {
-      flh = 2;
+    buttons.pulseHeight += 0.5;
+    if (buttons.pulseHeight > 2) {
+      buttons.pulseHeight = 2;
       flhg = false;
     }
   }
-  musictog();
+  drawMusicToggle();
 }
 var alipha = 0;
 var bgsload = null;
@@ -9125,13 +9197,13 @@ function drawstageselect() {
   var rgb = hslToRgb(hsl[0], 1, 0.3);
   rd.strokeStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
   rd.lineWidth = 10 * view.scale;
-  spdPolygon(xsp, ysp, 50);
+  strokeScaledPolygon(xsp, ysp, 50);
   rgb = hslToRgb(hsl[0], 1, 0.4);
   rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
-  spPolygon(0, 0, xsp, ysp, 0, 17, 1280, 0);
-  spPolygon(1280, 0, xsp, ysp, 16, 26, 1280, 720);
-  spPolygon(1280, 720, xsp, ysp, 25, 42, 0, 720);
-  spPolygon(0, 720, xsp, ysp, 41, 51, 0, 0);
+  fillScaledShape(0, 0, xsp, ysp, 0, 17, 1280, 0);
+  fillScaledShape(1280, 0, xsp, ysp, 16, 26, 1280, 720);
+  fillScaledShape(1280, 720, xsp, ysp, 25, 42, 0, 720);
+  fillScaledShape(0, 720, xsp, ysp, 41, 51, 0, 0);
   if (!flkun) {
     rd.letterSpacing = "1px";
     rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
@@ -9205,24 +9277,24 @@ function drawstageselect() {
         racers[0].u.left = false;
       }
       if (
-        drawbutton(
-          9,
-          210 * view.scale,
-          130 * view.scaleY,
-          150,
-          56,
-          "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-          "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-          "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-          "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
-          3,
-          " Back",
-          20,
-          0.7,
-          images.buttons[5],
-          0.7,
-          false,
-        )
+        drawButton({
+          id: 9,
+          x: 210 * view.scale,
+          y: 130 * view.scaleY,
+          width: 150,
+          height: 56,
+          faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
+          faceBottom: "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
+          shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
+          shadowBottom: "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+          layout: BUTTON.imageThenText,
+          text: " Back",
+          fontSize: 20,
+          textOpacity: 0.7,
+          image: images.buttons[5],
+          imageOpacity: 0.7,
+          pulsing: false,
+        })
       ) {
         scene.tint = [0, -0.05, 0.6];
         var fogc = [0, 0, 0];
@@ -9236,47 +9308,48 @@ function drawstageselect() {
         rd.fillRect(0, 0, view.width, view.height);
       }
       if (
-        drawbutton(
-          11,
-          view.width - 210 * view.scale,
-          130 * view.scaleY,
-          190,
-          56,
-          "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-          "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-          "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-          "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
-          1,
-          `${game.raceCars} Cars  [C]`,
-          20,
-          0.7,
-          null,
-          0,
-          false,
-        )
+        drawButton({
+          id: 11,
+          x: view.width - 210 * view.scale,
+          y: 130 * view.scaleY,
+          width: 190,
+          height: 56,
+          faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
+          faceBottom: "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
+          shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
+          shadowBottom: "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+          layout: BUTTON.textOnly,
+          text: `${game.raceCars} Cars  [C]`,
+          fontSize: 20,
+          textOpacity: 0.7,
+          image: null,
+          imageOpacity: 0,
+          pulsing: false,
+        })
       ) {
         nextRaceSize();
       }
       if (track.stage > 1) {
         if (
-          drawbutton(
-            3,
-            190 * view.scale,
-            360 * view.scaleY,
-            140,
-            47,
-            "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-            "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-            "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-            "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
-            3,
-            " Prev",
-            15,
-            0.9,
-            images.buttons[3],
-            0.9,
-            false,
-          )
+          drawButton({
+            id: 3,
+            x: 190 * view.scale,
+            y: 360 * view.scaleY,
+            width: 140,
+            height: 47,
+            faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
+            faceBottom: "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
+            shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
+            shadowBottom:
+              "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+            layout: BUTTON.imageThenText,
+            text: " Prev",
+            fontSize: 15,
+            textOpacity: 0.9,
+            image: images.buttons[3],
+            imageOpacity: 0.9,
+            pulsing: false,
+          })
         ) {
           track.stage--;
           stageload = -1;
@@ -9285,24 +9358,25 @@ function drawstageselect() {
       }
       if (track.stage < 17) {
         if (
-          drawbutton(
-            2,
-            view.width - 190 * view.scale,
-            360 * view.scaleY,
-            140,
-            47,
-            "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-            "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-            "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-            "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
-            0,
-            "Next ",
-            15,
-            0.9,
-            images.buttons[2],
-            0.9,
-            false,
-          )
+          drawButton({
+            id: 2,
+            x: view.width - 190 * view.scale,
+            y: 360 * view.scaleY,
+            width: 140,
+            height: 47,
+            faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
+            faceBottom: "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
+            shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
+            shadowBottom:
+              "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+            layout: BUTTON.textThenImage,
+            text: "Next ",
+            fontSize: 15,
+            textOpacity: 0.9,
+            image: images.buttons[2],
+            imageOpacity: 0.9,
+            pulsing: false,
+          })
         ) {
           if (track.stage != game.unlocked) {
             track.stage++;
@@ -9316,24 +9390,26 @@ function drawstageselect() {
       if (!flkun) {
         if (hastip) {
           if (
-            drawbutton(
-              6,
-              70 * view.scaleX + 357 * view.scale,
-              720 * view.scaleY - 157 * view.scale,
-              120,
-              60,
-              "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-              "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-              "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-              "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
-              1,
-              "TIP ",
-              22,
-              0.9,
-              null,
-              0,
-              false,
-            )
+            drawButton({
+              id: 6,
+              x: 70 * view.scaleX + 357 * view.scale,
+              y: 720 * view.scaleY - 157 * view.scale,
+              width: 120,
+              height: 60,
+              faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
+              faceBottom:
+                "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
+              shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
+              shadowBottom:
+                "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+              layout: BUTTON.textOnly,
+              text: "TIP ",
+              fontSize: 22,
+              textOpacity: 0.9,
+              image: null,
+              imageOpacity: 0,
+              pulsing: false,
+            })
           ) {
             ontip = true;
             dudo = 0;
@@ -9341,24 +9417,27 @@ function drawstageselect() {
         } else {
           if (track.stage == 1 || track.stage == 2) {
             if (
-              drawbutton(
-                8,
-                view.width - 510 * view.scale,
-                720 * view.scaleY - 180 * view.scale,
-                220,
-                60,
-                "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-                "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-                "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-                "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
-                1,
-                "Practice ",
-                22,
-                0.9,
-                null,
-                0,
-                false,
-              )
+              drawButton({
+                id: 8,
+                x: view.width - 510 * view.scale,
+                y: 720 * view.scaleY - 180 * view.scale,
+                width: 220,
+                height: 60,
+                faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
+                faceBottom:
+                  "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
+                shadowTop:
+                  "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
+                shadowBottom:
+                  "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+                layout: BUTTON.textOnly,
+                text: "Practice ",
+                fontSize: 22,
+                textOpacity: 0.9,
+                image: null,
+                imageOpacity: 0,
+                pulsing: false,
+              })
             ) {
               game.carCount = 1;
               pauseMenuMusic();
@@ -9369,24 +9448,25 @@ function drawstageselect() {
       }
       if (track.stage != game.unlocked && track.stage >= 3) {
         if (
-          drawbutton(
-            10,
-            view.width - 550 * view.scale,
-            720 * view.scaleY - 190 * view.scale,
-            300,
-            70,
-            "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-            "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-            "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-            "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
-            0,
-            "PLAY SWITCH ",
-            20,
-            0.9,
-            images.buttons[1],
-            0.9,
-            true,
-          )
+          drawButton({
+            id: 10,
+            x: view.width - 550 * view.scale,
+            y: 720 * view.scaleY - 190 * view.scale,
+            width: 300,
+            height: 70,
+            faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
+            faceBottom: "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
+            shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
+            shadowBottom:
+              "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+            layout: BUTTON.textThenImage,
+            text: "PLAY SWITCH ",
+            fontSize: 20,
+            textOpacity: 0.9,
+            image: images.buttons[1],
+            imageOpacity: 0.9,
+            pulsing: true,
+          })
         ) {
           applyracecars();
           game.mode = 1;
@@ -9427,24 +9507,24 @@ function drawstageselect() {
       rgb3 = hslToRgb(hsl[0] - 0.05, 1, 0.2);
       rgb4 = hslToRgb(hsl[0] + 0.05, 1, 0.2);
       if (
-        drawbutton(
-          1,
-          view.width - 220 * view.scale,
-          720 * view.scaleY - 190 * view.scale,
-          200,
-          70,
-          "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-          "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-          "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-          "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
-          0,
-          "PLAY ",
-          25,
-          0.9,
-          images.buttons[1],
-          0.9,
-          true,
-        )
+        drawButton({
+          id: 1,
+          x: view.width - 220 * view.scale,
+          y: 720 * view.scaleY - 190 * view.scale,
+          width: 200,
+          height: 70,
+          faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
+          faceBottom: "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
+          shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
+          shadowBottom: "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+          layout: BUTTON.textThenImage,
+          text: "PLAY ",
+          fontSize: 25,
+          textOpacity: 0.9,
+          image: images.buttons[1],
+          imageOpacity: 0.9,
+          pulsing: true,
+        })
       ) {
         applyracecars();
         game.mode = 0;
@@ -9459,28 +9539,28 @@ function drawstageselect() {
         confirm.state = CONFIRM.used;
       }
       if (!flwg) {
-        flw -= 0.03;
-        if (flw < 0.5) {
-          flw = 0.5;
+        buttons.pulseWidth -= 0.03;
+        if (buttons.pulseWidth < 0.5) {
+          buttons.pulseWidth = 0.5;
           flwg = true;
         }
       } else {
-        flw += 0.03;
-        if (flw > 2) {
-          flw = 2;
+        buttons.pulseWidth += 0.03;
+        if (buttons.pulseWidth > 2) {
+          buttons.pulseWidth = 2;
           flwg = false;
         }
       }
       if (!flhg) {
-        flh -= 0.5;
-        if (flh < 0.1) {
-          flh = 0.1;
+        buttons.pulseHeight -= 0.5;
+        if (buttons.pulseHeight < 0.1) {
+          buttons.pulseHeight = 0.1;
           flhg = true;
         }
       } else {
-        flh += 0.5;
-        if (flh > 2) {
-          flh = 2;
+        buttons.pulseHeight += 0.5;
+        if (buttons.pulseHeight > 2) {
+          buttons.pulseHeight = 2;
           flhg = false;
         }
       }
@@ -9530,24 +9610,24 @@ function drawstageselect() {
       var rgb3 = hslToRgb(hsl[0] - 0.05, 1, 0.2);
       var rgb4 = hslToRgb(hsl[0] + 0.05, 1, 0.2);
       if (
-        drawbutton(
-          6,
-          1140 * fm - 80 * view.scale,
-          topo + 210 * fm,
-          160,
-          60,
-          "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-          "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-          "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-          "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
-          0,
-          "Okay ",
-          21,
-          0.9,
-          images.buttons[1],
-          0.9,
-          false,
-        )
+        drawButton({
+          id: 6,
+          x: 1140 * fm - 80 * view.scale,
+          y: topo + 210 * fm,
+          width: 160,
+          height: 60,
+          faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
+          faceBottom: "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
+          shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
+          shadowBottom: "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+          layout: BUTTON.textThenImage,
+          text: "Okay ",
+          fontSize: 21,
+          textOpacity: 0.9,
+          image: images.buttons[1],
+          imageOpacity: 0.9,
+          pulsing: false,
+        })
       ) {
         ontip = false;
         dudo = 0;
@@ -9561,7 +9641,7 @@ function drawstageselect() {
       game.phase = PHASE.stageLoading;
     }
   }
-  musictog();
+  drawMusicToggle();
 }
 function startflash() {
   cntspark = 2;
@@ -9580,57 +9660,6 @@ function aftersparkstart() {
   }
   updateframe = false;
   game.phase = PHASE.race;
-}
-function spPolygon(stx, sty, xd, yd, fm, to, enx, eny) {
-  rd.beginPath();
-  rd.moveTo(stx * view.scaleX, sty * view.scaleY);
-  for (var i = fm; i < to; i++) {
-    rd.lineTo(xd[i] * view.scaleX, yd[i] * view.scaleY);
-  }
-  rd.lineTo(enx * view.scaleX, eny * view.scaleY);
-  rd.closePath();
-  rd.fill();
-}
-function spdPolygon(xd, yd, nd) {
-  rd.beginPath();
-  rd.moveTo(xd[0] * view.scaleX, yd[0] * view.scaleY);
-  for (var i = 1; i < nd; i++) {
-    rd.lineTo(xd[i] * view.scaleX, yd[i] * view.scaleY);
-  }
-  rd.closePath();
-  rd.stroke();
-}
-function musictog() {
-  onycl = oncla(
-    4,
-    view.width - 62 * view.scale,
-    4 * view.scale,
-    58 * view.scale,
-    42 * view.scale,
-  );
-  if (onycl == 1) {
-    rd.globalAlpha = 0.7;
-  }
-  if (onycl == 2) {
-    if (!audio.muteMusic) {
-      audio.muteMusic = true;
-    } else {
-      audio.muteMusic = false;
-    }
-  }
-  if (!audio.muteMusic) {
-    onycl = 4;
-  } else {
-    onycl = 5;
-  }
-  rd.drawImage(
-    images.soundToggles[onycl],
-    view.width - 62 * view.scale,
-    4 * view.scale,
-    58 * view.scale,
-    42 * view.scale,
-  );
-  rd.globalAlpha = 1;
 }
 function arrow(pnt, misdcp, pntcar) {
   var xp = [];
@@ -9713,8 +9742,8 @@ function arrow(pnt, misdcp, pntcar) {
     for (var i = 0; i < carStats.names[car[pnti].typ].length; i++) {
       stspace += "  ";
     }
-    drawcs(16, "[" + stspace + "]", 76, 67, 240, 1);
-    drawcs(18, carStats.names[car[pnti].typ], 0, 0, 0, 1);
+    drawCenteredText(16, "[" + stspace + "]", 76, 67, 240, TEXT.label);
+    drawCenteredText(18, carStats.names[car[pnti].typ], 0, 0, 0, TEXT.label);
   }
   an += camera.yaw;
   while (an < 0) {
@@ -9814,7 +9843,7 @@ function arrow(pnt, misdcp, pntcar) {
       }
       rd.strokeStyle = "rgb(" + r + "," + g + "," + b + ")";
       rd.lineWidth = 2.6 * view.scale;
-      drawPolygon(xp, yp, 7);
+      strokePolygon(xp, yp, 7);
       rd.globalAlpha = 1;
     }
   } else {
@@ -9834,7 +9863,7 @@ function arrow(pnt, misdcp, pntcar) {
     b = 255;
     rd.strokeStyle = "rgb(" + r + "," + g + "," + b + ")";
     rd.lineWidth = 2.6 * view.scale;
-    drawPolygon(xp, yp, 7);
+    strokePolygon(xp, yp, 7);
   }
 }
 var onscreen = [];
@@ -9898,311 +9927,11 @@ function findonscreen() {
     }
   }
 }
-function fillPolygon(xd, yd, nd) {
-  rd.beginPath();
-  rd.moveTo(xd[0], yd[0]);
-  for (var i = 1; i < nd; i++) {
-    rd.lineTo(xd[i], yd[i]);
-  }
-  rd.closePath();
-  rd.fill();
-}
-function drawPolygon(xd, yd, nd) {
-  rd.beginPath();
-  rd.moveTo(xd[0], yd[0]);
-  for (var i = 1; i < nd; i++) {
-    rd.lineTo(xd[i], yd[i]);
-  }
-  rd.closePath();
-  rd.stroke();
-}
 function xs(x, z) {
   return ((z - 400) * -x) / z + x;
 }
 function ys(y, z) {
   return ((z - 400) * -y) / z + y;
-}
-function drawcs(y, cs, r, g, b, typ) {
-  rd.letterSpacing = "0px";
-  rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px verd";
-  if (typ == 1 || typ == 2) {
-    rd.letterSpacing = "1px";
-    rd.font = "" + 13 * (view.scaleY + view.scaleX) + "px junk";
-  }
-  if (typ == 3) {
-    rd.letterSpacing = "1px";
-    rd.font = "" + 24 * (view.scaleY + view.scaleX) + "px junk";
-  }
-  if (typ == 4) {
-    rd.letterSpacing = "1px";
-    rd.font = "" + 17 * (view.scaleY + view.scaleX) + "px junk";
-  }
-  rd.textAlign = "center";
-  rd.textBaseline = "middle";
-  rd.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
-  if (typ == 2) {
-    rd.globalAlpha = 0.67;
-  }
-  rd.fillText(cs, 640 * view.scaleX, y * view.scaleY);
-  if (typ == 2) {
-    rd.globalAlpha = 1;
-  }
-}
-function drawbar(xb, yb, cb1, cb2, cbf, fct) {
-  rd.fillStyle = cbf;
-  rd.fillRect(
-    xb + 7 * view.scale,
-    yb + 6 * view.scale,
-    166 * fct * view.scale,
-    18 * view.scale,
-  );
-  var grd = rd.createLinearGradient(xb, yb, xb, yb + 30 * view.scale);
-  grd.addColorStop(0, cb1);
-  grd.addColorStop(1, cb2);
-  rd.fillStyle = grd;
-  rd.beginPath();
-  rd.moveTo(xb, yb);
-  rd.lineTo(xb - 9 * view.scale, yb + 10 * view.scale);
-  rd.lineTo(xb - 1.5 * view.scale, yb + 27 * view.scale);
-  rd.lineTo(xb + 10 * view.scale, yb + 30 * view.scale);
-  rd.lineTo(xb + 92 * view.scale, yb + 30 * view.scale);
-  rd.lineTo(xb + 92 * view.scale, yb + 24 * view.scale);
-  rd.lineTo(xb + 7 * view.scale, yb + 24 * view.scale);
-  rd.lineTo(xb + 7 * view.scale, yb + 6 * view.scale);
-  rd.lineTo(xb + 92 * view.scale, yb + 6 * view.scale);
-  rd.lineTo(xb + 92 * view.scale, yb);
-  rd.closePath();
-  rd.fill();
-  rd.beginPath();
-  rd.moveTo(xb + 180 * view.scale, yb + 30 * view.scale);
-  rd.lineTo(xb + 189 * view.scale, yb + 20 * view.scale);
-  rd.lineTo(xb + 181.5 * view.scale, yb + 3 * view.scale);
-  rd.lineTo(xb + 170 * view.scale, yb);
-  rd.lineTo(xb + 90 * view.scale, yb);
-  rd.lineTo(xb + 90 * view.scale, yb + 6 * view.scale);
-  rd.lineTo(xb + 173 * view.scale, yb + 6 * view.scale);
-  rd.lineTo(xb + 173 * view.scale, yb + 24 * view.scale);
-  rd.lineTo(xb + 90 * view.scale, yb + 24 * view.scale);
-  rd.lineTo(xb + 90 * view.scale, yb + 30 * view.scale);
-  rd.closePath();
-  rd.fill();
-}
-var wasonit = [0, 0, 0, 0];
-var keyonx = 0;
-function drawbutton(
-  onx,
-  xb,
-  yb,
-  wb,
-  hb,
-  cb1,
-  cb2,
-  cb3,
-  cb4,
-  typ,
-  txt,
-  fz,
-  opa,
-  img,
-  iopa,
-  flak,
-) {
-  wb = wb * view.scale;
-  hb = hb * view.scale;
-  var xbd = xb - wb * 0.5 + 5 * view.scale;
-  var ybd = yb + 4 * view.scale;
-  var clknow = false;
-  var hasonx = false;
-  var mnms = pointer.count;
-  if (mnms < 1) {
-    mnms = 1;
-  }
-  for (var i = 0; i < mnms; i++) {
-    if (
-      pointer.x[i] > xbd - hb * 0.3 &&
-      pointer.x[i] < xbd + wb + hb * 0.3 &&
-      pointer.y[i] > ybd &&
-      pointer.y[i] < ybd + hb
-    ) {
-      if (pointer.down) {
-        wasonit[i] = onx;
-        hasonx = true;
-      } else {
-        if (wasonit[i] == onx) {
-          clknow = true;
-          wasonit[i] = 0;
-        }
-      }
-    } else {
-      if (wasonit[i] == onx) {
-        wasonit[i] = 0;
-      }
-    }
-  }
-  if (keyonx == onx) {
-    hasonx = true;
-  }
-  var flwu = 2;
-  var flhu = 0.5;
-  if (flak) {
-    flwu = flw;
-    flhu = flh;
-  }
-  if (!hasonx) {
-    var grd = rd.createLinearGradient(
-      xbd,
-      ybd - hb * 0.5,
-      xbd + wb * 0.5 * flwu,
-      ybd - hb * 0.5 + hb * flhu,
-    );
-    grd.addColorStop(0, cb3);
-    grd.addColorStop(1, cb4);
-    rd.fillStyle = grd;
-    rd.beginPath();
-    rd.moveTo(xbd, ybd);
-    rd.lineTo(xbd - hb * 0.3, ybd + hb * 0.3334);
-    rd.lineTo(xbd - hb * 0.05, ybd + hb * 0.9);
-    rd.lineTo(xbd + hb * 0.1, ybd + hb);
-    rd.lineTo(xbd + wb, ybd + hb);
-    rd.lineTo(xbd + wb + hb * 0.3, ybd + hb * 0.6667);
-    rd.lineTo(xbd + wb + hb * 0.05, ybd + hb * 0.1);
-    rd.lineTo(xbd + wb - hb * 0.1, ybd);
-    rd.closePath();
-    rd.fill();
-    xbd = xb - wb * 0.5;
-    ybd = yb;
-  }
-  var grd = rd.createLinearGradient(
-    xbd,
-    ybd - hb * 0.5,
-    xbd + wb * 0.5 * flwu,
-    ybd - hb * 0.5 + hb * flhu,
-  );
-  grd.addColorStop(0, cb1);
-  grd.addColorStop(1, cb2);
-  rd.fillStyle = grd;
-  rd.beginPath();
-  rd.moveTo(xbd, ybd);
-  rd.lineTo(xbd - hb * 0.3, ybd + hb * 0.3334);
-  rd.lineTo(xbd - hb * 0.05, ybd + hb * 0.9);
-  rd.lineTo(xbd + hb * 0.1, ybd + hb);
-  rd.lineTo(xbd + wb, ybd + hb);
-  rd.lineTo(xbd + wb + hb * 0.3, ybd + hb * 0.6667);
-  rd.lineTo(xbd + wb + hb * 0.05, ybd + hb * 0.1);
-  rd.lineTo(xbd + wb - hb * 0.1, ybd);
-  rd.closePath();
-  rd.fill();
-  var wti = 0;
-  if (typ == 0 || typ == 3) {
-    rd.font = "" + fz * (view.scaleY + view.scaleX) + "px junk";
-    rd.letterSpacing = "1px";
-    wti =
-      rd.measureText(txt).width +
-      10 * view.scale +
-      img.width * view.scale * interfaceResolution;
-  }
-  if (typ == 1) {
-    rd.font = "" + fz * (view.scaleY + view.scaleX) + "px junk";
-    rd.letterSpacing = "1px";
-    wti = rd.measureText(txt).width;
-  }
-  if (typ == 2) {
-    wti = img.width * view.scale * interfaceResolution;
-  }
-  if (typ == 0 || typ == 1) {
-    rd.textBaseline = "middle";
-    rd.textAlign = "left";
-    rd.fillStyle = "#000000";
-    rd.globalAlpha = opa;
-    var ydf = 0;
-    if (isFirefox) {
-      ydf = fz * view.scale * 0.35;
-    }
-    rd.fillText(
-      txt,
-      xbd + wb * 0.5 - wti * 0.5 + fz * view.scale * 0.3,
-      ybd + hb * 0.5 - fz * view.scale * 0.25 + ydf,
-    );
-    rd.globalAlpha = 1;
-  }
-  if (typ == 0 || typ == 2) {
-    rd.globalAlpha = iopa;
-    rd.drawImage(
-      img,
-      xbd + wb * 0.5 + wti * 0.5 - img.width * view.scale * interfaceResolution,
-      ybd + hb * 0.5 - img.height * view.scale * 0.5 * interfaceResolution,
-      img.width * view.scale * interfaceResolution,
-      img.height * view.scale * interfaceResolution,
-    );
-    rd.globalAlpha = 1;
-  }
-  if (typ == 3) {
-    rd.globalAlpha = iopa;
-    var subft = 0;
-    if (txt == "Time" || txt == "Rewind Time") {
-      subft = 7 * view.scale;
-    }
-    rd.drawImage(
-      img,
-      xbd + wb * 0.5 - wti * 0.5,
-      ybd +
-        hb * 0.5 -
-        img.height * view.scale * 0.5 * interfaceResolution -
-        subft,
-      img.width * view.scale * interfaceResolution,
-      img.height * view.scale * interfaceResolution,
-    );
-    rd.globalAlpha = 1;
-    rd.textBaseline = "middle";
-    rd.textAlign = "left";
-    rd.fillStyle = "#000000";
-    rd.globalAlpha = opa;
-    var ydf = 0;
-    if (isFirefox) {
-      ydf = fz * view.scale * 0.35;
-    }
-    rd.fillText(
-      txt,
-      xbd +
-        wb * 0.5 +
-        wti * 0.5 -
-        rd.measureText(txt).width -
-        fz * view.scale * 0.3,
-      ybd + hb * 0.5 - fz * view.scale * 0.25 + ydf,
-    );
-    rd.globalAlpha = 1;
-  }
-  return clknow;
-}
-function oncla(onx, xa, ya, wa, ha) {
-  var oncl = 0;
-  var mnms = pointer.count;
-  if (mnms < 1) {
-    mnms = 1;
-  }
-  for (var i = 0; i < mnms; i++) {
-    if (
-      pointer.x[i] > xa &&
-      pointer.x[i] < xa + wa &&
-      pointer.y[i] > ya &&
-      pointer.y[i] < ya + ha
-    ) {
-      if (pointer.down) {
-        wasonit[i] = onx;
-        oncl = 1;
-      } else {
-        if (wasonit[i] == onx) {
-          oncl = 2;
-          wasonit[i] = 0;
-        }
-      }
-    } else {
-      if (wasonit[i] == onx) {
-        wasonit[i] = 0;
-      }
-    }
-  }
-  return oncl;
 }
 function drawcoolrect(xb, yb, wb, hb, cb1, cb2, cbs, per) {
   wb = wb * view.scale;
@@ -10419,17 +10148,17 @@ function onKey(action, pressed) {
   if (action == "toggleArrow") {
     if (pressed) {
       if (game.phase == PHASE.race) {
-        keyonx = 1;
+        buttons.pressedByKey = 1;
       }
     } else {
       racers[game.player].u.arrace = !racers[game.player].u.arrace;
-      keyonx = 0;
+      buttons.pressedByKey = 0;
     }
   }
   if (action == "rewind") {
     if (game.phase == PHASE.race && starcnt == 0) {
       if (pressed) {
-        keyonx = 11;
+        buttons.pressedByKey = 11;
       } else {
         stopEngine();
         stopStageMusic();
@@ -10437,7 +10166,7 @@ function onKey(action, pressed) {
       }
     }
     if (!pressed) {
-      keyonx = 0;
+      buttons.pressedByKey = 0;
     }
   }
   if (action == "lookBackLeft") {
