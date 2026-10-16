@@ -10,9 +10,14 @@ import {
 import { cosDeg, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
 import { PHASE, game } from "../core/state.js";
-import { applyracecars, loadstage, nextRaceSize, startflash } from "../game.js";
+import { applyracecars, nextRaceSize, startflash } from "../game.js";
+import {
+  AFTER_LOAD,
+  STAGE_LOAD,
+  loadstage,
+  stageLoad,
+} from "../loading/stageLoad.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
-import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
 import { raceEvents } from "../race/events.js";
 import { racers } from "../race/racers.js";
 import { spinFixHoops, track } from "../race/track.js";

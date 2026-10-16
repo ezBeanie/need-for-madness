@@ -21,6 +21,9 @@ class Track {
   nfix = 0;
   notb = false;
   name = "hogan rewish";
+  // pieces after the last path piece that the stage select still shows ("addon" in the
+  // stage file)
+  addons = 0;
   switchtime = 800;
   // per car: race position (starting as 6, last of the original seven), checkpoints
   // cleared, wasted (0 no, 1 by itself, 2 in a collision), damage (0..1)

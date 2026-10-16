@@ -1,10 +1,4 @@
 import {
-  isSpecialFix,
-  parseStage,
-  pathType,
-  valueOf,
-} from "./data/stageFormat.js";
-import {
   cosDeg as mcos,
   distance as pyd,
   distanceSquaredXZ as pyo,
@@ -98,7 +92,6 @@ import {
   stageselect,
 } from "./screens/stageSelect.js";
 import { gameinstructions } from "./screens/instructions.js";
-import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "./loading/stageLoad.js";
 import { MAX_CARS, PHASE, RACE_SIZES, game } from "./core/state.js";
 import { tick } from "./core/tick.js";
 import { car, racers } from "./race/racers.js";
@@ -138,13 +131,7 @@ import {
   pickTalkingPicture,
 } from "./ui/insano.js";
 import { drawmain, resetgame } from "./screens/mainMenu.js";
-import {
-  colorcptext,
-  createsparks,
-  gamecartextures,
-  groundtexture,
-  skytexture,
-} from "./render/generated.js";
+import { gamecartextures } from "./render/generated.js";
 import { loaddata } from "./loading/assets.js";
 
 function setwheelspos() {
@@ -284,345 +271,6 @@ function shadowmap(crft, shd, rad) {
       }
     }
   }
-}
-
-var adod = 0;
-
-function newobo() {
-  return { typ: 0, x: 0, z: 0, mat: null, bnd: [0, 0, 0, 0], iscp: 0 };
-}
-
-export function loadstage() {
-  stageLoad.progress = STAGE_LOAD.loading;
-  var rawFile = new XMLHttpRequest();
-  rawFile.open("GET", "data/stages/" + track.stage + ".txt", true);
-  rawFile.onreadystatechange = function () {
-    if (rawFile.readyState === 4) {
-      if (rawFile.status === 200 || rawFile.status == 0) {
-        var allText = rawFile.responseText;
-        track.n = 0;
-        track.nsp = 0;
-        pieces.count = 0;
-        pieces.fixCount = 0;
-        adod = 0;
-        scene.tint = [0, 0, 0];
-        var skyc = [];
-        var cloudsc = [];
-        var cloudtyp = 0;
-        scene.light[0] = 0;
-        scene.light[1] = 1;
-        scene.light[2] = 0;
-        var bounds = [0, 0, 0, 0];
-        var bounded = false;
-        track.tips = [];
-        var entries = parseStage(allText);
-        for (var i = 0; i < entries.length; i++) {
-          var e = entries[i];
-          var v = function (field) {
-            return valueOf(e, field);
-          };
-          if (e.command == "name") {
-            track.name = e.name ?? "";
-          }
-          if (e.command == "nlaps") {
-            track.nlaps = v("laps");
-          }
-          if (e.command == "addon") {
-            adod = v("count");
-          }
-          if (e.command == "snap") {
-            scene.tint[0] = v("r") / 100;
-            scene.tint[1] = v("g") / 100;
-            scene.tint[2] = v("b") / 100;
-          }
-          if (e.command == "sky") {
-            skyc[0] = v("r");
-            skyc[1] = v("g");
-            skyc[2] = v("b");
-          }
-          if (e.command == "fog") {
-            scene.fog[0] = v("r");
-            scene.fog[1] = v("g");
-            scene.fog[2] = v("b");
-          }
-          if (e.command == "clouds") {
-            cloudsc[0] = v("r");
-            cloudsc[1] = v("g");
-            cloudsc[2] = v("b");
-            cloudtyp = v("type");
-          }
-          if (e.command == "ground") {
-            groundtexture(
-              v("texture"),
-              v("r"),
-              v("g"),
-              v("b"),
-              v("hue"),
-              v("saturation"),
-            );
-          }
-          if (track.stage >= 3 && game.unlocked == track.stage) {
-            if (e.command == "tip") {
-              track.tips.push(
-                (e.text ?? "")
-                  .replace("[", "(")
-                  .replace("]", ")")
-                  .replace(";", ","),
-              );
-            }
-          }
-          if (e.command == "lightswingX") {
-            var an = v("angle");
-            scene.light[1] = Math.cos(an * (Math.PI / 180));
-            an += 90;
-            scene.light[0] = Math.cos(an * (Math.PI / 180));
-          }
-          if (e.command == "lightswingZ") {
-            var an = v("angle");
-            scene.light[1] = Math.cos(an * (Math.PI / 180));
-            an += 90;
-            scene.light[2] = Math.cos(an * (Math.PI / 180));
-          }
-          if (e.command == "distfog") {
-            scene.fogDistance = v("distance");
-          }
-          if (e.command == "bnd") {
-            bounds = [v("a"), v("b"), v("c"), v("d")];
-            bounded = true;
-          }
-          if (e.command == "set") {
-            pieces.list[pieces.count] = newobo();
-            pieces.list[pieces.count].mat = mat4.create();
-            pieces.list[pieces.count].typ = v("piece") - 10;
-            if (bounded) {
-              for (var k = 0; k < 4; k++) {
-                pieces.list[pieces.count].bnd[k] = bounds[k];
-              }
-              bounded = false;
-            }
-            pieces.list[pieces.count].x = -(v("x") / 10);
-            pieces.list[pieces.count].y = 0;
-            pieces.list[pieces.count].z = v("z") / 10;
-            var rot = v("rotation");
-            mat4.rotate(
-              pieces.list[pieces.count].mat,
-              pieces.list[pieces.count].mat,
-              rot * (Math.PI / 180),
-              [0, 1, 0],
-            );
-            if (Math.abs(rot) == 90) {
-              pieces.list[pieces.count].bx =
-                pieceModels[pieces.list[pieces.count].typ].bz;
-              pieces.list[pieces.count].bz =
-                pieceModels[pieces.list[pieces.count].typ].bx;
-            } else {
-              pieces.list[pieces.count].bx =
-                pieceModels[pieces.list[pieces.count].typ].bx;
-              pieces.list[pieces.count].bz =
-                pieceModels[pieces.list[pieces.count].typ].bz;
-            }
-            pieces.list[pieces.count].bx += 15;
-            pieces.list[pieces.count].bz += 15;
-            pieces.list[pieces.count].by =
-              pieceModels[pieces.list[pieces.count].typ].by;
-            if (pieces.list[pieces.count].typ == 39) {
-              pieces.list[pieces.count].rot = rot;
-            }
-            var path = pathType(e);
-            if (path !== null) {
-              track.x[track.n] = pieces.list[pieces.count].x;
-              track.z[track.n] = pieces.list[pieces.count].z;
-              track.y[track.n] = 0;
-              track.typ[track.n] = path;
-              track.obi[track.n] = pieces.count;
-              track.n++;
-            }
-            pieces.count++;
-          }
-          if (e.command == "chk") {
-            pieces.list[pieces.count] = newobo();
-            pieces.list[pieces.count].mat = mat4.create();
-            pieces.list[pieces.count].typ = v("piece") - 10;
-            pieces.list[pieces.count].x = -(v("x") / 10);
-            pieces.list[pieces.count].y = 0.4;
-            pieces.list[pieces.count].z = v("z") / 10;
-            var rot = v("rotation");
-            mat4.rotate(
-              pieces.list[pieces.count].mat,
-              pieces.list[pieces.count].mat,
-              rot * (Math.PI / 180),
-              [0, 1, 0],
-            );
-            if (pieces.list[pieces.count].typ == 54) {
-              pieces.list[pieces.count].y = -(v("y") / 10);
-            }
-            if (Math.abs(rot) == 90) {
-              pieces.list[pieces.count].bx =
-                pieceModels[pieces.list[pieces.count].typ].bz;
-              pieces.list[pieces.count].bz =
-                pieceModels[pieces.list[pieces.count].typ].bx;
-            } else {
-              pieces.list[pieces.count].bx =
-                pieceModels[pieces.list[pieces.count].typ].bx;
-              pieces.list[pieces.count].bz =
-                pieceModels[pieces.list[pieces.count].typ].bz;
-            }
-            pieces.list[pieces.count].bx += 15;
-            pieces.list[pieces.count].bz += 15;
-            pieces.list[pieces.count].by =
-              pieceModels[pieces.list[pieces.count].typ].by;
-            track.x[track.n] = pieces.list[pieces.count].x;
-            track.z[track.n] = pieces.list[pieces.count].z;
-            track.y[track.n] = pieces.list[pieces.count].y;
-            track.obi[track.n] = pieces.count;
-            if (rot == 0) {
-              track.typ[track.n] = 1;
-            } else {
-              track.typ[track.n] = 2;
-            }
-            track.pcs = track.n;
-            track.n++;
-            track.obn[track.nsp] = pieces.count;
-            track.nsp++;
-            pieces.list[pieces.count].iscp = track.nsp;
-            pieces.count++;
-          }
-          if (e.command == "fix") {
-            pieces.list[pieces.count] = newobo();
-            pieces.list[pieces.count].mat = mat4.create();
-            pieces.list[pieces.count].typ = v("piece") - 10;
-            pieces.list[pieces.count].x = -(v("x") / 10);
-            pieces.list[pieces.count].z = v("z") / 10;
-            pieces.list[pieces.count].y = -(v("y") / 10) + 25;
-            var rot = v("rotation");
-            mat4.rotate(
-              pieces.list[pieces.count].mat,
-              pieces.list[pieces.count].mat,
-              rot * (Math.PI / 180),
-              [0, 1, 0],
-            );
-            track.special[pieces.fixCount] = isSpecialFix(e);
-            pieces.fixes[pieces.fixCount] = pieces.count;
-            pieces.fixCount++;
-            pieces.count++;
-          }
-          if (e.command == "maxr") {
-            var num = v("count");
-            var limit = -(v("limit") / 10);
-            track.limr = limit + 5;
-            track.limro = pieces.count;
-            var strt = v("start") / 10;
-            for (var c = 0; c < num; c++) {
-              pieces.list[pieces.count] = newobo();
-              pieces.list[pieces.count].mat = mat4.create();
-              pieces.list[pieces.count].typ = 29;
-              pieces.list[pieces.count].x = limit;
-              pieces.list[pieces.count].y = 0;
-              pieces.list[pieces.count].z = c * 480 + strt;
-              pieces.count++;
-            }
-          }
-          if (e.command == "maxl") {
-            var num = v("count");
-            var limit = -(v("limit") / 10);
-            track.liml = limit - 5;
-            track.limlo = pieces.count;
-            var strt = v("start") / 10;
-            for (var c = 0; c < num; c++) {
-              pieces.list[pieces.count] = newobo();
-              pieces.list[pieces.count].mat = mat4.create();
-              pieces.list[pieces.count].typ = 29;
-              pieces.list[pieces.count].x = limit;
-              pieces.list[pieces.count].y = 0;
-              pieces.list[pieces.count].z = c * 480 + strt;
-              mat4.rotate(
-                pieces.list[pieces.count].mat,
-                pieces.list[pieces.count].mat,
-                180 * (Math.PI / 180),
-                [0, 1, 0],
-              );
-              pieces.count++;
-            }
-          }
-          if (e.command == "maxt") {
-            var num = v("count");
-            var limit = v("limit") / 10;
-            track.limt = limit - 5;
-            track.limto = pieces.count;
-            var strt = -v("start") / 10;
-            for (var c = 0; c < num; c++) {
-              pieces.list[pieces.count] = newobo();
-              pieces.list[pieces.count].mat = mat4.create();
-              pieces.list[pieces.count].typ = 29;
-              pieces.list[pieces.count].x = -(c * 480) + strt;
-              pieces.list[pieces.count].y = 0;
-              pieces.list[pieces.count].z = limit;
-              mat4.rotate(
-                pieces.list[pieces.count].mat,
-                pieces.list[pieces.count].mat,
-                90 * (Math.PI / 180),
-                [0, 1, 0],
-              );
-              pieces.count++;
-            }
-          }
-          if (e.command == "maxb") {
-            var num = v("count");
-            var limit = v("limit") / 10;
-            track.limb = limit + 5;
-            track.limbo = pieces.count;
-            var strt = -v("start") / 10;
-            for (var c = 0; c < num; c++) {
-              pieces.list[pieces.count] = newobo();
-              pieces.list[pieces.count].mat = mat4.create();
-              pieces.list[pieces.count].typ = 29;
-              pieces.list[pieces.count].x = -(c * 480) + strt;
-              pieces.list[pieces.count].y = 0;
-              pieces.list[pieces.count].z = limit;
-              mat4.rotate(
-                pieces.list[pieces.count].mat,
-                pieces.list[pieces.count].mat,
-                -90 * (Math.PI / 180),
-                [0, 1, 0],
-              );
-              pieces.count++;
-            }
-          }
-        }
-        setupcars();
-        skytexture(skyc, scene.fog, cloudsc, cloudtyp);
-        for (var i = 0; i < 3; i++) {
-          scene.glassColor[i] = Math.round((skyc[i] * 2 + 70) / 3);
-        }
-        gamecartextures();
-        createsparks();
-        colorcptext();
-        effects.nchp = 0;
-        effects.nspr = 0;
-        effects.ndst = 0;
-        effects.nexp = 0;
-        if (stageLoad.after != AFTER_LOAD.race) {
-          var opsnap = [
-            -(scene.tint[0] * 3),
-            -(scene.tint[1] * 3),
-            -(scene.tint[2] * 3),
-          ];
-          setWorld(opsnap, scene.fog, 0, 1, 0, 10700);
-        } else {
-          setWorld(
-            scene.tint,
-            scene.fog,
-            scene.light[0],
-            scene.light[1],
-            scene.light[2],
-            scene.fogDistance,
-          );
-        }
-        stageLoad.progress = STAGE_LOAD.loaded;
-      }
-    }
-  };
-  rawFile.send(null);
 }
 
 function cpanimate() {
@@ -1375,7 +1023,7 @@ function render(now) {
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
       if (!stageSelect.hiddenTicks) {
-        for (var i = 0; i < track.obi[track.n - 1] + adod; i++) {
+        for (var i = 0; i < track.obi[track.n - 1] + track.addons; i++) {
           if (pieces.list[i].iscp) {
             if (
               Math.round(raceEvents.checkpointFlash) == 0 ||
@@ -1605,7 +1253,7 @@ function inishcars() {
   }
 }
 // Chooses the opponents and puts all cars on the start grid.
-function setupcars() {
+export function setupcars() {
   track.insih();
   sortcars(track.stage);
 

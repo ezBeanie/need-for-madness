@@ -7,7 +7,11 @@ const walk = require("acorn-walk");
 const fs = require("fs");
 
 const s = fs.readFileSync(process.argv[2], "utf8");
-const ast = parse(s, { ecmaVersion: "latest", sourceType: "module" });
+const parsed = parse(s, { ecmaVersion: "latest", sourceType: "module" });
+// exported declarations count like the others
+const ast = {
+  body: parsed.body.map((n) => (n.type === "ExportNamedDeclaration" && n.declaration ? n.declaration : n)),
+};
 const kind = new Map();
 for (const n of ast.body) {
   if (n.type === "VariableDeclaration") n.declarations.forEach((d) => kind.set(d.id.name, "var"));

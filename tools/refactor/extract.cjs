@@ -69,7 +69,9 @@ if (autoVars) {
 }
 
 const declared = (n) =>
-  n.type === "FunctionDeclaration"
+  n.type === "ExportNamedDeclaration" && n.declaration
+    ? declared(n.declaration)
+    : n.type === "FunctionDeclaration"
     ? [n.id.name]
     : n.type === "VariableDeclaration"
       ? n.declarations.map((d) => d.id.name)
