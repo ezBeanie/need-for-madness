@@ -80,8 +80,8 @@ describe("interpolated drawing in a real race", () => {
             .slice(0, ctx.game.carCount)
             .flatMap((car) => [car.mat, ...ctx.whl[car.typ].map((w) => w.mat)]),
         ),
-        dust: ctx.dust.map((d) => (d.stg != 0 ? d.mat : null)),
-        explosions: ctx.exp.map((e) => (e.ani != -1 ? e.mat : null)),
+        dust: ctx.effects.dust.map((d) => (d.stg != 0 ? d.mat : null)),
+        explosions: ctx.effects.exp.map((e) => (e.ani != -1 ? e.mat : null)),
       };
       if (before) {
         for (const kind of Object.keys(now)) {

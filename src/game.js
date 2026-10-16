@@ -83,6 +83,7 @@ import { car, racers } from "./race/racers.js";
 import { carStats } from "./data/carStats.js";
 import { pieceModels, pieces, track } from "./race/track.js";
 import { recording } from "./race/recording.js";
+import { effects } from "./race/effects.js";
 import { control, inishcontrol, resetPursuit } from "./race/ai.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
@@ -2207,10 +2208,10 @@ function loadstage() {
         gamecartextures();
         createsparks();
         colorcptext();
-        nchp = 0;
-        nspr = 0;
-        ndst = 0;
-        nexp = 0;
+        effects.nchp = 0;
+        effects.nspr = 0;
+        effects.ndst = 0;
+        effects.nexp = 0;
         if (stageloadtyp != 2) {
           var opsnap = [-(snap[0] * 3), -(snap[1] * 3), -(snap[2] * 3)];
           setWorld(opsnap, fogc, 0, 1, 0, 10700);
@@ -2301,21 +2302,19 @@ function cpanimate() {
     }
   }
 }
-var nchp = 0;
-var chip = [];
 
 function chipaway(c, x, y, z, ctmag) {
   if (racers[c].carnchp < 120 && !recording.onpausefr) {
     var ui = -1;
-    for (var i = 0; i < nchp; i++) {
-      if (chip[i].loaded == 0) {
+    for (var i = 0; i < effects.nchp; i++) {
+      if (effects.chip[i].loaded == 0) {
         ui = i;
         break;
       }
     }
     if (ui == -1) {
-      ui = nchp;
-      nchp++;
+      ui = effects.nchp;
+      effects.nchp++;
       racers[c].carnchp++;
     }
     if (ctmag > 0.4) {
@@ -2324,21 +2323,24 @@ function chipaway(c, x, y, z, ctmag) {
     if (ctmag < -0.4) {
       ctmag = -0.3;
     }
-    chip[ui] = newModel();
-    chip[i].rx = x * car[c].mat[0] + y * car[c].mat[4] + z * car[c].mat[8];
-    chip[i].ry = x * car[c].mat[1] + y * car[c].mat[5] + z * car[c].mat[9];
-    chip[i].rz = x * car[c].mat[2] + y * car[c].mat[6] + z * car[c].mat[10];
-    chip[i].cn = c;
-    chip[ui].vx = ctmag * (30 - random.fx() * 60);
-    chip[ui].vy = ctmag * (30 - random.fx() * 60);
-    chip[ui].vz = ctmag * (30 - random.fx() * 60);
-    chip[ui].rtn1 = Math.floor(random.fx() * 5);
-    if (chip[ui].rtn1 < 3) {
-      chip[ui].rtn1mag = random.fx() * 60;
+    effects.chip[ui] = newModel();
+    effects.chip[i].rx =
+      x * car[c].mat[0] + y * car[c].mat[4] + z * car[c].mat[8];
+    effects.chip[i].ry =
+      x * car[c].mat[1] + y * car[c].mat[5] + z * car[c].mat[9];
+    effects.chip[i].rz =
+      x * car[c].mat[2] + y * car[c].mat[6] + z * car[c].mat[10];
+    effects.chip[i].cn = c;
+    effects.chip[ui].vx = ctmag * (30 - random.fx() * 60);
+    effects.chip[ui].vy = ctmag * (30 - random.fx() * 60);
+    effects.chip[ui].vz = ctmag * (30 - random.fx() * 60);
+    effects.chip[ui].rtn1 = Math.floor(random.fx() * 5);
+    if (effects.chip[ui].rtn1 < 3) {
+      effects.chip[ui].rtn1mag = random.fx() * 60;
     }
-    chip[ui].rtn2 = Math.floor(random.fx() * 5);
-    if (chip[ui].rtn2 < 3) {
-      chip[ui].rtn2mag = random.fx() * 60;
+    effects.chip[ui].rtn2 = Math.floor(random.fx() * 5);
+    if (effects.chip[ui].rtn2 < 3) {
+      effects.chip[ui].rtn2mag = random.fx() * 60;
     }
     var ox = [];
     ox[0] = 0;
@@ -2397,91 +2399,91 @@ function chipaway(c, x, y, z, ctmag) {
       texu[i * 2] = car[c].ctxl[0];
       texu[i * 2 + 1] = car[c].ctxl[1];
     }
-    chip[ui].ni = 3;
-    chip[ui].nt = 1;
+    effects.chip[ui].ni = 3;
+    effects.chip[ui].nt = 1;
     var roni = random.fx();
     if (roni > 0.334) {
-      chip[ui].ownshade = true;
+      effects.chip[ui].ownshade = true;
     }
     if (roni > 0.667) {
-      chip[ui].ownlight = true;
+      effects.chip[ui].ownlight = true;
     }
-    chip[ui].vbuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, chip[ui].vbuf);
+    effects.chip[ui].vbuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, effects.chip[ui].vbuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vert), gl.STATIC_DRAW);
-    chip[ui].nbuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, chip[ui].nbuf);
+    effects.chip[ui].nbuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, effects.chip[ui].nbuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(norm), gl.STATIC_DRAW);
-    chip[ui].tbuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, chip[ui].tbuf);
+    effects.chip[ui].tbuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, effects.chip[ui].tbuf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texu), gl.STATIC_DRAW);
-    chip[ui].ibuf = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, chip[ui].ibuf);
+    effects.chip[ui].ibuf = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, effects.chip[ui].ibuf);
     gl.bufferData(
       gl.ELEMENT_ARRAY_BUFFER,
       new Uint16Array(indice),
       gl.STATIC_DRAW,
     );
-    chip[ui].mat = mat4.create();
-    chip[ui].texture = carobj[car[c].typ].texture[1];
-    chip[ui].loaded = 1;
+    effects.chip[ui].mat = mat4.create();
+    effects.chip[ui].texture = carobj[car[c].typ].texture[1];
+    effects.chip[ui].loaded = 1;
   }
 }
 function chipsfly() {
   var nfly = false;
-  for (var i = 0; i < nchp; i++) {
-    if (chip[i].loaded) {
-      chip[i].x = car[chip[i].cn].x + chip[i].rx;
-      chip[i].y = car[chip[i].cn].y + chip[i].ry;
-      chip[i].z = car[chip[i].cn].z + chip[i].rz;
-      chip[i].rx += chip[i].vx * tick.scale;
-      chip[i].ry += chip[i].vy * tick.scale;
-      chip[i].rz += chip[i].vz * tick.scale;
-      chip[i].vy -= 0.7 * tick.scale;
-      if (chip[i].rtn1 < 3) {
+  for (var i = 0; i < effects.nchp; i++) {
+    if (effects.chip[i].loaded) {
+      effects.chip[i].x = car[effects.chip[i].cn].x + effects.chip[i].rx;
+      effects.chip[i].y = car[effects.chip[i].cn].y + effects.chip[i].ry;
+      effects.chip[i].z = car[effects.chip[i].cn].z + effects.chip[i].rz;
+      effects.chip[i].rx += effects.chip[i].vx * tick.scale;
+      effects.chip[i].ry += effects.chip[i].vy * tick.scale;
+      effects.chip[i].rz += effects.chip[i].vz * tick.scale;
+      effects.chip[i].vy -= 0.7 * tick.scale;
+      if (effects.chip[i].rtn1 < 3) {
         var a1rot = [0, 0, 0];
-        a1rot[chip[i].rtn1] = 1;
+        a1rot[effects.chip[i].rtn1] = 1;
         mat4.rotate(
-          chip[i].mat,
-          chip[i].mat,
-          chip[i].rtn1mag * (Math.PI / 180),
+          effects.chip[i].mat,
+          effects.chip[i].mat,
+          effects.chip[i].rtn1mag * (Math.PI / 180),
           a1rot,
         );
       }
-      if (chip[i].rtn2 < 3) {
+      if (effects.chip[i].rtn2 < 3) {
         var a2rot = [0, 0, 0];
-        a2rot[chip[i].rtn2] = 1;
+        a2rot[effects.chip[i].rtn2] = 1;
         mat4.rotate(
-          chip[i].mat,
-          chip[i].mat,
-          chip[i].rtn2mag * (Math.PI / 180),
+          effects.chip[i].mat,
+          effects.chip[i].mat,
+          effects.chip[i].rtn2mag * (Math.PI / 180),
           a2rot,
         );
       }
       if (tick.fraction >= tick.scale) {
-        chip[i].loaded++;
-        if (chip[i].loaded == 100) {
-          chip[i].loaded = 0;
+        effects.chip[i].loaded++;
+        if (effects.chip[i].loaded == 100) {
+          effects.chip[i].loaded = 0;
         }
       }
-      if (chip[i].y < 0) {
-        chip[i].loaded = 0;
+      if (effects.chip[i].y < 0) {
+        effects.chip[i].loaded = 0;
       }
-      if (chip[i].loaded == 0) {
-        gl.deleteBuffer(chip[i].vbuf);
-        chip[i].vbuf = null;
-        gl.deleteBuffer(chip[i].tbuf);
-        chip[i].tbuf = null;
-        gl.deleteBuffer(chip[i].ibuf);
-        chip[i].ibuf = null;
-        chip[i].texture = null;
+      if (effects.chip[i].loaded == 0) {
+        gl.deleteBuffer(effects.chip[i].vbuf);
+        effects.chip[i].vbuf = null;
+        gl.deleteBuffer(effects.chip[i].tbuf);
+        effects.chip[i].tbuf = null;
+        gl.deleteBuffer(effects.chip[i].ibuf);
+        effects.chip[i].ibuf = null;
+        effects.chip[i].texture = null;
       } else {
         nfly = true;
       }
     }
   }
   if (!nfly) {
-    nchp = 0;
+    effects.nchp = 0;
     for (const racer of racers) {
       racer.carnchp = 0;
     }
@@ -2490,8 +2492,7 @@ function chipsfly() {
 function newsprk() {
   return { typ: 0, stat: 0, x: 0, y: 0, z: 0, sp: 0, mat: null };
 }
-var nspr = 0;
-var sprk = [];
+
 function sprks(cn, x, y, z, sx, sy, sz, cap) {
   var vdist = Math.sqrt(sx * sx + sy * sy + sz * sz);
   if (vdist > 5 && !recording.onpausefr) {
@@ -2506,70 +2507,73 @@ function sprks(cn, x, y, z, sx, sy, sz, cap) {
     }
     for (var ka = 0; ka < oli; ka++) {
       var ui = -1;
-      for (var i = 0; i < nspr; i++) {
-        if (sprk[i].stat == 0) {
+      for (var i = 0; i < effects.nspr; i++) {
+        if (effects.sprk[i].stat == 0) {
           ui = i;
           break;
         }
       }
       if (ui == -1) {
-        ui = nspr;
-        nspr++;
+        ui = effects.nspr;
+        effects.nspr++;
       }
-      sprk[ui] = newsprk();
-      sprk[ui].typ = Math.floor(random.fx() * 6);
-      if (sprk[ui].typ == 6) {
-        sprk[ui].typ = 0;
+      effects.sprk[ui] = newsprk();
+      effects.sprk[ui].typ = Math.floor(random.fx() * 6);
+      if (effects.sprk[ui].typ == 6) {
+        effects.sprk[ui].typ = 0;
       }
-      sprk[ui].x = x + (random.fx() * 3 - 1.5);
+      effects.sprk[ui].x = x + (random.fx() * 3 - 1.5);
       if (cap == 2) {
-        sprk[ui].y = y + wlh[cn][0] * 2.4 + (random.fx() * 3 - 1.5);
+        effects.sprk[ui].y = y + wlh[cn][0] * 2.4 + (random.fx() * 3 - 1.5);
       } else {
-        sprk[ui].y = y + random.fx() * 2;
+        effects.sprk[ui].y = y + random.fx() * 2;
       }
-      sprk[ui].z = z + (random.fx() * 3 - 1.5);
+      effects.sprk[ui].z = z + (random.fx() * 3 - 1.5);
       if (cap == 2) {
         sy -= random.fx() * 1;
       } else {
         sx += random.fx() * 1 - 0.5;
         sz += random.fx() * 1 - 0.5;
       }
-      sprk[ui].sp = 32 - random.fx() * 2 - vdist;
-      sprk[ui].sp *= 0.4;
-      sprk[ui].mat = mat4.create();
+      effects.sprk[ui].sp = 32 - random.fx() * 2 - vdist;
+      effects.sprk[ui].sp *= 0.4;
+      effects.sprk[ui].mat = mat4.create();
       var vx = -(sx / vdist);
       var vy = -(sy / vdist);
       var vz = -(sz / vdist);
-      sprk[ui].mat[8] = vx;
-      sprk[ui].mat[9] = vy;
-      sprk[ui].mat[10] = vz;
-      sprk[ui].mat[0] = vz;
-      sprk[ui].mat[1] = 0;
-      sprk[ui].mat[2] = vx;
-      sprk[ui].mat[4] = -vx;
-      sprk[ui].mat[5] = Math.sqrt(1 - vy * vy);
-      sprk[ui].mat[6] = -vz;
-      sprk[ui].stat = 1;
+      effects.sprk[ui].mat[8] = vx;
+      effects.sprk[ui].mat[9] = vy;
+      effects.sprk[ui].mat[10] = vz;
+      effects.sprk[ui].mat[0] = vz;
+      effects.sprk[ui].mat[1] = 0;
+      effects.sprk[ui].mat[2] = vx;
+      effects.sprk[ui].mat[4] = -vx;
+      effects.sprk[ui].mat[5] = Math.sqrt(1 - vy * vy);
+      effects.sprk[ui].mat[6] = -vz;
+      effects.sprk[ui].stat = 1;
     }
   }
 }
 function sprksfly() {
   var nfly = false;
-  for (var i = 0; i < nspr; i++) {
-    if (sprk[i].stat != 0) {
-      sprk[i].x += sprk[i].mat[8] * sprk[i].sp * tick.scale;
-      sprk[i].y += sprk[i].mat[9] * sprk[i].sp * tick.scale;
-      sprk[i].z += sprk[i].mat[10] * sprk[i].sp * tick.scale;
-      sprk[i].stat++;
-      if (sprk[i].stat == 8) {
-        sprk[i].stat = 0;
+  for (var i = 0; i < effects.nspr; i++) {
+    if (effects.sprk[i].stat != 0) {
+      effects.sprk[i].x +=
+        effects.sprk[i].mat[8] * effects.sprk[i].sp * tick.scale;
+      effects.sprk[i].y +=
+        effects.sprk[i].mat[9] * effects.sprk[i].sp * tick.scale;
+      effects.sprk[i].z +=
+        effects.sprk[i].mat[10] * effects.sprk[i].sp * tick.scale;
+      effects.sprk[i].stat++;
+      if (effects.sprk[i].stat == 8) {
+        effects.sprk[i].stat = 0;
       } else {
         nfly = true;
       }
     }
   }
   if (!nfly) {
-    nspr = 0;
+    effects.nspr = 0;
   }
 }
 function newdust() {
@@ -2588,9 +2592,7 @@ function newdust() {
     ta: 0,
   };
 }
-var ndst = 0;
-var dust = [];
-var dwer = [];
+
 function dustup(tskd, c, mst, x, y, z, sx, sz, smag, tlt, capsz) {
   var tilted = false;
   if (tlt > 5 && (mst == 0 || mst == 2)) {
@@ -2608,98 +2610,102 @@ function dustup(tskd, c, mst, x, y, z, sx, sz, smag, tlt, capsz) {
       recordust(tskd, c, mst, x, y, z, sx, sz, smag, tlt, capsz);
     }
     var ui = -1;
-    for (var i = 0; i < ndst; i++) {
-      if (dust[i].stg == 0) {
+    for (var i = 0; i < effects.ndst; i++) {
+      if (effects.dust[i].stg == 0) {
         ui = i;
         break;
       }
     }
     if (ui == -1) {
-      ui = ndst;
-      ndst++;
+      ui = effects.ndst;
+      effects.ndst++;
     }
-    dust[ui] = newdust();
+    effects.dust[ui] = newdust();
     if (!capsz) {
       var fk = random.fx();
-      dust[ui].x = (x + car[c].x * fk) / (1 + fk);
-      dust[ui].z = (z + car[c].z * fk) / (1 + fk);
-      dust[ui].dy = (y + car[c].y * fk) / (1 + fk);
+      effects.dust[ui].x = (x + car[c].x * fk) / (1 + fk);
+      effects.dust[ui].z = (z + car[c].z * fk) / (1 + fk);
+      effects.dust[ui].dy = (y + car[c].y * fk) / (1 + fk);
     } else {
-      dust[ui].x = (x + (car[c].x + sx)) / 2;
-      dust[ui].z = (z + (car[c].z + sz)) / 2;
-      dust[ui].dy = y;
+      effects.dust[ui].x = (x + (car[c].x + sx)) / 2;
+      effects.dust[ui].z = (z + (car[c].z + sz)) / 2;
+      effects.dust[ui].dy = y;
     }
-    if (dust[ui].y < 0) {
-      dust[ui].y = 0;
+    if (effects.dust[ui].y < 0) {
+      effects.dust[ui].y = 0;
     }
-    dust[ui].mag = 0.2 + smag * bk * 0.8;
+    effects.dust[ui].mag = 0.2 + smag * bk * 0.8;
     var ron = Math.floor(4 * random.fx());
     if (ron == 4) {
       ron = 0;
     }
-    dust[ui].rot = 90 * ron - 90;
+    effects.dust[ui].rot = 90 * ron - 90;
     var sk = 0.1 + random.fx();
     if (sk > 1) {
       sk = 1;
     }
-    dust[ui].sx = sx * sk;
-    dust[ui].sz = sz * sk;
-    dust[ui].stg = 1;
-    dust[ui].tx = Math.floor(random.fx() * 3);
-    if (dust[ui].tx == 3) {
-      dust[ui].tx = 0;
+    effects.dust[ui].sx = sx * sk;
+    effects.dust[ui].sz = sz * sk;
+    effects.dust[ui].stg = 1;
+    effects.dust[ui].tx = Math.floor(random.fx() * 3);
+    if (effects.dust[ui].tx == 3) {
+      effects.dust[ui].tx = 0;
     }
     if (tskd == 2) {
-      dust[ui].tx += 3;
+      effects.dust[ui].tx += 3;
     }
     if (tskd == 1) {
-      dust[ui].tx += 6;
+      effects.dust[ui].tx += 6;
     }
-    dust[ui].ta = 0;
-    dust[ui].mat = mat4.create();
-    dwer[ui] = ui;
+    effects.dust[ui].ta = 0;
+    effects.dust[ui].mat = mat4.create();
+    effects.dwer[ui] = ui;
   }
 }
 function dustfly() {
   var nfly = false;
-  for (var i = 0; i < ndst; i++) {
-    if (dust[i].stg != 0) {
+  for (var i = 0; i < effects.ndst; i++) {
+    if (effects.dust[i].stg != 0) {
       if (!recording.onpausefr) {
-        dust[i].x += dust[i].sx / (dust[i].stg + 1);
-        dust[i].z += dust[i].sz / (dust[i].stg + 1);
-        dust[i].y = dust[i].dy + 3 * dust[i].mag;
+        effects.dust[i].x += effects.dust[i].sx / (effects.dust[i].stg + 1);
+        effects.dust[i].z += effects.dust[i].sz / (effects.dust[i].stg + 1);
+        effects.dust[i].y = effects.dust[i].dy + 3 * effects.dust[i].mag;
       }
       var fct =
-        1 / Math.sqrt(dust[i].sx * dust[i].sx + dust[i].sz * dust[i].sz);
-      var vfx = dust[i].sx * fct * dust[i].sx * fct;
-      var vfz = dust[i].sz * fct * dust[i].sz * fct;
+        1 /
+        Math.sqrt(
+          effects.dust[i].sx * effects.dust[i].sx +
+            effects.dust[i].sz * effects.dust[i].sz,
+        );
+      var vfx = effects.dust[i].sx * fct * effects.dust[i].sx * fct;
+      var vfz = effects.dust[i].sz * fct * effects.dust[i].sz * fct;
       var mlt = 1;
       if (vfx > vfz) {
         mlt = 1 + (1 - Math.abs(mcos(camera.yaw) * mcos(camera.yaw) - vfx));
       } else {
         mlt = 1 + (1 - Math.abs(msin(camera.yaw) * msin(camera.yaw) - vfz));
       }
-      dust[i].mat = resetMatrix(dust[i].mat);
+      effects.dust[i].mat = resetMatrix(effects.dust[i].mat);
       mat4.rotate(
-        dust[i].mat,
-        dust[i].mat,
+        effects.dust[i].mat,
+        effects.dust[i].mat,
         camera.yaw * (Math.PI / 180),
         [0, -1, 0],
       );
       mat4.rotate(
-        dust[i].mat,
-        dust[i].mat,
+        effects.dust[i].mat,
+        effects.dust[i].mat,
         camera.pitch * (Math.PI / 180),
         [-1, 0, 0],
       );
       mat4.rotate(
-        dust[i].mat,
-        dust[i].mat,
-        dust[i].rot * (Math.PI / 180),
+        effects.dust[i].mat,
+        effects.dust[i].mat,
+        effects.dust[i].rot * (Math.PI / 180),
         [0, 0, 1],
       );
       var kmt = 0;
-      if (Math.abs(dust[i].rot) == 90) {
+      if (Math.abs(effects.dust[i].rot) == 90) {
         kmt = 1;
       }
       for (var k = 0; k < 3; k++) {
@@ -2707,22 +2713,22 @@ function dustfly() {
         if (k == kmt) {
           mt = mlt;
         }
-        dust[i].mat[k * 4] *= dust[i].mag * mt;
-        dust[i].mat[k * 4 + 1] *= dust[i].mag * mt;
-        dust[i].mat[k * 4 + 2] *= dust[i].mag * mt;
+        effects.dust[i].mat[k * 4] *= effects.dust[i].mag * mt;
+        effects.dust[i].mat[k * 4 + 1] *= effects.dust[i].mag * mt;
+        effects.dust[i].mat[k * 4 + 2] *= effects.dust[i].mag * mt;
       }
       if (!recording.onpausefr) {
-        dust[i].mag += 0.05 + random.fx() * 0.05;
-        if (dust[i].stg >= 2) {
-          dust[i].ta += 0.45;
-          if (dust[i].ta > 4) {
-            dust[i].ta = 4;
+        effects.dust[i].mag += 0.05 + random.fx() * 0.05;
+        if (effects.dust[i].stg >= 2) {
+          effects.dust[i].ta += 0.45;
+          if (effects.dust[i].ta > 4) {
+            effects.dust[i].ta = 4;
           }
         }
-        if (dust[i].stg == 10) {
-          dust[i].stg = 0;
+        if (effects.dust[i].stg == 10) {
+          effects.dust[i].stg = 0;
         } else {
-          dust[i].stg++;
+          effects.dust[i].stg++;
           nfly = true;
         }
       } else {
@@ -2733,29 +2739,29 @@ function dustfly() {
   if (nfly) {
     var wer = [];
     var dustd = [];
-    for (var i = 0; i < ndst; i++) {
+    for (var i = 0; i < effects.ndst; i++) {
       wer[i] = 0;
       dustd[i] = pyd(
-        dust[i].x,
+        effects.dust[i].x,
         camera.x,
-        dust[i].y,
+        effects.dust[i].y,
         camera.y,
-        dust[i].z,
+        effects.dust[i].z,
         camera.z,
       );
     }
-    for (var i = 0; i < ndst; i++) {
-      for (var j = i + 1; j < ndst; j++) {
+    for (var i = 0; i < effects.ndst; i++) {
+      for (var j = i + 1; j < effects.ndst; j++) {
         if (dustd[i] < dustd[j]) {
           wer[i]++;
         } else {
           wer[j]++;
         }
       }
-      dwer[wer[i]] = i;
+      effects.dwer[wer[i]] = i;
     }
   } else {
-    ndst = 0;
+    effects.ndst = 0;
   }
 }
 function newexp() {
@@ -2775,100 +2781,98 @@ function newexp() {
     first: false,
   };
 }
-var nexp = 0;
-var exp = [];
-var ewer = [];
+
 function firexp(c, vsx, vsy, vsz) {
   var ui = -1;
-  for (var i = 0; i < nexp; i++) {
-    if (exp[i].ani == -1) {
+  for (var i = 0; i < effects.nexp; i++) {
+    if (effects.exp[i].ani == -1) {
       ui = i;
       break;
     }
   }
   if (ui == -1) {
-    ui = nexp;
-    nexp++;
+    ui = effects.nexp;
+    effects.nexp++;
   }
   var rad = carobj[car[c].typ];
   var ir = Math.floor(rad.ni * random.fx());
   if (ir == rad.ni) {
     ir = 0;
   }
-  exp[ui] = newexp();
-  exp[ui].x =
+  effects.exp[ui] = newexp();
+  effects.exp[ui].x =
     car[c].x +
     rad.dvert[ir * 3] * car[c].mat[0] +
     rad.dvert[ir * 3 + 1] * car[c].mat[4] +
     rad.dvert[ir * 3 + 2] * car[c].mat[8];
-  exp[ui].y =
+  effects.exp[ui].y =
     car[c].y +
     rad.dvert[ir * 3] * car[c].mat[1] +
     rad.dvert[ir * 3 + 1] * car[c].mat[5] +
     rad.dvert[ir * 3 + 2] * car[c].mat[9];
-  exp[ui].z =
+  effects.exp[ui].z =
     car[c].z +
     rad.dvert[ir * 3] * car[c].mat[2] +
     rad.dvert[ir * 3 + 1] * car[c].mat[6] +
     rad.dvert[ir * 3 + 2] * car[c].mat[10];
-  exp[ui].vsx = vsx;
-  exp[ui].vsy = vsy;
-  exp[ui].vsz = vsz;
-  exp[ui].vy = 0.4 + random.fx() * 0.2;
-  exp[ui].size = 0.6 + random.fx() * 0.6;
-  exp[ui].rot = 360 * random.fx();
-  exp[ui].typ = Math.floor(random.fx() * 3);
-  if (exp[ui].typ == 3) {
-    exp[ui].typ = 0;
+  effects.exp[ui].vsx = vsx;
+  effects.exp[ui].vsy = vsy;
+  effects.exp[ui].vsz = vsz;
+  effects.exp[ui].vy = 0.4 + random.fx() * 0.2;
+  effects.exp[ui].size = 0.6 + random.fx() * 0.6;
+  effects.exp[ui].rot = 360 * random.fx();
+  effects.exp[ui].typ = Math.floor(random.fx() * 3);
+  if (effects.exp[ui].typ == 3) {
+    effects.exp[ui].typ = 0;
   }
-  exp[ui].ani = 0;
-  exp[ui].mat = mat4.create();
-  exp[ui].first = false;
-  ewer[ui] = ui;
+  effects.exp[ui].ani = 0;
+  effects.exp[ui].mat = mat4.create();
+  effects.exp[ui].first = false;
+  effects.ewer[ui] = ui;
 }
 function expburn() {
   var nfly = false;
-  for (var i = 0; i < nexp; i++) {
-    if (exp[i].ani != -1) {
-      exp[i].mat = resetMatrix(exp[i].mat);
+  for (var i = 0; i < effects.nexp; i++) {
+    if (effects.exp[i].ani != -1) {
+      effects.exp[i].mat = resetMatrix(effects.exp[i].mat);
       mat4.rotate(
-        exp[i].mat,
-        exp[i].mat,
+        effects.exp[i].mat,
+        effects.exp[i].mat,
         camera.yaw * (Math.PI / 180),
         [0, -1, 0],
       );
       mat4.rotate(
-        exp[i].mat,
-        exp[i].mat,
+        effects.exp[i].mat,
+        effects.exp[i].mat,
         camera.pitch * (Math.PI / 180),
         [-1, 0, 0],
       );
       mat4.rotate(
-        exp[i].mat,
-        exp[i].mat,
-        exp[i].rot * (Math.PI / 180),
+        effects.exp[i].mat,
+        effects.exp[i].mat,
+        effects.exp[i].rot * (Math.PI / 180),
         [0, 0, 1],
       );
       for (var k = 0; k < 3; k++) {
-        exp[i].mat[k * 4] *= exp[i].size;
-        exp[i].mat[k * 4 + 1] *= exp[i].size;
-        exp[i].mat[k * 4 + 2] *= exp[i].size;
+        effects.exp[i].mat[k * 4] *= effects.exp[i].size;
+        effects.exp[i].mat[k * 4 + 1] *= effects.exp[i].size;
+        effects.exp[i].mat[k * 4 + 2] *= effects.exp[i].size;
       }
-      exp[i].y += exp[i].vy;
-      if (exp[i].first) {
-        exp[i].x += exp[i].vsx * tick.scale;
-        exp[i].vsx *= 0.95;
-        exp[i].y += exp[i].vsy * tick.scale;
-        exp[i].vsy *= 0.95;
-        exp[i].z += exp[i].vsz * tick.scale;
-        exp[i].vsz *= 0.95;
-        exp[i].size += exp[i].size * 0.05 * tick.scale;
-        exp[i].ani += 0.85 * tick.scale;
+      effects.exp[i].y += effects.exp[i].vy;
+      if (effects.exp[i].first) {
+        effects.exp[i].x += effects.exp[i].vsx * tick.scale;
+        effects.exp[i].vsx *= 0.95;
+        effects.exp[i].y += effects.exp[i].vsy * tick.scale;
+        effects.exp[i].vsy *= 0.95;
+        effects.exp[i].z += effects.exp[i].vsz * tick.scale;
+        effects.exp[i].vsz *= 0.95;
+        effects.exp[i].size += effects.exp[i].size * 0.05 * tick.scale;
+        effects.exp[i].ani += 0.85 * tick.scale;
       } else {
-        exp[i].first = true;
+        effects.exp[i].first = true;
       }
-      if (exp[i].ani >= 6) {
-        exp[i].ani = -1;
+      if (effects.exp[i].ani >= 6) {
+        effects.exp[i].ani = -1;
       } else {
         nfly = true;
       }
@@ -2877,22 +2881,29 @@ function expburn() {
   if (nfly) {
     var wer = [];
     var expd = [];
-    for (var i = 0; i < nexp; i++) {
+    for (var i = 0; i < effects.nexp; i++) {
       wer[i] = 0;
-      expd[i] = pyd(exp[i].x, camera.x, exp[i].y, camera.y, exp[i].z, camera.z);
+      expd[i] = pyd(
+        effects.exp[i].x,
+        camera.x,
+        effects.exp[i].y,
+        camera.y,
+        effects.exp[i].z,
+        camera.z,
+      );
     }
-    for (var i = 0; i < nexp; i++) {
-      for (var j = i + 1; j < nexp; j++) {
+    for (var i = 0; i < effects.nexp; i++) {
+      for (var j = i + 1; j < effects.nexp; j++) {
         if (expd[i] < expd[j]) {
           wer[i]++;
         } else {
           wer[j]++;
         }
       }
-      ewer[wer[i]] = i;
+      effects.ewer[wer[i]] = i;
     }
   } else {
-    nexp = 0;
+    effects.nexp = 0;
   }
 }
 
@@ -4002,13 +4013,13 @@ function render(now) {
           gl.disable(gl.CULL_FACE);
         }
       }
-      for (var i = 0; i < nspr; i++) {
-        if (sprk[i].stat != 0) {
-          spark[sprk[i].typ].x = sprk[i].x;
-          spark[sprk[i].typ].y = sprk[i].y;
-          spark[sprk[i].typ].z = sprk[i].z;
-          spark[sprk[i].typ].mat = sprk[i].mat;
-          drawParticle(spark[sprk[i].typ]);
+      for (var i = 0; i < effects.nspr; i++) {
+        if (effects.sprk[i].stat != 0) {
+          spark[effects.sprk[i].typ].x = effects.sprk[i].x;
+          spark[effects.sprk[i].typ].y = effects.sprk[i].y;
+          spark[effects.sprk[i].typ].z = effects.sprk[i].z;
+          spark[effects.sprk[i].typ].mat = effects.sprk[i].mat;
+          drawParticle(spark[effects.sprk[i].typ]);
         }
       }
       for (var c = 0; c < game.carCount; c++) {
@@ -4020,8 +4031,8 @@ function render(now) {
           gl.enable(gl.DEPTH_TEST);
         }
       }
-      for (var i = 0; i < nchp; i++) {
-        drawModel(chip[i]);
+      for (var i = 0; i < effects.nchp; i++) {
+        drawModel(effects.chip[i]);
       }
       if (oncheckpoint != -1) {
         drawParticle(cptext);
@@ -4099,24 +4110,31 @@ function render(now) {
           drawParticle(racers[c].switchp);
         }
       }
-      for (var i = 0; i < nexp; i++) {
-        if (exp[ewer[i]].ani != -1) {
-          explode[exp[ewer[i]].typ].x = exp[ewer[i]].x;
-          explode[exp[ewer[i]].typ].y = exp[ewer[i]].y;
-          explode[exp[ewer[i]].typ].z = exp[ewer[i]].z;
-          explode[exp[ewer[i]].typ].ont = Math.floor(exp[ewer[i]].ani);
-          explode[exp[ewer[i]].typ].mat = exp[ewer[i]].mat;
-          drawModel(explode[exp[ewer[i]].typ]);
+      for (var i = 0; i < effects.nexp; i++) {
+        if (effects.exp[effects.ewer[i]].ani != -1) {
+          explode[effects.exp[effects.ewer[i]].typ].x =
+            effects.exp[effects.ewer[i]].x;
+          explode[effects.exp[effects.ewer[i]].typ].y =
+            effects.exp[effects.ewer[i]].y;
+          explode[effects.exp[effects.ewer[i]].typ].z =
+            effects.exp[effects.ewer[i]].z;
+          explode[effects.exp[effects.ewer[i]].typ].ont = Math.floor(
+            effects.exp[effects.ewer[i]].ani,
+          );
+          explode[effects.exp[effects.ewer[i]].typ].mat =
+            effects.exp[effects.ewer[i]].mat;
+          drawModel(explode[effects.exp[effects.ewer[i]].typ]);
         }
       }
-      for (var k = 0; k < ndst; k++) {
-        var i = dwer[k];
-        if (dust[i].stg != 0) {
-          sprite.x = dust[i].x;
-          sprite.y = dust[i].y;
-          sprite.z = dust[i].z;
-          sprite.mat = dust[i].mat;
-          sprite.texture = dtexture[dust[i].tx][Math.floor(dust[i].ta)];
+      for (var k = 0; k < effects.ndst; k++) {
+        var i = effects.dwer[k];
+        if (effects.dust[i].stg != 0) {
+          sprite.x = effects.dust[i].x;
+          sprite.y = effects.dust[i].y;
+          sprite.z = effects.dust[i].z;
+          sprite.mat = effects.dust[i].mat;
+          sprite.texture =
+            dtexture[effects.dust[i].tx][Math.floor(effects.dust[i].ta)];
           drawModel(sprite);
         }
       }
