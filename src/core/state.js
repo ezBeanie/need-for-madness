@@ -23,6 +23,9 @@ export const PHASE = {
   timeRewind: 18,
 };
 
+// The most cars a race can have; the championship races with 7.
+export const MAX_CARS = 20;
+
 // What the game is doing: the screen it shows, the race setup and the player's progress.
 export const game = {
   phase: PHASE.loading,
@@ -31,7 +34,7 @@ export const game = {
   // stages the player can pick (1..17)
   unlocked: 1,
   // car type of every car in the race, the player's at index 0
-  carTypes: [0, 0, 0, 0, 0, 0, 0],
+  carTypes: Array(MAX_CARS).fill(0),
   carCount: 7,
   // index of the car the player controls (another one in replays)
   player: 0,

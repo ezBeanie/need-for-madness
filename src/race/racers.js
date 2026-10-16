@@ -1,3 +1,5 @@
+import { MAX_CARS } from "../core/state.js";
+
 // The race state of every car, one object per car (index = car number, the player drives
 // car 0). Fields keep their original names for now; the ones not listed here start
 // undefined, as the original per-car arrays did.
@@ -19,8 +21,7 @@ const newRacer = () => ({
   colidim: false,
 });
 
-// The original game always had seven slots.
-export const racers = Array.from({ length: 7 }, newRacer);
+export const racers = Array.from({ length: MAX_CARS }, newRacer);
 
 const newCar = () => ({
   typ: 0,
@@ -41,4 +42,4 @@ const newCar = () => ({
 });
 
 // The car models in the race, placed by the physics every tick.
-export const car = Array.from({ length: 7 }, newCar);
+export const car = Array.from({ length: MAX_CARS }, newCar);

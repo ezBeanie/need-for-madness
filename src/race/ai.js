@@ -2,7 +2,7 @@
 
 import { cosDeg, distanceSquaredXZ, distanceXZ, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
-import { game } from "../core/state.js";
+import { MAX_CARS, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
 import { car, racers } from "./racers.js";
@@ -82,7 +82,7 @@ const newDriver = () => ({
 });
 
 // index = car number
-export const ai = Array.from({ length: 7 }, newDriver);
+export const ai = Array.from({ length: MAX_CARS }, newDriver);
 
 export const resetPursuit = (c) => {
   Object.assign(ai[c], newPursuit());

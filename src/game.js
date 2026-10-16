@@ -67,7 +67,7 @@ import {
   scene,
   sparkModels,
 } from "./render/scene.js";
-import { game, PHASE } from "./core/state.js";
+import { game, MAX_CARS, PHASE } from "./core/state.js";
 import { tick } from "./core/tick.js";
 import { car, racers } from "./race/racers.js";
 import { carStats } from "./data/carStats.js";
@@ -6432,7 +6432,7 @@ function inishinter() {
   gocnt = 0;
   gocntdrop = 0;
   raceEvents.iclear = 0;
-  for (var i = 0; i < 7; i++) {
+  for (var i = 0; i < MAX_CARS; i++) {
     dested[i] = 0;
   }
   raceEvents.holdcnt = 0;
@@ -6444,7 +6444,7 @@ function inishinter() {
   onbreplay = 0;
   flw = 2;
   flh = 0.5;
-  for (var i = 0; i < 7; i++) {
+  for (var i = 0; i < MAX_CARS; i++) {
     racers[i].u.arrace = false;
     racers[i].u.zyinv = false;
   }

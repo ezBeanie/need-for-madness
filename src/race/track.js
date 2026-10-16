@@ -1,3 +1,4 @@
+import { MAX_CARS } from "../core/state.js";
 import { newModel } from "../render/models.js";
 
 // The loaded stage: its path points (used by the AI and the race positions), the race
@@ -19,10 +20,12 @@ class Track {
   notb = false;
   name = "hogan rewish";
   switchtime = 800;
-  pos = [6, 6, 6, 6, 6, 6, 6];
-  clear = [0, 0, 0, 0, 0, 0, 0];
-  dested = [0, 0, 0, 0, 0, 0, 0];
-  magperc = [0, 0, 0, 0, 0, 0, 0];
+  // per car: race position (starting as 6, last of the original seven), checkpoints
+  // cleared, wasted (0 no, 1 by itself, 2 in a collision), damage (0..1)
+  pos = Array(MAX_CARS).fill(6);
+  clear = Array(MAX_CARS).fill(0);
+  dested = Array(MAX_CARS).fill(0);
+  magperc = Array(MAX_CARS).fill(0);
   wasted = 0;
   haltall = false;
   pcleared = 0;
@@ -36,10 +39,10 @@ class Track {
   limto = 0;
   limbo = 0;
   insih() {
-    this.pos = [6, 6, 6, 6, 6, 6, 6];
-    this.clear = [0, 0, 0, 0, 0, 0, 0];
-    this.dested = [0, 0, 0, 0, 0, 0, 0];
-    this.magperc = [0, 0, 0, 0, 0, 0, 0];
+    this.pos = Array(MAX_CARS).fill(6);
+    this.clear = Array(MAX_CARS).fill(0);
+    this.dested = Array(MAX_CARS).fill(0);
+    this.magperc = Array(MAX_CARS).fill(0);
     this.wasted = 0;
     this.haltall = false;
     this.pcleared = 0;

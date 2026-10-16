@@ -18,7 +18,7 @@ import {
   sinDeg,
 } from "../core/math.js";
 import { random } from "../core/random.js";
-import { PHASE, game } from "../core/state.js";
+import { MAX_CARS, PHASE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
 import { gl } from "../render/renderer.js";
@@ -32,12 +32,12 @@ import { pieceModels, pieces, track } from "./track.js";
 const drag = 0.05;
 const lonorm = [];
 export function inishmad() {
-  for (var c = 0; c < 7; c++) {
+  for (var c = 0; c < MAX_CARS; c++) {
     racers[c].mxz = 0;
     racers[c].cxz = 0;
     racers[c].dominate = [];
     racers[c].caught = [];
-    for (var i = 0; i < 7; i++) {
+    for (var i = 0; i < MAX_CARS; i++) {
       racers[c].dominate[i] = false;
       racers[c].caught[i] = false;
     }
