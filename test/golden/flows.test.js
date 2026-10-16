@@ -11,6 +11,7 @@ const UP = 38;
 const DOWN = 40;
 const LEFT = 37;
 const RIGHT = 39;
+const RACE_CARS = 67;
 const REWIND = 82;
 
 // Presses a key for one frame: down now, up on the next frame.
@@ -237,6 +238,53 @@ const carSelectTour = () => {
   };
 };
 
+// The stage select of a player who has won three stages: stages change with the arrow
+// keys and with Prev and Next, the next locked stage shows a lock, Insano's tip opens and
+// closes, the field grows, Back leads to the car select and Practice starts a race.
+const stageSelectTour = () => {
+  const keys = keyTapper();
+  const taps = {
+    200: ENTER,
+    210: UP,
+    220: ENTER,
+    240: ENTER,
+    300: ENTER,
+    420: RIGHT,
+    620: RIGHT,
+    720: RIGHT,
+    900: RACE_CARS,
+    1080: ENTER,
+    1180: LEFT,
+    1280: LEFT,
+  };
+  const clicks = {
+    520: [1090, 384], // Next
+    780: [427, 593], // TIP
+    860: [1060, 504], // Okay
+    920: [190, 384], // Prev
+    1020: [210, 158], // Back
+    1380: [770, 574], // Practice
+  };
+  let clickedAt = null;
+  return (ctx, frame, game) => {
+    keys.releaseAfterFrame(game);
+    Object.assign(ctx.racers[0].u, NO_INPUT);
+    if (frame === 225) {
+      ctx.game.unlocked = 4;
+      // car 15 is locked until stage 10
+      ctx.game.carTypes[0] = 5;
+    }
+    if (taps[frame]) {
+      keys.tap(game, taps[frame]);
+    }
+    if (clicks[frame]) {
+      clickedAt = frame;
+      [ctx.pointer.x[0], ctx.pointer.y[0]] = clicks[frame];
+    }
+    ctx.pointer.down = clickedAt !== null && frame - clickedAt < CLICK_FRAMES;
+  };
+};
+
 // The touch controls of phones, where they are at 1280x720.
 const TOUCH = {
   left: [130, 558],
@@ -367,6 +415,12 @@ const flows = [
     stage: 1,
     frames: 1000,
     script: carSelectTour,
+  },
+  {
+    name: "stage-select-stage-01",
+    stage: 1,
+    frames: 1500,
+    script: stageSelectTour,
   },
   {
     name: "rewind-time-stage-02",

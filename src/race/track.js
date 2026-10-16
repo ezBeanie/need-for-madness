@@ -27,6 +27,8 @@ class Track {
   dested = Array(MAX_CARS).fill(0);
   magperc = Array(MAX_CARS).fill(0);
   wasted = 0;
+  // Coach Insano's tips for the stage, shown in the stage select
+  tips = [];
   haltall = false;
   pcleared = 0;
   // the outer walls (maxr, maxl, maxt, maxb): where they stand and which piece each is

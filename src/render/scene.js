@@ -9,7 +9,14 @@ export const sparkModels = Array.from({ length: 6 }, newParticleModel);
 
 // Set per stage: the colour tint of everything (r, g, b offsets) and the colour of car
 // windows, which mirror the sky.
-export const scene = { tint: [0, 0, 0], glassColor: [] };
+export const scene = {
+  tint: [0, 0, 0],
+  glassColor: [],
+  // the stage's fog colour and how far one sees, and where the light comes from
+  fog: [],
+  fogDistance: 10700,
+  light: [0, 1, 0],
+};
 
 // The tube the time travels through while winding back time (see drawrevtime).
 export const timeTube = newParticleModel();

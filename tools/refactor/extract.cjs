@@ -3,9 +3,10 @@
 // imports it needs, resolved from the source's imports.
 // usage: [AUTO_VARS=1] node tools/refactor/extract.cjs src/game.js src/ui/hud.js "Header" fn1,fn2,... [other files that may use them]
 // With AUTO_VARS=1, top-level variables used only by the moved functions move along.
-// Refuses when a moved function uses a top-level name of the source that does not move:
+// Functions of the source the moved ones call are exported there and imported back.
+// Refuses when a moved function uses a top-level variable of the source that does not move:
 // put that into a state object first. When the target exists, its new imports are
-// appended under "// TODO merge imports:" to be merged by hand (or by merge-imports.cjs).
+// appended under "// TODO merge imports:", which imports.cjs merges.
 // Note: "still used" is a plain word match, so a name in a comment counts as a use.
 const { parse } = require("acorn");
 const walk = require("acorn-walk");
@@ -30,7 +31,20 @@ for (const n of ast.body) {
     }
   if (n.type === "VariableDeclaration") n.declarations.forEach((d) => topLevel.add(d.id.name));
   if (n.type === "FunctionDeclaration" || n.type === "ClassDeclaration") topLevel.add(n.id.name);
+  if (n.type === "ExportNamedDeclaration" && n.declaration?.type === "FunctionDeclaration")
+    topLevel.add(n.declaration.id.name);
 }
+// functions that stay in the source: moved code imports them back (cycles are fine for
+// functions, they are only called after both modules loaded)
+const functionsHere = new Set(
+  ast.body.flatMap((n) =>
+    n.type === "FunctionDeclaration"
+      ? [n.id.name]
+      : n.type === "ExportNamedDeclaration" && n.declaration?.type === "FunctionDeclaration"
+        ? [n.declaration.id.name]
+        : [],
+  ),
+);
 
 if (autoVars) {
   const usedBy = new Map();
@@ -69,7 +83,9 @@ if (missing.length) {
 
 const free = new Set();
 for (const fn of moved) walk.full(fn, (x) => { if (x.type === "Identifier") free.add(x.name); });
-const blocking = [...free].filter((n) => topLevel.has(n) && !names.includes(n) && !imports.has(n));
+const stayingBehind = [...free].filter((n) => topLevel.has(n) && !names.includes(n) && !imports.has(n));
+const importedBack = stayingBehind.filter((n) => functionsHere.has(n));
+const blocking = stayingBehind.filter((n) => !functionsHere.has(n));
 if (blocking.length) {
   console.error("still in source:", blocking.join(","));
   process.exit(1);
@@ -112,6 +128,13 @@ for (const n of free)
     if (!needed.has(r)) needed.set(r, []);
     needed.get(r).push(imported === "default" ? `default:${n}` : imported === n ? n : `${imported} as ${n}`);
   }
+if (importedBack.length) {
+  let back = path.relative(path.dirname(targetFile), srcFile);
+  if (!back.startsWith(".")) back = `./${back}`;
+  needed.set(back, importedBack);
+  for (const n of importedBack)
+    src = src.replace(new RegExp(`^function ${n}\\(`, "m"), `export function ${n}(`);
+}
 const importLines = [...needed]
   .sort()
   .map(([from, specs]) => {

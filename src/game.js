@@ -1662,13 +1662,7 @@ function loaddata() {
 }
 
 var adod = 0;
-var lvx = 0,
-  lvy = 1,
-  lvz = 0;
-var fogdist = 10700;
-var fogc = [];
-var hastip = 0;
-var tip = [];
+
 function newobo() {
   return { typ: 0, x: 0, z: 0, mat: null, bnd: [0, 0, 0, 0], iscp: 0 };
 }
@@ -1690,12 +1684,12 @@ function loadstage() {
         var skyc = [];
         var cloudsc = [];
         var cloudtyp = 0;
-        lvx = 0;
-        lvy = 1;
-        lvz = 0;
+        scene.light[0] = 0;
+        scene.light[1] = 1;
+        scene.light[2] = 0;
         var bounds = [0, 0, 0, 0];
         var bounded = false;
-        hastip = 0;
+        track.tips = [];
         var entries = parseStage(allText);
         for (var i = 0; i < entries.length; i++) {
           var e = entries[i];
@@ -1722,9 +1716,9 @@ function loadstage() {
             skyc[2] = v("b");
           }
           if (e.command == "fog") {
-            fogc[0] = v("r");
-            fogc[1] = v("g");
-            fogc[2] = v("b");
+            scene.fog[0] = v("r");
+            scene.fog[1] = v("g");
+            scene.fog[2] = v("b");
           }
           if (e.command == "clouds") {
             cloudsc[0] = v("r");
@@ -1744,27 +1738,28 @@ function loadstage() {
           }
           if (track.stage >= 3 && game.unlocked == track.stage) {
             if (e.command == "tip") {
-              tip[hastip] = e.text ?? "";
-              tip[hastip] = tip[hastip].replace("[", "(");
-              tip[hastip] = tip[hastip].replace("]", ")");
-              tip[hastip] = tip[hastip].replace(";", ",");
-              hastip++;
+              track.tips.push(
+                (e.text ?? "")
+                  .replace("[", "(")
+                  .replace("]", ")")
+                  .replace(";", ","),
+              );
             }
           }
           if (e.command == "lightswingX") {
             var an = v("angle");
-            lvy = Math.cos(an * (Math.PI / 180));
+            scene.light[1] = Math.cos(an * (Math.PI / 180));
             an += 90;
-            lvx = Math.cos(an * (Math.PI / 180));
+            scene.light[0] = Math.cos(an * (Math.PI / 180));
           }
           if (e.command == "lightswingZ") {
             var an = v("angle");
-            lvy = Math.cos(an * (Math.PI / 180));
+            scene.light[1] = Math.cos(an * (Math.PI / 180));
             an += 90;
-            lvz = Math.cos(an * (Math.PI / 180));
+            scene.light[2] = Math.cos(an * (Math.PI / 180));
           }
           if (e.command == "distfog") {
-            fogdist = v("distance");
+            scene.fogDistance = v("distance");
           }
           if (e.command == "bnd") {
             bounds = [v("a"), v("b"), v("c"), v("d")];
@@ -1970,7 +1965,7 @@ function loadstage() {
           }
         }
         setupcars();
-        skytexture(skyc, fogc, cloudsc, cloudtyp);
+        skytexture(skyc, scene.fog, cloudsc, cloudtyp);
         for (var i = 0; i < 3; i++) {
           scene.glassColor[i] = Math.round((skyc[i] * 2 + 70) / 3);
         }
@@ -1987,9 +1982,16 @@ function loadstage() {
             -(scene.tint[1] * 3),
             -(scene.tint[2] * 3),
           ];
-          setWorld(opsnap, fogc, 0, 1, 0, 10700);
+          setWorld(opsnap, scene.fog, 0, 1, 0, 10700);
         } else {
-          setWorld(scene.tint, fogc, lvx, lvy, lvz, fogdist);
+          setWorld(
+            scene.tint,
+            scene.fog,
+            scene.light[0],
+            scene.light[1],
+            scene.light[2],
+            scene.fogDistance,
+          );
         }
         stageLoad.progress = STAGE_LOAD.loaded;
       }
@@ -3931,7 +3933,7 @@ function stageloading() {
       colorbgst();
       createbordo();
       ontip = false;
-      if (hastip) {
+      if (track.tips.length) {
         insano.talkTicks = 0;
         insano.picture = 0;
       }
@@ -3996,7 +3998,7 @@ function drawstageselect() {
     }
   }
   if (!ontip) {
-    if (hastip && !flkun) {
+    if (track.tips.length && !flkun) {
       if (blink.on) {
         blink.on = false;
       } else {
@@ -4164,12 +4166,7 @@ function drawstageselect() {
         })
       ) {
         scene.tint = [0, -0.05, 0.6];
-        var fogc = [0, 0, 0];
-        var lvx = 0,
-          lvy = 0.866,
-          lvz = -0.5;
-        var fogdist = 10700;
-        setWorld(scene.tint, fogc, lvx, lvy, lvz, fogdist);
+        setWorld(scene.tint, [0, 0, 0], 0, 0.866, -0.5, 10700);
         game.phase = PHASE.carSelect;
         rd.fillStyle = "#FFFFFF";
         rd.fillRect(0, 0, view.width, view.height);
@@ -4253,7 +4250,7 @@ function drawstageselect() {
         }
       }
       if (!flkun) {
-        if (hastip) {
+        if (track.tips.length) {
           if (
             drawButton({
               id: 6,
@@ -4430,8 +4427,12 @@ function drawstageselect() {
       rd.textBaseline = "middle";
       rd.textAlign = "left";
       rd.fillStyle = "#002748";
-      for (var i = 0; i < hastip; i++) {
-        rd.fillText(tip[i], 200 * fm + 20 * fm, topo + (36 + 50 * i) * fm);
+      for (var i = 0; i < track.tips.length; i++) {
+        rd.fillText(
+          track.tips[i],
+          200 * fm + 20 * fm,
+          topo + (36 + 50 * i) * fm,
+        );
       }
       rgb = hslToRgb(hsl[0] - 0.05, 1, 0.5);
       var rgb2 = hslToRgb(hsl[0] + 0.05, 1, 0.6);
@@ -4477,7 +4478,14 @@ function startflash() {
 }
 function aftersparkstart() {
   playStageMusic(track.stage);
-  setWorld(scene.tint, fogc, lvx, lvy, lvz, fogdist);
+  setWorld(
+    scene.tint,
+    scene.fog,
+    scene.light[0],
+    scene.light[1],
+    scene.light[2],
+    scene.fogDistance,
+  );
   if (game.mode == 1) {
     for (var c = 1; c < game.carCount; c++) {
       if (!isEngineLoaded(game.carTypes[c])) {
@@ -4549,7 +4557,7 @@ function createbordo() {
       Math.abs(ysp[i] - ysp[i + 1]) < 7 &&
       Math.abs(ysp[i] - ysp[i + 2]) < 7 &&
       xsp[i + 1] < vony &&
-      (xsp[i + 1] > 572 || !hastip)
+      (xsp[i + 1] > 572 || !track.tips.length)
     ) {
       if (random.fx() > random.fx()) {
         ysp[i + 1] -= 30 + random.fx() * 30;
