@@ -106,7 +106,7 @@ import {
   hud,
   inishinter,
 } from "./ui/hud.js";
-import { menu, showcase } from "./screens/menuState.js";
+import { SHOWCASE, menu, showcase } from "./screens/menuState.js";
 import { gameinstructions, instructions } from "./screens/instructions.js";
 import { loading } from "./loading/progress.js";
 import { game, MAX_CARS, PHASE } from "./core/state.js";
@@ -1368,7 +1368,7 @@ function loaddata() {
         }
         if (track.stage == 17) {
           track.stage = Math.floor(3 + random.sim() * 13);
-          canreset = true;
+          menu.resetOffered = true;
         }
       }
     }
@@ -2673,7 +2673,6 @@ function gameworks() {
 var csxz = 0,
   cszy = 0;
 
-var flyout = 1;
 var nextc = 0;
 function newsmoke() {
   return { x: 0, y: 0, z: 0, sx: 0, sy: 0, rot: 0, rota: 0, mat: null };
@@ -2770,7 +2769,7 @@ function carselect() {
       smoke[i].rot += 360;
     }
   }
-  if (flyout == 0) {
+  if (showcase.motion == SHOWCASE.hovering) {
     if (showcase.bob >= 1) {
       if (showcase.bob == 1) {
         showcase.height += 0.7 + (11 - showcase.height) / 31;
@@ -2801,17 +2800,17 @@ function carselect() {
       }
     }
   } else {
-    if (flyout == 1) {
+    if (showcase.motion == SHOWCASE.droppingIn) {
       cszy = 0;
       showcase.dropSpeed += 0.5;
       showcase.height -= showcase.dropSpeed;
       if (showcase.height < -21) {
         showcase.height = -21;
         showcase.bob = -30;
-        flyout = 0;
+        showcase.motion = SHOWCASE.hovering;
       }
     }
-    if (flyout == 2) {
+    if (showcase.motion == SHOWCASE.flyingOut) {
       showcase.height += 7;
       if (nextc == 1) {
         cszy += 20;
@@ -2835,7 +2834,7 @@ function carselect() {
         if (nextc == 0) {
           game.carTypes[0] = lastsel;
         }
-        flyout = 1;
+        showcase.motion = SHOWCASE.droppingIn;
         showcase.dropSpeed = 0;
         showcase.height = 100;
       }
@@ -4562,7 +4561,6 @@ function supportsGamepads() {
   return !!navigator.getGamepads;
 }
 
-var canreset = false;
 var cnf = 0;
 var cnl = 0;
 var relit = "RE-LIT";
@@ -4729,7 +4727,7 @@ function drawmain() {
         confirm.state = CONFIRM.used;
       }
     }
-    if (canreset) {
+    if (menu.resetOffered) {
       if (
         drawButton({
           id: 7,
@@ -4785,7 +4783,7 @@ function drawmain() {
       racers[game.player].u.up = false;
       racers[game.player].u.down = false;
       racers[game.player].u.handb = false;
-      flyout = 1;
+      showcase.motion = SHOWCASE.droppingIn;
       showcase.dropSpeed = 0;
       showcase.height = 100;
       scene.tint = [0, -0.05, 0.6];
@@ -4883,7 +4881,7 @@ function resetgame() {
     saveSetting("unlocked", game.unlocked);
     game.carTypes[0] = 5;
     saveSetting("carsel", game.carTypes[0]);
-    canreset = false;
+    menu.resetOffered = false;
     game.phase = PHASE.mainMenu;
   }
   if (
@@ -5105,7 +5103,7 @@ function drawcarselect() {
   rd.strokeText("Select your Car", lefy + 20 * view.scale, 25 * view.scaleY);
   rd.fillStyle = "#8665FF";
   rd.fillText("Select your Car", lefy + 20 * view.scale, 25 * view.scaleY);
-  if (flyout == 0) {
+  if (showcase.motion == SHOWCASE.hovering) {
     rd.letterSpacing = "1px";
     rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
     rd.textAlign = "center";
@@ -5126,14 +5124,14 @@ function drawcarselect() {
     if (racers[0].u.right) {
       if (game.carTypes[0] != 18) {
         nextc = 1;
-        flyout = 2;
+        showcase.motion = SHOWCASE.flyingOut;
       }
       racers[0].u.right = false;
     }
     if (racers[0].u.left) {
       if (game.carTypes[0] != 0) {
         nextc = -1;
-        flyout = 2;
+        showcase.motion = SHOWCASE.flyingOut;
       }
       racers[0].u.left = false;
     }
@@ -5159,7 +5157,7 @@ function drawcarselect() {
         })
       ) {
         nextc = -1;
-        flyout = 2;
+        showcase.motion = SHOWCASE.flyingOut;
       }
       if ((handson > 10 && handson < 20) || (handson > 30 && handson < 40)) {
         rd.drawImage(
@@ -5193,7 +5191,7 @@ function drawcarselect() {
         })
       ) {
         nextc = 1;
-        flyout = 2;
+        showcase.motion = SHOWCASE.flyingOut;
       }
       if ((handson > 50 && handson < 60) || (handson > 70 && handson < 80)) {
         rd.drawImage(

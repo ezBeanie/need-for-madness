@@ -161,6 +161,36 @@ const instructionsTour = () => {
   };
 };
 
+// Quits a race to the main menu and watches its intro, opens the reset question (offered
+// once the last stage was won), cancels it, resets the game and starts with PLAY.
+const mainMenuTour = () => {
+  const keys = keyTapper();
+  const taps = { 200: ENTER, 210: UP, 220: ENTER };
+  const clicks = {
+    300: [830, 664], // Reset Game
+    340: [340, 589], // Cancel
+    380: [830, 664], // Reset Game
+    420: [730, 439], // Yes!  Reset my game now
+    470: [1130, 655], // PLAY
+  };
+  let clickedAt = null;
+  return (ctx, frame, game) => {
+    keys.releaseAfterFrame(game);
+    Object.assign(ctx.racers[0].u, NO_INPUT);
+    if (frame === 225) {
+      ctx.menu.resetOffered = true;
+    }
+    if (taps[frame]) {
+      keys.tap(game, taps[frame]);
+    }
+    if (clicks[frame]) {
+      clickedAt = frame;
+      [ctx.pointer.x[0], ctx.pointer.y[0]] = clicks[frame];
+    }
+    ctx.pointer.down = clickedAt !== null && frame - clickedAt < CLICK_FRAMES;
+  };
+};
+
 // The touch controls of phones, where they are at 1280x720.
 const TOUCH = {
   left: [130, 558],
@@ -279,6 +309,12 @@ const flows = [
     frames: 800,
     script: instructionsTour,
     userAgent: "iPhone",
+  },
+  {
+    name: "main-menu-stage-01",
+    stage: 1,
+    frames: 560,
+    script: mainMenuTour,
   },
   {
     name: "rewind-time-stage-02",
