@@ -30,8 +30,9 @@ export const openStageSelect = async ({
   fxSeed,
   unlocked = 17,
   cars = 7,
+  userAgent,
 }) => {
-  const game = await loadGame({ seed, fxSeed });
+  const game = await loadGame({ seed, fxSeed, userAgent });
   const { ctx, stepUntil } = game;
   stepUntil(() => ctx.game.phase === PHASE.mainMenu, 400, "main menu");
 
@@ -55,6 +56,7 @@ export const startRace = async ({
   fxSeed,
   unlocked = 17,
   cars,
+  userAgent,
 }) => {
   const game = await openStageSelect({
     stage,
@@ -63,6 +65,7 @@ export const startRace = async ({
     fxSeed,
     unlocked,
     cars,
+    userAgent,
   });
   const { ctx, stepUntil } = game;
   ctx.game.mode = 0;
@@ -201,14 +204,21 @@ const flowState = (ctx) => ({
   stage: ctx.track.stage,
   unlocked: ctx.game.unlocked,
   winner: ctx.raceEvents.winner,
-  holdcnt: ctx.raceEvents.holdcnt,
+  holdcnt: ctx.raceEvents.raceOverTicks,
 });
 
 // Records a whole game flow, e.g. finishing a race and clicking through the menus.
 // script(ctx, frame, game) runs before every frame and may press keys or call game
 // functions.
-export const recordFlow = async ({ stage, car, seed, frames, script }) => {
-  const game = await startRace({ stage, car, seed });
+export const recordFlow = async ({
+  stage,
+  car,
+  seed,
+  frames,
+  script,
+  userAgent,
+}) => {
+  const game = await startRace({ stage, car, seed, userAgent });
   const states = [];
   const canvas = recordCanvas();
   const drawings = [];

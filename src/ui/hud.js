@@ -40,6 +40,7 @@ import { startRaceEnd } from "../screens/raceEnd.js";
 import { images } from "./images.js";
 import { rd, view } from "./view.js";
 import {
+  AREA,
   BUTTON,
   TEXT,
   blink,
@@ -278,14 +279,14 @@ export function drawswitch() {
     playSound(38, 1);
   }
   if (raceEvents.switcnt >= 10 && raceEvents.switcnt < 90) {
-    if (tflk) {
+    if (messageBlink) {
       drawCenteredText(132, "SWITCHING CARS", 0, 0, 0, TEXT.title);
-      tflk = false;
+      messageBlink = false;
     } else {
       drawCenteredText(132, "SWITCHING CARS", 0, 64, 128, TEXT.title);
-      tflk = true;
+      messageBlink = true;
     }
-    if (tflk) {
+    if (messageBlink) {
       drawCenteredText(192, "Laps Reset, Time +10", 0, 0, 0, TEXT.label);
     } else {
       drawCenteredText(192, "Laps Reset, Time +10", 0, 128, 255, TEXT.label);
@@ -335,11 +336,11 @@ export function drawswitch() {
     racers[camera.nextTarget].u.down = racers[game.player].u.down;
     racers[camera.nextTarget].u.handb = racers[game.player].u.handb;
     racers[camera.nextTarget].u.arrace = racers[game.player].u.arrace;
-    raceEvents.iclear = 0;
+    raceEvents.checkpointsAnnounced = 0;
     game.player = camera.nextTarget;
     camera.target = game.player;
     track.switchtime += 134;
-    timer = track.switchtime;
+    switchTimer = track.switchtime;
     game.phase = PHASE.race;
     camera.mode = 0;
   }
@@ -350,12 +351,12 @@ export function drawrevtime() {
     playSound(41, 1);
   }
   if (raceEvents.switcnt >= 10 && raceEvents.switcnt < 90) {
-    if (tflk) {
+    if (messageBlink) {
       drawCenteredText(132, "Reversing Time", 0, 0, 0, TEXT.title);
-      tflk = false;
+      messageBlink = false;
     } else {
       drawCenteredText(132, "Reversing Time", 0, 64, 128, TEXT.title);
-      tflk = true;
+      messageBlink = true;
     }
     var duds = 0;
     if (raceEvents.switcnt >= 10 && raceEvents.switcnt < 15) {
@@ -424,1230 +425,1099 @@ export function drawrevtime() {
   timeTube.y = car[camera.target].y - timeTube.mat[9] * 170;
   timeTube.z = car[camera.target].z - timeTube.mat[10] * 170;
 }
-var wasu = false,
-  wasd = false,
-  wasl = false,
-  wasr = false,
-  wash = false,
-  wast = false;
-var timer = 800;
-var arrace = false;
-var ana = 0,
-  cntan = 0,
-  cntovn = 0;
-var flk = false;
-var gocnt = 0;
-var gocntdrop = 0;
-var looped = 1;
-var tflk = false;
-var say = "";
-var wasay = false;
-var adj = [
+
+// The touch controls on phones held in the last frame.
+const touchHeld = {
+  left: false,
+  right: false,
+  accelerate: false,
+  brake: false,
+  handbrake: false,
+  arrow: false,
+};
+// switch mode: ticks left until the next switch (800 a minute)
+let switchTimer = 800;
+// where the arrow points as last announced: at the cars or along the track
+let arrowAtCars = false;
+// the angle between the car's heading and the arrow (see arrow)
+let arrowAngle = 0;
+// ticks the car drove the wrong way, and the ticks "Wrong Way!" has been shown since the
+// last checkpoint
+let wrongWayTicks = 0;
+let wrongWayShown = 0;
+let warningBlink = false;
+// the number of the countdown (3, 2, 1, 0 for "Go!") and the ticks it stays
+let countdownNumber = 0;
+let countdownNumberTicks = 0;
+// teaches stunts: 1 not yet in the air, 2 has been in the air, 0 has looped; 3 and 4
+// take turns showing how to flip the car
+let stuntHint = 1;
+let powerHintTicks = 0;
+// the message in the middle (checkpoint, wasted cars, power up, ...), shown while
+// raceEvents.messageTicks < 30; an important one is not replaced by power ups
+let message = "";
+let messageImportant = false;
+let messageBlink = false;
+// the praise for the last stunt, shown while raceEvents.stuntTicks < 45
+let stuntText = "";
+const PRAISE = [
   ["Cool", "Alright", "Nice"],
   ["Wicked", "Amazing", "Super"],
   ["Awesome", "Ripping", "Radical"],
   ["What the...?", "You're a super star!!!!", "Who are you again...?"],
   ["surf style", "off the lip", "bounce back"],
 ];
-var exlm = ["!", "!!", "!!!"];
-var loopin = "",
-  spin = "",
-  asay = "";
-var pwcnt = 0;
-var dmcnt = 0;
-var dmflk = false;
-var dested = [];
+const EXCLAMATIONS = ["!", "!!", "!!!"];
+let damageBlinkTicks = 0;
+let damageBlink = false;
+// how the HUD last saw each car wasted (see track.dested), to announce changes
+const knownWrecks = [];
+
 export function inishinter() {
   game.player = 0;
   track.switchtime = 800;
-  timer = track.switchtime;
+  switchTimer = track.switchtime;
   raceEvents.oncheckpoint = -1;
   raceEvents.onlastcheck = false;
   raceEvents.checkpointFlash = 0;
-  arrace = false;
-  ana = 0;
-  cntan = 0;
-  cntovn = 0;
-  raceEvents.tcnt = 30;
-  wasay = false;
-  pwcnt = 0;
-  raceEvents.auscnt = 45;
+  arrowAtCars = false;
+  arrowAngle = 0;
+  wrongWayTicks = 0;
+  wrongWayShown = 0;
+  raceEvents.messageTicks = 30;
+  messageImportant = false;
+  powerHintTicks = 0;
+  raceEvents.stuntTicks = 45;
   raceEvents.countdown = 186;
-  gocnt = 0;
-  gocntdrop = 0;
-  raceEvents.iclear = 0;
-  for (var i = 0; i < MAX_CARS; i++) {
-    dested[i] = 0;
+  countdownNumber = 0;
+  countdownNumberTicks = 0;
+  raceEvents.checkpointsAnnounced = 0;
+  for (let i = 0; i < MAX_CARS; i++) {
+    knownWrecks[i] = 0;
   }
-  raceEvents.holdcnt = 0;
+  raceEvents.raceOverTicks = 0;
   camera.mode = 0;
   camera.target = 0;
   recording.onpausefr = false;
-  raceEvents.cntwis = 0;
-  dmcnt = 0;
+  raceEvents.playerWreckTicks = 0;
+  damageBlinkTicks = 0;
   hud.replayStartsIn = 0;
   buttons.pulseWidth = 2;
   buttons.pulseHeight = 0.5;
-  for (var i = 0; i < MAX_CARS; i++) {
+  for (let i = 0; i < MAX_CARS; i++) {
     racers[i].u.arrace = false;
     racers[i].u.zyinv = false;
   }
 }
-export function drawinter() {
-  rd.clearRect(0, 0, view.width, view.height);
-  var showpcn = isPhone;
-  if (
-    showpcn &&
-    raceEvents.countdown > 65 &&
-    track.stage == 2 &&
-    game.unlocked == 2
-  ) {
-    showpcn = false;
+
+const once = () => tick.fraction >= tick.scale;
+
+// Text in the middle that blinks between black and a colour.
+const drawBlinking = (y, text, r, g, b) => {
+  if (blink.on) {
+    drawCenteredText(y, text, 0, 0, 0, TEXT.small);
+    blink.on = false;
+  } else {
+    drawCenteredText(y, text, r, g, b, TEXT.small);
+    blink.on = true;
   }
-  if (
-    showpcn &&
+};
+
+// The touch controls of phones: steering, accelerating, braking, the handbrake and the
+// arrow. They press the keys of the player's car while a finger is on them.
+const TOUCH = [
+  { image: 0, x: 130, y: 622, key: "left" },
+  { image: 1, x: 320, y: 662, key: "right" },
+  { image: 3, x: 1150, y: 622, key: "accelerate" },
+  { image: 2, x: 960, y: 662, key: "brake" },
+];
+const CONTROL_FOR = {
+  left: "left",
+  right: "right",
+  accelerate: "up",
+  brake: "down",
+  handbrake: "handb",
+};
+
+const touchControlsShown = () =>
+  isPhone &&
+  !(
     raceEvents.countdown > 65 &&
-    track.stage == 4 &&
-    game.unlocked == 4
-  ) {
-    showpcn = false;
+    ((track.stage == 2 && game.unlocked == 2) ||
+      (track.stage == 4 && game.unlocked == 4))
+  );
+
+// The arrow button is there in races with opponents, after the first stage.
+const arrowButtonShown = () =>
+  game.carCount != 1 && (track.stage != 1 || game.unlocked != 1);
+
+const drawTouchControls = () => {
+  for (const { image, x, y, key } of TOUCH) {
+    if (touchHeld[key]) {
+      rd.globalAlpha = 0.4;
+    }
+    rd.drawImage(
+      images.touchControls[image],
+      x * view.scaleX - 64 * view.scale,
+      y * view.scaleY - 128 * view.scale,
+      128 * view.scale,
+      128 * view.scale,
+    );
+    rd.globalAlpha = 1;
   }
-  if (showpcn) {
-    if (wasl) {
+  if (touchHeld.handbrake) {
+    rd.globalAlpha = 0.4;
+  }
+  rd.drawImage(
+    images.touchControls[4],
+    1260 * view.scaleX - 154 * view.scale,
+    440 * view.scaleY - 111 * view.scale,
+    154 * view.scale,
+    111 * view.scale,
+  );
+  rd.globalAlpha = 1;
+  if (arrowButtonShown()) {
+    if (touchHeld.arrow) {
       rd.globalAlpha = 0.4;
     }
     rd.drawImage(
-      images.touchControls[0],
-      130 * view.scaleX - 64 * view.scale,
-      622 * view.scaleY - 128 * view.scale,
-      128 * view.scale,
-      128 * view.scale,
-    );
-    rd.globalAlpha = 1;
-    if (wasr) {
-      rd.globalAlpha = 0.4;
-    }
-    rd.drawImage(
-      images.touchControls[1],
-      320 * view.scaleX - 64 * view.scale,
-      662 * view.scaleY - 128 * view.scale,
-      128 * view.scale,
-      128 * view.scale,
-    );
-    rd.globalAlpha = 1;
-    if (wasu) {
-      rd.globalAlpha = 0.4;
-    }
-    rd.drawImage(
-      images.touchControls[3],
-      1150 * view.scaleX - 64 * view.scale,
-      622 * view.scaleY - 128 * view.scale,
-      128 * view.scale,
-      128 * view.scale,
-    );
-    rd.globalAlpha = 1;
-    if (wasd) {
-      rd.globalAlpha = 0.4;
-    }
-    rd.drawImage(
-      images.touchControls[2],
-      960 * view.scaleX - 64 * view.scale,
-      662 * view.scaleY - 128 * view.scale,
-      128 * view.scale,
-      128 * view.scale,
-    );
-    rd.globalAlpha = 1;
-    if (wash) {
-      rd.globalAlpha = 0.4;
-    }
-    rd.drawImage(
-      images.touchControls[4],
-      1260 * view.scaleX - 154 * view.scale,
+      images.touchControls[5],
+      20 * view.scaleX,
       440 * view.scaleY - 111 * view.scale,
       154 * view.scale,
       111 * view.scale,
     );
     rd.globalAlpha = 1;
-    if (game.carCount != 1 && (track.stage != 1 || game.unlocked != 1)) {
-      if (wast) {
-        rd.globalAlpha = 0.4;
-      }
-      rd.drawImage(
-        images.touchControls[5],
-        20 * view.scaleX,
-        440 * view.scaleY - 111 * view.scale,
-        154 * view.scale,
-        111 * view.scale,
-      );
-      rd.globalAlpha = 1;
-    }
-    if (wasu) {
-      racers[game.player].u.up = false;
-      wasu = false;
-    }
-    if (wasd) {
-      racers[game.player].u.down = false;
-      wasd = false;
-    }
-    if (wasl) {
-      racers[game.player].u.left = false;
-      wasl = false;
-    }
-    if (wasr) {
-      racers[game.player].u.right = false;
-      wasr = false;
-    }
-    if (wash) {
-      racers[game.player].u.handb = false;
-      wash = false;
-    }
-    var notwast = 0;
-    if (pointer.down) {
-      for (var i = 0; i < pointer.count; i++) {
-        var onkbt = false;
-        var onkb = -1;
-        var xpr = [
-          130 * view.scaleX,
-          320 * view.scaleX,
-          1150 * view.scaleX,
-          960 * view.scaleX,
-          1260 * view.scaleX - 77 * view.scale,
-          20 * view.scaleX + 77 * view.scale,
-        ];
-        var ypr = [
-          622 * view.scaleY - 64 * view.scale,
-          662 * view.scaleY - 64 * view.scale,
-          622 * view.scaleY - 64 * view.scale,
-          662 * view.scaleY - 64 * view.scale,
-          440 * view.scaleY - 55.5 * view.scale,
-          440 * view.scaleY - 55.5 * view.scale,
-        ];
-        var pyclos = 200 * view.scale;
-        var nkb = 6;
-        if (game.carCount == 1) {
-          nkb = 5;
-        }
-        if (track.stage == 1 && game.unlocked == 1) {
-          nkb = 5;
-        }
-        for (var k = 0; k < nkb; k++) {
-          var pypr = py(xpr[k], pointer.x[i], ypr[k], pointer.y[i]);
-          if (pypr < pyclos) {
-            pyclos = pypr;
-            onkb = k;
-          }
-        }
-        if (onkb == 0) {
-          racers[game.player].u.left = true;
-          wasl = true;
-        }
-        if (onkb == 1) {
-          racers[game.player].u.right = true;
-          wasr = true;
-        }
-        if (onkb == 2) {
-          racers[game.player].u.up = true;
-          wasu = true;
-        }
-        if (onkb == 3) {
-          racers[game.player].u.down = true;
-          wasd = true;
-        }
-        if (onkb == 4) {
-          racers[game.player].u.handb = true;
-          wash = true;
-        }
-        if (onkb == 5) {
-          if (!wast) {
-            if (racers[game.player].u.arrace) {
-              racers[game.player].u.arrace = false;
-            } else {
-              racers[game.player].u.arrace = true;
-            }
-            wast = true;
-          }
-          onkbt = true;
-        }
-      }
-      if (!onkbt) {
-        notwast++;
-      }
-    }
-    if (notwast == pointer.count) {
-      wast = false;
+  }
+};
+
+// Each finger presses the control closest to it (within 200 units).
+const pressTouchControls = () => {
+  const u = racers[game.player].u;
+  for (const key of Object.keys(CONTROL_FOR)) {
+    if (touchHeld[key]) {
+      u[CONTROL_FOR[key]] = false;
+      touchHeld[key] = false;
     }
   }
-  var holdit = false;
+  // As in the original, only the last finger counts: the arrow can be pressed again when
+  // a single finger is off it, or when no finger is counted.
+  let fingersOffArrow = 0;
+  if (pointer.down) {
+    let onArrow = false;
+    for (let i = 0; i < pointer.count; i++) {
+      onArrow = false;
+      let closest = -1;
+      const xs = [
+        130 * view.scaleX,
+        320 * view.scaleX,
+        1150 * view.scaleX,
+        960 * view.scaleX,
+        1260 * view.scaleX - 77 * view.scale,
+        20 * view.scaleX + 77 * view.scale,
+      ];
+      const ys = [
+        622 * view.scaleY - 64 * view.scale,
+        662 * view.scaleY - 64 * view.scale,
+        622 * view.scaleY - 64 * view.scale,
+        662 * view.scaleY - 64 * view.scale,
+        440 * view.scaleY - 55.5 * view.scale,
+        440 * view.scaleY - 55.5 * view.scale,
+      ];
+      let closestDistance = 200 * view.scale;
+      const controls = arrowButtonShown() ? 6 : 5;
+      for (let k = 0; k < controls; k++) {
+        const distance = py(xs[k], pointer.x[i], ys[k], pointer.y[i]);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closest = k;
+        }
+      }
+      const key = ["left", "right", "accelerate", "brake", "handbrake"][
+        closest
+      ];
+      if (key) {
+        u[CONTROL_FOR[key]] = true;
+        touchHeld[key] = true;
+      }
+      if (closest == 5) {
+        if (!touchHeld.arrow) {
+          u.arrace = !u.arrace;
+          touchHeld.arrow = true;
+        }
+        onArrow = true;
+      }
+    }
+    if (!onArrow) {
+      fingersOffArrow++;
+    }
+  }
+  if (fingersOffArrow == pointer.count) {
+    touchHeld.arrow = false;
+  }
+};
+
+// Is the race over? Says so (all cars wasted, the player's car wasted, someone finished)
+// and stops the race.
+const raceOutcome = () => {
+  let over = false;
   if (track.wasted == game.carCount - 1 && game.carCount != 1) {
     drawCenteredText(132, "You Wasted'em!", 0, 0, 0, TEXT.title);
-    if (blink.on) {
-      drawCenteredText(
-        192,
-        "You Won, all cars have been wasted!",
-        0,
-        0,
-        0,
-        TEXT.small,
-      );
-      blink.on = false;
-    } else {
-      drawCenteredText(
-        192,
-        "You Won, all cars have been wasted!",
-        0,
-        128,
-        255,
-        TEXT.small,
-      );
-      blink.on = true;
-    }
+    drawBlinking(192, "You Won, all cars have been wasted!", 0, 128, 255);
     if (!track.haltall) {
       playSound(33, 1);
     }
     track.haltall = true;
-    holdit = true;
+    over = true;
     raceEvents.winner = true;
   }
-  if (!holdit) {
-    if (racers[game.player].dest && raceEvents.cntwis == 16) {
+  if (!over) {
+    if (racers[game.player].dest && raceEvents.playerWreckTicks == 16) {
       drawCenteredText(132, "You're Wasted!", 0, 0, 0, TEXT.title);
-      holdit = true;
+      over = true;
       raceEvents.winner = false;
     }
   }
-  if (racers[game.player].cntdest != 0 && raceEvents.cntwis < 16) {
-    raceEvents.cntwis++;
-    if (raceEvents.cntwis == 1) {
+  if (racers[game.player].cntdest != 0 && raceEvents.playerWreckTicks < 16) {
+    raceEvents.playerWreckTicks++;
+    if (raceEvents.playerWreckTicks == 1) {
       playSound(31, 1);
     }
-    if (raceEvents.cntwis == 16) {
+    if (raceEvents.playerWreckTicks == 16) {
       playSound(30, 1);
     }
   }
-  if (!holdit) {
-    for (var i = 0; i < game.carCount; i++) {
+  if (!over) {
+    for (let i = 0; i < game.carCount; i++) {
       if (track.clear[i] == track.nlaps * track.nsp && track.pos[i] == 0) {
         if (i == game.player) {
           drawCenteredText(132, "You Won!", 0, 0, 0, TEXT.title);
-          if (blink.on) {
-            drawCenteredText(
-              192,
-              "You finished first, nice job!",
-              0,
-              0,
-              0,
-              TEXT.small,
-            );
-            blink.on = false;
-          } else {
-            drawCenteredText(
-              192,
-              "You finished first, nice job!",
-              0,
-              128,
-              255,
-              TEXT.small,
-            );
-            blink.on = true;
-          }
+          drawBlinking(192, "You finished first, nice job!", 0, 128, 255);
           raceEvents.winner = true;
           if (!track.haltall) {
             playSound(32, 1);
           }
         } else {
           drawCenteredText(132, "You Lost!", 0, 0, 0, TEXT.title);
-          if (blink.on) {
-            drawCenteredText(
-              192,
-              "" +
-                carStats.names[game.carTypes[i]] +
-                " finished first, race over!",
-              0,
-              0,
-              0,
-              TEXT.small,
-            );
-            blink.on = false;
-          } else {
-            drawCenteredText(
-              192,
-              "" +
-                carStats.names[game.carTypes[i]] +
-                " finished first, race over!",
-              0,
-              128,
-              255,
-              TEXT.small,
-            );
-            blink.on = true;
-          }
+          drawBlinking(
+            192,
+            "" +
+              carStats.names[game.carTypes[i]] +
+              " finished first, race over!",
+            0,
+            128,
+            255,
+          );
           raceEvents.winner = false;
         }
         track.haltall = true;
-        holdit = true;
+        over = true;
       }
     }
   }
-  if (holdit) {
-    if (raceEvents.holdcnt == 0) {
-      if (
-        raceEvents.winner &&
-        game.unlocked == track.stage &&
-        game.carCount != 1 &&
-        track.stage != 17
-      ) {
-        saveSetting("unlocked", game.unlocked + 1);
-      }
-    }
-    raceEvents.holdcnt++;
-    var exitnow = false;
-    if (racers[game.player].u.handb && raceEvents.holdcnt > 50) {
-      exitnow = true;
-      racers[game.player].u.handb = false;
-    }
-    if (confirm.state == CONFIRM.pressed) {
-      exitnow = true;
-      confirm.state = CONFIRM.used;
-    }
+  return over;
+};
+
+// After the race: remembers the unlocked stage, waits for "Continue" (or the handbrake)
+// and goes on to the highlight replay or the race end.
+const afterRaceOver = () => {
+  if (raceEvents.raceOverTicks == 0) {
     if (
-      drawButton({
-        id: 7,
-        x: 640 * view.scaleX,
-        y: view.height - 60 * view.scale - 40 * view.scaleY,
-        width: 250,
-        height: 60,
-        faceTop: "#019DFF",
-        faceBottom: "#01BAFF",
-        shadowTop: "#004A78",
-        shadowBottom: "#015777",
-        layout: BUTTON.textThenImage,
-        text: "Continue ",
-        fontSize: 20,
-        textOpacity: 0.8,
-        image: images.buttons[1],
-        imageOpacity: 0.8,
-        pulsing: false,
-      })
+      raceEvents.winner &&
+      game.unlocked == track.stage &&
+      game.carCount != 1 &&
+      track.stage != 17
     ) {
-      exitnow = true;
-    }
-    /*if (winner){if (holdcnt==150) { exitnow=true; }}else{if (drawbutton(7,(640*mw),(canh-(55*avm)-(20*mh)),270,60,"#89C800","#CADC00","#4B6E00","#778200",0,"Continue ",20,0.8,btimg[1],0.8,false)) { exitnow=true; }}*/ if (
-      exitnow
-    ) {
-      if (recording.htyp) {
-        hud.replayStartsIn = 2;
-      } else {
-        startRaceEnd();
-        game.phase = PHASE.raceEnd;
-      }
-      stopEngine();
-    }
-    if (hud.replayStartsIn == 1) {
-      cntreps = 0;
-      camera.orbitHeight = Math.floor(90 * random.fx());
-      camera.orbitAngle = Math.floor(360 * random.fx());
-      hrewindhreplay();
-    }
-    if (hud.replayStartsIn) {
-      rd.globalAlpha = 0.7;
-      rd.fillStyle = "#000000";
-      rd.fillRect(0, 0, view.width, view.height);
-      rd.globalAlpha = 1;
-      hud.replayStartsIn--;
-    }
-  } else {
-    if (raceEvents.holdcnt != 0) {
-      raceEvents.holdcnt = 0;
-    }
-    if (confirm.state == CONFIRM.pressed && raceEvents.countdown <= 65) {
-      confirm.state = CONFIRM.used;
-      pauseMenu.selected = 0;
-      stopStageMusic();
-      stopEngine();
-      game.phase = PHASE.paused;
+      saveSetting("unlocked", game.unlocked + 1);
     }
   }
-  if (raceEvents.countdown <= 65) {
-    if (game.mode == 1 && raceEvents.countdown == 0 && !holdit) {
-      timer--;
-      var minutes = Math.floor(timer / 800);
-      var seconds = Math.floor((timer / 800 - minutes) * 60);
-      var adlz = "";
-      if (seconds < 10) {
-        adlz = "0";
-      }
-      drawCenteredText(
-        670,
-        "0" + minutes + ":" + adlz + "" + seconds,
-        0,
-        0,
-        0,
-        TEXT.heading,
-      );
-      if (timer == 120 || timer == 90 || timer == 60 || timer == 30) {
-        playSound(39, 1);
-      }
-      if (timer == 0) {
-        playSound(40, 1);
-        createswitches();
-        raceEvents.switcnt = 0;
-        game.phase = PHASE.switchScreen;
-      }
+  raceEvents.raceOverTicks++;
+  let leave = false;
+  if (racers[game.player].u.handb && raceEvents.raceOverTicks > 50) {
+    leave = true;
+    racers[game.player].u.handb = false;
+  }
+  if (confirm.state == CONFIRM.pressed) {
+    leave = true;
+    confirm.state = CONFIRM.used;
+  }
+  if (
+    drawButton({
+      id: 7,
+      x: 640 * view.scaleX,
+      y: view.height - 60 * view.scale - 40 * view.scaleY,
+      width: 250,
+      height: 60,
+      faceTop: "#019DFF",
+      faceBottom: "#01BAFF",
+      shadowTop: "#004A78",
+      shadowBottom: "#015777",
+      layout: BUTTON.textThenImage,
+      text: "Continue ",
+      fontSize: 20,
+      textOpacity: 0.8,
+      image: images.buttons[1],
+      imageOpacity: 0.8,
+      pulsing: false,
+    })
+  ) {
+    leave = true;
+  }
+  if (leave) {
+    if (recording.htyp) {
+      hud.replayStartsIn = 2;
+    } else {
+      startRaceEnd();
+      game.phase = PHASE.raceEnd;
     }
-    if (
-      game.carCount != 1 &&
-      arrace != racers[game.player].u.arrace &&
-      track.stage != 16
-    ) {
-      arrace = racers[game.player].u.arrace;
-      if (arrace) {
-        wasay = true;
-        say = " Arrow now pointing at >  CARS";
-        raceEvents.tcnt = -5;
-      }
-      if (!arrace) {
-        wasay = false;
-        say = " Arrow now pointing at >  TRACK";
-        raceEvents.tcnt = -5;
-        cntan = 20;
-      }
-    }
-    if (
-      !holdit &&
-      raceEvents.countdown == 0 &&
-      camera.mode == 0 &&
-      track.stage != 16
-    ) {
-      arrow(racers[game.player].point, racers[game.player].missedcp, arrace);
-      if (
-        !arrace &&
-        raceEvents.auscnt == 45 &&
-        racers[game.player].capcnt == 0
-      ) {
-        if (racers[game.player].missedcp > 0) {
-          if (
-            racers[game.player].missedcp > 15 &&
-            racers[game.player].missedcp < 50
-          ) {
-            if (flk) {
-              drawCenteredText(
-                112,
-                "Check Point Missed!",
-                255,
-                0,
-                0,
-                TEXT.label,
-              );
-            } else {
-              drawCenteredText(
-                112,
-                "Check Point Missed!",
-                255,
-                128,
-                0,
-                TEXT.faintLabel,
-              );
-            }
-          }
-          if (tick.fraction >= tick.scale) {
-            racers[game.player].missedcp++;
-            if (racers[game.player].missedcp == 70) {
-              racers[game.player].missedcp = -2;
-            }
-          }
-        } else {
-          if (racers[game.player].mtouch && cntovn < 70) {
-            if (tick.fraction >= tick.scale) {
-              if (Math.abs(ana) > 100) {
-                cntan++;
-              } else {
-                if (cntan != 0) {
-                  cntan--;
-                }
-              }
-            }
-            if (cntan > 40) {
-              if (tick.fraction >= tick.scale) {
-                cntovn++;
-              }
-              cntan = 40;
-              if (flk) {
-                drawCenteredText(112, "Wrong Way!", 255, 128, 0, TEXT.label);
-                flk = false;
-              } else {
-                drawCenteredText(112, "Wrong Way!", 255, 0, 0, TEXT.faintLabel);
-                flk = true;
-              }
-            }
-          }
-        }
-      }
-    }
-    rd.letterSpacing = "1px";
-    rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
-    rd.textBaseline = "middle";
-    rd.textAlign = "left";
+    stopEngine();
+  }
+  if (hud.replayStartsIn == 1) {
+    cntreps = 0;
+    camera.orbitHeight = Math.floor(90 * random.fx());
+    camera.orbitAngle = Math.floor(360 * random.fx());
+    hrewindhreplay();
+  }
+  if (hud.replayStartsIn) {
+    rd.globalAlpha = 0.7;
     rd.fillStyle = "#000000";
-    rd.fillText("Lap", 20 * view.scale, 19 * view.scale);
-    rd.fillText("Wasted", 130 * view.scale, 19 * view.scale);
-    var adln = 0;
-    if (isPhone) {
-      adln = 70;
-    }
-    rd.fillText("Position", (60 + adln) * view.scale, 55 * view.scale);
-    rd.letterSpacing = "2px";
-    rd.fillStyle = "#000078";
-    rd.fillText(
-      "" + (racers[game.player].nlaps + 1) + "/" + track.nlaps + "",
-      68 * view.scale,
-      19 * view.scale,
-    );
-    rd.fillText(
-      "" + track.wasted + "/" + (game.carCount - 1) + "",
-      217 * view.scale,
-      19 * view.scale,
-    );
-    var rank = "th";
-    if (track.pos[game.player] == 2) {
-      rank = "rd";
-    }
-    if (track.pos[game.player] == 1) {
-      rank = "nd";
-    }
-    if (track.pos[game.player] == 0) {
-      rank = "st";
-    }
-    rd.letterSpacing = "1px";
-    rd.font = "" + 15 * (view.scaleY + view.scaleX) + "px junk";
-    rd.fillText(
-      "" + (track.pos[game.player] + 1),
-      (157 + adln) * view.scale,
-      56 * view.scale,
-    );
-    rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
-    rd.fillStyle = "#000000";
-    rd.fillText(rank, (176 + adln) * view.scale, 55 * view.scale);
-    if (
-      !isPhone &&
-      game.carCount != 1 &&
-      (track.stage != 1 || game.unlocked != 1)
-    ) {
-      if (arrace) {
-        if (
-          drawButton({
-            id: 1,
-            x: 80 * view.scale,
-            y: 90 * view.scale,
-            width: 100,
-            height: 60,
-            faceTop: "#7DBDFF",
-            faceBottom: "#7872FF",
-            shadowTop: "#1767B9",
-            shadowBottom: "#2018C2",
-            layout: BUTTON.textThenImage,
-            text: "A",
-            fontSize: 22,
-            textOpacity: 0.76,
-            image: images.buttons[0],
-            imageOpacity: 1,
-            pulsing: false,
-          })
-        ) {
-          racers[game.player].u.arrace = false;
-        }
+    rd.fillRect(0, 0, view.width, view.height);
+    rd.globalAlpha = 1;
+    hud.replayStartsIn--;
+  }
+};
+
+const pause = () => {
+  pauseMenu.selected = 0;
+  stopStageMusic();
+  stopEngine();
+  game.phase = PHASE.paused;
+};
+
+// Switch mode: the time until the player switches to another car.
+const drawSwitchTimer = () => {
+  switchTimer--;
+  const minutes = Math.floor(switchTimer / 800);
+  const seconds = Math.floor((switchTimer / 800 - minutes) * 60);
+  drawCenteredText(
+    670,
+    "0" + minutes + ":" + (seconds < 10 ? "0" : "") + "" + seconds,
+    0,
+    0,
+    0,
+    TEXT.heading,
+  );
+  if (
+    switchTimer == 120 ||
+    switchTimer == 90 ||
+    switchTimer == 60 ||
+    switchTimer == 30
+  ) {
+    playSound(39, 1);
+  }
+  if (switchTimer == 0) {
+    playSound(40, 1);
+    createswitches();
+    raceEvents.switcnt = 0;
+    game.phase = PHASE.switchScreen;
+  }
+};
+
+const announceArrowTarget = () => {
+  arrowAtCars = racers[game.player].u.arrace;
+  if (arrowAtCars) {
+    messageImportant = true;
+    message = " Arrow now pointing at >  CARS";
+    raceEvents.messageTicks = -5;
+  }
+  if (!arrowAtCars) {
+    messageImportant = false;
+    message = " Arrow now pointing at >  TRACK";
+    raceEvents.messageTicks = -5;
+    wrongWayTicks = 20;
+  }
+};
+
+// Under the arrow: a missed checkpoint, or driving the wrong way.
+const drawTrackWarnings = () => {
+  const player = racers[game.player];
+  if (player.missedcp > 0) {
+    if (player.missedcp > 15 && player.missedcp < 50) {
+      if (warningBlink) {
+        drawCenteredText(112, "Check Point Missed!", 255, 0, 0, TEXT.label);
       } else {
-        if (
-          drawButton({
-            id: 1,
-            x: 80 * view.scale,
-            y: 90 * view.scale,
-            width: 100,
-            height: 60,
-            faceTop: "#89C800",
-            faceBottom: "#CADC00",
-            shadowTop: "#4B6E00",
-            shadowBottom: "#778200",
-            layout: BUTTON.textThenImage,
-            text: "A",
-            fontSize: 22,
-            textOpacity: 0.76,
-            image: images.buttons[0],
-            imageOpacity: 1,
-            pulsing: false,
-          })
-        ) {
-          racers[game.player].u.arrace = true;
-        }
+        drawCenteredText(
+          112,
+          "Check Point Missed!",
+          255,
+          128,
+          0,
+          TEXT.faintLabel,
+        );
       }
     }
-    var lalign = view.width - 290 * view.scale;
-    if (view.width / view.height < 1.3) {
-      lalign = view.width - 200 * view.scale;
-    }
-    rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
-    rd.textAlign = "right";
-    rd.fillStyle = "#000000";
-    rd.fillText("Damage", lalign - 15 * view.scale, 19 * view.scale);
-    rd.fillText("Power", lalign - 15 * view.scale, 55 * view.scale);
-    var trav =
-      98 * (racers[game.player].hitmag / carStats.maxmag[car[game.player].typ]);
-    if (trav > 98) {
-      trav = 98;
-    }
-    var r = 255;
-    var g = 200;
-    var b = 0;
-    if (trav > 33) {
-      g = 200 - 189 * ((trav - 33) / 65);
-    }
-    if (trav > 70) {
-      if (dmcnt < 10) {
-        if (dmflk) {
-          g = 170;
-          dmflk = false;
-        } else {
-          dmflk = true;
-        }
-      }
-      if (tick.fraction >= tick.scale) {
-        dmcnt++;
-      }
-      if (dmcnt > 167 - trav * 1.5) {
-        dmcnt = 0;
+    if (once()) {
+      player.missedcp++;
+      if (player.missedcp == 70) {
+        player.missedcp = -2;
       }
     }
-    drawMeter(
-      lalign,
-      6 * view.scale,
-      "#FC4D00",
-      "#B20000",
-      "rgb(" + r + "," + g + "," + b + ")",
-      trav / 98,
-    );
+  } else if (player.mtouch && wrongWayShown < 70) {
+    if (once()) {
+      if (Math.abs(arrowAngle) > 100) {
+        wrongWayTicks++;
+      } else if (wrongWayTicks != 0) {
+        wrongWayTicks--;
+      }
+    }
+    if (wrongWayTicks > 40) {
+      if (once()) {
+        wrongWayShown++;
+      }
+      wrongWayTicks = 40;
+      if (warningBlink) {
+        drawCenteredText(112, "Wrong Way!", 255, 128, 0, TEXT.label);
+        warningBlink = false;
+      } else {
+        drawCenteredText(112, "Wrong Way!", 255, 0, 0, TEXT.faintLabel);
+        warningBlink = true;
+      }
+    }
+  }
+};
+
+// Top left: lap, wasted opponents and the position.
+const drawStanding = () => {
+  rd.letterSpacing = "1px";
+  rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
+  rd.textBaseline = "middle";
+  rd.textAlign = "left";
+  rd.fillStyle = "#000000";
+  rd.fillText("Lap", 20 * view.scale, 19 * view.scale);
+  rd.fillText("Wasted", 130 * view.scale, 19 * view.scale);
+  // on phones the arrow button is not up here
+  const phoneShift = isPhone ? 70 : 0;
+  rd.fillText("Position", (60 + phoneShift) * view.scale, 55 * view.scale);
+  rd.letterSpacing = "2px";
+  rd.fillStyle = "#000078";
+  rd.fillText(
+    "" + (racers[game.player].nlaps + 1) + "/" + track.nlaps + "",
+    68 * view.scale,
+    19 * view.scale,
+  );
+  rd.fillText(
+    "" + track.wasted + "/" + (game.carCount - 1) + "",
+    217 * view.scale,
+    19 * view.scale,
+  );
+  const position = track.pos[game.player];
+  const suffix =
+    position == 0 ? "st" : position == 1 ? "nd" : position == 2 ? "rd" : "th";
+  rd.letterSpacing = "1px";
+  rd.font = "" + 15 * (view.scaleY + view.scaleX) + "px junk";
+  rd.fillText(
+    "" + (position + 1),
+    (157 + phoneShift) * view.scale,
+    56 * view.scale,
+  );
+  rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
+  rd.fillStyle = "#000000";
+  rd.fillText(suffix, (176 + phoneShift) * view.scale, 55 * view.scale);
+};
+
+// The button that switches the arrow between the track and the cars.
+const drawArrowButton = () => {
+  const colors = arrowAtCars
+    ? ["#7DBDFF", "#7872FF", "#1767B9", "#2018C2"]
+    : ["#89C800", "#CADC00", "#4B6E00", "#778200"];
+  if (
+    drawButton({
+      id: 1,
+      x: 80 * view.scale,
+      y: 90 * view.scale,
+      width: 100,
+      height: 60,
+      faceTop: colors[0],
+      faceBottom: colors[1],
+      shadowTop: colors[2],
+      shadowBottom: colors[3],
+      layout: BUTTON.textThenImage,
+      text: "A",
+      fontSize: 22,
+      textOpacity: 0.76,
+      image: images.buttons[0],
+      imageOpacity: 1,
+      pulsing: false,
+    })
+  ) {
+    racers[game.player].u.arrace = !arrowAtCars;
+  }
+};
+
+// Top right: the damage meter (yellow to red, blinking when nearly wasted) and the power
+// meter (blinking while stunt praise is shown).
+const drawMeters = () => {
+  const metersX =
+    view.width / view.height < 1.3
+      ? view.width - 200 * view.scale
+      : view.width - 290 * view.scale;
+  rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
+  rd.textAlign = "right";
+  rd.fillStyle = "#000000";
+  rd.fillText("Damage", metersX - 15 * view.scale, 19 * view.scale);
+  rd.fillText("Power", metersX - 15 * view.scale, 55 * view.scale);
+  let damage =
+    98 * (racers[game.player].hitmag / carStats.maxmag[car[game.player].typ]);
+  if (damage > 98) {
+    damage = 98;
+  }
+  let green = 200;
+  if (damage > 33) {
+    green = 200 - 189 * ((damage - 33) / 65);
+  }
+  if (damage > 70) {
+    if (damageBlinkTicks < 10) {
+      if (damageBlink) {
+        green = 170;
+        damageBlink = false;
+      } else {
+        damageBlink = true;
+      }
+    }
+    if (once()) {
+      damageBlinkTicks++;
+    }
+    if (damageBlinkTicks > 167 - damage * 1.5) {
+      damageBlinkTicks = 0;
+    }
+  }
+  drawMeter(
+    metersX,
+    6 * view.scale,
+    "#FC4D00",
+    "#B20000",
+    "rgb(" + 255 + "," + green + "," + 0 + ")",
+    damage / 98,
+  );
+  const power = racers[game.player].power;
+  let r = power == 98 ? 64 : 128;
+  let g = 190 + power * 0.37;
+  let b = 255;
+  if (raceEvents.stuntTicks < 45 && blink.on) {
     r = 128;
-    if (racers[game.player].power == 98) {
-      r = 64;
-    }
-    g = 190 + racers[game.player].power * 0.37;
+    g = 244;
     b = 255;
-    if (raceEvents.auscnt < 45 && blink.on) {
-      r = 128;
-      g = 244;
-      b = 255;
-    }
-    drawMeter(
-      lalign,
-      42 * view.scale,
-      "#00B0DC",
-      "#005C96",
-      "rgb(" + r + "," + g + "," + b + ")",
-      racers[game.player].power / 98,
-    );
-    var adwn = 0;
-    if (view.width / view.height < 1.3) {
-      adwn = 76 * view.scale;
-    }
-    var onycl = touchArea(
-      2,
-      view.width - 87 * view.scale,
-      10 * view.scale + adwn,
+  }
+  drawMeter(
+    metersX,
+    42 * view.scale,
+    "#00B0DC",
+    "#005C96",
+    "rgb(" + r + "," + g + "," + b + ")",
+    power / 98,
+  );
+};
+
+// A sound or music toggle in the top right corner: dimmed while held.
+const drawToggle = (id, y, muted, toggle, onImage) => {
+  const x = view.width - 77.5 * view.scale;
+  const area = touchArea(id, x, y, 58 * view.scale, 42 * view.scale);
+  if (area == AREA.held) {
+    rd.globalAlpha = 0.5;
+  }
+  if (area == AREA.clicked) {
+    toggle();
+  }
+  rd.drawImage(
+    images.soundToggles[muted() ? onImage + 1 : onImage],
+    x,
+    y,
+    58 * view.scale,
+    42 * view.scale,
+  );
+  rd.globalAlpha = 1;
+};
+
+// Top right corner: pause, sound and music.
+const drawCornerButtons = (raceOver) => {
+  // narrow screens leave the meters room above the buttons
+  const shift = view.width / view.height < 1.3 ? 76 * view.scale : 0;
+  const pauseX = view.width - 87 * view.scale;
+  const pauseArea = touchArea(
+    2,
+    pauseX,
+    10 * view.scale + shift,
+    77 * view.scale,
+    53 * view.scale,
+  );
+  if (pauseArea != AREA.clicked) {
+    // the pause button, pressed while held
+    rd.drawImage(
+      images.soundToggles[pauseArea],
+      pauseX,
+      10 * view.scale + shift,
       77 * view.scale,
       53 * view.scale,
     );
-    if (onycl != 2) {
-      rd.drawImage(
-        images.soundToggles[onycl],
-        view.width - 87 * view.scale,
-        10 * view.scale + adwn,
-        77 * view.scale,
-        53 * view.scale,
-      );
-    } else {
-      if (!holdit) {
-        pauseMenu.selected = 0;
-        stopStageMusic();
-        stopEngine();
-        game.phase = PHASE.paused;
-      }
-    }
-    onycl = touchArea(
-      3,
-      view.width - 77.5 * view.scale,
-      73 * view.scale + adwn,
-      58 * view.scale,
-      42 * view.scale,
-    );
-    if (onycl == 1) {
-      rd.globalAlpha = 0.5;
-    }
-    if (onycl == 2) {
+  } else if (!raceOver) {
+    pause();
+  }
+  drawToggle(
+    3,
+    73 * view.scale + shift,
+    () => audio.muteSound,
+    () => {
       if (!audio.muteSound) {
         audio.muteSound = true;
         stopEngine();
       } else {
         audio.muteSound = false;
       }
-    }
-    if (!audio.muteSound) {
-      onycl = 2;
-    } else {
-      onycl = 3;
-    }
+    },
+    2,
+  );
+  drawToggle(
+    4,
+    125 * view.scale + shift,
+    () => audio.muteMusic,
+    () => {
+      audio.muteMusic = !audio.muteMusic;
+    },
+    4,
+  );
+};
+
+// The key hint next to the arrow button, blinking for a while from stage 2 on. It blinks
+// with the counter the switch screen slides with, as in the original.
+const drawKeyHint = () => {
+  if (slide < 10 || hud.keyHintTicks > 100) {
     rd.drawImage(
-      images.soundToggles[onycl],
-      view.width - 77.5 * view.scale,
-      73 * view.scale + adwn,
-      58 * view.scale,
-      42 * view.scale,
+      images.instructions[9],
+      80 * view.scale + 50 * view.scale + 30 * view.scale,
+      85 * view.scale,
+      72 * view.scale,
+      75 * view.scale,
+    );
+  }
+  slide++;
+  if (slide > 12) {
+    slide = 0;
+  }
+  hud.keyHintTicks++;
+};
+
+// The countdown: Insano pulling faces, the numbers and "Go!".
+const drawCountdown = () => {
+  const countdown = raceEvents.countdown;
+  if ((countdown != 0 || countdownNumberTicks > 4) && countdown < 65) {
+    const numbers = { 63: [3, 34], 41: [2, 35], 24: [1, 36], 2: [0, 37] };
+    if (numbers[countdown]) {
+      countdownNumber = numbers[countdown][0];
+      countdownNumberTicks = 16;
+      playSound(numbers[countdown][1], 1);
+    }
+    let face = 0;
+    if (countdown <= 63 && countdown > 52) {
+      face = 1;
+    }
+    if (countdown <= 41 && countdown > 32) {
+      face = 4;
+    }
+    if (countdown <= 24 && countdown > 13) {
+      face = 2;
+    }
+    if (countdown <= 2) {
+      face = 3;
+    }
+    if (countdown == 0 && countdownNumberTicks < 7) {
+      face = 1;
+    }
+    rd.globalAlpha = 0.6;
+    rd.drawImage(
+      images.insano[face],
+      640 * view.scaleX - 230 * view.scale,
+      10 * view.scaleY,
+      274 * view.scale * 0.7,
+      341 * view.scale * 0.7,
     );
     rd.globalAlpha = 1;
-    onycl = touchArea(
-      4,
-      view.width - 77.5 * view.scale,
-      125 * view.scale + adwn,
-      58 * view.scale,
-      42 * view.scale,
+  }
+  if (countdownNumberTicks != 0) {
+    drawCenteredText(
+      100,
+      countdownNumber != 0 ? "" + countdownNumber : "Go!",
+      0,
+      0,
+      0,
+      TEXT.title,
     );
-    if (onycl == 1) {
-      rd.globalAlpha = 0.5;
+    countdownNumberTicks--;
+  }
+};
+
+const learnStunts = () => {
+  const player = racers[game.player];
+  if (stuntHint != 0) {
+    if (
+      player.loop == 2 &&
+      (Math.abs(player.travxy) > 110 || Math.abs(player.travzy) > 110)
+    ) {
+      stuntHint = 0;
     }
-    if (onycl == 2) {
-      if (!audio.muteMusic) {
-        audio.muteMusic = true;
-      } else {
-        audio.muteMusic = false;
+    if (stuntHint == 1 && !player.mtouch) {
+      stuntHint = 2;
+    }
+  }
+};
+
+const drawBlinkingHint = (text) => {
+  if (hud.powerBlink) {
+    drawCenteredText(176, text, 0, 0, 200, TEXT.small);
+    hud.powerBlink = false;
+  } else {
+    drawCenteredText(176, text, 255, 100, 0, TEXT.small);
+    hud.powerBlink = true;
+  }
+};
+
+// With little power left the HUD asks for stunts, and once in a while shows how.
+const drawPowerHint = () => {
+  const player = racers[game.player];
+  if (player.power >= 40) {
+    if (powerHintTicks != 0) {
+      powerHintTicks = 0;
+    }
+    return;
+  }
+  if (
+    raceEvents.messageTicks == 30 &&
+    raceEvents.stuntTicks == 45 &&
+    player.mtouch &&
+    player.capcnt == 0
+  ) {
+    if (stuntHint != 3) {
+      if (powerHintTicks < 70 || (powerHintTicks < 100 && stuntHint != 0)) {
+        drawBlinkingHint("Power low, perform stunt!");
+      }
+    } else if (powerHintTicks < 100) {
+      drawBlinkingHint("Try to flip your car in the air to preform stunts!");
+    }
+    if (once()) {
+      powerHintTicks++;
+    }
+    if (powerHintTicks == 300) {
+      powerHintTicks = 0;
+      if (stuntHint >= 2) {
+        stuntHint++;
+        if (stuntHint == 5) {
+          stuntHint = 3;
+        }
       }
     }
-    if (!audio.muteMusic) {
-      onycl = 4;
+  }
+};
+
+// The message, the stunt praise or "Bad Landing!".
+const drawMessages = () => {
+  if (racers[game.player].capcnt != 0) {
+    if (messageBlink) {
+      drawCenteredText(176, "Bad Landing!", 0, 0, 200, TEXT.label);
+      messageBlink = false;
     } else {
-      onycl = 5;
+      drawCenteredText(176, "Bad Landing!", 255, 100, 0, TEXT.label);
+      messageBlink = true;
     }
-    rd.drawImage(
-      images.soundToggles[onycl],
-      view.width - 77.5 * view.scale,
-      125 * view.scale + adwn,
-      58 * view.scale,
-      42 * view.scale,
-    );
-    rd.globalAlpha = 1;
+    return;
+  }
+  if (raceEvents.messageTicks < 30) {
+    if (messageBlink) {
+      drawCenteredText(167, message, 0, 0, 0, TEXT.label);
+      messageBlink = false;
+    } else {
+      if (!messageImportant) {
+        drawCenteredText(167, message, 0, 128, 255, TEXT.label);
+      } else {
+        drawCenteredText(167, message, 255, 128, 0, TEXT.label);
+      }
+      messageBlink = true;
+    }
+    if (once()) {
+      raceEvents.messageTicks++;
+    }
+  } else if (messageImportant) {
+    messageImportant = false;
+  }
+  if (raceEvents.stuntTicks < 45) {
+    if (blink.on) {
+      drawCenteredText(136, stuntText, 59, 156, 255, TEXT.small);
+      blink.on = false;
+    } else {
+      drawCenteredText(136, stuntText, 0, 107, 216, TEXT.small);
+      blink.on = true;
+    }
+    if (once()) {
+      raceEvents.stuntTicks++;
+    }
+  }
+};
+
+const LOOPS = {
+  1: "Forward loop",
+  2: "double Forward",
+  3: "triple Forward",
+  "-1": "Backloop",
+  "-2": "double Back",
+  "-3": "triple Back",
+};
+const SPINS = { 1: "Rollspin", 2: "double Rollspin", 3: "triple Rollspin" };
+
+// The name of the stunt that just landed: loops (travzy), roll spins (travxy) and turns
+// (travxz) the car made in the air, e.g. "double Forward with Rollspin by 360". Uses up the
+// car's counted turns. Each part makes the praise shorter (raceEvents.stuntTicks).
+const nameStunt = (player) => {
+  let loopName = "";
+  let spinName = "";
+  let text = "";
+  let turns = 0;
+  while (player.travzy > 225) {
+    player.travzy -= 360;
+    turns++;
+  }
+  while (player.travzy < -225) {
+    player.travzy += 360;
+    turns--;
+  }
+  loopName = LOOPS[turns] ?? "";
+  if (turns >= 4) {
+    loopName = "massive Forward looping";
+  }
+  if (turns <= -4) {
+    loopName = "massive Back looping";
+  }
+  if (turns == 0) {
+    if (player.ftab && player.btab) {
+      loopName = "Tabletop and reversed Tabletop";
+    } else if (player.ftab || player.btab) {
+      loopName = "Tabletop";
+    }
+  }
+  if ((turns > 0 && player.btab) || (turns < 0 && player.ftab)) {
+    loopName = "Hanged " + loopName;
+  }
+  if (loopName != "") {
+    text += " " + loopName;
+  }
+  turns = 0;
+  player.travxy = Math.abs(player.travxy);
+  while (player.travxy > 270) {
+    player.travxy -= 360;
+    turns++;
+  }
+  if (turns == 0 && player.rtab) {
+    spinName = loopName == "" ? "Tabletop" : "Flipside";
+  }
+  spinName = SPINS[turns] ?? spinName;
+  if (turns >= 4) {
+    spinName = "massive Roll spinning";
+  }
+  let degrees = 0;
+  let beyond = false;
+  player.travxz = Math.abs(player.travxz);
+  while (player.travxz > 90) {
+    player.travxz -= 180;
+    degrees += 180;
+    if (degrees > 900) {
+      degrees = 900;
+      beyond = true;
+    }
+  }
+  if (degrees != 0) {
+    if (loopName == "" && spinName == "") {
+      text += " " + degrees;
+    } else {
+      if (spinName != "") {
+        text += (loopName == "" ? " " : " with ") + spinName;
+      }
+      text += " by " + degrees;
+    }
+    if (beyond) {
+      text += " and beyond";
+    }
+  } else if (spinName != "") {
+    text += (loopName == "" ? " " : " by ") + spinName;
+  }
+  if (text != "") {
+    raceEvents.stuntTicks -= 15;
+  }
+  if (loopName != "") {
+    raceEvents.stuntTicks -= 25;
+  }
+  if (spinName != "") {
+    raceEvents.stuntTicks -= 25;
+  }
+  if (degrees != 0) {
+    raceEvents.stuntTicks -= 25;
+  }
+  return text;
+};
+
+// Praises a landed stunt, more for the more power it gave, and tells the power up.
+const praiseStunt = () => {
+  const player = racers[game.player];
+  stuntText = nameStunt(player);
+  if (raceEvents.stuntTicks >= 45) {
+    return;
+  }
+  playSound(27, 1);
+  if (raceEvents.onautocorrect) {
+    raceEvents.onautocorrect--;
+  }
+  if (raceEvents.stuntTicks < -20) {
+    raceEvents.stuntTicks = -20;
+  }
+  let level = 0;
+  if (player.powerup > 20) {
+    level = 1;
+  }
+  if (player.powerup > 40) {
+    level = 2;
+  }
+  if (player.powerup > 150) {
+    level = 3;
+  }
+  if (player.surfer) {
+    stuntText = " " + PRAISE[4][Math.floor(random.fx() * 2.99)] + stuntText;
+  }
+  if (level != 3) {
+    stuntText =
+      PRAISE[level][Math.floor(random.fx() * 2.99)] +
+      stuntText +
+      EXCLAMATIONS[level];
+  } else {
+    stuntText = PRAISE[level][Math.floor(random.fx() * 2.99)];
+  }
+  if (!messageImportant) {
+    raceEvents.messageTicks = raceEvents.stuntTicks;
+    message =
+      player.power != 98
+        ? "POWER UP " + Math.floor((100 * player.powerup) / 98) + "%"
+        : "POWER TO THE MAX";
+  }
+};
+
+// Messages about the fixed car, wasted opponents and passed checkpoints.
+const announceEvents = () => {
+  const player = racers[game.player];
+  if (car[game.player].fcnt == 2) {
+    if (!messageImportant) {
+      message = "Car Fixed";
+      raceEvents.messageTicks = 0;
+    }
+  }
+  if (game.carCount != 1) {
+    for (let i = 0; i < game.carCount; i++) {
+      if (knownWrecks[i] != track.dested[i] && i != game.player) {
+        knownWrecks[i] = track.dested[i];
+        if (knownWrecks[i] == 1) {
+          messageImportant = true;
+          message = "" + carStats.names[game.carTypes[i]] + " has been wasted!";
+          raceEvents.messageTicks = -15;
+        }
+        if (knownWrecks[i] == 2) {
+          messageImportant = true;
+          message = "You wasted " + carStats.names[game.carTypes[i]] + "!";
+          raceEvents.messageTicks = -15;
+        }
+      }
+    }
+  }
+  if (raceEvents.checkpointsAnnounced != player.clear && player.clear != 0) {
+    if (!messageImportant) {
+      message = "Check Point";
+      raceEvents.messageTicks = 15;
+    }
+    raceEvents.checkpointsAnnounced = player.clear;
+    playSound(28, 1);
+    wrongWayShown = 0;
+    if (wrongWayTicks != 0) {
+      wrongWayTicks = 0;
+    }
+  }
+};
+
+// Everything drawn over the race, every tick.
+export function drawinter() {
+  rd.clearRect(0, 0, view.width, view.height);
+  if (touchControlsShown()) {
+    drawTouchControls();
+    pressTouchControls();
+  }
+  const raceOver = raceOutcome();
+  if (raceOver) {
+    afterRaceOver();
+  } else {
+    if (raceEvents.raceOverTicks != 0) {
+      raceEvents.raceOverTicks = 0;
+    }
+    if (confirm.state == CONFIRM.pressed && raceEvents.countdown <= 65) {
+      confirm.state = CONFIRM.used;
+      pause();
+    }
+  }
+  if (raceEvents.countdown <= 65) {
+    if (game.mode == 1 && raceEvents.countdown == 0 && !raceOver) {
+      drawSwitchTimer();
+    }
+    if (
+      game.carCount != 1 &&
+      arrowAtCars != racers[game.player].u.arrace &&
+      track.stage != 16
+    ) {
+      announceArrowTarget();
+    }
+    if (
+      !raceOver &&
+      raceEvents.countdown == 0 &&
+      camera.mode == 0 &&
+      track.stage != 16
+    ) {
+      arrow(
+        racers[game.player].point,
+        racers[game.player].missedcp,
+        arrowAtCars,
+      );
+      if (
+        !arrowAtCars &&
+        raceEvents.stuntTicks == 45 &&
+        racers[game.player].capcnt == 0
+      ) {
+        drawTrackWarnings();
+      }
+    }
+    drawStanding();
+    if (!isPhone && arrowButtonShown()) {
+      drawArrowButton();
+    }
+    drawMeters();
+    drawCornerButtons(raceOver);
     if (
       !isPhone &&
       track.stage >= 2 &&
       hud.keyHintTicks < 200 &&
       game.carCount != 1
     ) {
-      if (slide < 10 || hud.keyHintTicks > 100) {
-        rd.drawImage(
-          images.instructions[9],
-          80 * view.scale + 50 * view.scale + 30 * view.scale,
-          85 * view.scale,
-          72 * view.scale,
-          75 * view.scale,
-        );
-      }
-      slide++;
-      if (slide > 12) {
-        slide = 0;
-      }
-      hud.keyHintTicks++;
+      drawKeyHint();
     }
   }
-  if (!holdit) {
-    if (
-      (raceEvents.countdown != 0 || gocntdrop > 4) &&
-      raceEvents.countdown < 65
-    ) {
-      if (raceEvents.countdown == 63) {
-        gocnt = 3;
-        gocntdrop = 16;
-        playSound(34, 1);
-      }
-      if (raceEvents.countdown == 41) {
-        gocnt = 2;
-        gocntdrop = 16;
-        playSound(35, 1);
-      }
-      if (raceEvents.countdown == 24) {
-        gocnt = 1;
-        gocntdrop = 16;
-        playSound(36, 1);
-      }
-      if (raceEvents.countdown == 2) {
-        gocnt = 0;
-        gocntdrop = 16;
-        playSound(37, 1);
-      }
-      var duds = 0;
-      if (raceEvents.countdown <= 63 && raceEvents.countdown > 52) {
-        duds = 1;
-      }
-      if (raceEvents.countdown <= 41 && raceEvents.countdown > 32) {
-        duds = 4;
-      }
-      if (raceEvents.countdown <= 24 && raceEvents.countdown > 13) {
-        duds = 2;
-      }
-      if (raceEvents.countdown <= 2) {
-        duds = 3;
-      }
-      if (raceEvents.countdown == 0 && gocntdrop < 7) {
-        duds = 1;
-      }
-      rd.globalAlpha = 0.6;
-      rd.drawImage(
-        images.insano[duds],
-        640 * view.scaleX - 230 * view.scale,
-        10 * view.scaleY,
-        274 * view.scale * 0.7,
-        341 * view.scale * 0.7,
-      );
-      rd.globalAlpha = 1;
+  if (!raceOver) {
+    drawCountdown();
+    learnStunts();
+    drawPowerHint();
+    drawMessages();
+    if (racers[game.player].trcnt == 10 && once()) {
+      praiseStunt();
     }
-    if (gocntdrop != 0) {
-      if (gocnt != 0) {
-        drawCenteredText(100, "" + gocnt, 0, 0, 0, TEXT.title);
-      } else {
-        drawCenteredText(100, "Go!", 0, 0, 0, TEXT.title);
-      }
-      gocntdrop--;
-    }
-    if (looped != 0) {
-      if (
-        racers[game.player].loop == 2 &&
-        (Math.abs(racers[game.player].travxy) > 110 ||
-          Math.abs(racers[game.player].travzy) > 110)
-      ) {
-        looped = 0;
-      }
-      if (looped == 1 && !racers[game.player].mtouch) {
-        looped = 2;
-      }
-    }
-    if (racers[game.player].power < 40) {
-      if (
-        raceEvents.tcnt == 30 &&
-        raceEvents.auscnt == 45 &&
-        racers[game.player].mtouch &&
-        racers[game.player].capcnt == 0
-      ) {
-        if (looped != 3) {
-          if (pwcnt < 70 || (pwcnt < 100 && looped != 0)) {
-            if (hud.powerBlink) {
-              drawCenteredText(
-                176,
-                "Power low, perform stunt!",
-                0,
-                0,
-                200,
-                TEXT.small,
-              );
-              hud.powerBlink = false;
-            } else {
-              drawCenteredText(
-                176,
-                "Power low, perform stunt!",
-                255,
-                100,
-                0,
-                TEXT.small,
-              );
-              hud.powerBlink = true;
-            }
-          }
-        } else {
-          if (pwcnt < 100) {
-            if (hud.powerBlink) {
-              drawCenteredText(
-                176,
-                "Try to flip your car in the air to preform stunts!",
-                0,
-                0,
-                200,
-                TEXT.small,
-              );
-              hud.powerBlink = false;
-            } else {
-              drawCenteredText(
-                176,
-                "Try to flip your car in the air to preform stunts!",
-                255,
-                100,
-                0,
-                TEXT.small,
-              );
-              hud.powerBlink = true;
-            }
-          }
-        }
-        if (tick.fraction >= tick.scale) {
-          pwcnt++;
-        }
-        if (pwcnt == 300) {
-          pwcnt = 0;
-          if (looped >= 2) {
-            looped++;
-            if (looped == 5) {
-              looped = 3;
-            }
-          }
-        }
-      }
-    } else {
-      if (pwcnt != 0) {
-        pwcnt = 0;
-      }
-    }
-    if (racers[game.player].capcnt == 0) {
-      if (raceEvents.tcnt < 30) {
-        if (tflk) {
-          drawCenteredText(167, say, 0, 0, 0, TEXT.label);
-          tflk = false;
-        } else {
-          if (!wasay) {
-            drawCenteredText(167, say, 0, 128, 255, TEXT.label);
-          } else {
-            drawCenteredText(167, say, 255, 128, 0, TEXT.label);
-          }
-          tflk = true;
-        }
-        if (tick.fraction >= tick.scale) {
-          raceEvents.tcnt++;
-        }
-      } else {
-        if (wasay) {
-          wasay = false;
-        }
-      }
-      if (raceEvents.auscnt < 45) {
-        if (blink.on) {
-          drawCenteredText(136, asay, 59, 156, 255, TEXT.small);
-          blink.on = false;
-        } else {
-          drawCenteredText(136, asay, 0, 107, 216, TEXT.small);
-          blink.on = true;
-        }
-        if (tick.fraction >= tick.scale) {
-          raceEvents.auscnt++;
-        }
-      }
-    } else {
-      if (tflk) {
-        drawCenteredText(176, "Bad Landing!", 0, 0, 200, TEXT.label);
-        tflk = false;
-      } else {
-        drawCenteredText(176, "Bad Landing!", 255, 100, 0, TEXT.label);
-        tflk = true;
-      }
-    }
-    if (racers[game.player].trcnt == 10 && tick.fraction >= tick.scale) {
-      loopin = "";
-      spin = "";
-      asay = "";
-      var lp = 0;
-      while (racers[game.player].travzy > 225) {
-        racers[game.player].travzy -= 360;
-        lp++;
-      }
-      while (racers[game.player].travzy < -225) {
-        racers[game.player].travzy += 360;
-        lp--;
-      }
-      if (lp == 1) {
-        loopin = "Forward loop";
-      }
-      if (lp == 2) {
-        loopin = "double Forward";
-      }
-      if (lp == 3) {
-        loopin = "triple Forward";
-      }
-      if (lp >= 4) {
-        loopin = "massive Forward looping";
-      }
-      if (lp == -1) {
-        loopin = "Backloop";
-      }
-      if (lp == -2) {
-        loopin = "double Back";
-      }
-      if (lp == -3) {
-        loopin = "triple Back";
-      }
-      if (lp <= -4) {
-        loopin = "massive Back looping";
-      }
-      if (lp == 0) {
-        if (racers[game.player].ftab && racers[game.player].btab) {
-          loopin = "Tabletop and reversed Tabletop";
-        } else {
-          if (racers[game.player].ftab || racers[game.player].btab) {
-            loopin = "Tabletop";
-          }
-        }
-      }
-      if (lp > 0 && racers[game.player].btab) {
-        loopin = "Hanged " + loopin;
-      }
-      if (lp < 0 && racers[game.player].ftab) {
-        loopin = "Hanged " + loopin;
-      }
-      if (loopin != "") {
-        asay += " " + loopin;
-      }
-      lp = 0;
-      racers[game.player].travxy = Math.abs(racers[game.player].travxy);
-      while (racers[game.player].travxy > 270) {
-        racers[game.player].travxy -= 360;
-        lp++;
-      }
-      if (lp == 0 && racers[game.player].rtab) {
-        if (loopin == "") {
-          spin = "Tabletop";
-        } else {
-          spin = "Flipside";
-        }
-      }
-      if (lp == 1) {
-        spin = "Rollspin";
-      }
-      if (lp == 2) {
-        spin = "double Rollspin";
-      }
-      if (lp == 3) {
-        spin = "triple Rollspin";
-      }
-      if (lp >= 4) {
-        spin = "massive Roll spinning";
-      }
-      lp = 0;
-      var beyond = false;
-      racers[game.player].travxz = Math.abs(racers[game.player].travxz);
-      while (racers[game.player].travxz > 90) {
-        racers[game.player].travxz -= 180;
-        lp += 180;
-        if (lp > 900) {
-          lp = 900;
-          beyond = true;
-        }
-      }
-      if (lp != 0) {
-        if (loopin == "" && spin == "") {
-          asay += " " + lp;
-          if (beyond) {
-            asay += " and beyond";
-          }
-        } else {
-          if (spin != "") {
-            if (loopin == "") {
-              asay += " " + spin;
-            } else {
-              asay += " with " + spin;
-            }
-          }
-          asay += " by " + lp;
-          if (beyond) {
-            asay += " and beyond";
-          }
-        }
-      } else {
-        if (spin != "") {
-          if (loopin == "") {
-            asay += " " + spin;
-          } else {
-            asay += " by " + spin;
-          }
-        }
-      }
-      if (asay != "") {
-        raceEvents.auscnt -= 15;
-      }
-      if (loopin != "") {
-        raceEvents.auscnt -= 25;
-      }
-      if (spin != "") {
-        raceEvents.auscnt -= 25;
-      }
-      if (lp != 0) {
-        raceEvents.auscnt -= 25;
-      }
-      if (raceEvents.auscnt < 45) {
-        playSound(27, 1);
-        if (raceEvents.onautocorrect) {
-          raceEvents.onautocorrect--;
-        }
-        if (raceEvents.auscnt < -20) {
-          raceEvents.auscnt = -20;
-        }
-        var prp = 0;
-        if (racers[game.player].powerup > 20) {
-          prp = 1;
-        }
-        if (racers[game.player].powerup > 40) {
-          prp = 2;
-        }
-        if (racers[game.player].powerup > 150) {
-          prp = 3;
-        }
-        if (racers[game.player].surfer) {
-          asay = " " + adj[4][Math.floor(random.fx() * 2.99)] + asay;
-        }
-        if (prp != 3) {
-          asay = adj[prp][Math.floor(random.fx() * 2.99)] + asay + exlm[prp];
-        } else {
-          asay = adj[prp][Math.floor(random.fx() * 2.99)];
-        }
-        if (!wasay) {
-          raceEvents.tcnt = raceEvents.auscnt;
-          if (racers[game.player].power != 98) {
-            say =
-              "POWER UP " +
-              Math.floor((100 * racers[game.player].powerup) / 98) +
-              "%";
-          } else {
-            say = "POWER TO THE MAX";
-          }
-        }
-      }
-    }
-    if (car[game.player].fcnt == 2) {
-      if (!wasay) {
-        say = "Car Fixed";
-        raceEvents.tcnt = 0;
-      }
-    }
-    if (game.carCount != 1) {
-      for (var i = 0; i < game.carCount; i++) {
-        if (dested[i] != track.dested[i] && i != game.player) {
-          dested[i] = track.dested[i];
-          if (dested[i] == 1) {
-            wasay = true;
-            say = "" + carStats.names[game.carTypes[i]] + " has been wasted!";
-            raceEvents.tcnt = -15;
-          }
-          if (dested[i] == 2) {
-            wasay = true;
-            say = "You wasted " + carStats.names[game.carTypes[i]] + "!";
-            raceEvents.tcnt = -15;
-          }
-        }
-      }
-    }
-    if (
-      raceEvents.iclear != racers[game.player].clear &&
-      racers[game.player].clear != 0
-    ) {
-      if (!wasay) {
-        say = "Check Point";
-        raceEvents.tcnt = 15;
-      }
-      raceEvents.iclear = racers[game.player].clear;
-      playSound(28, 1);
-      cntovn = 0;
-      if (cntan != 0) {
-        cntan = 0;
-      }
-    }
+    announceEvents();
   }
 }
 export function drawreplay() {
@@ -2135,34 +2005,34 @@ export function arrow(pnt, misdcp, pntcar) {
       an = -100;
     }
   }
-  if (Math.abs(ana - an) < 180) {
-    if (Math.abs(ana - an) < 10) {
-      ana = an;
+  if (Math.abs(arrowAngle - an) < 180) {
+    if (Math.abs(arrowAngle - an) < 10) {
+      arrowAngle = an;
     } else {
-      if (ana < an) {
-        ana += 10;
+      if (arrowAngle < an) {
+        arrowAngle += 10;
       } else {
-        ana -= 10;
+        arrowAngle -= 10;
       }
     }
   } else {
     if (an < 0) {
-      ana += 15;
-      if (ana > 180) {
-        ana -= 360;
+      arrowAngle += 15;
+      if (arrowAngle > 180) {
+        arrowAngle -= 360;
       }
     }
     if (an > 0) {
-      ana -= 15;
-      if (ana < -180) {
-        ana += 360;
+      arrowAngle -= 15;
+      if (arrowAngle < -180) {
+        arrowAngle += 360;
       }
     }
   }
-  rotate(xp, zp, cx, cz, ana, 7);
-  an = Math.abs(ana);
+  rotate(xp, zp, cx, cz, arrowAngle, 7);
+  an = Math.abs(arrowAngle);
   if (!pntcar) {
-    if (an > 7 || misdcp > 0 || misdcp == -2 || cntan != 0) {
+    if (an > 7 || misdcp > 0 || misdcp == -2 || wrongWayTicks != 0) {
       for (var i = 0; i < 7; i++) {
         xp[i] = xs(xp[i], zp[i]) * 1.6 * view.scale;
         yp[i] = ys(yp[i], zp[i]) * 1.6 * view.scale;
@@ -2173,7 +2043,7 @@ export function arrow(pnt, misdcp, pntcar) {
       var g = 255;
       var b = 0;
       if (misdcp <= 0) {
-        if (an <= 45 && misdcp != -2 && cntan == 0) {
+        if (an <= 45 && misdcp != -2 && wrongWayTicks == 0) {
           rd.globalAlpha = an / 45;
         }
         if (an >= 90) {
@@ -2184,13 +2054,13 @@ export function arrow(pnt, misdcp, pntcar) {
           }
         }
       } else {
-        if (flk) {
+        if (warningBlink) {
           r = 255;
-          flk = false;
+          warningBlink = false;
         } else {
           r = 255;
           g = 220;
-          flk = true;
+          warningBlink = true;
         }
       }
       rd.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
@@ -2200,11 +2070,11 @@ export function arrow(pnt, misdcp, pntcar) {
       g = 170;
       b = 0;
       if (misdcp <= 0) {
-        if (an <= 45 && misdcp != -2 && cntan == 0) {
+        if (an <= 45 && misdcp != -2 && wrongWayTicks == 0) {
           rd.globalAlpha = an / 45;
         }
       } else {
-        if (flk) {
+        if (warningBlink) {
           r = 255;
           g = 0;
         }

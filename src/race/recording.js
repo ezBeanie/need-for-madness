@@ -227,7 +227,7 @@ export function inishrecord() {
   recording.catchfin = 0;
 }
 export function record() {
-  if (raceEvents.holdcnt < 100) {
+  if (raceEvents.raceOverTicks < 100) {
     for (var c = 0; c < game.carCount; c++) {
       for (var i = 0; i < 429; i++) {
         recording.repcar[c].x[i] = recording.repcar[c].x[i + 1];
@@ -950,10 +950,10 @@ export function revtime() {
         recording.repcar[c].destat = 700;
       }
     }
-    raceEvents.cntwis = 0;
-    raceEvents.iclear = racers[game.player].clear;
-    raceEvents.tcnt = 30;
-    raceEvents.auscnt = 45;
+    raceEvents.playerWreckTicks = 0;
+    raceEvents.checkpointsAnnounced = racers[game.player].clear;
+    raceEvents.messageTicks = 30;
+    raceEvents.stuntTicks = 45;
     track.haltall = false;
     game.phase = PHASE.race;
     recording.nrec = 0;

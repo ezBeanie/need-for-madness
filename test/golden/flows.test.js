@@ -36,7 +36,7 @@ const finishAndPlayOn = () => {
     keys.releaseAfterFrame(game);
     if (finishedAt === null) {
       Object.assign(ctx.racers[0].u, drive(ctx));
-      if (ctx.raceEvents.holdcnt) {
+      if (ctx.raceEvents.raceOverTicks) {
         finishedAt = frame;
         Object.assign(ctx.racers[0].u, NO_INPUT);
       }
@@ -64,6 +64,47 @@ const driveThen = (afterFrames, action) => {
   };
 };
 
+// The touch controls of phones, where they are at 1280x720.
+const TOUCH = {
+  left: [130, 558],
+  right: [320, 598],
+  accelerate: [1150, 558],
+  brake: [960, 598],
+  handbrake: [1183, 384.5],
+  arrow: [97, 384.5],
+};
+
+// A phone: fingers on the touch controls, steering both ways, the handbrake, the arrow
+// button twice, braking, and a while without fingers.
+const fingers = () => (ctx, frame) => {
+  const on = [];
+  if (frame < 1000) {
+    on.push(TOUCH.accelerate);
+  } else if (frame < 1100) {
+    on.push(TOUCH.brake);
+  }
+  if (frame % 200 < 60) {
+    on.push(TOUCH.left);
+  } else if (frame % 200 >= 100 && frame % 200 < 160) {
+    on.push(TOUCH.right);
+  }
+  if (frame >= 300 && frame < 330) {
+    on.push(TOUCH.handbrake);
+  }
+  if ((frame >= 500 && frame < 505) || (frame >= 800 && frame < 805)) {
+    on.push(TOUCH.arrow);
+  }
+  if (frame >= 1200 && frame < 1250) {
+    on.length = 0;
+  }
+  ctx.pointer.down = on.length > 0;
+  ctx.pointer.count = on.length;
+  on.forEach(([x, y], i) => {
+    ctx.pointer.x[i] = x;
+    ctx.pointer.y[i] = y;
+  });
+};
+
 const flows = [
   {
     name: "finish-and-play-on-stage-01",
@@ -79,6 +120,13 @@ const flows = [
     script: () => driveThen(900, (ctx) => ctx.rewindreplay()),
   },
   {
+    name: "touch-controls-stage-03",
+    stage: 3,
+    frames: 1400,
+    script: fingers,
+    userAgent: "iPhone",
+  },
+  {
     name: "rewind-time-stage-02",
     stage: 2,
     frames: 1500,
@@ -87,16 +135,20 @@ const flows = [
 ];
 
 describe("game flows match the golden master", () => {
-  test.each(flows)("$name", async ({ name, stage, frames, script }) => {
-    const car = 15;
-    const recording = await recordFlow({
-      stage,
-      car,
-      seed: stage,
-      frames,
-      script: script(),
-    });
-    expectMatchesGolden(name, { stage, car }, recording);
-    expectDrawingMatchesGolden(name, recording);
-  });
+  test.each(flows)(
+    "$name",
+    async ({ name, stage, frames, script, userAgent }) => {
+      const car = 15;
+      const recording = await recordFlow({
+        stage,
+        car,
+        seed: stage,
+        frames,
+        script: script(),
+        userAgent,
+      });
+      expectMatchesGolden(name, { stage, car }, recording);
+      expectDrawingMatchesGolden(name, recording);
+    },
+  );
 });

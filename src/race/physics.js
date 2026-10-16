@@ -2716,7 +2716,7 @@ export function drive() {
             racers[c].cntdest = 0;
             racers[c].dest = false;
             if (c == game.player) {
-              raceEvents.cntwis = 0;
+              raceEvents.playerWreckTicks = 0;
             }
           }
           if (car[c].fcnt == 5) {

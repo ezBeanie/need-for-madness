@@ -52,9 +52,9 @@ const glNames = [
   ),
 ];
 
-const installBrowser = (queue) => {
+const installBrowser = (queue, userAgent) => {
   for (const [name, value] of Object.entries(
-    createBrowserGlobals({ root: PUBLIC_ROOT, queue, glNames }),
+    createBrowserGlobals({ root: PUBLIC_ROOT, queue, glNames, userAgent }),
   )) {
     Object.defineProperty(globalThis, name, {
       value,
@@ -66,13 +66,18 @@ const installBrowser = (queue) => {
 };
 
 // Every call loads fresh instances of the game and all its modules, with its own browser
-// stubs. seed drives the simulation, fxSeed only visual and sound effects.
-export const loadGame = async ({ seed = 1, fxSeed = seed + 1000 } = {}) => {
+// stubs. seed drives the simulation, fxSeed only visual and sound effects; a phone's
+// userAgent makes it a phone (touch controls).
+export const loadGame = async ({
+  seed = 1,
+  fxSeed = seed + 1000,
+  userAgent,
+} = {}) => {
   if (!globalThis.mat4) {
     installGlMatrix();
   }
   const queue = createTaskQueue();
-  installBrowser(queue);
+  installBrowser(queue, userAgent);
 
   // The game reads Math.random once when loading (both random sources start as it, and
   // the car select smoke is placed right away); it never calls it afterwards.

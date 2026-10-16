@@ -4505,7 +4505,7 @@ function enginsnd() {
         }
       }
     }
-    if (raceEvents.holdcnt == 0) {
+    if (raceEvents.raceOverTicks == 0) {
       engine.volume.gain.value +=
         ((reqvol - 1) * 0.75 + 1 - engine.volume.gain.value) / 10;
     } else {
@@ -4528,7 +4528,7 @@ function enginsnd() {
     engine.source.playbackRate.value =
       1 + abo * carStats.engrev[game.carTypes[game.player]];
   } else {
-    if (!raceEvents.holdcnt) {
+    if (!raceEvents.raceOverTicks) {
       startEngine(game.carTypes[game.player], true);
     }
   }

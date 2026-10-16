@@ -197,7 +197,12 @@ class Audio {
   }
 }
 
-export const createBrowserGlobals = ({ root, queue, glNames }) => {
+export const createBrowserGlobals = ({
+  root,
+  queue,
+  glNames,
+  userAgent = "node-harness",
+}) => {
   const gl = createWebGLStub(glNames);
   const ctx2d = create2dContextStub();
   const canvas3D = createCanvasStub(gl);
@@ -206,7 +211,7 @@ export const createBrowserGlobals = ({ root, queue, glNames }) => {
   const element = () => ({ style: {}, addEventListener: noop });
 
   return {
-    navigator: { userAgent: "node-harness", getGamepads: () => [] },
+    navigator: { userAgent, getGamepads: () => [] },
     screen: { width: 1280, height: 720 },
     innerWidth: 1280,
     innerHeight: 720,
