@@ -1,3 +1,4 @@
+import { vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -51,10 +52,8 @@ const installBrowser = (queue) => {
   globalThis.window = globalThis;
 };
 
-let instances = 0;
-
-// Every call imports a fresh instance of the game module (the query makes it a new module),
-// with its own browser stubs. seed drives the simulation, fxSeed only visual and sound effects.
+// Every call loads fresh instances of the game and all its modules, with its own browser
+// stubs. seed drives the simulation, fxSeed only visual and sound effects.
 export const loadGame = async ({ seed = 1, fxSeed = seed + 1000 } = {}) => {
   if (!globalThis.mat4) {
     installGlMatrix();
@@ -62,20 +61,20 @@ export const loadGame = async ({ seed = 1, fxSeed = seed + 1000 } = {}) => {
   const queue = createTaskQueue();
   installBrowser(queue);
 
-  // The game reads Math.random once when loading (simrandom and fxrandom start as it,
-  // and the car select smoke is placed right away); it never calls it afterwards.
+  // The game reads Math.random once when loading (both random sources start as it, and
+  // the car select smoke is placed right away); it never calls it afterwards.
   const fxrandom = seededRandom(fxSeed);
-  const random = Math.random;
+  const mathRandom = Math.random;
   Math.random = fxrandom;
   let ctx;
   try {
-    const gameModule = `../../src/game.js?instance=${++instances}`;
-    ({ __state: ctx } = await import(/* @vite-ignore */ gameModule));
+    vi.resetModules();
+    ({ __state: ctx } = await import("../../src/game.js"));
   } finally {
-    Math.random = random;
+    Math.random = mathRandom;
   }
-  ctx.simrandom = seededRandom(seed);
-  ctx.fxrandom = fxrandom;
+  ctx.random.sim = seededRandom(seed);
+  ctx.random.fx = fxrandom;
 
   let frame = 0;
   const step = () => {

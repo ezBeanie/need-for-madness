@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { NO_INPUT, autopilot, recordRace } from "../harness/race.js";
 
-// Effects (sparks, dust, scratches, camera, sounds) draw from fxrandom(). If one of those
+// Effects (sparks, dust, scratches, camera, sounds) draw from random.fx(). If one of those
 // call sites actually fed the simulation, a different fx seed would change the race.
 const races = [
   {

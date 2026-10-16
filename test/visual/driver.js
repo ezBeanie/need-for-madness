@@ -70,8 +70,8 @@ export const openGame = async (page, { storage = {} } = {}) => {
     settle: async () => {
       await page.waitForLoadState("networkidle");
       await page.evaluate(() => {
-        window.gameState.simrandom = window.seededRandom(1);
-        window.gameState.fxrandom = window.seededRandom(1001);
+        window.gameState.random.sim = window.seededRandom(1);
+        window.gameState.random.fx = window.seededRandom(1001);
         window.gameState.frgm = 0;
       });
     },
