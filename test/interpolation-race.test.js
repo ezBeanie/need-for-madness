@@ -20,7 +20,7 @@ const raceFrames = async ({ stage, car, input, frames }, onFrame) => {
     frame < frames && ctx.game.phase === PHASE.race;
     frame++
   ) {
-    Object.assign(ctx.u[0], input(ctx));
+    Object.assign(ctx.racers[0].u, input(ctx));
     step();
     onFrame(ctx, frame);
   }

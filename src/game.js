@@ -70,6 +70,7 @@ import {
 import { canvas2D, rd, view } from "./ui/view.js";
 import { camera } from "./render/camera.js";
 import { game, PHASE } from "./core/state.js";
+import { racers } from "./race/racers.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 var camrs, pyclos, pnext, pback, onycl;
@@ -2281,9 +2282,9 @@ function cpanimate() {
 }
 var nchp = 0;
 var chip = [];
-var carnchp = [0, 0, 0, 0, 0, 0, 0];
+
 function chipaway(c, x, y, z, ctmag) {
-  if (carnchp[c] < 120 && !onpausefr) {
+  if (racers[c].carnchp < 120 && !onpausefr) {
     var ui = -1;
     for (var i = 0; i < nchp; i++) {
       if (chip[i].loaded == 0) {
@@ -2294,7 +2295,7 @@ function chipaway(c, x, y, z, ctmag) {
     if (ui == -1) {
       ui = nchp;
       nchp++;
-      carnchp[c]++;
+      racers[c].carnchp++;
     }
     if (ctmag > 0.4) {
       ctmag = 0.3;
@@ -2460,7 +2461,9 @@ function chipsfly() {
   }
   if (!nfly) {
     nchp = 0;
-    carnchp = [0, 0, 0, 0, 0, 0, 0];
+    for (const racer of racers) {
+      racer.carnchp = 0;
+    }
   }
 }
 function newsprk() {
@@ -2971,12 +2974,12 @@ function gameworks() {
         }
       }
       if (starcnt > 65) {
-        if (enter == 1 || u[0].handb || pointer.down) {
+        if (enter == 1 || racers[0].u.handb || pointer.down) {
           starcnt = 65;
           if (enter == 1) {
             enter = 2;
           }
-          u[0].handb = false;
+          racers[0].u.handb = false;
         }
       }
       if (starcnt == 65) {
@@ -3077,7 +3080,7 @@ function gameworks() {
         }
       }
     }
-    var kcxz = cxz[camera.target] - 180 + camera.lookBackYaw;
+    var kcxz = racers[camera.target].cxz - 180 + camera.lookBackYaw;
     camera.yaw = kcxz;
     camera.x = car[camera.target].x - 80 * msin(kcxz);
     camera.z = car[camera.target].z + 80 * mcos(kcxz);
@@ -3158,12 +3161,12 @@ function gameworks() {
       camera.y = car[camera.target].y + 10 + 160 * random.fx();
       camera.x =
         car[camera.target].x +
-        40 * sidn * mcos(mxz[camera.target]) -
-        500 * msin(mxz[camera.target]);
+        40 * sidn * mcos(racers[camera.target].mxz) -
+        500 * msin(racers[camera.target].mxz);
       camera.z =
         car[camera.target].z +
-        40 * sidn * msin(mxz[camera.target]) +
-        500 * mcos(mxz[camera.target]);
+        40 * sidn * msin(racers[camera.target].mxz) +
+        500 * mcos(racers[camera.target].mxz);
       camera.relocate = false;
     }
     var ad = 0;
@@ -4072,7 +4075,7 @@ function render(now) {
       }
       if (game.phase == PHASE.switchScreen) {
         for (var c = 0; c < game.carCount; c++) {
-          drawParticle(switchp[c]);
+          drawParticle(racers[c].switchp);
         }
       }
       for (var i = 0; i < nexp; i++) {
@@ -4243,9 +4246,9 @@ function newcontrol() {
     zyinv: false,
   };
 }
-var u = [];
+
 for (var i = 0; i < 7; i++) {
-  u[i] = newcontrol();
+  racers[i].u = newcontrol();
 }
 // Car stats come from cars.json; some are written there in finer units.
 class CarDefine {
@@ -4340,13 +4343,13 @@ var secar = 0;
 function checkstat() {
   if (!cp.haltall) {
     for (var i = 0; i < game.carCount; i++) {
-      cp.magperc[i] = hitmag[i] / cd.maxmag[car[i].typ];
+      cp.magperc[i] = racers[i].hitmag / cd.maxmag[car[i].typ];
       if (cp.magperc[i] > 1) {
         cp.magperc[i] = 1;
       }
       cp.pos[i] = 0;
       if (cp.dested[i] == 0) {
-        cp.clear[i] = clear[i];
+        cp.clear[i] = racers[i].clear;
       } else {
         cp.clear[i] = -1;
       }
@@ -4360,7 +4363,7 @@ function checkstat() {
             cp.pos[j]++;
           }
         } else {
-          var ic = pcleared[i] + 1;
+          var ic = racers[i].pcleared + 1;
           if (ic >= cp.n) {
             ic = 0;
           }
@@ -4397,7 +4400,7 @@ function checkstat() {
                 car[0].z / 10,
                 car[secar].z / 10,
               ) < 14000 &&
-              cp.clear[0] - clear[secar] == 1
+              cp.clear[0] - racers[secar].clear == 1
             ) {
               catchfin = 43;
             }
@@ -4406,7 +4409,7 @@ function checkstat() {
               cp.pos[0] == 1 &&
               pyo(car[0].x / 10, car[i].x / 10, car[0].z / 10, car[i].z / 10) <
                 14000 &&
-              clear[i] - clear[0] == 1
+              racers[i].clear - racers[0].clear == 1
             ) {
               catchfin = 43;
               secar = i;
@@ -4419,7 +4422,7 @@ function checkstat() {
   cp.wasted = 0;
   for (var i = 0; i < game.carCount; i++) {
     if (game.player != i) {
-      if (dest[i]) {
+      if (racers[i].dest) {
         cp.wasted++;
       }
     }
@@ -4715,70 +4718,7 @@ function sortcars(stage) {
   }
 }
 var fpnt = [0, 0, 0, 0, 0];
-var pan = [0, 0, 0, 0, 0, 0, 0];
-var attack = [0, 0, 0, 0, 0, 0, 0],
-  acr = [0, 0, 0, 0, 0, 0, 0];
-var afta = [false, false, false, false, false, false, false];
-var trfix = [0, 0, 0, 0, 0, 0, 0];
-var forget = [false, false, false, false, false, false, false];
-var bulistc = [false, false, false, false, false, false, false];
-var runbul = [0, 0, 0, 0, 0, 0, 0];
-var acuracy = [0, 0, 0, 0, 0, 0, 0];
-var upwait = [0, 0, 0, 0, 0, 0, 0];
-var agressed = [false, false, false, false, false, false, false];
-var skiplev = [1, 1, 1, 1, 1, 1, 1];
-var clrnce = [5, 5, 5, 5, 5, 5, 5];
-var rampp = [0, 0, 0, 0, 0, 0, 0];
-var turntyp = [0, 0, 0, 0, 0, 0, 0];
-var aim = [0, 0, 0, 0, 0, 0, 0];
-var saftey = [30, 30, 30, 30, 30, 30, 30];
-var perfection = [false, false, false, false, false, false, false];
-var mustland = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
-var usebounce = [false, false, false, false, false, false, false];
-var trickprf = [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5];
-var stuntf = [0, 0, 0, 0, 0, 0, 0];
-var lastl = [false, false, false, false, false, false, false],
-  wlastl = [false, false, false, false, false, false, false];
-var hold = [0, 0, 0, 0, 0, 0, 0],
-  wall = [-1, -1, -1, -1, -1, -1, -1],
-  lwall = [-1, -1, -1, -1, -1, -1, -1];
-var stcnt = [0, 0, 0, 0, 0, 0, 0],
-  statusque = [0, 0, 0, 0, 0, 0, 0];
-var turncnt = [0, 0, 0, 0, 0, 0, 0],
-  randtcnt = [0, 0, 0, 0, 0, 0, 0];
-var upcnt = [0, 0, 0, 0, 0, 0, 0];
-var trickfase = [0, 0, 0, 0, 0, 0, 0],
-  swat = [0, 0, 0, 0, 0, 0, 0];
-var udcomp = [false, false, false, false, false, false, false],
-  lrcomp = [false, false, false, false, false, false, false],
-  udbare = [false, false, false, false, false, false, false],
-  lrbare = [false, false, false, false, false, false, false];
-var onceu = [false, false, false, false, false, false, false],
-  onced = [false, false, false, false, false, false, false],
-  oncel = [false, false, false, false, false, false, false],
-  oncer = [false, false, false, false, false, false, false];
-var lrdirect = [0, 0, 0, 0, 0, 0, 0],
-  uddirect = [0, 0, 0, 0, 0, 0, 0],
-  lrstart = [0, 0, 0, 0, 0, 0, 0],
-  udstart = [0, 0, 0, 0, 0, 0, 0],
-  oxy = [0, 0, 0, 0, 0, 0, 0],
-  ozy = [0, 0, 0, 0, 0, 0, 0],
-  flycnt = [0, 0, 0, 0, 0, 0, 0];
-var lrswt = [false, false, false, false, false, false, false],
-  udswt = [false, false, false, false, false, false, false],
-  gowait = [false, false, false, false, false, false, false];
-var actwait = [0, 0, 0, 0, 0, 0, 0],
-  cntrn = [0, 0, 0, 0, 0, 0, 0];
-var revstart = [0, 0, 0, 0, 0, 0, 0],
-  oupnt = [0, 0, 0, 0, 0, 0, 0];
-var wtz = [0, 0, 0, 0, 0, 0, 0],
-  wtx = [0, 0, 0, 0, 0, 0, 0],
-  frx = [0, 0, 0, 0, 0, 0, 0],
-  frz = [0, 0, 0, 0, 0, 0, 0],
-  frad = [0, 0, 0, 0, 0, 0, 0];
-var apunch = [0, 0, 0, 0, 0, 0, 0];
-var exitattack = [false, false, false, false, false, false, false];
-var avoidnlev = [0, 0, 0, 0, 0, 0, 0];
+
 function inishcontrol() {
   if (cp.stage != 9) {
     for (var j = 0; j < nf; j++) {
@@ -4819,102 +4759,102 @@ function inishcontrol() {
     }
   }
   for (var c = 1; c < game.carCount; c++) {
-    pan[c] = 0;
-    attack[c] = 0;
-    acr[c] = 0;
-    afta[c] = false;
-    trfix[c] = 0;
-    acuracy[c] = 0;
-    upwait[c] = 0;
-    forget[c] = false;
-    bulistc[c] = false;
-    runbul[c] = 0;
-    revstart[c] = 0;
-    oupnt[c] = 0;
-    gowait[c] = false;
-    apunch[c] = 0;
-    exitattack[c] = false;
-    hold[c] = 0;
+    racers[c].pan = 0;
+    racers[c].attack = 0;
+    racers[c].acr = 0;
+    racers[c].afta = false;
+    racers[c].trfix = 0;
+    racers[c].acuracy = 0;
+    racers[c].upwait = 0;
+    racers[c].forget = false;
+    racers[c].bulistc = false;
+    racers[c].runbul = 0;
+    racers[c].revstart = 0;
+    racers[c].oupnt = 0;
+    racers[c].gowait = false;
+    racers[c].apunch = 0;
+    racers[c].exitattack = false;
+    racers[c].hold = 0;
     if (cp.stage == 6) {
-      hold[c] = 50;
+      racers[c].hold = 50;
     }
     if (cp.stage == 7) {
-      hold[c] = 10;
+      racers[c].hold = 10;
     }
     if (cp.stage == 8 && c != 6) {
-      hold[c] = 50;
+      racers[c].hold = 50;
     }
     if (cp.stage == 10) {
-      hold[c] = 60;
+      racers[c].hold = 60;
     }
     if (cp.stage == 11) {
       if (c != 6) {
-        hold[c] = 35;
-        revstart[c] = 25;
+        racers[c].hold = 35;
+        racers[c].revstart = 25;
       } else {
-        hold[c] = 5;
+        racers[c].hold = 5;
       }
-      statusque[c] = 0;
+      racers[c].statusque = 0;
     }
     if (cp.stage == 12) {
       if (c != 6) {
-        hold[c] = Math.floor(20 + 10 * random.sim());
-        revstart[c] = Math.floor(10 + 10 * random.sim());
+        racers[c].hold = Math.floor(20 + 10 * random.sim());
+        racers[c].revstart = Math.floor(10 + 10 * random.sim());
       } else {
-        hold[c] = 5;
+        racers[c].hold = 5;
       }
-      statusque[c] = 0;
+      racers[c].statusque = 0;
     }
     if (cp.stage == 14) {
-      hold[c] = 30;
-      statusque[c] = 0;
+      racers[c].hold = 30;
+      racers[c].statusque = 0;
       if (c != 6) {
-        revstart[c] = 1;
+        racers[c].revstart = 1;
       }
     }
     if (cp.stage == 15) {
-      hold[c] = 40;
+      racers[c].hold = 40;
     }
     if (cp.stage == 16) {
-      hold[c] = 20;
+      racers[c].hold = 20;
     }
-    u[c].left = false;
-    u[c].right = false;
-    u[c].up = false;
-    u[c].down = false;
-    u[c].handb = false;
+    racers[c].u.left = false;
+    racers[c].u.right = false;
+    racers[c].u.up = false;
+    racers[c].u.down = false;
+    racers[c].u.handb = false;
   }
 }
 function control() {
   for (var c = 0; c < game.carCount; c++) {
     if (c != game.player) {
       var cn = car[c].typ;
-      u[c].left = false;
-      u[c].right = false;
-      u[c].up = false;
-      u[c].down = false;
-      u[c].handb = false;
-      if (!dest[c]) {
-        if (mtouch[c]) {
-          if (stcnt[c] > statusque[c]) {
+      racers[c].u.left = false;
+      racers[c].u.right = false;
+      racers[c].u.up = false;
+      racers[c].u.down = false;
+      racers[c].u.handb = false;
+      if (!racers[c].dest) {
+        if (racers[c].mtouch) {
+          if (racers[c].stcnt > racers[c].statusque) {
             var tstage = cp.stage;
-            acuracy[c] = Math.floor(
+            racers[c].acuracy = Math.floor(
               (7 - cp.pos[c]) * cp.pos[game.player] * (6 - tstage * 2),
             );
-            if (acuracy[c] < 0) {
-              acuracy[c] = 0;
+            if (racers[c].acuracy < 0) {
+              racers[c].acuracy = 0;
             }
-            clrnce[c] = 5;
+            racers[c].clrnce = 5;
             if (cp.stage == 6 || cp.stage == 11) {
-              clrnce[c] = 2;
+              racers[c].clrnce = 2;
             }
             if (cp.stage == 12) {
-              if (pcleared[c] == 27 || pcleared[c] == 17) {
-                clrnce[c] = 3;
+              if (racers[c].pcleared == 27 || racers[c].pcleared == 17) {
+                racers[c].clrnce = 3;
               }
             }
             if (cp.stage == 16) {
-              clrnce[c] = 3;
+              racers[c].clrnce = 3;
             }
             var mw = 0;
             if (cp.stage == 1) {
@@ -4929,18 +4869,18 @@ function control() {
             if (cp.stage == 4) {
               mw = 0.5;
             }
-            upwait[c] = Math.floor(
+            racers[c].upwait = Math.floor(
               (cp.pos[game.player] - cp.pos[c]) *
                 (cp.pos[game.player] - cp.pos[c]) *
                 (cp.pos[game.player] - cp.pos[c]) *
                 mw,
             );
-            if (upwait[c] > 80) {
-              upwait[c] = 80;
+            if (racers[c].upwait > 80) {
+              racers[c].upwait = 80;
             }
             if (cp.stage == 1) {
-              if (upwait[c] < 20) {
-                upwait[c] = 20;
+              if (racers[c].upwait < 20) {
+                racers[c].upwait = 20;
               }
             }
             mw = 0;
@@ -4957,128 +4897,131 @@ function control() {
               mw = 0.2;
             }
             if (cp.pos[c] - cp.pos[game.player] >= -1) {
-              skiplev[c] -= 0.1;
-              if (skiplev[c] < 0) {
-                skiplev[c] = 0;
+              racers[c].skiplev -= 0.1;
+              if (racers[c].skiplev < 0) {
+                racers[c].skiplev = 0;
               }
             } else {
-              skiplev[c] += 0.2;
-              if (skiplev[c] > mw) {
-                skiplev[c] = mw;
+              racers[c].skiplev += 0.2;
+              if (racers[c].skiplev > mw) {
+                racers[c].skiplev = mw;
               }
             }
             if (cp.stage == 9 || cp.stage == 12) {
-              skiplev[c] = 1;
+              racers[c].skiplev = 1;
             }
             if (cp.stage == 11) {
-              skiplev[c] = 0;
-              if (pcleared[c] == 89 || pcleared[c] == 18) {
-                skiplev[c] = 1;
+              racers[c].skiplev = 0;
+              if (racers[c].pcleared == 89 || racers[c].pcleared == 18) {
+                racers[c].skiplev = 1;
               }
-              if (pcleared[c] == 45 || pcleared[c] == 52) {
-                skiplev[c] = 0.5;
+              if (racers[c].pcleared == 45 || racers[c].pcleared == 52) {
+                racers[c].skiplev = 0.5;
               }
             }
-            if (cp.stage == 13 && pcleared[c] == 20) {
-              skiplev[c] = 1;
+            if (cp.stage == 13 && racers[c].pcleared == 20) {
+              racers[c].skiplev = 1;
             }
             if (cp.stage == 14) {
-              skiplev[c] = 1;
+              racers[c].skiplev = 1;
               if (cn == 17) {
                 if (random.sim() > 0.8) {
-                  acr[c] = 1;
+                  racers[c].acr = 1;
                 } else {
-                  acr[c] = 0;
+                  racers[c].acr = 0;
                 }
               }
             }
             if (cp.stage == 15) {
-              skiplev[c] = 0;
+              racers[c].skiplev = 0;
             }
             if (cp.stage == 16) {
-              if (pcleared[c] >= 45) {
-                skiplev[c] = 0;
+              if (racers[c].pcleared >= 45) {
+                racers[c].skiplev = 0;
               } else {
-                skiplev[c] = 1;
+                racers[c].skiplev = 1;
               }
             }
-            if (game.mode == 1 && (100 * hitmag[c]) / cd.maxmag[cn] > 85) {
-              skiplev[c] = 0;
+            if (
+              game.mode == 1 &&
+              (100 * racers[c].hitmag) / cd.maxmag[cn] > 85
+            ) {
+              racers[c].skiplev = 0;
             }
-            rampp[c] = Math.floor(random.sim() * 4 - 2);
-            if (rampp[c] == 2) {
-              rampp[c] = 1;
+            racers[c].rampp = Math.floor(random.sim() * 4 - 2);
+            if (racers[c].rampp == 2) {
+              racers[c].rampp = 1;
             }
-            if (power[c] == 98) {
-              rampp[c] = -1;
+            if (racers[c].power == 98) {
+              racers[c].rampp = -1;
             }
-            if (power[c] < 75 && rampp[c] == -1) {
-              rampp[c] = 0;
+            if (racers[c].power < 75 && racers[c].rampp == -1) {
+              racers[c].rampp = 0;
             }
-            if (power[c] < 60) {
-              rampp[c] = 1;
+            if (racers[c].power < 60) {
+              racers[c].rampp = 1;
             }
             if (cp.stage == 11) {
-              if (pcleared[c] == 18) {
-                rampp[c] = 2;
+              if (racers[c].pcleared == 18) {
+                racers[c].rampp = 2;
               }
             }
             if (cp.stage == 12) {
-              if (pcleared[c] == 17) {
-                rampp[c] = 2;
+              if (racers[c].pcleared == 17) {
+                racers[c].rampp = 2;
               }
             }
             if (cp.stage == 15 || cp.stage == 16) {
-              rampp[c] = 0;
+              racers[c].rampp = 0;
             }
-            if (cntrn[c] == 0) {
-              agressed[c] = false;
-              turntyp[c] = Math.floor(random.sim() * 4);
-              if (turntyp[c] == 4) {
-                turntyp[c] = 3;
+            if (racers[c].cntrn == 0) {
+              racers[c].agressed = false;
+              racers[c].turntyp = Math.floor(random.sim() * 4);
+              if (racers[c].turntyp == 4) {
+                racers[c].turntyp = 3;
               }
               if (cp.stage == 3 && cn == 12) {
-                turntyp[c] = 1;
-                if (attack[c] == 0) {
-                  agressed[c] = true;
+                racers[c].turntyp = 1;
+                if (racers[c].attack == 0) {
+                  racers[c].agressed = true;
                 }
               }
               if (cp.pos[game.player] - cp.pos[c] < 0 || cp.stage == 10) {
-                turntyp[c] = Math.floor(random.sim() * 2);
-                if (turntyp[c] == 2) {
-                  turntyp[c] = 1;
+                racers[c].turntyp = Math.floor(random.sim() * 2);
+                if (racers[c].turntyp == 2) {
+                  racers[c].turntyp = 1;
                 }
               }
               if (cp.stage == 11) {
-                if (pcleared[c] == 89) {
-                  if (point[c] >= 5) {
-                    turntyp[c] = 2;
+                if (racers[c].pcleared == 89) {
+                  if (racers[c].point >= 5) {
+                    racers[c].turntyp = 2;
                   } else {
-                    turntyp[c] = 0;
+                    racers[c].turntyp = 0;
                   }
                 }
-                if (pcleared[c] == 9) {
-                  turntyp[c] = 2;
+                if (racers[c].pcleared == 9) {
+                  racers[c].turntyp = 2;
                 }
               }
               if (cp.stage == 13) {
                 if (
-                  pcleared[c] == 20 ||
-                  pcleared[c] == 36 ||
-                  pcleared[c] == 52
+                  racers[c].pcleared == 20 ||
+                  racers[c].pcleared == 36 ||
+                  racers[c].pcleared == 52
                 ) {
-                  turntyp[c] = 1;
+                  racers[c].turntyp = 1;
                 } else {
-                  if (turntyp[c] == 3) {
-                    turntyp[c] = 1;
+                  if (racers[c].turntyp == 3) {
+                    racers[c].turntyp = 1;
                   }
                 }
               }
               if (cp.stage == 14) {
-                turntyp[c] = 0;
+                racers[c].turntyp = 0;
               }
-              if (attack[c] != 0) {
-                turntyp[c] = 2;
+              if (racers[c].attack != 0) {
+                racers[c].turntyp = 2;
                 if (
                   cp.stage == 9 ||
                   cp.stage == 11 ||
@@ -5086,14 +5029,14 @@ function control() {
                   cp.stage == 16 ||
                   cp.stage == 17
                 ) {
-                  turntyp[c] = Math.floor(random.sim() * 3);
-                  if (turntyp[c] == 3) {
-                    turntyp[c] = 2;
+                  racers[c].turntyp = Math.floor(random.sim() * 3);
+                  if (racers[c].turntyp == 3) {
+                    racers[c].turntyp = 2;
                   }
                 }
                 if (cp.stage == 16) {
                   if (cn == 14) {
-                    turntyp[c] = 0;
+                    racers[c].turntyp = 0;
                   }
                 }
               }
@@ -5108,17 +5051,17 @@ function control() {
                 cp.stage == 16 ||
                 cp.stage == 17
               ) {
-                agressed[c] = true;
+                racers[c].agressed = true;
               }
-              cntrn[c] = 5;
+              racers[c].cntrn = 5;
             } else {
-              cntrn[c]--;
+              racers[c].cntrn--;
             }
-            saftey[c] = Math.floor(
-              (98 - power[c]) * 0.5 * (random.sim() * 0.5 + 0.5),
+            racers[c].saftey = Math.floor(
+              (98 - racers[c].power) * 0.5 * (random.sim() * 0.5 + 0.5),
             );
-            if (saftey[c] > 20) {
-              saftey[c] = 20;
+            if (racers[c].saftey > 20) {
+              racers[c].saftey = 20;
             }
             mw = 0;
             if (cp.stage == 1) {
@@ -5130,7 +5073,7 @@ function control() {
             if (cp.stage == 3) {
               mw = 0.4;
             }
-            mustland[c] = mw + (random.sim() / 2 - 0.25);
+            racers[c].mustland = mw + (random.sim() / 2 - 0.25);
             mw = 1;
             if (cp.stage == 1) {
               mw = 5;
@@ -5141,18 +5084,18 @@ function control() {
             if (cp.stage == 3) {
               mw = 1.5;
             }
-            if (power[c] > 50) {
+            if (racers[c].power > 50) {
               if (cp.pos[game.player] - cp.pos[c] > 0) {
-                saftey[c] *= mw;
+                racers[c].saftey *= mw;
               } else {
-                mustland[c] = 0;
+                racers[c].mustland = 0;
               }
             } else {
-              mustland[c] -= 0.5;
+              racers[c].mustland -= 0.5;
             }
             if (cp.stage == 6) {
               if (cn == 13) {
-                mustland[c] = 0;
+                racers[c].mustland = 0;
               }
             }
             if (
@@ -5162,122 +5105,123 @@ function control() {
               cp.stage == 14 ||
               cp.stage == 16
             ) {
-              mustland[c] = 0;
+              racers[c].mustland = 0;
             }
-            stuntf[c] = 0;
+            racers[c].stuntf = 0;
             if (cp.stage == 10) {
               if (
                 cp.pos[c] - cp.pos[game.player] > 1 ||
                 random.sim() > random.sim()
               ) {
-                stuntf[c] = 1;
-                saftey[c] = 10;
+                racers[c].stuntf = 1;
+                racers[c].saftey = 10;
               } else {
-                stuntf[c] = 2;
+                racers[c].stuntf = 2;
               }
             }
-            if (cp.stage == 11 && pcleared[c] == 18) {
-              stuntf[c] = 2;
+            if (cp.stage == 11 && racers[c].pcleared == 18) {
+              racers[c].stuntf = 2;
             }
             if (cp.stage == 11 && cn == 16) {
-              stuntf[c] = 3;
+              racers[c].stuntf = 3;
             }
             if (cp.stage == 14) {
               if (cn == 17) {
-                stuntf[c] = 4;
-                saftey[c] = 20;
+                racers[c].stuntf = 4;
+                racers[c].saftey = 20;
               } else {
-                saftey[c] = 10;
-                if (pcleared[c] == 47) {
-                  stuntf[c] = 2;
+                racers[c].saftey = 10;
+                if (racers[c].pcleared == 47) {
+                  racers[c].stuntf = 2;
                 }
               }
             }
             if (cp.stage == 16) {
-              mustland[c] = 0;
-              saftey[c] = 20;
-              if (pcleared[c] == 152 || pcleared[c] == 20) {
-                stuntf[c] = 2;
+              racers[c].mustland = 0;
+              racers[c].saftey = 20;
+              if (racers[c].pcleared == 152 || racers[c].pcleared == 20) {
+                racers[c].stuntf = 2;
               }
-              if (pcleared[c] == 35) {
-                stuntf[c] = 1;
+              if (racers[c].pcleared == 35) {
+                racers[c].stuntf = 1;
               }
-              if (pcleared[c] == 112) {
-                stuntf[c] = 1;
+              if (racers[c].pcleared == 112) {
+                racers[c].stuntf = 1;
               }
-              if (pcleared[c] == 120) {
-                stuntf[c] = 2;
+              if (racers[c].pcleared == 120) {
+                racers[c].stuntf = 2;
               }
-              avoidnlev[c] = Math.floor(2700 * random.sim());
+              racers[c].avoidnlev = Math.floor(2700 * random.sim());
             }
             if (game.mode == 1) {
-              avoidnlev[c] = Math.floor(2700 * random.sim());
+              racers[c].avoidnlev = Math.floor(2700 * random.sim());
             }
-            trickprf[c] = (power[c] - 38) / 50 - random.sim() * 0.5;
-            if (power[c] < 60) {
-              trickprf[c] = -1;
+            racers[c].trickprf =
+              (racers[c].power - 38) / 50 - random.sim() * 0.5;
+            if (racers[c].power < 60) {
+              racers[c].trickprf = -1;
             }
             if (cp.stage == 3 && cn == 12) {
-              if (trickprf[c] > 0.7) {
-                trickprf[c] = 0.7;
+              if (racers[c].trickprf > 0.7) {
+                racers[c].trickprf = 0.7;
               }
             }
             if (cp.stage == 6 && cn != 13) {
-              if (trickprf[c] > 0.3) {
-                trickprf[c] = 0.3;
+              if (racers[c].trickprf > 0.3) {
+                racers[c].trickprf = 0.3;
               }
             }
             if (cp.stage == 8) {
-              if (trickprf[c] > 0.2) {
-                trickprf[c] = 0.2;
+              if (racers[c].trickprf > 0.2) {
+                racers[c].trickprf = 0.2;
               }
             }
             if (cp.stage == 11) {
-              if (trickprf[c] != -1) {
-                trickprf[c] *= 0.75;
+              if (racers[c].trickprf != -1) {
+                racers[c].trickprf *= 0.75;
               }
             }
             if (cp.stage == 12) {
-              if (pcleared[c] == 55 || pcleared[c] == 7) {
-                trickprf[c] = -1;
+              if (racers[c].pcleared == 55 || racers[c].pcleared == 7) {
+                racers[c].trickprf = -1;
               }
             }
             if (cp.stage == 14) {
-              if (trickprf[c] > 0.5) {
-                trickprf[c] = 0.5;
+              if (racers[c].trickprf > 0.5) {
+                racers[c].trickprf = 0.5;
               }
             }
             if (cp.stage == 17) {
-              trickprf[c] = -1;
+              racers[c].trickprf = -1;
             }
-            if (random.sim() > power[c] / 100) {
-              usebounce[c] = true;
+            if (random.sim() > racers[c].power / 100) {
+              racers[c].usebounce = true;
             } else {
-              usebounce[c] = false;
+              racers[c].usebounce = false;
             }
             if (cp.stage == 4) {
-              usebounce[c] = true;
+              racers[c].usebounce = true;
             }
             if (cp.stage == 6) {
               if (cn == 13) {
-                usebounce[c] = false;
+                racers[c].usebounce = false;
               } else {
-                usebounce[c] = true;
+                racers[c].usebounce = true;
               }
             }
             if (cp.stage == 9 || cp.stage == 10 || cp.stage == 14) {
-              usebounce[c] = false;
+              racers[c].usebounce = false;
             }
-            if (random.sim() > hitmag[c] / cd.maxmag[cn]) {
-              perfection[c] = false;
+            if (random.sim() > racers[c].hitmag / cd.maxmag[cn]) {
+              racers[c].perfection = false;
             } else {
-              perfection[c] = true;
+              racers[c].perfection = true;
             }
-            if ((100 * hitmag[c]) / cd.maxmag[cn] > 60) {
-              perfection[c] = true;
+            if ((100 * racers[c].hitmag) / cd.maxmag[cn] > 60) {
+              racers[c].perfection = true;
             }
             if (cp.stage == 3 && cn == 12) {
-              perfection[c] = true;
+              racers[c].perfection = true;
             }
             if (
               cp.stage == 6 ||
@@ -5289,12 +5233,12 @@ function control() {
               cp.stage == 16 ||
               cp.stage == 17
             ) {
-              perfection[c] = true;
+              racers[c].perfection = true;
             }
             if (cp.stage == 15 && cn == 18) {
-              perfection[c] = true;
+              racers[c].perfection = true;
             }
-            if (attack[c] == 0) {
+            if (racers[c].attack == 0) {
               var startsway = true;
               if (
                 cp.stage == 3 ||
@@ -5304,7 +5248,7 @@ function control() {
                 cp.stage == 13 ||
                 cp.stage == 16
               ) {
-                startsway = afta[c];
+                startsway = racers[c].afta;
               }
               if (
                 cp.stage == 6 ||
@@ -5359,13 +5303,13 @@ function control() {
               if (cp.stage == 9 && onlyou) {
                 powtoattack = 30;
               }
-              if (cp.stage == 11 && bulistc[c]) {
+              if (cp.stage == 11 && racers[c].bulistc) {
                 powtoattack = 30;
               }
               if (cp.stage == 12) {
                 powtoattack = 50;
               }
-              if (cp.stage == 15 && bulistc[c]) {
+              if (cp.stage == 15 && racers[c].bulistc) {
                 powtoattack = 40;
               }
               if (cp.stage == 16) {
@@ -5385,7 +5329,7 @@ function control() {
               for (var i = 0; i < game.carCount; i++) {
                 if (i != c && cp.clear[i] != -1) {
                   var myxz = car[c].xz;
-                  if (u[c].zyinv) {
+                  if (racers[c].u.zyinv) {
                     myxz += 180;
                   }
                   while (myxz < 0) {
@@ -5413,7 +5357,8 @@ function control() {
                   if (vis > 180) {
                     vis = Math.abs(vis - 360);
                   }
-                  var attackrad = 2000 * (Math.abs(cp.clear[i] - clear[c]) + 1);
+                  var attackrad =
+                    2000 * (Math.abs(cp.clear[i] - racers[c].clear) + 1);
                   if (cp.stage == 3 && cn == 12) {
                     if (attackrad < 12000) {
                       attackrad = 12000;
@@ -5436,17 +5381,17 @@ function control() {
                     }
                   }
                   if (cp.stage == 11) {
-                    if (bulistc[c]) {
+                    if (racers[c].bulistc) {
                       attackrad = 8000;
                       vis = 10;
-                      afta[c] = true;
+                      racers[c].afta = true;
                     } else {
                       if (attackrad < 6000) {
                         attackrad = 6000;
                       }
                     }
                   }
-                  if (cp.stage == 12 && bulistc[c]) {
+                  if (cp.stage == 12 && racers[c].bulistc) {
                     attackrad = 6000;
                     vis = 10;
                   }
@@ -5456,9 +5401,10 @@ function control() {
                     }
                   }
                   if (cp.stage == 15) {
-                    attackrad *= Math.abs(cp.clear[i] - clear[c]) + 1;
-                    if (bulistc[c]) {
-                      attackrad = 4000 * (Math.abs(cp.clear[i] - clear[c]) + 1);
+                    attackrad *= Math.abs(cp.clear[i] - racers[c].clear) + 1;
+                    if (racers[c].bulistc) {
+                      attackrad =
+                        4000 * (Math.abs(cp.clear[i] - racers[c].clear) + 1);
                       vis = 10;
                     }
                   }
@@ -5472,10 +5418,11 @@ function control() {
                       vis = 10;
                     }
                     if (cn == 18 || cn == 12) {
-                      attackrad *= Math.abs(cp.clear[i] - clear[c]) + 1;
+                      attackrad *= Math.abs(cp.clear[i] - racers[c].clear) + 1;
                     }
                   }
-                  var visan = 85 + 15 * (Math.abs(cp.clear[i] - clear[c]) + 1);
+                  var visan =
+                    85 + 15 * (Math.abs(cp.clear[i] - racers[c].clear) + 1);
                   if (cp.stage == 9 && !onlyou) {
                     if (
                       car[game.player].typ != 14 ||
@@ -5489,7 +5436,7 @@ function control() {
                   }
                   if (cp.stage == 16) {
                     if (cn == 18 || cn == 12 || cn == 17) {
-                      visan = 50 + 70 * Math.abs(cp.clear[i] - clear[c]);
+                      visan = 50 + 70 * Math.abs(cp.clear[i] - racers[c].clear);
                     }
                   }
                   if (
@@ -5500,10 +5447,10 @@ function control() {
                       car[c].z / 10,
                       car[i].z / 10,
                     ) < attackrad &&
-                    afta[c] &&
-                    power[c] > powtoattack
+                    racers[c].afta &&
+                    racers[c].power > powtoattack
                   ) {
-                    var bim = 35 - Math.abs(cp.clear[i] - clear[c]) * 10;
+                    var bim = 35 - Math.abs(cp.clear[i] - racers[c].clear) * 10;
                     if (bim < 1) {
                       bim = 1;
                     }
@@ -5521,7 +5468,7 @@ function control() {
                         atp = 0;
                       }
                       if (cp.stage == 3) {
-                        if (cn == 12 || (cn == 16 && bulistc[c])) {
+                        if (cn == 12 || (cn == 16 && racers[c].bulistc)) {
                           atp *= 2;
                         } else {
                           atp *= 0.5;
@@ -5537,7 +5484,7 @@ function control() {
                         atp *= 1.5;
                       }
                       if (cp.stage == 8) {
-                        if (bulistc[c] && i == game.player) {
+                        if (racers[c].bulistc && i == game.player) {
                           atp = 1;
                         } else {
                           atp = 0;
@@ -5547,7 +5494,7 @@ function control() {
                         atp = 0;
                       }
                       if (cp.stage == 11) {
-                        if (bulistc[c] && i == game.player) {
+                        if (racers[c].bulistc && i == game.player) {
                           atp = 1;
                         }
                         if (
@@ -5575,7 +5522,7 @@ function control() {
                         if (cp.pos[game.player] < cp.pos[c]) {
                           atp *= 2;
                         }
-                        if (bulistc[c] && i == game.player) {
+                        if (racers[c].bulistc && i == game.player) {
                           atp = 1;
                         }
                       }
@@ -5592,7 +5539,7 @@ function control() {
                         if (
                           (cn == 14 || cn == 16) &&
                           i == game.player &&
-                          bulistc[c]
+                          racers[c].bulistc
                         ) {
                           atp = 1;
                         }
@@ -5614,7 +5561,7 @@ function control() {
                       }
                     } else {
                       var opxz = car[i].xz;
-                      if (u[i].zyinv) {
+                      if (racers[i].u.zyinv) {
                         opxz += 180;
                       }
                       while (opxz < 0) {
@@ -5626,19 +5573,20 @@ function control() {
                       if (Math.abs(Math.abs(myxz - opxz) - 180) < 45) {
                         atp = 1;
                       }
-                      if ((100 * hitmag[c]) / cd.maxmag[cn] > 80) {
+                      if ((100 * racers[c].hitmag) / cd.maxmag[cn] > 80) {
                         atp = 0;
                       }
                     }
                     if (random.sim() < atp) {
-                      attack[c] = 40 * (Math.abs(cp.clear[i] - clear[c]) + 1);
-                      if (attack[c] > 500) {
-                        attack[c] = 500;
+                      racers[c].attack =
+                        40 * (Math.abs(cp.clear[i] - racers[c].clear) + 1);
+                      if (racers[c].attack > 500) {
+                        racers[c].attack = 500;
                       }
-                      aim[c] = 0;
+                      racers[c].aim = 0;
                       if (cp.stage == 3 && cn == 12) {
                         if (random.sim() > random.sim()) {
-                          aim[c] = 1;
+                          racers[c].aim = 1;
                         }
                       }
                       if (cp.stage == 4) {
@@ -5646,13 +5594,13 @@ function control() {
                           i == game.player &&
                           cp.pos[game.player] < cp.pos[c]
                         ) {
-                          aim[c] = 1.5;
+                          racers[c].aim = 1.5;
                         } else {
-                          aim[c] = random.sim();
+                          racers[c].aim = random.sim();
                         }
                       }
                       if (cp.stage == 5) {
-                        aim[c] = random.sim() * 1.5;
+                        racers[c].aim = random.sim() * 1.5;
                       }
                       if (cp.stage == 7) {
                         if (c != 6) {
@@ -5660,90 +5608,90 @@ function control() {
                             random.sim() > random.sim() ||
                             cp.pos[game.player] < cp.pos[c]
                           ) {
-                            aim[c] = 1;
+                            racers[c].aim = 1;
                           }
                         }
                       }
                       if (cp.stage == 8 && cn == 14) {
                         if (random.sim() > random.sim()) {
-                          aim[c] = 0.76 + random.sim() * 0.76;
+                          racers[c].aim = 0.76 + random.sim() * 0.76;
                         }
                       }
                       if (cp.stage == 9) {
-                        aim[c] = 1;
+                        racers[c].aim = 1;
                         if (
                           car[game.player].typ != 14 ||
                           cp.clear[c] - cp.clear[game.player] < 8
                         ) {
-                          if (attack[c] > 150 && !onlyou) {
-                            attack[c] = 150;
+                          if (racers[c].attack > 150 && !onlyou) {
+                            racers[c].attack = 150;
                           }
                         }
                       }
                       if (cp.stage == 11) {
-                        if (bulistc[c]) {
-                          aim[c] = 0.7;
-                          if (attack[c] > 150) {
-                            attack[c] = 150;
+                        if (racers[c].bulistc) {
+                          racers[c].aim = 0.7;
+                          if (racers[c].attack > 150) {
+                            racers[c].attack = 150;
                           }
                         } else {
-                          aim[c] = random.sim();
+                          racers[c].aim = random.sim();
                         }
                       }
                       if (cp.stage == 12) {
                         if (random.sim() > random.sim()) {
-                          aim[c] = 0.7;
+                          racers[c].aim = 0.7;
                           if (cn == 14) {
-                            aim[c] += 0.7;
+                            racers[c].aim += 0.7;
                           }
                         }
-                        if (bulistc[c]) {
-                          if (attack[c] > 150) {
-                            attack[c] = 150;
+                        if (racers[c].bulistc) {
+                          if (racers[c].attack > 150) {
+                            racers[c].attack = 150;
                           }
                         }
                       }
                       if (cp.stage == 13) {
-                        if (attack[c] > 60) {
-                          attack[c] = 60;
+                        if (racers[c].attack > 60) {
+                          racers[c].attack = 60;
                         }
                       }
                       if (cp.stage == 15) {
-                        aim[c] = random.sim() * 1.5;
-                        attack[c] = attack[c] / 2;
+                        racers[c].aim = random.sim() * 1.5;
+                        racers[c].attack = racers[c].attack / 2;
                         if (random.sim() > random.sim()) {
-                          exitattack[c] = true;
+                          racers[c].exitattack = true;
                         } else {
-                          exitattack[c] = false;
+                          racers[c].exitattack = false;
                         }
                       }
                       if (cp.stage == 16) {
                         if (cn == 14) {
-                          aim[c] = 0.2 + random.sim() * 0.8;
-                          attack[c] = 70;
+                          racers[c].aim = 0.2 + random.sim() * 0.8;
+                          racers[c].attack = 70;
                         }
                         if (cn == 16) {
                           if (random.sim() > random.sim()) {
-                            aim[c] = 0.7;
+                            racers[c].aim = 0.7;
                           }
-                          if (attack[c] > 150) {
-                            attack[c] = 150;
+                          if (racers[c].attack > 150) {
+                            racers[c].attack = 150;
                           }
                         }
                         if (cn == 18 || cn == 12 || cn == 17) {
-                          aim[c] = random.sim() * 1.5;
+                          racers[c].aim = random.sim() * 1.5;
                           if (
-                            Math.abs(cp.clear[i] - clear[c]) <= 2 ||
+                            Math.abs(cp.clear[i] - racers[c].clear) <= 2 ||
                             cn == 17
                           ) {
-                            attack[c] = attack[c] / 3;
+                            racers[c].attack = racers[c].attack / 3;
                           }
                         }
                       }
-                      acr[c] = i;
-                      turntyp[c] = Math.floor(1 + random.sim() * 2);
-                      if (turntyp[c] == 3) {
-                        turntyp[c] = 2;
+                      racers[c].acr = i;
+                      racers[c].turntyp = Math.floor(1 + random.sim() * 2);
+                      if (racers[c].turntyp == 3) {
+                        racers[c].turntyp = 2;
                       }
                     }
                   }
@@ -5758,8 +5706,8 @@ function control() {
                     ) < 300 &&
                     random.sim() > 0.6 - cp.pos[c] / 10
                   ) {
-                    clrnce[c] = 0;
-                    acuracy[c] = 0;
+                    racers[c].clrnce = 0;
+                    racers[c].acuracy = 0;
                   }
                 }
               }
@@ -5776,62 +5724,62 @@ function control() {
             if (cp.stage == 8 && cn != 14) {
               norunfix = true;
             }
-            if (cp.stage == 15 && !bulistc[c]) {
+            if (cp.stage == 15 && !racers[c].bulistc) {
               norunfix = true;
             }
             if (cp.stage == 17) {
               norunfix = true;
             }
             if (game.mode != 1) {
-              if (trfix[c] != 3) {
-                trfix[c] = 0;
+              if (racers[c].trfix != 3) {
+                racers[c].trfix = 0;
                 var trunfix = 50;
                 if (cp.stage == 16) {
                   trunfix = 100;
                 }
-                if ((100 * hitmag[c]) / cd.maxmag[cn] > trunfix) {
-                  trfix[c] = 1;
+                if ((100 * racers[c].hitmag) / cd.maxmag[cn] > trunfix) {
+                  racers[c].trfix = 1;
                 }
                 if (!norunfix) {
                   var runfix = 80;
                   if (cp.stage == 9) {
                     runfix = 70;
                   }
-                  if ((100 * hitmag[c]) / cd.maxmag[cn] > runfix) {
-                    trfix[c] = 2;
+                  if ((100 * racers[c].hitmag) / cd.maxmag[cn] > runfix) {
+                    racers[c].trfix = 2;
                   }
                 }
               } else {
-                upwait[c] = 0;
-                acuracy[c] = 0;
-                skiplev[c] = 1;
-                clrnce[c] = 2;
+                racers[c].upwait = 0;
+                racers[c].acuracy = 0;
+                racers[c].skiplev = 1;
+                racers[c].clrnce = 2;
               }
             }
-            if (!bulistc[c]) {
+            if (!racers[c].bulistc) {
               if (cp.stage == 8 && cn == 14) {
-                bulistc[c] = true;
+                racers[c].bulistc = true;
               }
               if (cp.stage == 11 && cn == 16) {
-                bulistc[c] = true;
+                racers[c].bulistc = true;
               }
               if (cp.stage == 12 && cn == 16) {
-                bulistc[c] = true;
+                racers[c].bulistc = true;
               }
               if (
                 cp.stage == 15 &&
                 cp.clear[game.player] - cp.clear[c] >= 2 &&
-                trfix[c] == 0
+                racers[c].trfix == 0
               ) {
-                bulistc[c] = true;
-                oupnt[c] = -1;
+                racers[c].bulistc = true;
+                racers[c].oupnt = -1;
               }
               if (cp.stage == 16) {
                 if (cn == 14 && cp.clear[c] >= 1) {
-                  bulistc[c] = true;
+                  racers[c].bulistc = true;
                 }
                 if (cn == 16) {
-                  bulistc[c] = true;
+                  racers[c].bulistc = true;
                 }
               }
               if (
@@ -5844,54 +5792,54 @@ function control() {
               ) {
                 if (
                   cn == 16 &&
-                  Math.abs(cp.clear[game.player] - clear[c]) >= 2
+                  Math.abs(cp.clear[game.player] - racers[c].clear) >= 2
                 ) {
-                  bulistc[c] = true;
+                  racers[c].bulistc = true;
                 }
               }
             } else {
             }
-            stcnt[c] = 0;
-            statusque[c] = Math.floor(20 * random.sim());
+            racers[c].stcnt = 0;
+            racers[c].statusque = Math.floor(20 * random.sim());
           } else {
             if (frgm >= m) {
-              stcnt[c]++;
+              racers[c].stcnt++;
             }
           }
         }
         var ride = false;
-        if (usebounce[c]) {
-          ride = wtouch[c];
+        if (racers[c].usebounce) {
+          ride = racers[c].wtouch;
         } else {
-          ride = mtouch[c];
+          ride = racers[c].mtouch;
         }
         if (ride) {
-          if (trickfase[c] != 0) {
-            trickfase[c] = 0;
+          if (racers[c].trickfase != 0) {
+            racers[c].trickfase = 0;
           }
-          if (trfix[c] == 2 || trfix[c] == 3) {
-            attack[c] = 0;
+          if (racers[c].trfix == 2 || racers[c].trfix == 3) {
+            racers[c].attack = 0;
           }
-          if (attack[c] == 0) {
-            if (upcnt[c] < 30) {
-              if (revstart[c] <= 0) {
-                u[c].up = true;
+          if (racers[c].attack == 0) {
+            if (racers[c].upcnt < 30) {
+              if (racers[c].revstart <= 0) {
+                racers[c].u.up = true;
               } else {
-                u[c].down = true;
+                racers[c].u.down = true;
                 if (frgm >= m) {
-                  revstart[c]--;
+                  racers[c].revstart--;
                 }
               }
             }
-            if (upcnt[c] < 25 + actwait[c]) {
+            if (racers[c].upcnt < 25 + racers[c].actwait) {
               if (frgm >= m) {
-                upcnt[c]++;
+                racers[c].upcnt++;
               }
             } else {
-              upcnt[c] = 0;
-              actwait[c] = upwait[c];
+              racers[c].upcnt = 0;
+              racers[c].actwait = racers[c].upwait;
             }
-            var pnt = point[c];
+            var pnt = racers[c].point;
             var powbul = 50;
             if (cp.stage == 8) {
               powbul = 20;
@@ -5905,14 +5853,14 @@ function control() {
               }
             }
             if (
-              !bulistc[c] ||
-              trfix[c] == 2 ||
-              trfix[c] == 3 ||
-              trfix[c] == 4 ||
-              power[c] < powbul
+              !racers[c].bulistc ||
+              racers[c].trfix == 2 ||
+              racers[c].trfix == 3 ||
+              racers[c].trfix == 4 ||
+              racers[c].power < powbul
             ) {
               var tpnt = 0;
-              if (rampp[c] == 1 && cp.typ[pnt] <= 0) {
+              if (racers[c].rampp == 1 && cp.typ[pnt] <= 0) {
                 tpnt = pnt + 1;
                 if (tpnt >= cp.n) {
                   tpnt = 0;
@@ -5921,7 +5869,7 @@ function control() {
                   pnt = tpnt;
                 }
               }
-              if (rampp[c] == -1) {
+              if (racers[c].rampp == -1) {
                 if (cp.typ[pnt] == -2) {
                   pnt++;
                   if (pnt >= cp.n) {
@@ -5930,7 +5878,7 @@ function control() {
                 }
               }
               if (cp.stage != 9 || pnt != 0) {
-                if (random.sim() > skiplev[c]) {
+                if (random.sim() > racers[c].skiplev) {
                   tpnt = pnt;
                   var notimpcp = false;
                   if (cp.typ[tpnt] > 0) {
@@ -5940,7 +5888,7 @@ function control() {
                         ic++;
                       }
                     }
-                    notimpcp = clear[c] != ic + nlaps[c] * cp.nsp;
+                    notimpcp = racers[c].clear != ic + racers[c].nlaps * cp.nsp;
                   }
                   while (
                     cp.typ[tpnt] == 0 ||
@@ -5961,11 +5909,12 @@ function control() {
                           ic++;
                         }
                       }
-                      notimpcp = clear[c] != ic + nlaps[c] * cp.nsp;
+                      notimpcp =
+                        racers[c].clear != ic + racers[c].nlaps * cp.nsp;
                     }
                   }
                 } else {
-                  if (random.sim() > skiplev[c]) {
+                  if (random.sim() > racers[c].skiplev) {
                     while (cp.typ[pnt] == -1) {
                       pnt++;
                       if (pnt >= cp.n) {
@@ -5976,19 +5925,19 @@ function control() {
                 }
               }
               if (cp.stage == 11) {
-                if (pcleared[c] == 18 && pnt >= 26) {
+                if (racers[c].pcleared == 18 && pnt >= 26) {
                   if (pnt <= 32) {
                     pnt = 32;
                   } else {
                     pnt = 38;
                   }
                 }
-                if (pcleared[c] == 67) {
+                if (racers[c].pcleared == 67) {
                   pnt = 74;
                 }
               }
               if (cp.stage == 12) {
-                if (pcleared[c] == 27 || pcleared[c] == 37) {
+                if (racers[c].pcleared == 27 || racers[c].pcleared == 37) {
                   while (cp.typ[pnt] == -1) {
                     pnt++;
                     if (pnt >= cp.n) {
@@ -5998,7 +5947,11 @@ function control() {
                 }
               }
               if (cp.stage == 13) {
-                if (pcleared[c] == 20 && focus[c] == 36 && car[c].y < 100) {
+                if (
+                  racers[c].pcleared == 20 &&
+                  racers[c].focus == 36 &&
+                  car[c].y < 100
+                ) {
                   pnt = 30;
                   if (
                     pyo(
@@ -6008,48 +5961,52 @@ function control() {
                       cp.z[30] / 10,
                     ) < 1000
                   ) {
-                    focus[c] = -1;
+                    racers[c].focus = -1;
                   }
                 }
-                if (pcleared[c] == 20 && trfix[c] < 2) {
+                if (racers[c].pcleared == 20 && racers[c].trfix < 2) {
                   if (pnt >= 26 && pnt < 30) {
                     pnt = 30;
                   }
                 }
-                if (pcleared[c] == 52 && trfix[c] < 2) {
+                if (racers[c].pcleared == 52 && racers[c].trfix < 2) {
                   pnt = 60;
                 }
-                if (trfix[c] == 3 || trfix[c] == 4) {
-                  nofocus[c] = true;
+                if (racers[c].trfix == 3 || racers[c].trfix == 4) {
+                  racers[c].nofocus = true;
                   if (pnt < 66) {
                     pnt = 66;
                   }
                 }
-                if (trfix[c] == 1) {
+                if (racers[c].trfix == 1) {
                   fpnt[0] = 61;
                 }
-                if (trfix[c] == 2) {
+                if (racers[c].trfix == 2) {
                   fpnt[0] = 65;
                 }
-                if ((100 * hitmag[c]) / cd.maxmag[cn] < 10) {
-                  trfix[c] = 0;
+                if ((100 * racers[c].hitmag) / cd.maxmag[cn] < 10) {
+                  racers[c].trfix = 0;
                 }
-                if (trfix[c] == 3) {
-                  oupnt[c]++;
-                  if (oupnt[c] == 300) {
-                    trfix[c] = 0;
+                if (racers[c].trfix == 3) {
+                  racers[c].oupnt++;
+                  if (racers[c].oupnt == 300) {
+                    racers[c].trfix = 0;
                   }
                 } else {
-                  if (oupnt[c] != 0) {
-                    oupnt[c] = 0;
+                  if (racers[c].oupnt != 0) {
+                    racers[c].oupnt = 0;
                   }
                 }
               }
               if (cp.stage == 14) {
-                if (pcleared[c] == 47 && pnt > 58 && oupnt[c] == 0) {
-                  oupnt[c] = 1;
+                if (
+                  racers[c].pcleared == 47 &&
+                  pnt > 58 &&
+                  racers[c].oupnt == 0
+                ) {
+                  racers[c].oupnt = 1;
                 }
-                if (cn != 17 || acr[c] == 0) {
+                if (cn != 17 || racers[c].acr == 0) {
                   while (cp.typ[pnt] == -1) {
                     pnt++;
                     if (pnt >= cp.n) {
@@ -6059,21 +6016,21 @@ function control() {
                 }
               }
               if (cp.stage == 15) {
-                if (pcleared[c] == 10 && trfix[c] < 2) {
+                if (racers[c].pcleared == 10 && racers[c].trfix < 2) {
                   if (pnt != 18) {
                     pnt = 18;
                   }
                 }
               }
               if (cp.stage == 16) {
-                if (trfix[c] != 2 && trfix[c] != 3) {
-                  if (pcleared[c] == 152 && car[c].z < 2700) {
+                if (racers[c].trfix != 2 && racers[c].trfix != 3) {
+                  if (racers[c].pcleared == 152 && car[c].z < 2700) {
                     pnt = 5;
                   }
-                  if (pcleared[c] == 10 && car[c].x < 700) {
+                  if (racers[c].pcleared == 10 && car[c].x < 700) {
                     pnt = 13;
                   }
-                  if (pcleared[c] == 20) {
+                  if (racers[c].pcleared == 20) {
                     if (car[c].z < 6200 && car[c].z > 3400) {
                       pnt = 126;
                     }
@@ -6081,31 +6038,35 @@ function control() {
                       pnt = 35;
                     }
                   }
-                  if (pcleared[c] == 35 && car[c].x < 6300 && car[c].x > 4000) {
+                  if (
+                    racers[c].pcleared == 35 &&
+                    car[c].x < 6300 &&
+                    car[c].x > 4000
+                  ) {
                     pnt = 116;
                   }
-                  if (pcleared[c] == 55 && car[c].x < 4500) {
+                  if (racers[c].pcleared == 55 && car[c].x < 4500) {
                     pnt = 59;
                   }
-                  if (pcleared[c] == 64) {
+                  if (racers[c].pcleared == 64) {
                     pnt = 74;
                   }
-                  if (pcleared[c] == 74) {
+                  if (racers[c].pcleared == 74) {
                     pnt = 82;
                   }
-                  if (pcleared[c] == 82) {
+                  if (racers[c].pcleared == 82) {
                     pnt = 92;
                   }
-                  if (pcleared[c] == 103) {
+                  if (racers[c].pcleared == 103) {
                     pnt = 112;
                   }
-                  if (pcleared[c] == 112 && car[c].x > 3200) {
+                  if (racers[c].pcleared == 112 && car[c].x > 3200) {
                     pnt = 120;
                   }
-                  if (pcleared[c] == 120 && car[c].z > 2800) {
+                  if (racers[c].pcleared == 120 && car[c].z > 2800) {
                     pnt = 129;
                   }
-                  if (pcleared[c] == 129) {
+                  if (racers[c].pcleared == 129) {
                     pnt = 152;
                   }
                 }
@@ -6117,10 +6078,10 @@ function control() {
                     car[c].z / 10,
                     car[game.player].z / 10,
                   ) <
-                    1000 + avoidnlev[c]
+                    1000 + racers[c].avoidnlev
                 ) {
                   var myxz = car[c].xz;
-                  if (u[c].zyinv) {
+                  if (racers[c].u.zyinv) {
                     myxz += 180;
                   }
                   while (myxz < 0) {
@@ -6153,13 +6114,16 @@ function control() {
                     vis = Math.abs(vis - 360);
                   }
                   if (vis < 90) {
-                    wall[c] = 0;
+                    racers[c].wall = 0;
                   }
                 }
               }
-              if (game.mode == 1 && (100 * hitmag[c]) / cd.maxmag[cn] > 85) {
+              if (
+                game.mode == 1 &&
+                (100 * racers[c].hitmag) / cd.maxmag[cn] > 85
+              ) {
                 var myxz = car[c].xz;
-                if (u[c].zyinv) {
+                if (racers[c].u.zyinv) {
                   myxz += 180;
                 }
                 while (myxz < 0) {
@@ -6177,7 +6141,7 @@ function control() {
                         car[c].z / 10,
                         car[i].z / 10,
                       ) <
-                      1000 + avoidnlev[c]
+                      1000 + racers[c].avoidnlev
                     ) {
                       var ad = 0;
                       if (car[i].x - car[c].x >= 0) {
@@ -6202,37 +6166,37 @@ function control() {
                         vis = Math.abs(vis - 360);
                       }
                       if (vis < 45) {
-                        wall[c] = 0;
+                        racers[c].wall = 0;
                       }
-                      if ((100 * hitmag[c]) / cd.maxmag[cn] > 95) {
+                      if ((100 * racers[c].hitmag) / cd.maxmag[cn] > 95) {
                         if (vis < 90) {
-                          wall[c] = 0;
+                          racers[c].wall = 0;
                         }
                       }
                     }
                   }
                 }
               }
-              if (rampp[c] == 2) {
+              if (racers[c].rampp == 2) {
                 tpnt = pnt + 1;
                 if (tpnt >= cp.n) {
                   tpnt = 0;
                 }
-                if (cp.typ[tpnt] == -2 && pnt != point[c]) {
+                if (cp.typ[tpnt] == -2 && pnt != racers[c].point) {
                   pnt--;
                   if (pnt < 0) {
                     pnt += cp.n;
                   }
                 }
               }
-              if (bulistc[c]) {
-                nofocus[c] = true;
-                if (gowait[c]) {
-                  gowait[c] = false;
+              if (racers[c].bulistc) {
+                racers[c].nofocus = true;
+                if (racers[c].gowait) {
+                  racers[c].gowait = false;
                 }
               }
             } else {
-              if (cp.stage != 15 || runbul[c] == 0) {
+              if (cp.stage != 15 || racers[c].runbul == 0) {
                 pnt -= 2;
                 if (pnt < 0) {
                   pnt += cp.n;
@@ -6250,93 +6214,93 @@ function control() {
                 }
               }
               if (cp.stage == 12) {
-                if (!gowait[c]) {
+                if (!racers[c].gowait) {
                   if (cp.clear[game.player] == 0) {
-                    wtx[c] = 350;
-                    wtz[c] = 1900;
-                    frx[c] = 350;
-                    frz[c] = 3900;
-                    frad[c] = 12000;
-                    oupnt[c] = 37;
-                    gowait[c] = true;
-                    afta[c] = false;
+                    racers[c].wtx = 350;
+                    racers[c].wtz = 1900;
+                    racers[c].frx = 350;
+                    racers[c].frz = 3900;
+                    racers[c].frad = 12000;
+                    racers[c].oupnt = 37;
+                    racers[c].gowait = true;
+                    racers[c].afta = false;
                   }
                   if (cp.clear[game.player] == 7) {
-                    wtx[c] = 4480;
-                    wtz[c] = 4032;
-                    frx[c] = 4480;
-                    frz[c] = 3472;
-                    frad[c] = 30000;
-                    oupnt[c] = 27;
-                    gowait[c] = true;
-                    afta[c] = false;
+                    racers[c].wtx = 4480;
+                    racers[c].wtz = 4032;
+                    racers[c].frx = 4480;
+                    racers[c].frz = 3472;
+                    racers[c].frad = 30000;
+                    racers[c].oupnt = 27;
+                    racers[c].gowait = true;
+                    racers[c].afta = false;
                   }
                   if (cp.clear[game.player] == 10) {
-                    wtx[c] = 0;
-                    wtz[c] = 4873.9;
-                    frx[c] = 0;
-                    frz[c] = 3858.9;
-                    frad[c] = 90000;
-                    oupnt[c] = 55;
-                    gowait[c] = true;
-                    afta[c] = false;
+                    racers[c].wtx = 0;
+                    racers[c].wtz = 4873.9;
+                    racers[c].frx = 0;
+                    racers[c].frz = 3858.9;
+                    racers[c].frad = 90000;
+                    racers[c].oupnt = 55;
+                    racers[c].gowait = true;
+                    racers[c].afta = false;
                   }
                   if (cp.clear[game.player] == 14) {
-                    wtx[c] = 350;
-                    wtz[c] = 1900;
-                    frx[c] = 1470;
-                    frz[c] = 3900;
-                    frad[c] = 45000;
-                    oupnt[c] = 37;
-                    gowait[c] = true;
-                    afta[c] = false;
+                    racers[c].wtx = 350;
+                    racers[c].wtz = 1900;
+                    racers[c].frx = 1470;
+                    racers[c].frz = 3900;
+                    racers[c].frad = 45000;
+                    racers[c].oupnt = 37;
+                    racers[c].gowait = true;
+                    racers[c].afta = false;
                   }
                   if (cp.clear[game.player] == 18) {
-                    wtx[c] = 4830;
-                    wtz[c] = -455;
-                    frx[c] = 4830;
-                    frz[c] = 560;
-                    frad[c] = 90000;
-                    oupnt[c] = 17;
-                    gowait[c] = true;
-                    afta[c] = false;
+                    racers[c].wtx = 4830;
+                    racers[c].wtz = -455;
+                    racers[c].frx = 4830;
+                    racers[c].frz = 560;
+                    racers[c].frad = 90000;
+                    racers[c].oupnt = 17;
+                    racers[c].gowait = true;
+                    racers[c].afta = false;
                   }
                 }
-                if (gowait[c]) {
+                if (racers[c].gowait) {
                   if (
                     pyo(
                       car[c].x / 10,
-                      wtx[c] / 10,
+                      racers[c].wtx / 10,
                       car[c].z / 10,
-                      wtz[c] / 10,
+                      racers[c].wtz / 10,
                     ) < 10000
                   ) {
-                    if (speed[c] > 5) {
-                      u[c].up = false;
+                    if (racers[c].speed > 5) {
+                      racers[c].u.up = false;
                     }
                   }
                   if (
                     pyo(
                       car[c].x / 10,
-                      wtx[c] / 10,
+                      racers[c].wtx / 10,
                       car[c].z / 10,
-                      wtz[c] / 10,
+                      racers[c].wtz / 10,
                     ) < 200
                   ) {
-                    u[c].up = false;
-                    u[c].handb = true;
+                    racers[c].u.up = false;
+                    racers[c].u.handb = true;
                   }
                   if (
-                    pcleared[game.player] == oupnt[c] &&
+                    racers[game.player].pcleared == racers[c].oupnt &&
                     pyo(
                       car[game.player].x / 10,
-                      frx[c] / 10,
+                      racers[c].frx / 10,
                       car[game.player].z / 10,
-                      frz[c] / 10,
-                    ) < frad[c]
+                      racers[c].frz / 10,
+                    ) < racers[c].frad
                   ) {
-                    afta[c] = true;
-                    gowait[c] = false;
+                    racers[c].afta = true;
+                    racers[c].gowait = false;
                   }
                   if (
                     pyo(
@@ -6346,15 +6310,15 @@ function control() {
                       car[game.player].z / 10,
                     ) < 25
                   ) {
-                    afta[c] = true;
-                    gowait[c] = false;
-                    attack[c] = 200;
-                    acr[c] = 0;
+                    racers[c].afta = true;
+                    racers[c].gowait = false;
+                    racers[c].attack = 200;
+                    racers[c].acr = 0;
                   }
                 }
               }
               if (cp.stage == 15) {
-                if (oupnt[c] == -1) {
+                if (racers[c].oupnt == -1) {
                   var pyclos = -10;
                   for (var i = 0; i < cp.n; i++) {
                     if (cp.typ[i] == -2 && i < 71) {
@@ -6373,17 +6337,17 @@ function control() {
                           car[c].z / 10,
                           cp.z[i] / 10,
                         );
-                        oupnt[c] = i;
+                        racers[c].oupnt = i;
                       }
                     }
                   }
-                  oupnt[c]--;
-                  if (oupnt[c] < 0) {
-                    oupnt[c] += cp.n;
+                  racers[c].oupnt--;
+                  if (racers[c].oupnt < 0) {
+                    racers[c].oupnt += cp.n;
                   }
                 }
-                if (oupnt[c] >= 0 && oupnt[c] < cp.n) {
-                  pnt = oupnt[c];
+                if (racers[c].oupnt >= 0 && racers[c].oupnt < cp.n) {
+                  pnt = racers[c].oupnt;
                   if (
                     pyo(
                       car[c].x / 10,
@@ -6392,21 +6356,21 @@ function control() {
                       cp.z[pnt] / 10,
                     ) < 800
                   ) {
-                    oupnt[c] = -Math.floor(75 + random.sim() * 200);
-                    runbul[c] = Math.floor(50 + random.sim() * 100);
+                    racers[c].oupnt = -Math.floor(75 + random.sim() * 200);
+                    racers[c].runbul = Math.floor(50 + random.sim() * 100);
                   }
                 }
-                if (oupnt[c] < -1) {
-                  oupnt[c]++;
+                if (racers[c].oupnt < -1) {
+                  racers[c].oupnt++;
                 }
-                if (runbul[c] != 0) {
-                  runbul[c]--;
+                if (racers[c].runbul != 0) {
+                  racers[c].runbul--;
                 }
               }
               if (cp.stage == 16) {
                 if (cn == 14) {
-                  if (power[c] > 60) {
-                    var i = pcleared[game.player];
+                  if (racers[c].power > 60) {
+                    var i = racers[game.player].pcleared;
                     var found = -1;
                     while (found == -1) {
                       i++;
@@ -6429,9 +6393,9 @@ function control() {
                         cp.z[found] / 10,
                       ) < 1000
                     ) {
-                      acr[c] = 0;
-                      aim[c] = 1;
-                      attack[c] = 100;
+                      racers[c].acr = 0;
+                      racers[c].aim = 1;
+                      racers[c].attack = 100;
                     }
                     pnt = found;
                   } else {
@@ -6465,115 +6429,118 @@ function control() {
                   }
                 }
                 if (cn == 16) {
-                  if (!gowait[c]) {
+                  if (!racers[c].gowait) {
                     if (
-                      pcleared[game.player] == 152 ||
-                      pcleared[game.player] == 10 ||
-                      pcleared[game.player] == 20
+                      racers[game.player].pcleared == 152 ||
+                      racers[game.player].pcleared == 10 ||
+                      racers[game.player].pcleared == 20
                     ) {
-                      wtx[c] = 820;
-                      wtz[c] = 120;
-                      frx[c] = 1364;
-                      frz[c] = 218;
-                      frad[c] = 50000;
-                      oupnt[c] = 35;
-                      gowait[c] = true;
-                      afta[c] = false;
-                      runbul[c] = 1;
+                      racers[c].wtx = 820;
+                      racers[c].wtz = 120;
+                      racers[c].frx = 1364;
+                      racers[c].frz = 218;
+                      racers[c].frad = 50000;
+                      racers[c].oupnt = 35;
+                      racers[c].gowait = true;
+                      racers[c].afta = false;
+                      racers[c].runbul = 1;
                     }
                     if (
-                      pcleared[game.player] == 45 ||
-                      pcleared[game.player] == 55
+                      racers[game.player].pcleared == 45 ||
+                      racers[game.player].pcleared == 55
                     ) {
-                      if (power[c] > 60) {
-                        wtx[c] = 3000;
-                        wtz[c] = 1600;
-                        frx[c] = 4206;
-                        frz[c] = 1365;
-                        frad[c] = 30000;
-                        oupnt[c] = 64;
-                        gowait[c] = true;
-                        afta[c] = false;
-                        runbul[c] = 1;
+                      if (racers[c].power > 60) {
+                        racers[c].wtx = 3000;
+                        racers[c].wtz = 1600;
+                        racers[c].frx = 4206;
+                        racers[c].frz = 1365;
+                        racers[c].frad = 30000;
+                        racers[c].oupnt = 64;
+                        racers[c].gowait = true;
+                        racers[c].afta = false;
+                        racers[c].runbul = 1;
                       } else {
                         pnt = 73;
                       }
                     }
                     if (
-                      pcleared[game.player] == 92 ||
-                      pcleared[game.player] == 103
+                      racers[game.player].pcleared == 92 ||
+                      racers[game.player].pcleared == 103
                     ) {
-                      if (power[c] > 60) {
-                        wtx[c] = 6408.2;
-                        wtz[c] = 1571.4;
-                        frx[c] = 6184;
-                        frz[c] = 780;
-                        frad[c] = 90000;
-                        oupnt[c] = 112;
-                        gowait[c] = true;
-                        afta[c] = false;
-                        runbul[c] = 0;
+                      if (racers[c].power > 60) {
+                        racers[c].wtx = 6408.2;
+                        racers[c].wtz = 1571.4;
+                        racers[c].frx = 6184;
+                        racers[c].frz = 780;
+                        racers[c].frad = 90000;
+                        racers[c].oupnt = 112;
+                        racers[c].gowait = true;
+                        racers[c].afta = false;
+                        racers[c].runbul = 0;
                       } else {
                         pnt = 73;
                       }
                     }
-                    if (pcleared[game.player] == 112 && oupnt[c] == 112) {
-                      stcnt[c] = 0;
-                      statusque[c] = 10;
+                    if (
+                      racers[game.player].pcleared == 112 &&
+                      racers[c].oupnt == 112
+                    ) {
+                      racers[c].stcnt = 0;
+                      racers[c].statusque = 10;
                       if (
                         pyo(
                           car[c].x / 10,
-                          frx[c] / 10,
+                          racers[c].frx / 10,
                           car[c].z / 10,
-                          frz[c] / 10,
+                          racers[c].frz / 10,
                         ) < 100
                       ) {
-                        attack[c] = 200;
-                        acr[c] = 0;
-                        aim[c] = 0.7;
-                        oupnt[c] = -1;
+                        racers[c].attack = 200;
+                        racers[c].acr = 0;
+                        racers[c].aim = 0.7;
+                        racers[c].oupnt = -1;
                       }
                     }
                   }
-                  if (gowait[c]) {
+                  if (racers[c].gowait) {
                     if (
                       pyo(
                         car[c].x / 10,
-                        wtx[c] / 10,
+                        racers[c].wtx / 10,
                         car[c].z / 10,
-                        wtz[c] / 10,
+                        racers[c].wtz / 10,
                       ) < 10000
                     ) {
-                      if (speed[c] > 5) {
-                        u[c].up = false;
+                      if (racers[c].speed > 5) {
+                        racers[c].u.up = false;
                       }
                     }
                     if (
                       pyo(
                         car[c].x / 10,
-                        wtx[c] / 10,
+                        racers[c].wtx / 10,
                         car[c].z / 10,
-                        wtz[c] / 10,
+                        racers[c].wtz / 10,
                       ) < 200
                     ) {
-                      u[c].up = false;
-                      u[c].handb = true;
+                      racers[c].u.up = false;
+                      racers[c].u.handb = true;
                     }
                     if (
-                      pcleared[game.player] == oupnt[c] &&
+                      racers[game.player].pcleared == racers[c].oupnt &&
                       pyo(
                         car[game.player].x / 10,
-                        frx[c] / 10,
+                        racers[c].frx / 10,
                         car[game.player].z / 10,
-                        frz[c] / 10,
-                      ) < frad[c]
+                        racers[c].frz / 10,
+                      ) < racers[c].frad
                     ) {
-                      afta[c] = true;
-                      gowait[c] = false;
-                      if (runbul[c]) {
-                        attack[c] = 200;
-                        acr[c] = 0;
-                        aim[c] = 0.7;
+                      racers[c].afta = true;
+                      racers[c].gowait = false;
+                      if (racers[c].runbul) {
+                        racers[c].attack = 200;
+                        racers[c].acr = 0;
+                        racers[c].aim = 0.7;
                       }
                     }
                     if (
@@ -6584,19 +6551,23 @@ function control() {
                         car[game.player].z / 10,
                       ) < 25
                     ) {
-                      afta[c] = true;
-                      gowait[c] = false;
-                      attack[c] = 200;
-                      acr[c] = 0;
+                      racers[c].afta = true;
+                      racers[c].gowait = false;
+                      racers[c].attack = 200;
+                      racers[c].acr = 0;
                     }
                   }
                 }
               }
-              nofocus[c] = true;
+              racers[c].nofocus = true;
             }
             if (cp.stage != 17 && game.mode != 1) {
-              if (missedcp[c] == 0 || forget[c] || trfix[c] == 4) {
-                if (trfix[c] != 0) {
+              if (
+                racers[c].missedcp == 0 ||
+                racers[c].forget ||
+                racers[c].trfix == 4
+              ) {
+                if (racers[c].trfix != 0) {
                   var istr = 0;
                   if (
                     cp.stage == 9 &&
@@ -6608,7 +6579,7 @@ function control() {
                   if (cp.stage == 16) {
                     istr = 2;
                   }
-                  if (trfix[c] == 2) {
+                  if (racers[c].trfix == 2) {
                     if (cp.stage == 15) {
                       istr = 2;
                     }
@@ -6638,9 +6609,9 @@ function control() {
                     }
                     pnt = fpnt[closi];
                     if (cp.special[closi]) {
-                      forget[c] = true;
+                      racers[c].forget = true;
                     } else {
-                      forget[c] = false;
+                      racers[c].forget = false;
                     }
                   }
                   for (var i = istr; i < nf; i++) {
@@ -6652,29 +6623,29 @@ function control() {
                         cp.z[fpnt[i]] / 10,
                       ) < 2000
                     ) {
-                      forget[c] = false;
-                      actwait[c] = 0;
-                      upwait[c] = 0;
-                      turntyp[c] = 2;
-                      randtcnt[c] = -1;
-                      acuracy[c] = 0;
-                      rampp[c] = 0;
-                      trfix[c] = 3;
+                      racers[c].forget = false;
+                      racers[c].actwait = 0;
+                      racers[c].upwait = 0;
+                      racers[c].turntyp = 2;
+                      racers[c].randtcnt = -1;
+                      racers[c].acuracy = 0;
+                      racers[c].rampp = 0;
+                      racers[c].trfix = 3;
                     }
                   }
-                  if (trfix[c] == 3) {
-                    nofocus[c] = true;
+                  if (racers[c].trfix == 3) {
+                    racers[c].nofocus = true;
                   }
                 }
               }
             }
-            if (turncnt[c] > randtcnt[c]) {
-              if (!gowait[c]) {
+            if (racers[c].turncnt > racers[c].randtcnt) {
+              if (!racers[c].gowait) {
                 var ad = 0;
                 if (cp.x[pnt] - car[c].x >= 0) {
                   ad = 180;
                 }
-                pan[c] = Math.floor(
+                racers[c].pan = Math.floor(
                   90 +
                     ad +
                     Math.atan((cp.z[pnt] - car[c].z) / (cp.x[pnt] - car[c].x)) /
@@ -6682,71 +6653,81 @@ function control() {
                 );
               } else {
                 var ad = 0;
-                if (wtx[c] - car[c].x >= 0) {
+                if (racers[c].wtx - car[c].x >= 0) {
                   ad = 180;
                 }
-                pan[c] = Math.floor(
+                racers[c].pan = Math.floor(
                   90 +
                     ad +
-                    Math.atan((wtz[c] - car[c].z) / (wtx[c] - car[c].x)) /
+                    Math.atan(
+                      (racers[c].wtz - car[c].z) / (racers[c].wtx - car[c].x),
+                    ) /
                       0.017453292519943295,
                 );
               }
-              turncnt[c] = 0;
-              randtcnt[c] = Math.floor(acuracy[c] * random.sim());
+              racers[c].turncnt = 0;
+              racers[c].randtcnt = Math.floor(racers[c].acuracy * random.sim());
             } else {
               if (frgm >= m) {
-                turncnt[c]++;
+                racers[c].turncnt++;
               }
             }
           } else {
-            u[c].up = true;
+            racers[c].u.up = true;
             var ad = 0;
             var adsto =
-              (py(car[c].x, car[acr[c]].x, car[c].z, car[acr[c]].z) / 2) *
-              aim[c];
-            var acx = car[acr[c]].x - adsto * msin(mxz[acr[c]]);
-            var acz = car[acr[c]].z + adsto * mcos(mxz[acr[c]]);
+              (py(
+                car[c].x,
+                car[racers[c].acr].x,
+                car[c].z,
+                car[racers[c].acr].z,
+              ) /
+                2) *
+              racers[c].aim;
+            var acx =
+              car[racers[c].acr].x - adsto * msin(racers[racers[c].acr].mxz);
+            var acz =
+              car[racers[c].acr].z + adsto * mcos(racers[racers[c].acr].mxz);
             if (acx - car[c].x >= 0) {
               ad = 180;
             }
-            pan[c] =
+            racers[c].pan =
               90 +
               ad +
               Math.atan((acz - car[c].z) / (acx - car[c].x)) /
                 0.017453292519943295;
             if (frgm >= m) {
-              attack[c]--;
+              racers[c].attack--;
             }
-            if (attack[c] <= 0) {
-              attack[c] = 0;
+            if (racers[c].attack <= 0) {
+              racers[c].attack = 0;
             }
             if (
               cp.stage == 15 &&
-              exitattack[c] &&
-              !bulistc[c] &&
-              missedcp[c] != 0
+              racers[c].exitattack &&
+              !racers[c].bulistc &&
+              racers[c].missedcp != 0
             ) {
-              attack[c] = 0;
+              racers[c].attack = 0;
             }
-            if (cp.stage == 16 && missedcp[c] != 0) {
+            if (cp.stage == 16 && racers[c].missedcp != 0) {
               if (
                 cp.pos[c] == 0 ||
                 (cp.pos[c] == 1 && cp.pos[game.player] == 0)
               ) {
-                attack[c] = 0;
+                racers[c].attack = 0;
               }
             }
             if (
               cp.stage == 16 &&
               cp.pos[game.player] > cp.pos[c] &&
-              power[c] < 80
+              racers[c].power < 80
             ) {
-              attack[c] = 0;
+              racers[c].attack = 0;
             }
           }
           var crxz = car[c].xz;
-          if (u[c].zyinv) {
+          if (racers[c].u.zyinv) {
             crxz += 180;
           }
           while (crxz < 0) {
@@ -6755,106 +6736,114 @@ function control() {
           while (crxz > 180) {
             crxz -= 360;
           }
-          while (pan[c] < 0) {
-            pan[c] += 360;
+          while (racers[c].pan < 0) {
+            racers[c].pan += 360;
           }
-          while (pan[c] > 180) {
-            pan[c] -= 360;
+          while (racers[c].pan > 180) {
+            racers[c].pan -= 360;
           }
-          if (wall[c] != -1 && hold[c] == 0) {
-            clrnce[c] = 0;
+          if (racers[c].wall != -1 && racers[c].hold == 0) {
+            racers[c].clrnce = 0;
           }
-          if (hold[c] == 0) {
-            if (Math.abs(crxz - pan[c]) < 180) {
-              if (Math.floor(Math.abs(crxz - pan[c])) > clrnce[c]) {
-                if (crxz > pan[c]) {
-                  u[c].left = true;
-                  lastl[c] = true;
+          if (racers[c].hold == 0) {
+            if (Math.abs(crxz - racers[c].pan) < 180) {
+              if (
+                Math.floor(Math.abs(crxz - racers[c].pan)) > racers[c].clrnce
+              ) {
+                if (crxz > racers[c].pan) {
+                  racers[c].u.left = true;
+                  racers[c].lastl = true;
                 } else {
-                  u[c].right = true;
-                  lastl[c] = false;
+                  racers[c].u.right = true;
+                  racers[c].lastl = false;
                 }
                 if (
-                  Math.abs(crxz - pan[c]) > 50 &&
-                  speed[c] > cd.swits[cn][0] &&
-                  turntyp[c] != 0
+                  Math.abs(crxz - racers[c].pan) > 50 &&
+                  racers[c].speed > cd.swits[cn][0] &&
+                  racers[c].turntyp != 0
                 ) {
-                  if (turntyp[c] == 1) {
-                    u[c].down = true;
+                  if (racers[c].turntyp == 1) {
+                    racers[c].u.down = true;
                   }
-                  if (turntyp[c] == 2) {
-                    u[c].handb = true;
+                  if (racers[c].turntyp == 2) {
+                    racers[c].u.handb = true;
                   }
-                  if (!agressed[c]) {
-                    u[c].up = false;
+                  if (!racers[c].agressed) {
+                    racers[c].u.up = false;
                   }
                 }
               }
             } else {
-              if (Math.floor(Math.abs(crxz - pan[c])) < 360 - clrnce[c]) {
-                if (crxz > pan[c]) {
-                  u[c].right = true;
-                  lastl[c] = false;
+              if (
+                Math.floor(Math.abs(crxz - racers[c].pan)) <
+                360 - racers[c].clrnce
+              ) {
+                if (crxz > racers[c].pan) {
+                  racers[c].u.right = true;
+                  racers[c].lastl = false;
                 } else {
-                  u[c].left = true;
-                  lastl[c] = true;
+                  racers[c].u.left = true;
+                  racers[c].lastl = true;
                 }
                 if (
-                  Math.abs(crxz - pan[c]) < 310 &&
-                  speed[c] > cd.swits[cn][0] &&
-                  turntyp[c] != 0
+                  Math.abs(crxz - racers[c].pan) < 310 &&
+                  racers[c].speed > cd.swits[cn][0] &&
+                  racers[c].turntyp != 0
                 ) {
-                  if (turntyp[c] == 1) {
-                    u[c].down = true;
+                  if (racers[c].turntyp == 1) {
+                    racers[c].u.down = true;
                   }
-                  if (turntyp[c] == 2) {
-                    u[c].handb = true;
+                  if (racers[c].turntyp == 2) {
+                    racers[c].u.handb = true;
                   }
-                  if (!agressed[c]) {
-                    u[c].up = false;
+                  if (!racers[c].agressed) {
+                    racers[c].u.up = false;
                   }
                 }
               }
             }
           }
-          if (wall[c] != -1) {
-            if (lwall[c] != wall[c]) {
-              if (lastl[c]) {
-                u[c].left = true;
+          if (racers[c].wall != -1) {
+            if (racers[c].lwall != racers[c].wall) {
+              if (racers[c].lastl) {
+                racers[c].u.left = true;
               } else {
-                u[c].right = true;
+                racers[c].u.right = true;
               }
-              wlastl[c] = lastl[c];
-              lwall[c] = wall[c];
+              racers[c].wlastl = racers[c].lastl;
+              racers[c].lwall = racers[c].wall;
             } else {
-              if (wlastl[c]) {
-                u[c].left = true;
+              if (racers[c].wlastl) {
+                racers[c].u.left = true;
               } else {
-                u[c].right = true;
+                racers[c].u.right = true;
               }
             }
-            if (build[obo[wall[c]].typ].dam != 0) {
+            if (build[obo[racers[c].wall].typ].dam != 0) {
               var hmlt = 1;
-              if (build[obo[wall[c]].typ].skid == 1) {
+              if (build[obo[racers[c].wall].typ].skid == 1) {
                 hmlt = 3;
               }
-              hold[c] += hmlt;
-              if (hold[c] > 10 * hmlt) {
-                hold[c] = 10 * hmlt;
+              racers[c].hold += hmlt;
+              if (racers[c].hold > 10 * hmlt) {
+                racers[c].hold = 10 * hmlt;
               }
             } else {
-              hold[c] = 1;
+              racers[c].hold = 1;
             }
-            wall[c] = -1;
+            racers[c].wall = -1;
           } else {
-            if (hold[c] != 0) {
-              hold[c]--;
+            if (racers[c].hold != 0) {
+              racers[c].hold--;
             }
           }
         } else {
-          if (trickfase[c] == 0) {
+          if (racers[c].trickfase == 0) {
             var upv =
-              ((scy[c][0] + scy[c][1] + scy[c][2] + scy[c][3]) *
+              ((racers[c].scy[0] +
+                racers[c].scy[1] +
+                racers[c].scy[2] +
+                racers[c].scy[3]) *
                 (car[c].y + 5)) /
               40;
             var divo = 3;
@@ -6863,234 +6852,255 @@ function control() {
             }
             if (
               cp.stage == 13 &&
-              pcleared[c] == 20 &&
-              point[c] > 32 &&
+              racers[c].pcleared == 20 &&
+              racers[c].point > 32 &&
               cp.clear[c] - cp.clear[game.player] <= 3
             ) {
               upv = 0;
             }
-            if (cp.stage == 16 && pcleared[c] == 120 && car[c].z < 2200) {
+            if (
+              cp.stage == 16 &&
+              racers[c].pcleared == 120 &&
+              car[c].z < 2200
+            ) {
               upv = 0;
             }
             if (
               upv > 7 &&
-              (random.sim() > trickprf[c] / divo || stuntf[c] == 4)
+              (random.sim() > racers[c].trickprf / divo ||
+                racers[c].stuntf == 4)
             ) {
-              oxy[c] = pxy[c];
-              ozy[c] = pzy[c];
-              flycnt[c] = 0;
-              uddirect[c] = 0;
-              lrdirect[c] = 0;
-              udswt[c] = false;
-              lrswt[c] = false;
-              trickfase[c] = 1;
+              racers[c].oxy = racers[c].pxy;
+              racers[c].ozy = racers[c].pzy;
+              racers[c].flycnt = 0;
+              racers[c].uddirect = 0;
+              racers[c].lrdirect = 0;
+              racers[c].udswt = false;
+              racers[c].lrswt = false;
+              racers[c].trickfase = 1;
               if (upv < 16) {
-                uddirect[c] = -1;
-                udstart[c] = 0;
-                udswt[c] = false;
+                racers[c].uddirect = -1;
+                racers[c].udstart = 0;
+                racers[c].udswt = false;
               } else {
                 if (
-                  (random.sim() > random.sim() && stuntf[c] != 3) ||
-                  stuntf[c] == 1 ||
-                  stuntf[c] == 2 ||
-                  stuntf[c] == 4
+                  (random.sim() > random.sim() && racers[c].stuntf != 3) ||
+                  racers[c].stuntf == 1 ||
+                  racers[c].stuntf == 2 ||
+                  racers[c].stuntf == 4
                 ) {
-                  if (stuntf[c] == 4 && pcleared[c] == 47 && oupnt[c] == 0) {
-                    stuntf[c] = 5;
+                  if (
+                    racers[c].stuntf == 4 &&
+                    racers[c].pcleared == 47 &&
+                    racers[c].oupnt == 0
+                  ) {
+                    racers[c].stuntf = 5;
                   }
                   if (
                     (random.sim() > random.sim() ||
-                      stuntf[c] == 2 ||
-                      stuntf[c] == 5) &&
-                    stuntf[c] != 1 &&
-                    stuntf[c] != 4
+                      racers[c].stuntf == 2 ||
+                      racers[c].stuntf == 5) &&
+                    racers[c].stuntf != 1 &&
+                    racers[c].stuntf != 4
                   ) {
-                    uddirect[c] = -1;
+                    racers[c].uddirect = -1;
                   } else {
-                    uddirect[c] = 1;
+                    racers[c].uddirect = 1;
                   }
-                  udstart[c] = Math.floor(10 * random.sim() * trickprf[c]);
-                  if (stuntf[c] == 4 || stuntf[c] == 5 || cp.stage == 16) {
-                    udstart[c] = 0;
+                  racers[c].udstart = Math.floor(
+                    10 * random.sim() * racers[c].trickprf,
+                  );
+                  if (
+                    racers[c].stuntf == 4 ||
+                    racers[c].stuntf == 5 ||
+                    cp.stage == 16
+                  ) {
+                    racers[c].udstart = 0;
                   }
                   if (
                     random.sim() > 0.85 &&
-                    stuntf[c] != 1 &&
-                    stuntf[c] != 4 &&
-                    stuntf[c] != 5
+                    racers[c].stuntf != 1 &&
+                    racers[c].stuntf != 4 &&
+                    racers[c].stuntf != 5
                   ) {
-                    udswt[c] = true;
+                    racers[c].udswt = true;
                   }
                   if (
-                    random.sim() > trickprf[c] + 0.3 &&
-                    stuntf[c] != 1 &&
-                    stuntf[c] != 2 &&
-                    stuntf[c] != 4 &&
-                    stuntf[c] != 5
+                    random.sim() > racers[c].trickprf + 0.3 &&
+                    racers[c].stuntf != 1 &&
+                    racers[c].stuntf != 2 &&
+                    racers[c].stuntf != 4 &&
+                    racers[c].stuntf != 5
                   ) {
                     if (random.sim() > random.sim()) {
-                      lrdirect[c] = -1;
+                      racers[c].lrdirect = -1;
                     } else {
-                      lrdirect[c] = 1;
+                      racers[c].lrdirect = 1;
                     }
-                    lrstart[c] = Math.floor(30 * random.sim());
+                    racers[c].lrstart = Math.floor(30 * random.sim());
                     if (random.sim() > 0.75) {
-                      lrswt[c] = true;
+                      racers[c].lrswt = true;
                     }
                   }
                 } else {
                   if (random.sim() > random.sim()) {
-                    lrdirect[c] = -1;
+                    racers[c].lrdirect = -1;
                   } else {
-                    lrdirect[c] = 1;
+                    racers[c].lrdirect = 1;
                   }
-                  lrstart[c] = Math.floor(10 * random.sim() * trickprf[c]);
+                  racers[c].lrstart = Math.floor(
+                    10 * random.sim() * racers[c].trickprf,
+                  );
                   if (random.sim() > 0.75) {
-                    lrswt[c] = true;
+                    racers[c].lrswt = true;
                   }
-                  if (random.sim() > trickprf[c] + 0.3) {
-                    if (random.sim() > random.sim() || stuntf[c] == 3) {
-                      uddirect[c] = -1;
+                  if (random.sim() > racers[c].trickprf + 0.3) {
+                    if (random.sim() > random.sim() || racers[c].stuntf == 3) {
+                      racers[c].uddirect = -1;
                     } else {
-                      uddirect[c] = 1;
+                      racers[c].uddirect = 1;
                     }
-                    udstart[c] = Math.floor(30 * random.sim());
+                    racers[c].udstart = Math.floor(30 * random.sim());
                     if (random.sim() > 0.85) {
-                      udswt[c] = true;
+                      racers[c].udswt = true;
                     }
                   }
                 }
               }
               if (cp.stage == 16 && cn == 16) {
-                lrdirect[c] = -1;
-                lrstart[c] = 0;
-                uddirect[c] = -1;
-                udstart[c] = 0;
+                racers[c].lrdirect = -1;
+                racers[c].lrstart = 0;
+                racers[c].uddirect = -1;
+                racers[c].udstart = 0;
               }
-              if (trfix[c] == 3 || trfix[c] == 4) {
+              if (racers[c].trfix == 3 || racers[c].trfix == 4) {
                 if (cp.stage != 8) {
-                  if (lrdirect[c] == -1) {
-                    uddirect[c] = -1;
+                  if (racers[c].lrdirect == -1) {
+                    racers[c].uddirect = -1;
                   }
-                  lrdirect[c] = 0;
-                  if (power[c] < 60) {
-                    uddirect[c] = -1;
+                  racers[c].lrdirect = 0;
+                  if (racers[c].power < 60) {
+                    racers[c].uddirect = -1;
                   }
                 } else {
-                  if (uddirect[c] != 0) {
-                    uddirect[c] = -1;
+                  if (racers[c].uddirect != 0) {
+                    racers[c].uddirect = -1;
                   }
-                  lrdirect[c] = 0;
+                  racers[c].lrdirect = 0;
                 }
               }
             } else {
-              trickfase[c] = -1;
+              racers[c].trickfase = -1;
             }
-            if (!afta[c]) {
-              afta[c] = true;
+            if (!racers[c].afta) {
+              racers[c].afta = true;
             }
-            if (trfix[c] == 3) {
-              trfix[c] = 4;
-              statusque[c] += 30;
+            if (racers[c].trfix == 3) {
+              racers[c].trfix = 4;
+              racers[c].statusque += 30;
             }
           }
-          if (trickfase[c] == 1) {
-            flycnt[c]++;
-            if (lrdirect[c] != 0) {
-              if (flycnt[c] > lrstart[c]) {
-                if (lrswt[c]) {
-                  if (Math.abs(pxy[c] - oxy[c]) > 180) {
-                    if (lrdirect[c] == -1) {
-                      lrdirect[c] = 1;
+          if (racers[c].trickfase == 1) {
+            racers[c].flycnt++;
+            if (racers[c].lrdirect != 0) {
+              if (racers[c].flycnt > racers[c].lrstart) {
+                if (racers[c].lrswt) {
+                  if (Math.abs(racers[c].pxy - racers[c].oxy) > 180) {
+                    if (racers[c].lrdirect == -1) {
+                      racers[c].lrdirect = 1;
                     } else {
-                      lrdirect[c] = -1;
+                      racers[c].lrdirect = -1;
                     }
-                    lrswt[c] = false;
+                    racers[c].lrswt = false;
                   }
                 }
-                if (lrdirect[c] == -1) {
-                  u[c].handb = true;
-                  u[c].left = true;
+                if (racers[c].lrdirect == -1) {
+                  racers[c].u.handb = true;
+                  racers[c].u.left = true;
                 } else {
-                  u[c].handb = true;
-                  u[c].right = true;
+                  racers[c].u.handb = true;
+                  racers[c].u.right = true;
                 }
               }
             }
-            if (uddirect[c] != 0) {
-              if (flycnt[c] > udstart[c]) {
-                if (udswt[c]) {
-                  if (Math.abs(pzy[c] - ozy[c]) > 180) {
-                    if (uddirect[c] == -1) {
-                      uddirect[c] = 1;
+            if (racers[c].uddirect != 0) {
+              if (racers[c].flycnt > racers[c].udstart) {
+                if (racers[c].udswt) {
+                  if (Math.abs(racers[c].pzy - racers[c].ozy) > 180) {
+                    if (racers[c].uddirect == -1) {
+                      racers[c].uddirect = 1;
                     } else {
-                      uddirect[c] = -1;
+                      racers[c].uddirect = -1;
                     }
-                    udswt[c] = false;
+                    racers[c].udswt = false;
                   }
                 }
-                if (uddirect[c] == -1) {
-                  u[c].handb = true;
-                  u[c].down = true;
+                if (racers[c].uddirect == -1) {
+                  racers[c].u.handb = true;
+                  racers[c].u.down = true;
                 } else {
-                  u[c].handb = true;
-                  u[c].up = true;
-                  if (apunch[c] > 0) {
-                    u[c].down = true;
-                    apunch[c]--;
+                  racers[c].u.handb = true;
+                  racers[c].u.up = true;
+                  if (racers[c].apunch > 0) {
+                    racers[c].u.down = true;
+                    racers[c].apunch--;
                   }
                 }
               }
             }
             if (
-              ((scy[c][0] + scy[c][1] + scy[c][2] + scy[c][3]) * 100) /
+              ((racers[c].scy[0] +
+                racers[c].scy[1] +
+                racers[c].scy[2] +
+                racers[c].scy[3]) *
+                100) /
                 (car[c].y + 5) <
-              -saftey[c]
+              -racers[c].saftey
             ) {
-              onceu[c] = false;
-              onced[c] = false;
-              oncel[c] = false;
-              oncer[c] = false;
-              lrcomp[c] = false;
-              udcomp[c] = false;
-              udbare[c] = false;
-              lrbare[c] = false;
-              trickfase[c] = 2;
-              swat[c] = 0;
+              racers[c].onceu = false;
+              racers[c].onced = false;
+              racers[c].oncel = false;
+              racers[c].oncer = false;
+              racers[c].lrcomp = false;
+              racers[c].udcomp = false;
+              racers[c].udbare = false;
+              racers[c].lrbare = false;
+              racers[c].trickfase = 2;
+              racers[c].swat = 0;
             }
           }
-          if (trickfase[c] == 2) {
-            if (swat[c] == 0) {
-              if (dcomp[c] != 0 || ucomp[c] != 0) {
-                udbare[c] = true;
+          if (racers[c].trickfase == 2) {
+            if (racers[c].swat == 0) {
+              if (racers[c].dcomp != 0 || racers[c].ucomp != 0) {
+                racers[c].udbare = true;
               }
-              if (lcomp[c] != 0 || rcomp[c] != 0) {
-                lrbare[c] = true;
+              if (racers[c].lcomp != 0 || racers[c].rcomp != 0) {
+                racers[c].lrbare = true;
               }
-              swat[c] = 1;
+              racers[c].swat = 1;
             }
-            if (wtouch[c]) {
-              if (swat[c] == 1) {
-                swat[c] = 2;
+            if (racers[c].wtouch) {
+              if (racers[c].swat == 1) {
+                racers[c].swat = 2;
               }
             } else {
-              if (swat[c] == 2) {
-                if (capsized[c] && random.sim() > mustland[c]) {
-                  if (udbare[c]) {
-                    lrbare[c] = true;
-                    udbare[c] = false;
+              if (racers[c].swat == 2) {
+                if (racers[c].capsized && random.sim() > racers[c].mustland) {
+                  if (racers[c].udbare) {
+                    racers[c].lrbare = true;
+                    racers[c].udbare = false;
                   } else {
-                    if (lrbare[c]) {
-                      udbare[c] = true;
-                      lrbare[c] = false;
+                    if (racers[c].lrbare) {
+                      racers[c].udbare = true;
+                      racers[c].lrbare = false;
                     }
                   }
                 }
-                swat[c] = 3;
+                racers[c].swat = 3;
               }
             }
-            if (udbare[c]) {
-              var pzyr = pzy[c] + 90;
+            if (racers[c].udbare) {
+              var pzyr = racers[c].pzy + 90;
               while (pzyr < 0) {
                 pzyr += 360;
               }
@@ -7098,74 +7108,74 @@ function control() {
                 pzyr -= 360;
               }
               pzyr = Math.abs(pzyr);
-              if (Math.abs(lcomp[c] - rcomp[c]) < 5) {
-                if (onced[c] || onceu[c]) {
-                  udcomp[c] = true;
+              if (Math.abs(racers[c].lcomp - racers[c].rcomp) < 5) {
+                if (racers[c].onced || racers[c].onceu) {
+                  racers[c].udcomp = true;
                 }
               }
-              if (dcomp[c] > ucomp[c]) {
-                if (capsized[c]) {
-                  if (udcomp[c]) {
+              if (racers[c].dcomp > racers[c].ucomp) {
+                if (racers[c].capsized) {
+                  if (racers[c].udcomp) {
                     if (pzyr < 90) {
-                      u[c].up = true;
+                      racers[c].u.up = true;
                     } else {
-                      u[c].down = true;
+                      racers[c].u.down = true;
                     }
                   } else {
-                    if (!onced[c]) {
-                      u[c].down = true;
+                    if (!racers[c].onced) {
+                      racers[c].u.down = true;
                     }
                   }
                 } else {
-                  if (udcomp[c]) {
-                    if (perfection[c] && Math.abs(pzyr - 90) > 30) {
+                  if (racers[c].udcomp) {
+                    if (racers[c].perfection && Math.abs(pzyr - 90) > 30) {
                       if (pzyr < 90) {
-                        u[c].up = true;
+                        racers[c].u.up = true;
                       } else {
-                        u[c].down = true;
+                        racers[c].u.down = true;
                       }
                     }
                   } else {
-                    if (random.sim() > mustland[c]) {
-                      u[c].up = true;
+                    if (random.sim() > racers[c].mustland) {
+                      racers[c].u.up = true;
                     }
                   }
-                  onced[c] = true;
+                  racers[c].onced = true;
                 }
               } else {
-                if (capsized[c]) {
-                  if (udcomp[c]) {
+                if (racers[c].capsized) {
+                  if (racers[c].udcomp) {
                     if (pzyr < 90) {
-                      u[c].up = true;
+                      racers[c].u.up = true;
                     } else {
-                      u[c].down = true;
+                      racers[c].u.down = true;
                     }
                   } else {
-                    if (!onceu[c]) {
-                      u[c].up = true;
+                    if (!racers[c].onceu) {
+                      racers[c].u.up = true;
                     }
                   }
                 } else {
-                  if (udcomp[c]) {
-                    if (perfection[c] && Math.abs(pzyr - 90) > 30) {
+                  if (racers[c].udcomp) {
+                    if (racers[c].perfection && Math.abs(pzyr - 90) > 30) {
                       if (pzyr < 90) {
-                        u[c].up = true;
+                        racers[c].u.up = true;
                       } else {
-                        u[c].down = true;
+                        racers[c].u.down = true;
                       }
                     }
                   } else {
-                    if (random.sim() > mustland[c]) {
-                      u[c].down = true;
+                    if (random.sim() > racers[c].mustland) {
+                      racers[c].u.down = true;
                     }
                   }
-                  onceu[c] = true;
+                  racers[c].onceu = true;
                 }
               }
             }
-            if (lrbare[c]) {
-              var pxyr = pxy[c] + 90;
-              if (u[c].zyinv) {
+            if (racers[c].lrbare) {
+              var pxyr = racers[c].pxy + 90;
+              if (racers[c].u.zyinv) {
                 pxyr += 180;
               }
               while (pxyr < 0) {
@@ -7175,68 +7185,68 @@ function control() {
                 pxyr -= 360;
               }
               pxyr = Math.abs(pxyr);
-              if (Math.abs(lcomp[c] - rcomp[c]) < 10) {
-                if (oncel[c] || oncer[c]) {
-                  lrcomp[c] = true;
+              if (Math.abs(racers[c].lcomp - racers[c].rcomp) < 10) {
+                if (racers[c].oncel || racers[c].oncer) {
+                  racers[c].lrcomp = true;
                 }
               }
-              if (lcomp[c] > rcomp[c]) {
-                if (capsized[c]) {
-                  if (lrcomp[c]) {
+              if (racers[c].lcomp > racers[c].rcomp) {
+                if (racers[c].capsized) {
+                  if (racers[c].lrcomp) {
                     if (pxyr > 90) {
-                      u[c].left = true;
+                      racers[c].u.left = true;
                     } else {
-                      u[c].right = true;
+                      racers[c].u.right = true;
                     }
                   } else {
-                    if (!oncel[c]) {
-                      u[c].left = true;
+                    if (!racers[c].oncel) {
+                      racers[c].u.left = true;
                     }
                   }
                 } else {
-                  if (lrcomp[c]) {
-                    if (perfection[c] && Math.abs(pxyr - 90) > 30) {
+                  if (racers[c].lrcomp) {
+                    if (racers[c].perfection && Math.abs(pxyr - 90) > 30) {
                       if (pxyr > 90) {
-                        u[c].left = true;
+                        racers[c].u.left = true;
                       } else {
-                        u[c].right = true;
+                        racers[c].u.right = true;
                       }
                     }
                   } else {
-                    if (random.sim() > mustland[c]) {
-                      u[c].right = true;
+                    if (random.sim() > racers[c].mustland) {
+                      racers[c].u.right = true;
                     }
                   }
-                  oncel[c] = true;
+                  racers[c].oncel = true;
                 }
               } else {
-                if (capsized[c]) {
-                  if (lrcomp[c]) {
+                if (racers[c].capsized) {
+                  if (racers[c].lrcomp) {
                     if (pxyr > 90) {
-                      u[c].left = true;
+                      racers[c].u.left = true;
                     } else {
-                      u[c].right = true;
+                      racers[c].u.right = true;
                     }
                   } else {
-                    if (!oncer[c]) {
-                      u[c].right = true;
+                    if (!racers[c].oncer) {
+                      racers[c].u.right = true;
                     }
                   }
                 } else {
-                  if (lrcomp[c]) {
-                    if (perfection[c] && Math.abs(pxyr - 90) > 30) {
+                  if (racers[c].lrcomp) {
+                    if (racers[c].perfection && Math.abs(pxyr - 90) > 30) {
                       if (pxyr > 90) {
-                        u[c].left = true;
+                        racers[c].u.left = true;
                       } else {
-                        u[c].right = true;
+                        racers[c].u.right = true;
                       }
                     }
                   } else {
-                    if (random.sim() > mustland[c]) {
-                      u[c].left = true;
+                    if (random.sim() > racers[c].mustland) {
+                      racers[c].u.left = true;
                     }
                   }
-                  oncer[c] = true;
+                  racers[c].oncer = true;
                 }
               }
             }
@@ -7247,100 +7257,30 @@ function control() {
   }
 }
 var drag = 0.05;
-var mxz = [],
-  cxz = [];
-var dominate = [];
-var caught = [];
-var pzy = [],
-  pxy = [];
-var speed = [];
-var forca = [];
-var scy = [];
-var scz = [];
-var scx = [];
-var mtouch = [];
-var wtouch = [];
-var cntouch = [];
-var capsized = [];
-var txz = [],
-  fxz = [],
-  pmlt = [],
-  nmlt = [],
-  dcnt = [];
-var skid = [];
-var pushed = [],
-  gtouch = [],
-  pl = [],
-  pr = [],
-  pd = [],
-  pu = [];
-var actl = [],
-  actr = [],
-  actu = [],
-  actd = [];
-var loop = [];
-var ucomp = [],
-  dcomp = [],
-  lcomp = [],
-  rcomp = [];
-var uwall = [];
-var lxz = [],
-  travxy = [],
-  travzy = [],
-  travxz = [],
-  trcnt = [],
-  capcnt = [],
-  srfcnt = [];
-var rtab = [],
-  ftab = [],
-  btab = [],
-  surfer = [];
-var powerup = [];
-var xtpower = [];
-var tilt = [];
-var crank = [];
-var lcrank = [];
-var squash = [],
-  nbsq = [];
-var hitmag = [],
-  cntdest = [];
-var dest = [];
-var embos = [];
-var embodir = [];
-var embomag = [];
-var bshft = [];
-var pcleared = [];
-var clear = [];
-var nlaps = [];
-var focus = [];
-var power = [];
-var missedcp = [];
-var lastcolido = [];
-var point = [];
-var nofocus = [];
+
 var lonorm = [];
 function inishmad() {
   for (var c = 0; c < 7; c++) {
-    mxz[c] = 0;
-    cxz[c] = 0;
-    dominate[c] = [];
-    caught[c] = [];
+    racers[c].mxz = 0;
+    racers[c].cxz = 0;
+    racers[c].dominate = [];
+    racers[c].caught = [];
     for (var i = 0; i < 7; i++) {
-      dominate[c][i] = false;
-      caught[c][i] = false;
+      racers[c].dominate[i] = false;
+      racers[c].caught[i] = false;
     }
-    pzy[c] = 0;
-    pxy[c] = 0;
-    speed[c] = 0;
-    scy[c] = [];
-    scx[c] = [];
-    scz[c] = [];
+    racers[c].pzy = 0;
+    racers[c].pxy = 0;
+    racers[c].speed = 0;
+    racers[c].scy = [];
+    racers[c].scx = [];
+    racers[c].scz = [];
     for (var i = 0; i < 4; i++) {
-      scy[c][i] = 0;
-      scx[c][i] = 0;
-      scz[c][i] = 0;
+      racers[c].scy[i] = 0;
+      racers[c].scx[i] = 0;
+      racers[c].scz[i] = 0;
     }
-    forca[c] =
+    racers[c].forca =
       ((Math.sqrt(
         car[c].keyz[0] * car[c].keyz[0] + car[c].keyx[0] * car[c].keyx[0],
       ) +
@@ -7355,70 +7295,70 @@ function inishmad() {
         )) /
         1000) *
       (cd.bounce[car[c].typ] - 0.3);
-    mtouch[c] = true;
-    wtouch[c] = true;
-    cntouch[c] = 0;
-    capsized[c] = false;
-    txz[c] = 0;
-    fxz[c] = 0;
-    pmlt[c] = 1;
-    nmlt[c] = 1;
-    dcnt[c] = 0;
-    skid[c] = 0;
-    pushed[c] = false;
-    gtouch[c] = false;
-    pl[c] = false;
-    pr[c] = false;
-    pd[c] = false;
-    pu[c] = false;
-    actl[c] = false;
-    actr[c] = false;
-    actu[c] = false;
-    actd[c] = false;
-    loop[c] = 0;
-    ucomp[c] = 0;
-    dcomp[c] = 0;
-    lcomp[c] = 0;
-    rcomp[c] = 0;
-    uwall[c] = false;
-    lxz[c] = 0;
-    travxy[c] = 0;
-    travzy[c] = 0;
-    travxz[c] = 0;
-    trcnt[c] = 0;
-    capcnt[c] = 0;
-    srfcnt[c] = 0;
-    rtab[c] = false;
-    ftab[c] = false;
-    btab[c] = false;
-    surfer[c] = false;
-    powerup[c] = 0;
-    xtpower[c] = 0;
-    tilt[c] = 0;
-    crank[c] = [];
-    lcrank[c] = [];
+    racers[c].mtouch = true;
+    racers[c].wtouch = true;
+    racers[c].cntouch = 0;
+    racers[c].capsized = false;
+    racers[c].txz = 0;
+    racers[c].fxz = 0;
+    racers[c].pmlt = 1;
+    racers[c].nmlt = 1;
+    racers[c].dcnt = 0;
+    racers[c].skid = 0;
+    racers[c].pushed = false;
+    racers[c].gtouch = false;
+    racers[c].pl = false;
+    racers[c].pr = false;
+    racers[c].pd = false;
+    racers[c].pu = false;
+    racers[c].actl = false;
+    racers[c].actr = false;
+    racers[c].actu = false;
+    racers[c].actd = false;
+    racers[c].loop = 0;
+    racers[c].ucomp = 0;
+    racers[c].dcomp = 0;
+    racers[c].lcomp = 0;
+    racers[c].rcomp = 0;
+    racers[c].uwall = false;
+    racers[c].lxz = 0;
+    racers[c].travxy = 0;
+    racers[c].travzy = 0;
+    racers[c].travxz = 0;
+    racers[c].trcnt = 0;
+    racers[c].capcnt = 0;
+    racers[c].srfcnt = 0;
+    racers[c].rtab = false;
+    racers[c].ftab = false;
+    racers[c].btab = false;
+    racers[c].surfer = false;
+    racers[c].powerup = 0;
+    racers[c].xtpower = 0;
+    racers[c].tilt = 0;
+    racers[c].crank = [];
+    racers[c].lcrank = [];
     for (var i = 0; i < 4; i++) {
-      crank[c][i] = 0;
-      lcrank[c][i] = 0;
+      racers[c].crank[i] = 0;
+      racers[c].lcrank[i] = 0;
     }
-    squash[c] = 0;
-    nbsq[c] = 0;
-    hitmag[c] = 0;
-    cntdest[c] = 0;
-    dest[c] = false;
-    embos[c] = 0;
-    embodir[c] = 0;
-    embomag[c] = 0;
-    bshft[c] = 0;
-    pcleared[c] = cp.pcs;
-    clear[c] = 0;
-    nlaps[c] = 0;
-    focus[c] = -1;
-    power[c] = 98;
-    missedcp[c] = 0;
-    lastcolido[c] = 0;
-    nofocus[c] = false;
-    point[c] = 0;
+    racers[c].squash = 0;
+    racers[c].nbsq = 0;
+    racers[c].hitmag = 0;
+    racers[c].cntdest = 0;
+    racers[c].dest = false;
+    racers[c].embos = 0;
+    racers[c].embodir = 0;
+    racers[c].embomag = 0;
+    racers[c].bshft = 0;
+    racers[c].pcleared = cp.pcs;
+    racers[c].clear = 0;
+    racers[c].nlaps = 0;
+    racers[c].focus = -1;
+    racers[c].power = 98;
+    racers[c].missedcp = 0;
+    racers[c].lastcolido = 0;
+    racers[c].nofocus = false;
+    racers[c].point = 0;
     cp.dested[c] = 0;
   }
   for (var i = 0; i < 2; i++) {
@@ -7438,10 +7378,10 @@ function drive() {
     }
   }
   if (onautocorrect) {
-    if (capsized[0]) {
-      if (wtouch[0]) {
+    if (racers[0].capsized) {
+      if (racers[0].wtouch) {
         if (flipont) {
-          pxy[0] += 180;
+          racers[0].pxy += 180;
           flipont = false;
         }
       } else {
@@ -7456,8 +7396,8 @@ function drive() {
     var zyinv = false,
       doublinv = false,
       spinlocate = false;
-    capsized[c] = false;
-    var izy = Math.abs(pzy[c]);
+    racers[c].capsized = false;
+    var izy = Math.abs(racers[c].pzy);
     while (izy > 270) {
       izy -= 360;
     }
@@ -7466,7 +7406,7 @@ function drive() {
       zyinv = true;
     }
     var xyinv = false;
-    var ixy = Math.abs(pxy[c]);
+    var ixy = Math.abs(racers[c].pxy);
     while (ixy > 270) {
       ixy -= 360;
     }
@@ -7482,331 +7422,343 @@ function drive() {
         doublinv = true;
       } else {
         xyinv = true;
-        capsized[c] = true;
+        racers[c].capsized = true;
       }
       mlt = -1;
     } else {
       if (xyinv) {
-        capsized[c] = true;
+        racers[c].capsized = true;
       }
     }
-    if (capsized[c]) {
-      keyy = cd.flipy[cn] + squash[c];
+    if (racers[c].capsized) {
+      keyy = cd.flipy[cn] + racers[c].squash;
     }
-    u[c].zyinv = zyinv;
+    racers[c].u.zyinv = zyinv;
     var xtrim = 0,
       ztrim = 0,
       ytrim = 0;
-    if (mtouch[c]) {
-      loop[c] = 0;
+    if (racers[c].mtouch) {
+      racers[c].loop = 0;
     }
-    if (wtouch[c]) {
-      if (loop[c] == 2 || loop[c] == -1) {
-        loop[c] = -1;
-        if (u[c].left) {
-          pl[c] = true;
+    if (racers[c].wtouch) {
+      if (racers[c].loop == 2 || racers[c].loop == -1) {
+        racers[c].loop = -1;
+        if (racers[c].u.left) {
+          racers[c].pl = true;
         }
-        if (u[c].right) {
-          pr[c] = true;
+        if (racers[c].u.right) {
+          racers[c].pr = true;
         }
-        if (u[c].up) {
-          pu[c] = true;
+        if (racers[c].u.up) {
+          racers[c].pu = true;
         }
-        if (u[c].down) {
-          pd[c] = true;
+        if (racers[c].u.down) {
+          racers[c].pd = true;
         }
       }
-      ucomp[c] = 0;
-      dcomp[c] = 0;
-      lcomp[c] = 0;
-      rcomp[c] = 0;
+      racers[c].ucomp = 0;
+      racers[c].dcomp = 0;
+      racers[c].lcomp = 0;
+      racers[c].rcomp = 0;
     }
     if (c == game.player) {
-      if (!wtouch[c]) {
-        if (u[c].up) {
-          if (!actu[c]) {
-            if (loop[c] == 0) {
-              loop[c] = 1;
+      if (!racers[c].wtouch) {
+        if (racers[c].u.up) {
+          if (!racers[c].actu) {
+            if (racers[c].loop == 0) {
+              racers[c].loop = 1;
             }
           }
         } else {
-          actu[c] = false;
+          racers[c].actu = false;
         }
-        if (u[c].down) {
-          if (!actd[c]) {
-            if (loop[c] == 0) {
-              loop[c] = 1;
+        if (racers[c].u.down) {
+          if (!racers[c].actd) {
+            if (racers[c].loop == 0) {
+              racers[c].loop = 1;
             }
           }
         } else {
-          actd[c] = false;
+          racers[c].actd = false;
         }
-        if (u[c].left) {
-          if (!actl[c]) {
-            if (loop[c] == 0) {
-              loop[c] = 1;
+        if (racers[c].u.left) {
+          if (!racers[c].actl) {
+            if (racers[c].loop == 0) {
+              racers[c].loop = 1;
             }
           }
         } else {
-          actl[c] = false;
+          racers[c].actl = false;
         }
-        if (u[c].right) {
-          if (!actr[c]) {
-            if (loop[c] == 0) {
-              loop[c] = 1;
+        if (racers[c].u.right) {
+          if (!racers[c].actr) {
+            if (racers[c].loop == 0) {
+              racers[c].loop = 1;
             }
           }
         } else {
-          actr[c] = false;
+          racers[c].actr = false;
         }
       } else {
-        actl[c] = true;
-        actr[c] = true;
-        actu[c] = true;
-        actd[c] = true;
+        racers[c].actl = true;
+        racers[c].actr = true;
+        racers[c].actu = true;
+        racers[c].actd = true;
       }
     }
-    if (u[c].handb) {
-      if (!pushed[c]) {
-        if (!wtouch[c]) {
-          if (loop[c] == 0) {
-            loop[c] = 1;
-            actl[c] = false;
-            actr[c] = false;
-            actu[c] = false;
-            actd[c] = false;
+    if (racers[c].u.handb) {
+      if (!racers[c].pushed) {
+        if (!racers[c].wtouch) {
+          if (racers[c].loop == 0) {
+            racers[c].loop = 1;
+            racers[c].actl = false;
+            racers[c].actr = false;
+            racers[c].actu = false;
+            racers[c].actd = false;
           }
         } else {
-          if (gtouch[c]) {
-            pushed[c] = true;
+          if (racers[c].gtouch) {
+            racers[c].pushed = true;
           }
         }
       }
     } else {
-      pushed[c] = false;
+      racers[c].pushed = false;
     }
-    if (loop[c] == 1) {
-      var avay = (scy[c][0] + scy[c][1] + scy[c][2] + scy[c][3]) / 4;
+    if (racers[c].loop == 1) {
+      var avay =
+        (racers[c].scy[0] +
+          racers[c].scy[1] +
+          racers[c].scy[2] +
+          racers[c].scy[3]) /
+        4;
       for (var i = 0; i < 4; i++) {
-        scy[c][i] = avay;
+        racers[c].scy[i] = avay;
       }
-      loop[c] = 2;
+      racers[c].loop = 2;
     }
-    if (!dest[c]) {
-      if (loop[c] == 2) {
-        if (u[c].up && !actu[c]) {
-          if (ucomp[c] == 0) {
-            ucomp[c] = 10 + (-scy[c][0] * 10 + 50) / 20;
-            if (ucomp[c] < 5) {
-              ucomp[c] = 5;
+    if (!racers[c].dest) {
+      if (racers[c].loop == 2) {
+        if (racers[c].u.up && !racers[c].actu) {
+          if (racers[c].ucomp == 0) {
+            racers[c].ucomp = 10 + (-racers[c].scy[0] * 10 + 50) / 20;
+            if (racers[c].ucomp < 5) {
+              racers[c].ucomp = 5;
             }
-            if (ucomp[c] > 10) {
-              ucomp[c] = 10;
+            if (racers[c].ucomp > 10) {
+              racers[c].ucomp = 10;
             }
-            ucomp[c] *= cd.airs[cn];
+            racers[c].ucomp *= cd.airs[cn];
           }
-          if (ucomp[c] < 20) {
-            ucomp[c] += 0.5 * cd.airs[cn];
+          if (racers[c].ucomp < 20) {
+            racers[c].ucomp += 0.5 * cd.airs[cn];
           }
           xtrim = -cd.airc[cn] * msin(car[c].xz) * cov;
           ztrim = cd.airc[cn] * mcos(car[c].xz) * cov;
         } else {
-          if (ucomp[c] != 0) {
-            if (ucomp[c] > -2) {
-              ucomp[c] -= 0.5 * cd.airs[cn];
+          if (racers[c].ucomp != 0) {
+            if (racers[c].ucomp > -2) {
+              racers[c].ucomp -= 0.5 * cd.airs[cn];
             }
           }
         }
-        if (u[c].down && !actd[c]) {
-          if (dcomp[c] == 0) {
-            dcomp[c] = 10 + (-scy[c][0] * 10 + 50) / 20;
-            if (dcomp[c] < 5) {
-              dcomp[c] = 5;
+        if (racers[c].u.down && !racers[c].actd) {
+          if (racers[c].dcomp == 0) {
+            racers[c].dcomp = 10 + (-racers[c].scy[0] * 10 + 50) / 20;
+            if (racers[c].dcomp < 5) {
+              racers[c].dcomp = 5;
             }
-            if (dcomp[c] > 10) {
-              dcomp[c] = 10;
+            if (racers[c].dcomp > 10) {
+              racers[c].dcomp = 10;
             }
-            dcomp[c] *= cd.airs[cn];
+            racers[c].dcomp *= cd.airs[cn];
           }
-          if (dcomp[c] < 20) {
-            dcomp[c] += 0.5 * cd.airs[cn];
+          if (racers[c].dcomp < 20) {
+            racers[c].dcomp += 0.5 * cd.airs[cn];
           }
           ytrim = cd.airc[cn];
         } else {
-          if (dcomp[c] != 0) {
-            if (ucomp[c] > -2) {
-              dcomp[c] -= 0.5 * cd.airs[cn];
+          if (racers[c].dcomp != 0) {
+            if (racers[c].ucomp > -2) {
+              racers[c].dcomp -= 0.5 * cd.airs[cn];
             }
           }
         }
-        if (u[c].left && !actl[c]) {
-          if (lcomp[c] == 0) {
-            lcomp[c] = 5;
+        if (racers[c].u.left && !racers[c].actl) {
+          if (racers[c].lcomp == 0) {
+            racers[c].lcomp = 5;
           }
-          if (lcomp[c] < 20) {
-            lcomp[c] += 2 * cd.airs[cn];
+          if (racers[c].lcomp < 20) {
+            racers[c].lcomp += 2 * cd.airs[cn];
           }
           xtrim = cd.airc[cn] * mcos(car[c].xz) * mlt;
           ztrim = cd.airc[cn] * msin(car[c].xz) * mlt;
         } else {
-          if (lcomp[c] > 0) {
-            lcomp[c] -= 2 * cd.airs[cn];
+          if (racers[c].lcomp > 0) {
+            racers[c].lcomp -= 2 * cd.airs[cn];
           }
         }
-        if (u[c].right && !actr[c]) {
-          if (rcomp[c] == 0) {
-            rcomp[c] = 5;
+        if (racers[c].u.right && !racers[c].actr) {
+          if (racers[c].rcomp == 0) {
+            racers[c].rcomp = 5;
           }
-          if (rcomp[c] < 20) {
-            rcomp[c] += 2 * cd.airs[cn];
+          if (racers[c].rcomp < 20) {
+            racers[c].rcomp += 2 * cd.airs[cn];
           }
           xtrim = -cd.airc[cn] * mcos(car[c].xz) * mlt;
           ztrim = -cd.airc[cn] * msin(car[c].xz) * mlt;
         } else {
-          if (rcomp[c] > 0) {
-            rcomp[c] -= 2 * cd.airs[cn];
+          if (racers[c].rcomp > 0) {
+            racers[c].rcomp -= 2 * cd.airs[cn];
           }
         }
-        pzy[c] -= (dcomp[c] - ucomp[c]) * mcos(pxy[c]) * m;
+        racers[c].pzy -=
+          (racers[c].dcomp - racers[c].ucomp) * mcos(racers[c].pxy) * m;
         if (zyinv) {
-          car[c].xz -= (dcomp[c] - ucomp[c]) * msin(pxy[c]) * m;
+          car[c].xz -=
+            (racers[c].dcomp - racers[c].ucomp) * msin(racers[c].pxy) * m;
         } else {
-          car[c].xz += (dcomp[c] - ucomp[c]) * msin(pxy[c]) * m;
+          car[c].xz +=
+            (racers[c].dcomp - racers[c].ucomp) * msin(racers[c].pxy) * m;
         }
-        pxy[c] += (rcomp[c] - lcomp[c]) * m;
+        racers[c].pxy += (racers[c].rcomp - racers[c].lcomp) * m;
       } else {
-        var upower = power[c];
+        var upower = racers[c].power;
         if (upower < 40) {
           upower = 40;
         }
-        if (u[c].down) {
-          if (speed[c] > 0) {
-            speed[c] -= (cd.handb[cn] / 2) * m;
+        if (racers[c].u.down) {
+          if (racers[c].speed > 0) {
+            racers[c].speed -= (cd.handb[cn] / 2) * m;
           } else {
             var sw = 0;
             for (var i = 0; i < 2; i++) {
               if (
-                speed[c] <=
+                racers[c].speed <=
                 -(cd.swits[cn][i] / 2 + (upower * cd.swits[cn][i]) / 196)
               ) {
                 sw++;
               }
             }
             if (sw != 2) {
-              speed[c] -=
+              racers[c].speed -=
                 (cd.acelf[cn][sw] / 2 + (upower * cd.acelf[cn][sw]) / 196) * m;
             } else {
-              speed[c] = -(
+              racers[c].speed = -(
                 (cd.swits[cn][1] / 2 + (upower * cd.swits[cn][1]) / 196) *
                 m
               );
             }
           }
         }
-        if (u[c].up) {
-          if (speed[c] < 0) {
-            speed[c] += cd.handb[cn] * m;
+        if (racers[c].u.up) {
+          if (racers[c].speed < 0) {
+            racers[c].speed += cd.handb[cn] * m;
           } else {
             var sw = 0;
             for (var i = 0; i < 3; i++) {
               if (
-                speed[c] >=
+                racers[c].speed >=
                 cd.swits[cn][i] / 2 + (upower * cd.swits[cn][i]) / 196
               ) {
                 sw++;
               }
             }
             if (sw != 3) {
-              speed[c] +=
+              racers[c].speed +=
                 (cd.acelf[cn][sw] / 2 + (upower * cd.acelf[cn][sw]) / 196) * m;
             } else {
-              speed[c] = cd.swits[cn][2] / 2 + (upower * cd.swits[cn][2]) / 196;
+              racers[c].speed =
+                cd.swits[cn][2] / 2 + (upower * cd.swits[cn][2]) / 196;
             }
           }
         }
-        if (u[c].handb) {
-          if (Math.abs(speed[c]) > cd.handb[cn]) {
-            if (speed[c] < 0) {
-              speed[c] += cd.handb[cn] * m;
+        if (racers[c].u.handb) {
+          if (Math.abs(racers[c].speed) > cd.handb[cn]) {
+            if (racers[c].speed < 0) {
+              racers[c].speed += cd.handb[cn] * m;
             } else {
-              speed[c] -= cd.handb[cn] * m;
+              racers[c].speed -= cd.handb[cn] * m;
             }
           }
         }
-        if (loop[c] == -1) {
+        if (racers[c].loop == -1) {
           if (car[c].y > 15) {
-            if (u[c].left) {
-              if (!pl[c]) {
-                if (lcomp[c] == 0) {
-                  lcomp[c] = 5 * cd.airs[cn];
+            if (racers[c].u.left) {
+              if (!racers[c].pl) {
+                if (racers[c].lcomp == 0) {
+                  racers[c].lcomp = 5 * cd.airs[cn];
                 }
-                if (lcomp[c] < 20) {
-                  lcomp[c] += 2 * cd.airs[cn];
-                }
-              }
-            } else {
-              if (lcomp[c] > 0) {
-                lcomp[c] -= 2 * cd.airs[cn];
-              }
-              pl[c] = false;
-            }
-            if (u[c].right) {
-              if (!pr[c]) {
-                if (rcomp[c] == 0) {
-                  rcomp[c] = 5 * cd.airs[cn];
-                }
-                if (rcomp[c] < 20) {
-                  rcomp[c] += 2 * cd.airs[cn];
+                if (racers[c].lcomp < 20) {
+                  racers[c].lcomp += 2 * cd.airs[cn];
                 }
               }
             } else {
-              if (rcomp[c] > 0) {
-                rcomp[c] -= 2 * cd.airs[cn];
+              if (racers[c].lcomp > 0) {
+                racers[c].lcomp -= 2 * cd.airs[cn];
               }
-              pr[c] = false;
+              racers[c].pl = false;
             }
-            if (u[c].up) {
-              if (!pu[c]) {
-                if (ucomp[c] == 0) {
-                  ucomp[c] = 5 * cd.airs[cn];
+            if (racers[c].u.right) {
+              if (!racers[c].pr) {
+                if (racers[c].rcomp == 0) {
+                  racers[c].rcomp = 5 * cd.airs[cn];
                 }
-                if (ucomp[c] < 20) {
-                  ucomp[c] += 2 * cd.airs[cn];
+                if (racers[c].rcomp < 20) {
+                  racers[c].rcomp += 2 * cd.airs[cn];
                 }
               }
             } else {
-              if (ucomp[c] > 0) {
-                ucomp[c] -= 2 * cd.airs[cn];
+              if (racers[c].rcomp > 0) {
+                racers[c].rcomp -= 2 * cd.airs[cn];
               }
-              pu[c] = false;
+              racers[c].pr = false;
             }
-            if (u[c].down) {
-              if (!pd[c]) {
-                if (dcomp[c] == 0) {
-                  dcomp[c] = 5 * cd.airs[cn];
+            if (racers[c].u.up) {
+              if (!racers[c].pu) {
+                if (racers[c].ucomp == 0) {
+                  racers[c].ucomp = 5 * cd.airs[cn];
                 }
-                if (dcomp[c] < 20) {
-                  dcomp[c] += 2 * cd.airs[cn];
+                if (racers[c].ucomp < 20) {
+                  racers[c].ucomp += 2 * cd.airs[cn];
                 }
               }
             } else {
-              if (dcomp[c] > 0) {
-                dcomp[c] -= 2 * cd.airs[cn];
+              if (racers[c].ucomp > 0) {
+                racers[c].ucomp -= 2 * cd.airs[cn];
               }
-              pd[c] = false;
+              racers[c].pu = false;
             }
-            pzy[c] -= (dcomp[c] - ucomp[c]) * mcos(pxy[c]) * m;
+            if (racers[c].u.down) {
+              if (!racers[c].pd) {
+                if (racers[c].dcomp == 0) {
+                  racers[c].dcomp = 5 * cd.airs[cn];
+                }
+                if (racers[c].dcomp < 20) {
+                  racers[c].dcomp += 2 * cd.airs[cn];
+                }
+              }
+            } else {
+              if (racers[c].dcomp > 0) {
+                racers[c].dcomp -= 2 * cd.airs[cn];
+              }
+              racers[c].pd = false;
+            }
+            racers[c].pzy -=
+              (racers[c].dcomp - racers[c].ucomp) * mcos(racers[c].pxy) * m;
             if (zyinv) {
-              car[c].xz -= (dcomp[c] - ucomp[c]) * msin(pxy[c]) * m;
+              car[c].xz -=
+                (racers[c].dcomp - racers[c].ucomp) * msin(racers[c].pxy) * m;
             } else {
-              car[c].xz += (dcomp[c] - ucomp[c]) * msin(pxy[c]) * m;
+              car[c].xz +=
+                (racers[c].dcomp - racers[c].ucomp) * msin(racers[c].pxy) * m;
             }
-            pxy[c] += (rcomp[c] - lcomp[c]) * m;
+            racers[c].pxy += (racers[c].rcomp - racers[c].lcomp) * m;
           }
         }
       }
     }
-    var wrots = (200 * speed[c]) / (154 * cd.simag[cn]);
+    var wrots = (200 * racers[c].speed) / (154 * cd.simag[cn]);
     car[c].wzy -= wrots * m;
     if (car[c].wzy < -360) {
       car[c].wzy += 360;
@@ -7814,20 +7766,20 @@ function drive() {
     if (car[c].wzy > 360) {
       car[c].wzy -= 360;
     }
-    if (u[c].left) {
+    if (racers[c].u.left) {
       car[c].wxz -= cd.turn[cn] * m;
       if (car[c].wxz < -36) {
         car[c].wxz = -36;
       }
     }
-    if (u[c].right) {
+    if (racers[c].u.right) {
       car[c].wxz += cd.turn[cn] * m;
       if (car[c].wxz > 36) {
         car[c].wxz = 36;
       }
     }
-    if (car[c].wxz != 0 && !u[c].left && !u[c].right) {
-      if (Math.abs(speed[c]) < 1) {
+    if (car[c].wxz != 0 && !racers[c].u.left && !racers[c].u.right) {
+      if (Math.abs(racers[c].speed) < 1) {
         if (Math.abs(car[c].wxz) <= m) {
           car[c].wxz = 0;
         }
@@ -7849,45 +7801,45 @@ function drive() {
         }
       }
     }
-    var divt = 36 / (speed[c] * speed[c]);
+    var divt = 36 / (racers[c].speed * racers[c].speed);
     if (divt < 5) {
       divt = 5;
     }
-    if (speed[c] < 0) {
+    if (racers[c].speed < 0) {
       divt = -divt;
     }
-    if (wtouch[c]) {
-      if (!capsized[c]) {
-        if (!u[c].handb) {
-          fxz[c] = (car[c].wxz / (divt * 3)) * m;
+    if (racers[c].wtouch) {
+      if (!racers[c].capsized) {
+        if (!racers[c].u.handb) {
+          racers[c].fxz = (car[c].wxz / (divt * 3)) * m;
         } else {
-          fxz[c] = (car[c].wxz / divt) * m;
+          racers[c].fxz = (car[c].wxz / divt) * m;
         }
         car[c].xz += (car[c].wxz / divt) * m;
       }
-      wtouch[c] = false;
-      gtouch[c] = false;
+      racers[c].wtouch = false;
+      racers[c].gtouch = false;
     } else {
-      car[c].xz += fxz[c];
+      car[c].xz += racers[c].fxz;
     }
-    if (speed[c] > 3 || speed[c] < -7) {
-      while (Math.abs(mxz[c] - cxz[c]) > 180) {
-        if (cxz[c] > mxz[c]) {
-          cxz[c] -= 360;
+    if (racers[c].speed > 3 || racers[c].speed < -7) {
+      while (Math.abs(racers[c].mxz - racers[c].cxz) > 180) {
+        if (racers[c].cxz > racers[c].mxz) {
+          racers[c].cxz -= 360;
         } else {
-          if (cxz[c] < mxz[c]) {
-            cxz[c] += 360;
+          if (racers[c].cxz < racers[c].mxz) {
+            racers[c].cxz += 360;
           }
         }
       }
-      if (Math.abs(mxz[c] - cxz[c]) < 30) {
-        cxz[c] += (mxz[c] - cxz[c]) / 4;
+      if (Math.abs(racers[c].mxz - racers[c].cxz) < 30) {
+        racers[c].cxz += (racers[c].mxz - racers[c].cxz) / 4;
       } else {
-        if (cxz[c] > mxz[c]) {
-          cxz[c] -= 10 * m;
+        if (racers[c].cxz > racers[c].mxz) {
+          racers[c].cxz -= 10 * m;
         }
-        if (cxz[c] < mxz[c]) {
-          cxz[c] += 10 * m;
+        if (racers[c].cxz < racers[c].mxz) {
+          racers[c].cxz += 10 * m;
         }
       }
     }
@@ -7898,33 +7850,55 @@ function drive() {
       kx[i] = car[c].keyx[i] + car[c].x;
       ky[i] = keyy + car[c].y;
       kz[i] = car[c].z + car[c].keyz[i];
-      scy[c][i] -= 0.7 * m;
+      racers[c].scy[i] -= 0.7 * m;
     }
-    rotate(kx, ky, car[c].x, car[c].y, pxy[c], 4);
-    rotate(ky, kz, car[c].y, car[c].z, pzy[c], 4);
+    rotate(kx, ky, car[c].x, car[c].y, racers[c].pxy, 4);
+    rotate(ky, kz, car[c].y, car[c].z, racers[c].pzy, 4);
     rotate(kx, kz, car[c].x, car[c].z, car[c].xz, 4);
     var wastouch = false;
     var arch = 0;
-    var avnx = (scx[c][0] + scx[c][1] + scx[c][2] + scx[c][3]) / 4;
-    var avnz = (scz[c][0] + scz[c][1] + scz[c][2] + scz[c][3]) / 4;
+    var avnx =
+      (racers[c].scx[0] +
+        racers[c].scx[1] +
+        racers[c].scx[2] +
+        racers[c].scx[3]) /
+      4;
+    var avnz =
+      (racers[c].scz[0] +
+        racers[c].scz[1] +
+        racers[c].scz[2] +
+        racers[c].scz[3]) /
+      4;
     for (var i = 0; i < 4; i++) {
-      if (scx[c][i] - avnx > 20) {
-        scx[c][i] = 20 + avnx;
+      if (racers[c].scx[i] - avnx > 20) {
+        racers[c].scx[i] = 20 + avnx;
       }
-      if (scx[c][i] - avnx < -20) {
-        scx[c][i] = avnx - 20;
+      if (racers[c].scx[i] - avnx < -20) {
+        racers[c].scx[i] = avnx - 20;
       }
-      if (scz[c][i] - avnz > 20) {
-        scz[c][i] = 20 + avnz;
+      if (racers[c].scz[i] - avnz > 20) {
+        racers[c].scz[i] = 20 + avnz;
       }
-      if (scz[c][i] - avnz < -20) {
-        scz[c][i] = avnz - 20;
+      if (racers[c].scz[i] - avnz < -20) {
+        racers[c].scz[i] = avnz - 20;
       }
     }
     for (var i = 0; i < 4; i++) {
-      ky[i] += scy[c][i] * m;
-      kx[i] += ((scx[c][0] + scx[c][1] + scx[c][2] + scx[c][3]) / 4) * m;
-      kz[i] += ((scz[c][0] + scz[c][1] + scz[c][2] + scz[c][3]) / 4) * m;
+      ky[i] += racers[c].scy[i] * m;
+      kx[i] +=
+        ((racers[c].scx[0] +
+          racers[c].scx[1] +
+          racers[c].scx[2] +
+          racers[c].scx[3]) /
+          4) *
+        m;
+      kz[i] +=
+        ((racers[c].scz[0] +
+          racers[c].scz[1] +
+          racers[c].scz[2] +
+          racers[c].scz[3]) /
+          4) *
+        m;
     }
     var tskd = 1;
     var ontsprk = false;
@@ -7971,20 +7945,20 @@ function drive() {
         }
       }
     }
-    if (mtouch[c]) {
+    if (racers[c].mtouch) {
       var ugrip = cd.grip[cn];
-      ugrip -= (Math.abs(txz[c] - car[c].xz) * speed[c]) / 250;
-      if (u[c].handb) {
-        ugrip -= Math.abs(txz[c] - car[c].xz) * 4;
+      ugrip -= (Math.abs(racers[c].txz - car[c].xz) * racers[c].speed) / 250;
+      if (racers[c].u.handb) {
+        ugrip -= Math.abs(racers[c].txz - car[c].xz) * 4;
       }
       if (ugrip < cd.grip[cn]) {
-        if (skid[c] != 2) {
-          skid[c] = 1;
+        if (racers[c].skid != 2) {
+          racers[c].skid = 1;
         }
-        speed[c] -= (speed[c] / 100) * m;
+        racers[c].speed -= (racers[c].speed / 100) * m;
       } else {
-        if (skid[c] == 1) {
-          skid[c] = 2;
+        if (racers[c].skid == 1) {
+          racers[c].skid = 2;
         }
       }
       if (tskd == 1) {
@@ -7993,28 +7967,28 @@ function drive() {
       if (tskd == 2) {
         ugrip *= 0.55;
       }
-      var motorx = -(speed[c] * msin(car[c].xz) * mcos(pzy[c]));
-      var motorz = speed[c] * mcos(car[c].xz) * mcos(pzy[c]);
-      var motory = -(speed[c] * msin(pzy[c]));
-      if (capsized[c] || dest[c] || cp.haltall) {
+      var motorx = -(racers[c].speed * msin(car[c].xz) * mcos(racers[c].pzy));
+      var motorz = racers[c].speed * mcos(car[c].xz) * mcos(racers[c].pzy);
+      var motory = -(racers[c].speed * msin(racers[c].pzy));
+      if (racers[c].capsized || racers[c].dest || cp.haltall) {
         motorx = 0;
         motorz = 0;
         motory = 0;
         ugrip = cd.grip[cn] / 5;
-        if (speed[c] > 0) {
-          speed[c] -= 0.2 * m;
+        if (racers[c].speed > 0) {
+          racers[c].speed -= 0.2 * m;
         } else {
-          speed[c] += 0.2 * m;
+          racers[c].speed += 0.2 * m;
         }
       }
-      if (Math.abs(speed[c]) > drag) {
-        if (speed[c] > 0) {
-          speed[c] -= drag * m;
+      if (Math.abs(racers[c].speed) > drag) {
+        if (racers[c].speed > 0) {
+          racers[c].speed -= drag * m;
         } else {
-          speed[c] += drag * m;
+          racers[c].speed += drag * m;
         }
       } else {
-        speed[c] = 0;
+        racers[c].speed = 0;
       }
       if (cn == 10) {
         if (ugrip < 0.5) {
@@ -8027,43 +8001,46 @@ function drive() {
       var avcx = 0,
         avcz = 0;
       for (var i = 0; i < 4; i++) {
-        if (Math.abs(scx[c][i] - motorx) > ugrip * m) {
-          if (scx[c][i] < motorx) {
-            scx[c][i] += ugrip * m;
+        if (Math.abs(racers[c].scx[i] - motorx) > ugrip * m) {
+          if (racers[c].scx[i] < motorx) {
+            racers[c].scx[i] += ugrip * m;
           } else {
-            scx[c][i] -= ugrip * m;
+            racers[c].scx[i] -= ugrip * m;
           }
         } else {
-          scx[c][i] = motorx;
+          racers[c].scx[i] = motorx;
         }
-        if (Math.abs(scz[c][i] - motorz) > ugrip * m) {
-          if (scz[c][i] < motorz) {
-            scz[c][i] += ugrip * m;
+        if (Math.abs(racers[c].scz[i] - motorz) > ugrip * m) {
+          if (racers[c].scz[i] < motorz) {
+            racers[c].scz[i] += ugrip * m;
           } else {
-            scz[c][i] -= ugrip * m;
+            racers[c].scz[i] -= ugrip * m;
           }
         } else {
-          scz[c][i] = motorz;
+          racers[c].scz[i] = motorz;
         }
-        if (Math.abs(scy[c][i] - motory) > ugrip * m) {
-          if (scy[c][i] < motory) {
-            scy[c][i] += ugrip * m;
+        if (Math.abs(racers[c].scy[i] - motory) > ugrip * m) {
+          if (racers[c].scy[i] < motory) {
+            racers[c].scy[i] += ugrip * m;
           } else {
-            scy[c][i] -= ugrip * m;
+            racers[c].scy[i] -= ugrip * m;
           }
         } else {
-          scy[c][i] = motory;
+          racers[c].scy[i] = motory;
         }
         if (frgm >= m) {
           if (ugrip < cd.grip[cn]) {
-            if (txz[c] != car[c].xz) {
-              dcnt[c]++;
+            if (racers[c].txz != car[c].xz) {
+              racers[c].dcnt++;
             } else {
-              if (dcnt[c] != 0) {
-                dcnt[c] = 0;
+              if (racers[c].dcnt != 0) {
+                racers[c].dcnt = 0;
               }
             }
-            if (dcnt[c] > (40 * ugrip) / cd.grip[cn] || capsized[c]) {
+            if (
+              racers[c].dcnt > (40 * ugrip) / cd.grip[cn] ||
+              racers[c].capsized
+            ) {
               var mag = 1;
               if (tskd != 0) {
                 mag = 1.2;
@@ -8076,17 +8053,20 @@ function drive() {
                   kx[i],
                   ky[i],
                   kz[i],
-                  scx[c][i],
-                  scz[c][i],
+                  racers[c].scx[i],
+                  racers[c].scz[i],
                   mag * cd.simag[cn],
-                  tilt[c],
-                  capsized[c] && mtouch[c],
+                  racers[c].tilt,
+                  racers[c].capsized && racers[c].mtouch,
                 );
-                if (c == game.player && !capsized[c]) {
+                if (c == game.player && !racers[c].capsized) {
                   skidsnd(
                     tskd,
                     ontsprk,
-                    Math.sqrt(scx[c][i] * scx[c][i] + scz[c][i] * scz[c][i]),
+                    Math.sqrt(
+                      racers[c].scx[i] * racers[c].scx[i] +
+                        racers[c].scz[i] * racers[c].scz[i],
+                    ),
                   );
                 }
               }
@@ -8100,11 +8080,11 @@ function drive() {
                     kx[i],
                     ky[i],
                     kz[i],
-                    scx[c][i],
-                    scz[c][i],
+                    racers[c].scx[i],
+                    racers[c].scz[i],
                     1.1 * cd.simag[cn],
-                    tilt[c],
-                    capsized[c] && mtouch[c],
+                    racers[c].tilt,
+                    racers[c].capsized && racers[c].mtouch,
                   );
                 }
               }
@@ -8117,28 +8097,28 @@ function drive() {
                     kx[i],
                     ky[i],
                     kz[i],
-                    scx[c][i],
-                    scz[c][i],
+                    racers[c].scx[i],
+                    racers[c].scz[i],
                     1.15 * cd.simag[cn],
-                    tilt[c],
-                    capsized[c] && mtouch[c],
+                    racers[c].tilt,
+                    racers[c].capsized && racers[c].mtouch,
                   );
                 }
               }
             }
           } else {
-            if (dcnt[c] != 0) {
-              dcnt[c] -= 2;
-              if (dcnt[c] < 0) {
-                dcnt[c] = 0;
+            if (racers[c].dcnt != 0) {
+              racers[c].dcnt -= 2;
+              if (racers[c].dcnt < 0) {
+                racers[c].dcnt = 0;
               }
             }
           }
         }
-        avcx += scx[c][i];
-        avcz += scz[c][i];
+        avcx += racers[c].scx[i];
+        avcz += racers[c].scz[i];
       }
-      txz[c] = car[c].xz;
+      racers[c].txz = car[c].xz;
       if (avcx > 0) {
         mlt = -1;
       } else {
@@ -8149,30 +8129,32 @@ function drive() {
       } else {
         arch = 0;
       }
-      mxz[c] = (Math.acos(arch) / 0.017453292519943295) * mlt;
-      if (skid[c] == 2) {
-        if (!capsized[c]) {
+      racers[c].mxz = (Math.acos(arch) / 0.017453292519943295) * mlt;
+      if (racers[c].skid == 2) {
+        if (!racers[c].capsized) {
           avcx = avcx / 4;
           avcz = avcz / 4;
           if (doublinv) {
-            speed[c] = -(
-              Math.sqrt(avcx * avcx + avcz * avcz) * mcos(mxz[c] - car[c].xz)
+            racers[c].speed = -(
+              Math.sqrt(avcx * avcx + avcz * avcz) *
+              mcos(racers[c].mxz - car[c].xz)
             );
           } else {
-            speed[c] =
-              Math.sqrt(avcx * avcx + avcz * avcz) * mcos(mxz[c] - car[c].xz);
+            racers[c].speed =
+              Math.sqrt(avcx * avcx + avcz * avcz) *
+              mcos(racers[c].mxz - car[c].xz);
           }
         }
-        skid[c] = 0;
+        racers[c].skid = 0;
       }
-      if (capsized[c] && avcx == 0 && avcz == 0) {
+      if (racers[c].capsized && avcx == 0 && avcz == 0) {
         tskd = 0;
       }
-      mtouch[c] = false;
+      racers[c].mtouch = false;
       wastouch = true;
     } else {
-      if (skid[c] != 2) {
-        skid[c] = 2;
+      if (racers[c].skid != 2) {
+        racers[c].skid = 2;
       }
     }
     var ntr = 0;
@@ -8182,11 +8164,11 @@ function drive() {
       sprkon[i] = 0;
       if (ky[i] < -0.05) {
         ntr++;
-        wtouch[c] = true;
-        gtouch[c] = true;
+        racers[c].wtouch = true;
+        racers[c].gtouch = true;
         if (!wastouch) {
-          if (scy[c][i] != -0.7) {
-            var mag = scy[c][i] / 33.33;
+          if (racers[c].scy[i] != -0.7) {
+            var mag = racers[c].scy[i] / 33.33;
             if (mag > 0.3) {
               mag = 0.3;
             }
@@ -8202,16 +8184,17 @@ function drive() {
               kx[i],
               ky[i],
               kz[i],
-              scx[c][i],
-              scz[c][i],
+              racers[c].scx[i],
+              racers[c].scz[i],
               mag * cd.simag[cn],
               0,
-              capsized[c] && mtouch[c],
+              racers[c].capsized && racers[c].mtouch,
             );
           }
         }
         ky[i] = 0;
-        var bmac = Math.abs(msin(pxy[c])) + Math.abs(msin(pzy[c]));
+        var bmac =
+          Math.abs(msin(racers[c].pxy)) + Math.abs(msin(racers[c].pzy));
         bmac = bmac / 3;
         if (bmac > 0.4) {
           bmac = 0.4;
@@ -8220,11 +8203,11 @@ function drive() {
         if (bmac < 1.1) {
           bmac = 1.1;
         }
-        regn(2, i, Math.abs(scy[c][i] * bmac), c);
-        if (scy[c][i] < 0) {
-          scy[c][i] += Math.abs(scy[c][i] * bmac);
+        regn(2, i, Math.abs(racers[c].scy[i] * bmac), c);
+        if (racers[c].scy[i] < 0) {
+          racers[c].scy[i] += Math.abs(racers[c].scy[i] * bmac);
         }
-        if (capsized[c]) {
+        if (racers[c].capsized) {
           if (ontsprk && (tskd == 0 || tskd == 1)) {
             sprkon[i] = 1;
           } else {
@@ -8421,7 +8404,7 @@ function drive() {
                         normz > 0 &&
                         kz[k] < colz + zboundr &&
                         kz[k] > colz + zboundr - rad.bndmax &&
-                        (scz[c][k] <= 1.2 || bncbth)
+                        (racers[c].scz[k] <= 1.2 || bncbth)
                       ) {
                         for (var j = 0; j < 4; j++) {
                           if (k != j) {
@@ -8432,25 +8415,30 @@ function drive() {
                         }
                         kz[k] = colz + zboundr;
                         if (frgm >= m) {
-                          crank[c][k]++;
-                          if (crank[c][k] > 2) {
+                          racers[c].crank[k]++;
+                          if (racers[c].crank[k] > 2) {
                             sprks(
                               cn,
                               kx[k],
                               ky[k],
                               kz[k] - zboundr,
-                              scx[c][k],
-                              scy[c][k],
-                              scz[c][k],
+                              racers[c].scx[k],
+                              racers[c].scy[k],
+                              racers[c].scz[k],
                               2,
                             );
                             if (c == game.player) {
-                              scrapesnd(scx[c][k], scy[c][k], scz[c][k]);
+                              scrapesnd(
+                                racers[c].scx[k],
+                                racers[c].scy[k],
+                                racers[c].scz[k],
+                              );
                             }
                           }
                         }
                         var bmac =
-                          Math.abs(mcos(pxy[c])) + Math.abs(mcos(pzy[c]));
+                          Math.abs(mcos(racers[c].pxy)) +
+                          Math.abs(mcos(racers[c].pzy));
                         bmac = bmac / 4;
                         if (bmac > 0.3) {
                           bmac = 0.3;
@@ -8462,13 +8450,18 @@ function drive() {
                         if (bmac < 1.1) {
                           bmac = 1.1;
                         }
-                        regn(1, k, Math.abs(scz[c][k] * bmac * rad.dam), c);
-                        if (scz[c][k] <= 0) {
-                          scz[c][k] += Math.abs(scz[c][k] * bmac);
+                        regn(
+                          1,
+                          k,
+                          Math.abs(racers[c].scz[k] * bmac * rad.dam),
+                          c,
+                        );
+                        if (racers[c].scz[k] <= 0) {
+                          racers[c].scz[k] += Math.abs(racers[c].scz[k] * bmac);
                         }
-                        skid[c] = 2;
+                        racers[c].skid = 2;
                         spinlocate = true;
-                        uwall[c] = true;
+                        racers[c].uwall = true;
                         if (
                           obo[o].typ != 35 &&
                           obo[o].typ != 36 &&
@@ -8476,7 +8469,7 @@ function drive() {
                           (obo[o].typ != 20 || cp.stage != 14) &&
                           (obo[o].typ != 1 || cp.stage != 16)
                         ) {
-                          wall[c] = o;
+                          racers[c].wall = o;
                         }
                       }
                       if (
@@ -8484,7 +8477,7 @@ function drive() {
                         normz < 0 &&
                         kz[k] > colz - zboundr &&
                         kz[k] < colz - zboundr + rad.bndmax &&
-                        (scz[c][k] >= -1.2 || bncbth)
+                        (racers[c].scz[k] >= -1.2 || bncbth)
                       ) {
                         for (var j = 0; j < 4; j++) {
                           if (k != j) {
@@ -8495,25 +8488,30 @@ function drive() {
                         }
                         kz[k] = colz - zboundr;
                         if (frgm >= m) {
-                          crank[c][k]++;
-                          if (crank[c][k] > 2) {
+                          racers[c].crank[k]++;
+                          if (racers[c].crank[k] > 2) {
                             sprks(
                               cn,
                               kx[k],
                               ky[k],
                               kz[k] + zboundr,
-                              scx[c][k],
-                              scy[c][k],
-                              scz[c][k],
+                              racers[c].scx[k],
+                              racers[c].scy[k],
+                              racers[c].scz[k],
                               2,
                             );
                             if (c == game.player) {
-                              scrapesnd(scx[c][k], scy[c][k], scz[c][k]);
+                              scrapesnd(
+                                racers[c].scx[k],
+                                racers[c].scy[k],
+                                racers[c].scz[k],
+                              );
                             }
                           }
                         }
                         var bmac =
-                          Math.abs(mcos(pxy[c])) + Math.abs(mcos(pzy[c]));
+                          Math.abs(mcos(racers[c].pxy)) +
+                          Math.abs(mcos(racers[c].pzy));
                         bmac = bmac / 4;
                         if (bmac > 0.3) {
                           bmac = 0.3;
@@ -8525,13 +8523,18 @@ function drive() {
                         if (bmac < 1.1) {
                           bmac = 1.1;
                         }
-                        regn(1, k, -Math.abs(scz[c][k] * bmac * rad.dam), c);
-                        if (scz[c][k] >= 0) {
-                          scz[c][k] -= Math.abs(scz[c][k] * bmac);
+                        regn(
+                          1,
+                          k,
+                          -Math.abs(racers[c].scz[k] * bmac * rad.dam),
+                          c,
+                        );
+                        if (racers[c].scz[k] >= 0) {
+                          racers[c].scz[k] -= Math.abs(racers[c].scz[k] * bmac);
                         }
-                        skid[c] = 2;
+                        racers[c].skid = 2;
                         spinlocate = true;
-                        uwall[c] = true;
+                        racers[c].uwall = true;
                         if (
                           obo[o].typ != 35 &&
                           obo[o].typ != 36 &&
@@ -8539,7 +8542,7 @@ function drive() {
                           (obo[o].typ != 20 || cp.stage != 14) &&
                           (obo[o].typ != 1 || cp.stage != 16)
                         ) {
-                          wall[c] = o;
+                          racers[c].wall = o;
                         }
                       }
                     }
@@ -8589,7 +8592,7 @@ function drive() {
                         normx > 0 &&
                         kx[k] < colx + xboundr &&
                         kx[k] > colx + xboundr - rad.bndmax &&
-                        (scx[c][k] <= 1.2 || bncbth)
+                        (racers[c].scx[k] <= 1.2 || bncbth)
                       ) {
                         for (var j = 0; j < 4; j++) {
                           if (k != j) {
@@ -8600,25 +8603,30 @@ function drive() {
                         }
                         kx[k] = colx + xboundr;
                         if (frgm >= m) {
-                          crank[c][k]++;
-                          if (crank[c][k] > 2) {
+                          racers[c].crank[k]++;
+                          if (racers[c].crank[k] > 2) {
                             sprks(
                               cn,
                               kx[k] - xboundr,
                               ky[k],
                               kz[k],
-                              scx[c][k],
-                              scy[c][k],
-                              scz[c][k],
+                              racers[c].scx[k],
+                              racers[c].scy[k],
+                              racers[c].scz[k],
                               2,
                             );
                             if (c == game.player) {
-                              scrapesnd(scx[c][k], scy[c][k], scz[c][k]);
+                              scrapesnd(
+                                racers[c].scx[k],
+                                racers[c].scy[k],
+                                racers[c].scz[k],
+                              );
                             }
                           }
                         }
                         var bmac =
-                          Math.abs(mcos(pxy[c])) + Math.abs(mcos(pzy[c]));
+                          Math.abs(mcos(racers[c].pxy)) +
+                          Math.abs(mcos(racers[c].pzy));
                         bmac = bmac / 4;
                         if (bmac > 0.3) {
                           bmac = 0.3;
@@ -8630,20 +8638,25 @@ function drive() {
                         if (bmac < 1.1) {
                           bmac = 1.1;
                         }
-                        regn(0, k, Math.abs(scx[c][k] * bmac * rad.dam), c);
-                        if (scx[c][k] <= 0) {
-                          scx[c][k] += Math.abs(scx[c][k] * bmac);
+                        regn(
+                          0,
+                          k,
+                          Math.abs(racers[c].scx[k] * bmac * rad.dam),
+                          c,
+                        );
+                        if (racers[c].scx[k] <= 0) {
+                          racers[c].scx[k] += Math.abs(racers[c].scx[k] * bmac);
                         }
-                        skid[c] = 2;
+                        racers[c].skid = 2;
                         spinlocate = true;
-                        uwall[c] = true;
+                        racers[c].uwall = true;
                         if (
                           obo[o].typ != 35 &&
                           obo[o].typ != 36 &&
                           (obo[o].typ != 39 || cp.stage == 13) &&
                           (obo[o].typ != 1 || cp.stage != 16)
                         ) {
-                          wall[c] = o;
+                          racers[c].wall = o;
                         }
                       }
                       if (
@@ -8651,7 +8664,7 @@ function drive() {
                         normx < 0 &&
                         kx[k] > colx - xboundr &&
                         kx[k] < colx - xboundr + rad.bndmax &&
-                        (scx[c][k] >= -1.2 || bncbth)
+                        (racers[c].scx[k] >= -1.2 || bncbth)
                       ) {
                         for (var j = 0; j < 4; j++) {
                           if (k != j) {
@@ -8662,25 +8675,30 @@ function drive() {
                         }
                         kx[k] = colx - xboundr;
                         if (frgm >= m) {
-                          crank[c][k]++;
-                          if (crank[c][k] > 2) {
+                          racers[c].crank[k]++;
+                          if (racers[c].crank[k] > 2) {
                             sprks(
                               cn,
                               kx[k] + xboundr,
                               ky[k],
                               kz[k],
-                              scx[c][k],
-                              scy[c][k],
-                              scz[c][k],
+                              racers[c].scx[k],
+                              racers[c].scy[k],
+                              racers[c].scz[k],
                               2,
                             );
                             if (c == game.player) {
-                              scrapesnd(scx[c][k], scy[c][k], scz[c][k]);
+                              scrapesnd(
+                                racers[c].scx[k],
+                                racers[c].scy[k],
+                                racers[c].scz[k],
+                              );
                             }
                           }
                         }
                         var bmac =
-                          Math.abs(mcos(pxy[c])) + Math.abs(mcos(pzy[c]));
+                          Math.abs(mcos(racers[c].pxy)) +
+                          Math.abs(mcos(racers[c].pzy));
                         bmac = bmac / 4;
                         if (bmac > 0.3) {
                           bmac = 0.3;
@@ -8692,20 +8710,25 @@ function drive() {
                         if (bmac < 1.1) {
                           bmac = 1.1;
                         }
-                        regn(0, k, -Math.abs(scx[c][k] * bmac * rad.dam), c);
-                        if (scx[c][k] >= 0) {
-                          scx[c][k] -= Math.abs(scx[c][k] * bmac);
+                        regn(
+                          0,
+                          k,
+                          -Math.abs(racers[c].scx[k] * bmac * rad.dam),
+                          c,
+                        );
+                        if (racers[c].scx[k] >= 0) {
+                          racers[c].scx[k] -= Math.abs(racers[c].scx[k] * bmac);
                         }
-                        skid[c] = 2;
+                        racers[c].skid = 2;
                         spinlocate = true;
-                        uwall[c] = true;
+                        racers[c].uwall = true;
                         if (
                           obo[o].typ != 35 &&
                           obo[o].typ != 36 &&
                           (obo[o].typ != 39 || cp.stage == 13) &&
                           (obo[o].typ != 1 || cp.stage != 16)
                         ) {
-                          wall[c] = o;
+                          racers[c].wall = o;
                         }
                       }
                     }
@@ -8758,11 +8781,11 @@ function drive() {
                     if (Math.abs(normy) == 1) {
                       if (ky[k] < coly - 0.05 && ky[k] > coly - 20) {
                         ntrt++;
-                        wtouch[c] = true;
-                        gtouch[c] = true;
+                        racers[c].wtouch = true;
+                        racers[c].gtouch = true;
                         if (!wastouch) {
-                          if (scy[c][k] != -0.7) {
-                            var mag = scy[c][k] / 33.33;
+                          if (racers[c].scy[k] != -0.7) {
+                            var mag = racers[c].scy[k] / 33.33;
                             if (mag > 0.3) {
                               mag = 0.3;
                             }
@@ -8778,16 +8801,16 @@ function drive() {
                               kx[k],
                               ky[k],
                               kz[k],
-                              scx[c][k],
-                              scz[c][k],
+                              racers[c].scx[k],
+                              racers[c].scz[k],
                               mag * cd.simag[cn],
                               0,
-                              capsized[c] && mtouch[c],
+                              racers[c].capsized && racers[c].mtouch,
                             );
                           }
                         }
                         ky[k] = coly;
-                        if (capsized[c]) {
+                        if (racers[c].capsized) {
                           if (ontsprk && (tskd == 0 || tskd == 1)) {
                             sprkon[k] = 1;
                           } else {
@@ -8795,7 +8818,8 @@ function drive() {
                           }
                         }
                         var bmac =
-                          Math.abs(msin(pxy[c])) + Math.abs(msin(pzy[c]));
+                          Math.abs(msin(racers[c].pxy)) +
+                          Math.abs(msin(racers[c].pzy));
                         bmac = bmac / 3;
                         if (bmac > 0.4) {
                           bmac = 0.4;
@@ -8804,9 +8828,9 @@ function drive() {
                         if (bmac < 1.1) {
                           bmac = 1.1;
                         }
-                        regn(2, k, Math.abs(scy[c][k] * bmac), c);
-                        if (scy[c][k] < 0) {
-                          scy[c][k] += Math.abs(scy[c][k] * bmac);
+                        regn(2, k, Math.abs(racers[c].scy[k] * bmac), c);
+                        if (racers[c].scy[k] < 0) {
+                          racers[c].scy[k] += Math.abs(racers[c].scy[k] * bmac);
                         }
                         onorm[Math.floor(k * 0.5)] = 1;
                       }
@@ -8844,22 +8868,23 @@ function drive() {
                         var bounceramp = false;
                         if (Math.abs(normz) > Math.abs(normx)) {
                           if (
-                            (normz > 0 && scz[c][k] < 0) ||
-                            (normz < 0 && scz[c][k] > 0)
+                            (normz > 0 && racers[c].scz[k] < 0) ||
+                            (normz < 0 && racers[c].scz[k] > 0)
                           ) {
                             bounceramp = true;
                           }
                         } else {
                           if (
-                            (normx > 0 && scx[c][k] < 0) ||
-                            (normx < 0 && scx[c][k] > 0)
+                            (normx > 0 && racers[c].scx[k] < 0) ||
+                            (normx < 0 && racers[c].scx[k] > 0)
                           ) {
                             bounceramp = true;
                           }
                         }
                         if (bounceramp) {
                           var bmac =
-                            Math.abs(msin(pxy[c])) + Math.abs(msin(pzy[c]));
+                            Math.abs(msin(racers[c].pxy)) +
+                            Math.abs(msin(racers[c].pzy));
                           bmac = bmac / 3;
                           if (bmac > 0.4) {
                             bmac = 0.4;
@@ -8868,29 +8893,31 @@ function drive() {
                           if (bmac < 1.1) {
                             bmac = 1.1;
                           }
-                          if (scy[c][k] < 0) {
-                            scy[c][k] += Math.abs(scy[c][k] * bmac);
+                          if (racers[c].scy[k] < 0) {
+                            racers[c].scy[k] += Math.abs(
+                              racers[c].scy[k] * bmac,
+                            );
                           }
                           if (obo[o].typ == 39) {
                             for (var ka = 0; ka < 4; ka++) {
                               if (Math.abs(normz) > Math.abs(normx)) {
                                 if (normz > 0) {
-                                  scz[c][ka] += Math.abs(
-                                    scy[c][k] * bmac * 0.4,
+                                  racers[c].scz[ka] += Math.abs(
+                                    racers[c].scy[k] * bmac * 0.4,
                                   );
                                 } else {
-                                  scz[c][ka] -= Math.abs(
-                                    scy[c][k] * bmac * 0.4,
+                                  racers[c].scz[ka] -= Math.abs(
+                                    racers[c].scy[k] * bmac * 0.4,
                                   );
                                 }
                               } else {
                                 if (normx > 0) {
-                                  scx[c][ka] += Math.abs(
-                                    scy[c][k] * bmac * 0.4,
+                                  racers[c].scx[ka] += Math.abs(
+                                    racers[c].scy[k] * bmac * 0.4,
                                   );
                                 } else {
-                                  scx[c][ka] -= Math.abs(
-                                    scy[c][k] * bmac * 0.4,
+                                  racers[c].scx[ka] -= Math.abs(
+                                    racers[c].scy[k] * bmac * 0.4,
                                   );
                                 }
                               }
@@ -8904,7 +8931,7 @@ function drive() {
                           arct = 1;
                         }
                         var difco = (coly - ky[k]) / (arct * m);
-                        scy[c][k] += difco;
+                        racers[c].scy[k] += difco;
                         ky[k] = coly;
                         if (difco > 0) {
                           difco *= 20;
@@ -8927,9 +8954,9 @@ function drive() {
                         } else {
                           ntron++;
                         }
-                        wtouch[c] = true;
-                        gtouch[c] = false;
-                        if (capsized[c]) {
+                        racers[c].wtouch = true;
+                        racers[c].gtouch = false;
+                        if (racers[c].capsized) {
                           if (ontsprk && (tskd == 0 || tskd == 1)) {
                             sprkon[k] = 1;
                           } else {
@@ -8946,11 +8973,11 @@ function drive() {
                               kx[i],
                               ky[i],
                               kz[i],
-                              scx[c][i],
-                              scz[c][i],
+                              racers[c].scx[i],
+                              racers[c].scz[i],
                               mag * cd.simag[cn],
                               0,
-                              capsized[c] && mtouch[c],
+                              racers[c].capsized && racers[c].mtouch,
                             );
                           }
                         }
@@ -8965,14 +8992,14 @@ function drive() {
         }
       }
       if (ntroff == 4) {
-        mtouch[c] = true;
+        racers[c].mtouch = true;
       }
       if (ntrt == 4) {
         ntr = 4;
       }
     }
     if (ntron == 4) {
-      mtouch[c] = true;
+      racers[c].mtouch = true;
     }
     if (c == game.player) {
       for (var i = 0; i < 2; i++) {
@@ -8996,10 +9023,24 @@ function drive() {
       if (allsparks != 4) {
         for (var k = 0; k < 4; k++) {
           if (sprkon[k] == 1) {
-            sprks(cn, kx[k], ky[k], kz[k], scx[c][k], scy[c][k], scz[c][k], 1);
+            sprks(
+              cn,
+              kx[k],
+              ky[k],
+              kz[k],
+              racers[c].scx[k],
+              racers[c].scy[k],
+              racers[c].scz[k],
+              1,
+            );
           }
           if (c == game.player && sprkon[k]) {
-            grndscrapesnd(sprkon[k], scx[c][k], scy[c][k], scz[c][k]);
+            grndscrapesnd(
+              sprkon[k],
+              racers[c].scx[k],
+              racers[c].scy[k],
+              racers[c].scz[k],
+            );
           }
         }
       } else {
@@ -9012,9 +9053,9 @@ function drive() {
           (kx[k] + car[c].x) / 2,
           ky[k],
           (kz[k] + car[c].z) / 2,
-          scx[c][k],
-          scy[c][k],
-          scz[c][k],
+          racers[c].scx[k],
+          racers[c].scy[k],
+          racers[c].scz[k],
           1,
         );
         k = Math.floor(random.fx() * 4);
@@ -9026,13 +9067,18 @@ function drive() {
           (kx[k] + car[c].x) / 2,
           ky[k],
           (kz[k] + car[c].z) / 2,
-          scx[c][k],
-          scy[c][k],
-          scz[c][k],
+          racers[c].scx[k],
+          racers[c].scy[k],
+          racers[c].scz[k],
           1,
         );
         if (c == game.player) {
-          grndscrapesnd(1, scx[c][k], scy[c][k], scz[c][k]);
+          grndscrapesnd(
+            1,
+            racers[c].scx[k],
+            racers[c].scy[k],
+            racers[c].scz[k],
+          );
         }
       }
     }
@@ -9047,24 +9093,25 @@ function drive() {
         }
         kz[k] = limb + zboundr;
         if (frgm >= m && ky[k] < 20) {
-          crank[c][k]++;
-          if (crank[c][k] > 2) {
+          racers[c].crank[k]++;
+          if (racers[c].crank[k] > 2) {
             sprks(
               cn,
               kx[k],
               ky[k],
               kz[k] - zboundr,
-              scx[c][k],
-              scy[c][k],
-              scz[c][k],
+              racers[c].scx[k],
+              racers[c].scy[k],
+              racers[c].scz[k],
               2,
             );
             if (c == game.player) {
-              scrapesnd(scx[c][k], scy[c][k], scz[c][k]);
+              scrapesnd(racers[c].scx[k], racers[c].scy[k], racers[c].scz[k]);
             }
           }
         }
-        var bmac = Math.abs(mcos(pxy[c])) + Math.abs(mcos(pzy[c]));
+        var bmac =
+          Math.abs(mcos(racers[c].pxy)) + Math.abs(mcos(racers[c].pzy));
         bmac = bmac / 4;
         if (bmac > 0.3) {
           bmac = 0.3;
@@ -9076,13 +9123,13 @@ function drive() {
         if (bmac < 1.1) {
           bmac = 1.1;
         }
-        regn(1, k, Math.abs(scz[c][k] * bmac), c);
-        if (scz[c][k] <= 0) {
-          scz[c][k] += Math.abs(scz[c][k] * bmac);
+        regn(1, k, Math.abs(racers[c].scz[k] * bmac), c);
+        if (racers[c].scz[k] <= 0) {
+          racers[c].scz[k] += Math.abs(racers[c].scz[k] * bmac);
         }
-        skid[c] = 2;
+        racers[c].skid = 2;
         spinlocate = true;
-        wall[c] = limbo;
+        racers[c].wall = limbo;
       }
       if (kz[k] > limt - zboundr && kz[k] < limt - zboundr + 20) {
         for (var j = 0; j < 4; j++) {
@@ -9094,24 +9141,25 @@ function drive() {
         }
         kz[k] = limt - zboundr;
         if (frgm >= m && ky[k] < 20) {
-          crank[c][k]++;
-          if (crank[c][k] > 2) {
+          racers[c].crank[k]++;
+          if (racers[c].crank[k] > 2) {
             sprks(
               cn,
               kx[k],
               ky[k],
               kz[k] + zboundr,
-              scx[c][k],
-              scy[c][k],
-              scz[c][k],
+              racers[c].scx[k],
+              racers[c].scy[k],
+              racers[c].scz[k],
               2,
             );
             if (c == game.player) {
-              scrapesnd(scx[c][k], scy[c][k], scz[c][k]);
+              scrapesnd(racers[c].scx[k], racers[c].scy[k], racers[c].scz[k]);
             }
           }
         }
-        var bmac = Math.abs(mcos(pxy[c])) + Math.abs(mcos(pzy[c]));
+        var bmac =
+          Math.abs(mcos(racers[c].pxy)) + Math.abs(mcos(racers[c].pzy));
         bmac = bmac / 4;
         if (bmac > 0.3) {
           bmac = 0.3;
@@ -9123,13 +9171,13 @@ function drive() {
         if (bmac < 1.1) {
           bmac = 1.1;
         }
-        regn(1, k, -Math.abs(scz[c][k] * bmac), c);
-        if (scz[c][k] >= 0) {
-          scz[c][k] -= Math.abs(scz[c][k] * bmac);
+        regn(1, k, -Math.abs(racers[c].scz[k] * bmac), c);
+        if (racers[c].scz[k] >= 0) {
+          racers[c].scz[k] -= Math.abs(racers[c].scz[k] * bmac);
         }
-        skid[c] = 2;
+        racers[c].skid = 2;
         spinlocate = true;
-        wall[c] = limto;
+        racers[c].wall = limto;
       }
       if (kx[k] < limr + xboundr && kx[k] > limr + xboundr - 20) {
         for (var j = 0; j < 4; j++) {
@@ -9141,24 +9189,25 @@ function drive() {
         }
         kx[k] = limr + xboundr;
         if (frgm >= m && ky[k] < 20) {
-          crank[c][k]++;
-          if (crank[c][k] > 2) {
+          racers[c].crank[k]++;
+          if (racers[c].crank[k] > 2) {
             sprks(
               cn,
               kx[k] - xboundr,
               ky[k],
               kz[k],
-              scx[c][k],
-              scy[c][k],
-              scz[c][k],
+              racers[c].scx[k],
+              racers[c].scy[k],
+              racers[c].scz[k],
               2,
             );
             if (c == game.player) {
-              scrapesnd(scx[c][k], scy[c][k], scz[c][k]);
+              scrapesnd(racers[c].scx[k], racers[c].scy[k], racers[c].scz[k]);
             }
           }
         }
-        var bmac = Math.abs(mcos(pxy[c])) + Math.abs(mcos(pzy[c]));
+        var bmac =
+          Math.abs(mcos(racers[c].pxy)) + Math.abs(mcos(racers[c].pzy));
         bmac = bmac / 4;
         if (bmac > 0.3) {
           bmac = 0.3;
@@ -9170,13 +9219,13 @@ function drive() {
         if (bmac < 1.1) {
           bmac = 1.1;
         }
-        regn(0, k, Math.abs(scx[c][k] * bmac), c);
-        if (scx[c][k] <= 0) {
-          scx[c][k] += Math.abs(scx[c][k] * bmac);
+        regn(0, k, Math.abs(racers[c].scx[k] * bmac), c);
+        if (racers[c].scx[k] <= 0) {
+          racers[c].scx[k] += Math.abs(racers[c].scx[k] * bmac);
         }
-        skid[c] = 2;
+        racers[c].skid = 2;
         spinlocate = true;
-        wall[c] = limro;
+        racers[c].wall = limro;
       }
       if (kx[k] > liml - xboundr && kx[k] < liml - xboundr + 20) {
         for (var j = 0; j < 4; j++) {
@@ -9188,24 +9237,25 @@ function drive() {
         }
         kx[k] = liml - xboundr;
         if (frgm >= m && ky[k] < 20) {
-          crank[c][k]++;
-          if (crank[c][k] > 2) {
+          racers[c].crank[k]++;
+          if (racers[c].crank[k] > 2) {
             sprks(
               cn,
               kx[k] + xboundr,
               ky[k],
               kz[k],
-              scx[c][k],
-              scy[c][k],
-              scz[c][k],
+              racers[c].scx[k],
+              racers[c].scy[k],
+              racers[c].scz[k],
               2,
             );
             if (c == game.player) {
-              scrapesnd(scx[c][k], scy[c][k], scz[c][k]);
+              scrapesnd(racers[c].scx[k], racers[c].scy[k], racers[c].scz[k]);
             }
           }
         }
-        var bmac = Math.abs(mcos(pxy[c])) + Math.abs(mcos(pzy[c]));
+        var bmac =
+          Math.abs(mcos(racers[c].pxy)) + Math.abs(mcos(racers[c].pzy));
         bmac = bmac / 4;
         if (bmac > 0.3) {
           bmac = 0.3;
@@ -9217,28 +9267,28 @@ function drive() {
         if (bmac < 1.1) {
           bmac = 1.1;
         }
-        regn(0, k, -Math.abs(scx[c][k] * bmac), c);
-        if (scx[c][k] >= 0) {
-          scx[c][k] -= Math.abs(scx[c][k] * bmac);
+        regn(0, k, -Math.abs(racers[c].scx[k] * bmac), c);
+        if (racers[c].scx[k] >= 0) {
+          racers[c].scx[k] -= Math.abs(racers[c].scx[k] * bmac);
         }
-        skid[c] = 2;
+        racers[c].skid = 2;
         spinlocate = true;
-        wall[c] = limlo;
+        racers[c].wall = limlo;
       }
     }
     if (frgm >= m) {
       for (var i = 0; i < 4; i++) {
         // The original also had `if (crank[c][i] == lcrank[c][i]) crank[c][i][k] = 0;` here,
         // a write onto a number that never had any effect (and throws in strict mode).
-        lcrank[c][i] = crank[c][i];
+        racers[c].lcrank[i] = racers[c].crank[i];
       }
     }
     var nzy = 0,
       nzyr = 0,
       nxy = 0,
       nxyr = 0;
-    if (scy[c][2] != scy[c][0]) {
-      if (scy[c][2] < scy[c][0]) {
+    if (racers[c].scy[2] != racers[c].scy[0]) {
+      if (racers[c].scy[2] < racers[c].scy[0]) {
         mlt = -1;
       } else {
         mlt = 1;
@@ -9256,8 +9306,8 @@ function drive() {
         nzy = (Math.acos(arch) / 0.017453292519943295) * mlt;
       }
     }
-    if (scy[c][3] != scy[c][1]) {
-      if (scy[c][3] < scy[c][1]) {
+    if (racers[c].scy[3] != racers[c].scy[1]) {
+      if (racers[c].scy[3] < racers[c].scy[1]) {
         mlt = -1;
       } else {
         mlt = 1;
@@ -9275,8 +9325,8 @@ function drive() {
         nzyr = (Math.acos(arch) / 0.017453292519943295) * mlt;
       }
     }
-    if (scy[c][1] != scy[c][0]) {
-      if (scy[c][1] < scy[c][0]) {
+    if (racers[c].scy[1] != racers[c].scy[0]) {
+      if (racers[c].scy[1] < racers[c].scy[0]) {
         mlt = -1;
       } else {
         mlt = 1;
@@ -9294,8 +9344,8 @@ function drive() {
         nxy = (Math.acos(arch) / 0.017453292519943295) * mlt;
       }
     }
-    if (scy[c][3] != scy[c][2]) {
-      if (scy[c][3] < scy[c][2]) {
+    if (racers[c].scy[3] != racers[c].scy[2]) {
+      if (racers[c].scy[3] < racers[c].scy[2]) {
         mlt = -1;
       } else {
         mlt = 1;
@@ -9319,32 +9369,32 @@ function drive() {
         dxz -= 360;
       }
       if (Math.abs(dxz) > 90) {
-        pmlt[c] = 1;
+        racers[c].pmlt = 1;
       } else {
-        pmlt[c] = -1;
+        racers[c].pmlt = -1;
       }
       dxz = Math.abs(car[c].xz - 45);
       while (dxz > 180) {
         dxz -= 360;
       }
       if (Math.abs(dxz) > 90) {
-        nmlt[c] = 1;
+        racers[c].nmlt = 1;
       } else {
-        nmlt[c] = -1;
+        racers[c].nmlt = -1;
       }
     }
     car[c].xz +=
-      forca[c] *
+      racers[c].forca *
       10 *
       m *
-      (scz[c][0] * nmlt[c] -
-        scz[c][1] * pmlt[c] +
-        scz[c][2] * pmlt[c] -
-        scz[c][3] * nmlt[c] +
-        scx[c][0] * pmlt[c] +
-        scx[c][1] * nmlt[c] -
-        scx[c][2] * nmlt[c] -
-        scx[c][3] * pmlt[c]);
+      (racers[c].scz[0] * racers[c].nmlt -
+        racers[c].scz[1] * racers[c].pmlt +
+        racers[c].scz[2] * racers[c].pmlt -
+        racers[c].scz[3] * racers[c].nmlt +
+        racers[c].scx[0] * racers[c].pmlt +
+        racers[c].scx[1] * racers[c].nmlt -
+        racers[c].scx[2] * racers[c].nmlt -
+        racers[c].scx[3] * racers[c].pmlt);
     if (Math.abs(nzyr) > Math.abs(nzy)) {
       nzy = nzyr;
     }
@@ -9352,71 +9402,71 @@ function drive() {
       nxy = nxyr;
     }
     if (!zyinv) {
-      pzy[c] += nzy * m;
+      racers[c].pzy += nzy * m;
     } else {
-      pzy[c] -= nzy * m;
+      racers[c].pzy -= nzy * m;
     }
     if (!xyinv) {
-      pxy[c] += nxy * m;
+      racers[c].pxy += nxy * m;
     } else {
-      pxy[c] -= nxy * m;
+      racers[c].pxy -= nxy * m;
     }
     if (ntr == 4) {
       var tat = 0;
-      while (pzy[c] < 360) {
-        pzy[c] += 360;
+      while (racers[c].pzy < 360) {
+        racers[c].pzy += 360;
         car[c].zy += 360;
       }
-      while (pzy[c] > 360) {
-        pzy[c] -= 360;
+      while (racers[c].pzy > 360) {
+        racers[c].pzy -= 360;
         car[c].zy -= 360;
       }
-      if (pzy[c] < 190 && pzy[c] > 170) {
-        pzy[c] = 180;
+      if (racers[c].pzy < 190 && racers[c].pzy > 170) {
+        racers[c].pzy = 180;
         car[c].zy = 180;
         tat++;
       }
-      if (pzy[c] > 350 || pzy[c] < 10) {
-        pzy[c] = 0;
+      if (racers[c].pzy > 350 || racers[c].pzy < 10) {
+        racers[c].pzy = 0;
         car[c].zy = 0;
         tat++;
       }
-      while (pxy[c] < 360) {
-        pxy[c] += 360;
+      while (racers[c].pxy < 360) {
+        racers[c].pxy += 360;
         car[c].xy += 360;
       }
-      while (pxy[c] > 360) {
-        pxy[c] -= 360;
+      while (racers[c].pxy > 360) {
+        racers[c].pxy -= 360;
         car[c].xy -= 360;
       }
-      if (pxy[c] < 190 && pxy[c] > 170) {
-        pxy[c] = 180;
+      if (racers[c].pxy < 190 && racers[c].pxy > 170) {
+        racers[c].pxy = 180;
         car[c].xy = 180;
         tat++;
       }
-      if (pxy[c] > 350 || pxy[c] < 10) {
-        pxy[c] = 0;
+      if (racers[c].pxy > 350 || racers[c].pxy < 10) {
+        racers[c].pxy = 0;
         car[c].xy = 0;
         tat++;
       }
       if (tat == 2) {
-        mtouch[c] = true;
+        racers[c].mtouch = true;
       }
     }
     if (frgm >= m) {
-      if (!mtouch[c] && wtouch[c]) {
-        if (cntouch[c] == 10) {
-          mtouch[c] = true;
+      if (!racers[c].mtouch && racers[c].wtouch) {
+        if (racers[c].cntouch == 10) {
+          racers[c].mtouch = true;
         } else {
-          cntouch[c]++;
+          racers[c].cntouch++;
         }
       } else {
-        cntouch[c] = 0;
+        racers[c].cntouch = 0;
       }
     }
     car[c].y =
       (ky[0] + ky[1] + ky[2] + ky[3]) / 4 -
-      keyy * mcos(pzy[c]) * mcos(pxy[c]) +
+      keyy * mcos(racers[c].pzy) * mcos(racers[c].pxy) +
       ytrim * m;
     if (zyinv) {
       mlt = -1;
@@ -9437,8 +9487,8 @@ function drive() {
         car[c].keyx[3] * mcos(car[c].xz) +
         mlt * car[c].keyz[3] * msin(car[c].xz)) /
         4 +
-      keyy * msin(pxy[c]) * mcos(car[c].xz) -
-      keyy * msin(pzy[c]) * msin(car[c].xz) +
+      keyy * msin(racers[c].pxy) * mcos(car[c].xz) -
+      keyy * msin(racers[c].pzy) * msin(car[c].xz) +
       xtrim * m;
     car[c].z =
       (kz[0] -
@@ -9454,136 +9504,145 @@ function drive() {
         mlt * car[c].keyz[3] * mcos(car[c].xz) -
         car[c].keyx[3] * msin(car[c].xz)) /
         4 +
-      keyy * msin(pxy[c]) * msin(car[c].xz) -
-      keyy * msin(pzy[c]) * mcos(car[c].xz) +
+      keyy * msin(racers[c].pxy) * msin(car[c].xz) -
+      keyy * msin(racers[c].pzy) * mcos(car[c].xz) +
       ztrim * m;
-    if (Math.abs(speed[c]) > 10 || !mtouch[c]) {
-      if (Math.abs(pxy[c] - car[c].xy) >= 4 * m) {
-        if (pxy[c] > car[c].xy) {
-          car[c].xy += 2 * m + (pxy[c] - car[c].xy) / 2;
+    if (Math.abs(racers[c].speed) > 10 || !racers[c].mtouch) {
+      if (Math.abs(racers[c].pxy - car[c].xy) >= 4 * m) {
+        if (racers[c].pxy > car[c].xy) {
+          car[c].xy += 2 * m + (racers[c].pxy - car[c].xy) / 2;
         } else {
-          car[c].xy -= 2 * m + (car[c].xy - pxy[c]) / 2;
+          car[c].xy -= 2 * m + (car[c].xy - racers[c].pxy) / 2;
         }
       } else {
-        car[c].xy = pxy[c];
+        car[c].xy = racers[c].pxy;
       }
-      if (Math.abs(pzy[c] - car[c].zy) >= 4 * m) {
-        if (pzy[c] > car[c].zy) {
-          car[c].zy += 2 * m + (pzy[c] - car[c].zy) / 2;
+      if (Math.abs(racers[c].pzy - car[c].zy) >= 4 * m) {
+        if (racers[c].pzy > car[c].zy) {
+          car[c].zy += 2 * m + (racers[c].pzy - car[c].zy) / 2;
         } else {
-          car[c].zy -= 2 * m + (car[c].zy - pzy[c]) / 2;
+          car[c].zy -= 2 * m + (car[c].zy - racers[c].pzy) / 2;
         }
       } else {
-        car[c].zy = pzy[c];
+        car[c].zy = racers[c].pzy;
       }
     }
-    if (wtouch[c] && !capsized[c]) {
-      var mtilt = (speed[c] / cd.swits[cn][2]) * 14 * (cd.bounce[cn] - 0.4);
-      if (u[c].left && tilt[c] < mtilt && tilt[c] >= 0) {
-        tilt[c] += 0.4 * m;
+    if (racers[c].wtouch && !racers[c].capsized) {
+      var mtilt =
+        (racers[c].speed / cd.swits[cn][2]) * 14 * (cd.bounce[cn] - 0.4);
+      if (racers[c].u.left && racers[c].tilt < mtilt && racers[c].tilt >= 0) {
+        racers[c].tilt += 0.4 * m;
       } else {
-        if (u[c].right && tilt[c] > -mtilt && tilt[c] <= 0) {
-          tilt[c] -= 0.4 * m;
+        if (
+          racers[c].u.right &&
+          racers[c].tilt > -mtilt &&
+          racers[c].tilt <= 0
+        ) {
+          racers[c].tilt -= 0.4 * m;
         } else {
-          if (Math.abs(tilt[c]) > 3 * (cd.bounce[cn] - 0.4)) {
-            if (tilt[c] > 0) {
-              tilt[c] -= 3 * (cd.bounce[cn] - 0.3);
+          if (Math.abs(racers[c].tilt) > 3 * (cd.bounce[cn] - 0.4)) {
+            if (racers[c].tilt > 0) {
+              racers[c].tilt -= 3 * (cd.bounce[cn] - 0.3);
             } else {
-              tilt[c] += 3 * (cd.bounce[cn] - 0.3);
+              racers[c].tilt += 3 * (cd.bounce[cn] - 0.3);
             }
           } else {
-            tilt[c] = 0;
+            racers[c].tilt = 0;
           }
         }
       }
-      car[c].xy += tilt[c];
-      if (gtouch[c]) {
-        car[c].y -= (Math.abs(tilt[c]) / 30) * m;
+      car[c].xy += racers[c].tilt;
+      if (racers[c].gtouch) {
+        car[c].y -= (Math.abs(racers[c].tilt) / 30) * m;
       }
     } else {
-      if (tilt[c] != 0) {
-        tilt[c] = 0;
+      if (racers[c].tilt != 0) {
+        racers[c].tilt = 0;
       }
     }
     if (frgm >= m) {
-      if (mtouch[c] && tskd == 2) {
+      if (racers[c].mtouch && tskd == 2) {
         car[c].zy +=
-          ((random.sim() * 5 * speed[c]) / cd.swits[cn][2] -
-            (2.5 * speed[c]) / cd.swits[cn][2]) *
+          ((random.sim() * 5 * racers[c].speed) / cd.swits[cn][2] -
+            (2.5 * racers[c].speed) / cd.swits[cn][2]) *
           (cd.bounce[cn] - 0.3);
         car[c].xy +=
-          ((random.sim() * 5 * speed[c]) / cd.swits[cn][2] -
-            (2.5 * speed[c]) / cd.swits[cn][2]) *
+          ((random.sim() * 5 * racers[c].speed) / cd.swits[cn][2] -
+            (2.5 * racers[c].speed) / cd.swits[cn][2]) *
           (cd.bounce[cn] - 0.3);
       }
-      if (wtouch[c] && tskd == 1) {
+      if (racers[c].wtouch && tskd == 1) {
         car[c].zy +=
-          ((random.sim() * 3.34 * speed[c]) / cd.swits[cn][2] -
-            (1.67 * speed[c]) / cd.swits[cn][2]) *
+          ((random.sim() * 3.34 * racers[c].speed) / cd.swits[cn][2] -
+            (1.67 * racers[c].speed) / cd.swits[cn][2]) *
           (cd.bounce[cn] - 0.3);
         car[c].xy +=
-          ((random.sim() * 3.34 * speed[c]) / cd.swits[cn][2] -
-            (1.67 * speed[c]) / cd.swits[cn][2]) *
+          ((random.sim() * 3.34 * racers[c].speed) / cd.swits[cn][2] -
+            (1.67 * racers[c].speed) / cd.swits[cn][2]) *
           (cd.bounce[cn] - 0.3);
       }
     }
     if (frgm >= m) {
-      if (hitmag[c] >= cd.maxmag[cn]) {
+      if (racers[c].hitmag >= cd.maxmag[cn]) {
         if (repcar[c].destat == 700) {
           repcar[c].destat = 430;
-          if (lastcolido[c] != 0) {
-            repcar[c].destedbyzero = lastcolido[c];
+          if (racers[c].lastcolido != 0) {
+            repcar[c].destedbyzero = racers[c].lastcolido;
           }
         }
-        if (cntdest[c] < 6) {
-          if (embos[c] == 0) {
+        if (racers[c].cntdest < 6) {
+          if (racers[c].embos == 0) {
             carobj[car[c].typ].alpha = 1;
-            embodir[c] = Math.floor(random.fx() * 3);
-            if (embodir[c] == 3) {
-              embodir[c] = 0;
+            racers[c].embodir = Math.floor(random.fx() * 3);
+            if (racers[c].embodir == 3) {
+              racers[c].embodir = 0;
             }
-            embomag[c] = 1.2 + random.fx() * 0.2;
+            racers[c].embomag = 1.2 + random.fx() * 0.2;
           }
-          if (embos[c] == 1) {
+          if (racers[c].embos == 1) {
             carobj[car[c].typ].alpha = 2;
           }
-          embos[c]++;
-          if (embos[c] == 2) {
-            embos[c] = 0;
-            cntdest[c]++;
+          racers[c].embos++;
+          if (racers[c].embos == 2) {
+            racers[c].embos = 0;
+            racers[c].cntdest++;
           }
         } else {
-          if (cntdest[c] == 6) {
+          if (racers[c].cntdest == 6) {
             carobj[car[c].typ].alpha = 1;
-            embodir[c] = 0;
+            racers[c].embodir = 0;
             chipburn(c);
-            embos[c] = 0;
-            cntdest[c] = 7;
+            racers[c].embos = 0;
+            racers[c].cntdest = 7;
           }
           firexp(
             c,
             avnx,
-            (scy[c][0] + scy[c][1] + scy[c][2] + scy[c][3]) / 4,
+            (racers[c].scy[0] +
+              racers[c].scy[1] +
+              racers[c].scy[2] +
+              racers[c].scy[3]) /
+              4,
             avnz,
           );
-          if (cntdest[c] < 24) {
-            embos[c]++;
-            if (embos[c] == 5) {
+          if (racers[c].cntdest < 24) {
+            racers[c].embos++;
+            if (racers[c].embos == 5) {
               burn(c);
-              embos[c] = 0;
-              cntdest[c]++;
+              racers[c].embos = 0;
+              racers[c].cntdest++;
             }
           }
         }
-        if (cntdest[c] == 4) {
-          dest[c] = true;
+        if (racers[c].cntdest == 4) {
+          racers[c].dest = true;
         }
       }
     }
     var pnt = 0,
       pyclos = 0;
     var ic = 0;
-    if (nofocus[c]) {
+    if (racers[c].nofocus) {
       cov = 1;
     } else {
       cov = 7;
@@ -9592,36 +9651,50 @@ function drive() {
       if (cp.typ[i] > 0) {
         ic++;
         if (cp.typ[i] == 1) {
-          if (clear[c] == ic + nlaps[c] * cp.nsp) {
+          if (racers[c].clear == ic + racers[c].nlaps * cp.nsp) {
             cov = 1;
           }
           if (
             Math.abs(car[c].z - cp.z[i]) <
-              6 + Math.abs(scz[c][0] + scz[c][1] + scz[c][2] + scz[c][3]) / 4 &&
+              6 +
+                Math.abs(
+                  racers[c].scz[0] +
+                    racers[c].scz[1] +
+                    racers[c].scz[2] +
+                    racers[c].scz[3],
+                ) /
+                  4 &&
             Math.abs(car[c].x - cp.x[i]) < 70 &&
             Math.abs(car[c].y - cp.y[i] - 15) < 45
           ) {
-            if (clear[c] == ic + nlaps[c] * cp.nsp - 1) {
-              clear[c] = ic + nlaps[c] * cp.nsp;
-              pcleared[c] = i;
-              focus[c] = -1;
+            if (racers[c].clear == ic + racers[c].nlaps * cp.nsp - 1) {
+              racers[c].clear = ic + racers[c].nlaps * cp.nsp;
+              racers[c].pcleared = i;
+              racers[c].focus = -1;
             }
           }
         }
         if (cp.typ[i] == 2) {
-          if (clear[c] == ic + nlaps[c] * cp.nsp) {
+          if (racers[c].clear == ic + racers[c].nlaps * cp.nsp) {
             cov = 1;
           }
           if (
             Math.abs(car[c].x - cp.x[i]) <
-              6 + Math.abs(scx[c][0] + scx[c][1] + scx[c][2] + scx[c][3]) / 4 &&
+              6 +
+                Math.abs(
+                  racers[c].scx[0] +
+                    racers[c].scx[1] +
+                    racers[c].scx[2] +
+                    racers[c].scx[3],
+                ) /
+                  4 &&
             Math.abs(car[c].z - cp.z[i]) < 70 &&
             Math.abs(car[c].y - cp.y[i] - 15) < 45
           ) {
-            if (clear[c] == ic + nlaps[c] * cp.nsp - 1) {
-              clear[c] = ic + nlaps[c] * cp.nsp;
-              pcleared[c] = i;
-              focus[c] = -1;
+            if (racers[c].clear == ic + racers[c].nlaps * cp.nsp - 1) {
+              racers[c].clear = ic + racers[c].nlaps * cp.nsp;
+              racers[c].pcleared = i;
+              racers[c].focus = -1;
             }
           }
         }
@@ -9636,36 +9709,36 @@ function drive() {
           pyo(car[c].x / 10, cp.x[i] / 10, car[c].z / 10, cp.z[i] / 10) * cov;
       }
     }
-    if (clear[c] == ic + nlaps[c] * cp.nsp) {
-      nlaps[c]++;
+    if (racers[c].clear == ic + racers[c].nlaps * cp.nsp) {
+      racers[c].nlaps++;
     }
     if (c == game.player) {
-      oncheckpoint = clear[c];
+      oncheckpoint = racers[c].clear;
       while (oncheckpoint >= cp.nsp) {
         oncheckpoint -= cp.nsp;
       }
-      if (clear[c] == cp.nlaps * cp.nsp - 1) {
+      if (racers[c].clear == cp.nlaps * cp.nsp - 1) {
         onlastcheck = true;
       }
       if (cp.haltall) {
         onlastcheck = false;
       }
     }
-    if (focus[c] == -1) {
+    if (racers[c].focus == -1) {
       if (c == game.player) {
         pnt += 2;
       } else {
         pnt++;
       }
-      if (!nofocus[c]) {
+      if (!racers[c].nofocus) {
         if (
           cp.stage == 5 &&
-          (pcleared[c] == 27 || pcleared[c] == 35) &&
+          (racers[c].pcleared == 27 || racers[c].pcleared == 35) &&
           pnt < 29
         ) {
           pnt = 33;
         }
-        ic = pcleared[c] + 1;
+        ic = racers[c].pcleared + 1;
         if (ic >= cp.n) {
           ic = 0;
         }
@@ -9676,10 +9749,13 @@ function drive() {
           }
         }
         if (pnt > ic) {
-          if (clear[c] != nlaps[c] * cp.nsp || pnt < pcleared[c]) {
+          if (
+            racers[c].clear != racers[c].nlaps * cp.nsp ||
+            pnt < racers[c].pcleared
+          ) {
             if (cp.stage != 9 || ic != 9 || pnt < 16) {
               pnt = ic;
-              focus[c] = pnt;
+              racers[c].focus = pnt;
             } else {
               pnt = 0;
             }
@@ -9693,70 +9769,70 @@ function drive() {
         pnt = 0;
       }
       if (c == game.player) {
-        if (missedcp[c] != -1) {
-          missedcp[c] = -1;
+        if (racers[c].missedcp != -1) {
+          racers[c].missedcp = -1;
         }
       } else {
-        if (missedcp[c] != 0) {
-          missedcp[c] = 0;
+        if (racers[c].missedcp != 0) {
+          racers[c].missedcp = 0;
         }
       }
     } else {
-      pnt = focus[c];
+      pnt = racers[c].focus;
       if (c == game.player) {
         if (
-          missedcp[c] == 0 &&
-          mtouch[c] &&
+          racers[c].missedcp == 0 &&
+          racers[c].mtouch &&
           Math.sqrt(
             pyo(
               car[c].x / 10,
-              cp.x[focus[c]] / 10,
+              cp.x[racers[c].focus] / 10,
               car[c].z / 10,
-              cp.z[focus[c]] / 10,
+              cp.z[racers[c].focus] / 10,
             ),
           ) > 80
         ) {
-          missedcp[c] = 1;
+          racers[c].missedcp = 1;
         }
         if (
-          missedcp[c] == -2 &&
+          racers[c].missedcp == -2 &&
           Math.sqrt(
             pyo(
               car[c].x / 10,
-              cp.x[focus[c]] / 10,
+              cp.x[racers[c].focus] / 10,
               car[c].z / 10,
-              cp.z[focus[c]] / 10,
+              cp.z[racers[c].focus] / 10,
             ),
           ) < 40
         ) {
-          missedcp[c] = 0;
+          racers[c].missedcp = 0;
         }
         if (
-          missedcp[c] != 0 &&
-          mtouch[c] &&
+          racers[c].missedcp != 0 &&
+          racers[c].mtouch &&
           Math.sqrt(
             pyo(
               car[c].x / 10,
-              cp.x[focus[c]] / 10,
+              cp.x[racers[c].focus] / 10,
               car[c].z / 10,
-              cp.z[focus[c]] / 10,
+              cp.z[racers[c].focus] / 10,
             ),
           ) < 25
         ) {
-          missedcp[c] = 68;
+          racers[c].missedcp = 68;
         }
       } else {
-        missedcp[c] = 1;
+        racers[c].missedcp = 1;
       }
-      if (nofocus[c]) {
-        focus[c] = -1;
-        missedcp[c] = 0;
+      if (racers[c].nofocus) {
+        racers[c].focus = -1;
+        racers[c].missedcp = 0;
       }
     }
-    if (nofocus[c]) {
-      nofocus[c] = false;
+    if (racers[c].nofocus) {
+      racers[c].nofocus = false;
     }
-    point[c] = pnt;
+    racers[c].point = pnt;
     if (game.mode != 1) {
       if (!car[c].fcnt) {
         for (var i = 0; i < nf; i++) {
@@ -9800,11 +9876,11 @@ function drive() {
         }
         if (frgm >= m) {
           if (car[c].fcnt == 20) {
-            squash[c] = 0;
-            nbsq[c] = 0;
-            hitmag[c] = 0;
-            cntdest[c] = 0;
-            dest[c] = false;
+            racers[c].squash = 0;
+            racers[c].nbsq = 0;
+            racers[c].hitmag = 0;
+            racers[c].cntdest = 0;
+            racers[c].dest = false;
             if (c == game.player) {
               cntwis = 0;
             }
@@ -9816,114 +9892,114 @@ function drive() {
         }
       }
     }
-    if (!mtouch[c]) {
-      if (trcnt[c] != 1) {
-        trcnt[c] = 1;
-        lxz[c] = car[c].xz;
+    if (!racers[c].mtouch) {
+      if (racers[c].trcnt != 1) {
+        racers[c].trcnt = 1;
+        racers[c].lxz = car[c].xz;
       }
-      if (loop[c] == 2 || loop[c] == -1) {
-        travxy[c] += (rcomp[c] - lcomp[c]) * m;
-        if (Math.abs(travxy[c]) > 135) {
-          rtab[c] = true;
+      if (racers[c].loop == 2 || racers[c].loop == -1) {
+        racers[c].travxy += (racers[c].rcomp - racers[c].lcomp) * m;
+        if (Math.abs(racers[c].travxy) > 135) {
+          racers[c].rtab = true;
         }
-        travzy[c] += (ucomp[c] - dcomp[c]) * m;
-        if (travzy[c] > 135) {
-          ftab[c] = true;
+        racers[c].travzy += (racers[c].ucomp - racers[c].dcomp) * m;
+        if (racers[c].travzy > 135) {
+          racers[c].ftab = true;
         }
-        if (travzy[c] < -135) {
-          btab[c] = true;
+        if (racers[c].travzy < -135) {
+          racers[c].btab = true;
         }
       }
-      if (lxz[c] != car[c].xz) {
-        travxz[c] += lxz[c] - car[c].xz;
-        lxz[c] = car[c].xz;
+      if (racers[c].lxz != car[c].xz) {
+        racers[c].travxz += racers[c].lxz - car[c].xz;
+        racers[c].lxz = car[c].xz;
       }
       if (frgm >= m) {
-        if (srfcnt[c] < 10) {
-          if (uwall[c]) {
-            surfer[c] = true;
+        if (racers[c].srfcnt < 10) {
+          if (racers[c].uwall) {
+            racers[c].surfer = true;
           }
-          srfcnt[c]++;
+          racers[c].srfcnt++;
         }
       }
     } else {
-      if (!dest[c]) {
-        if (!capsized[c]) {
-          if (capcnt[c] != 0) {
-            capcnt[c] = 0;
+      if (!racers[c].dest) {
+        if (!racers[c].capsized) {
+          if (racers[c].capcnt != 0) {
+            racers[c].capcnt = 0;
           }
-          if (gtouch[c] && frgm >= m) {
-            if (trcnt[c] != 0) {
-              if (trcnt[c] == 9) {
-                powerup[c] = 0;
-                if (Math.abs(travxy[c]) > 90) {
-                  powerup[c] += Math.abs(travxy[c]) / 24;
+          if (racers[c].gtouch && frgm >= m) {
+            if (racers[c].trcnt != 0) {
+              if (racers[c].trcnt == 9) {
+                racers[c].powerup = 0;
+                if (Math.abs(racers[c].travxy) > 90) {
+                  racers[c].powerup += Math.abs(racers[c].travxy) / 24;
                 } else {
-                  if (rtab[c]) {
-                    powerup[c] += 30;
+                  if (racers[c].rtab) {
+                    racers[c].powerup += 30;
                   }
                 }
-                if (Math.abs(travzy[c]) > 90) {
-                  powerup[c] += Math.abs(travzy[c]) / 18;
+                if (Math.abs(racers[c].travzy) > 90) {
+                  racers[c].powerup += Math.abs(racers[c].travzy) / 18;
                 } else {
-                  if (ftab[c]) {
-                    powerup[c] += 40;
+                  if (racers[c].ftab) {
+                    racers[c].powerup += 40;
                   }
-                  if (btab[c]) {
-                    powerup[c] += 40;
+                  if (racers[c].btab) {
+                    racers[c].powerup += 40;
                   }
                 }
-                if (Math.abs(travxz[c]) > 90) {
-                  powerup[c] += Math.abs(travxz[c]) / 18;
+                if (Math.abs(racers[c].travxz) > 90) {
+                  racers[c].powerup += Math.abs(racers[c].travxz) / 18;
                 }
-                if (surfer[c]) {
-                  powerup[c] += 30;
+                if (racers[c].surfer) {
+                  racers[c].powerup += 30;
                 }
-                power[c] += powerup[c];
+                racers[c].power += racers[c].powerup;
                 if (
                   c == game.player &&
-                  powerup[c] > hpowerup &&
+                  racers[c].powerup > hpowerup &&
                   htyp <= 1 &&
-                  (powerup[c] > 60 || cp.stage == 1 || cp.stage == 2)
+                  (racers[c].powerup > 60 || cp.stage == 1 || cp.stage == 2)
                 ) {
                   rpdcatch = 43;
-                  hpowerup = powerup[c];
+                  hpowerup = racers[c].powerup;
                 }
-                if (power[c] > 98) {
-                  power[c] = 98;
-                  if (powerup[c] > 150) {
-                    xtpower[c] = 200;
+                if (racers[c].power > 98) {
+                  racers[c].power = 98;
+                  if (racers[c].powerup > 150) {
+                    racers[c].xtpower = 200;
                   } else {
-                    xtpower[c] = 100;
+                    racers[c].xtpower = 100;
                   }
                 }
               }
-              if (trcnt[c] == 10) {
-                travxy[c] = 0;
-                travzy[c] = 0;
-                travxz[c] = 0;
-                ftab[c] = false;
-                rtab[c] = false;
-                btab[c] = false;
-                trcnt[c] = 0;
-                srfcnt[c] = 0;
-                surfer[c] = false;
+              if (racers[c].trcnt == 10) {
+                racers[c].travxy = 0;
+                racers[c].travzy = 0;
+                racers[c].travxz = 0;
+                racers[c].ftab = false;
+                racers[c].rtab = false;
+                racers[c].btab = false;
+                racers[c].trcnt = 0;
+                racers[c].srfcnt = 0;
+                racers[c].surfer = false;
               } else {
-                trcnt[c]++;
+                racers[c].trcnt++;
               }
             }
           }
         } else {
-          if (trcnt[c] != 0) {
-            travxy[c] = 0;
-            travzy[c] = 0;
-            travxz[c] = 0;
-            ftab[c] = false;
-            rtab[c] = false;
-            btab[c] = false;
-            trcnt[c] = 0;
-            srfcnt[c] = 0;
-            surfer[c] = false;
+          if (racers[c].trcnt != 0) {
+            racers[c].travxy = 0;
+            racers[c].travzy = 0;
+            racers[c].travxz = 0;
+            racers[c].ftab = false;
+            racers[c].rtab = false;
+            racers[c].btab = false;
+            racers[c].trcnt = 0;
+            racers[c].srfcnt = 0;
+            racers[c].surfer = false;
           }
           var flmat = 7,
             capto = 30;
@@ -9949,30 +10025,33 @@ function drive() {
               capto = 25;
             }
           }
-          if (capcnt[c] == 0) {
+          if (racers[c].capcnt == 0) {
             var out = 0;
             for (var i = 0; i < 4; i++) {
-              if (Math.abs(scz[c][i]) < flmat && Math.abs(scx[c][i]) < flmat) {
+              if (
+                Math.abs(racers[c].scz[i]) < flmat &&
+                Math.abs(racers[c].scx[i]) < flmat
+              ) {
                 out++;
               }
             }
             if (out == 4) {
-              capcnt[c] = 1;
+              racers[c].capcnt = 1;
             }
           } else {
             if (frgm >= m) {
-              capcnt[c]++;
-              if (capcnt[c] == capto) {
-                speed[c] = 0;
+              racers[c].capcnt++;
+              if (racers[c].capcnt == capto) {
+                racers[c].speed = 0;
                 car[c].y += cd.flipy[cn];
-                pxy[c] += 180;
+                racers[c].pxy += 180;
                 car[c].xy += 180;
-                capcnt[c] = 0;
+                racers[c].capcnt = 0;
               }
             }
           }
         }
-        if (trcnt[c] == 0 && speed[c] != 0) {
+        if (racers[c].trcnt == 0 && racers[c].speed != 0) {
           var pfact = 1;
           if (c == game.player) {
             if (cp.stage == 1 && game.unlocked == 1) {
@@ -9988,28 +10067,29 @@ function drive() {
               pfact = 0.9;
             }
           }
-          if (xtpower[c] == 0) {
-            if (power[c] > 0) {
-              power[c] -=
-                (power[c] * power[c] * power[c] * pfact) / cd.powerloss[cn];
+          if (racers[c].xtpower == 0) {
+            if (racers[c].power > 0) {
+              racers[c].power -=
+                (racers[c].power * racers[c].power * racers[c].power * pfact) /
+                cd.powerloss[cn];
             } else {
-              power[c] = 0;
+              racers[c].power = 0;
             }
           } else {
-            xtpower[c]--;
+            racers[c].xtpower--;
           }
         }
       }
     }
-    if (uwall[c]) {
-      uwall[c] = false;
+    if (racers[c].uwall) {
+      racers[c].uwall = false;
     }
-    if (frgm >= m && lastcolido[c] != 0 && !dest[c]) {
-      lastcolido[c]--;
+    if (frgm >= m && racers[c].lastcolido != 0 && !racers[c].dest) {
+      racers[c].lastcolido--;
     }
-    if (dest[c]) {
+    if (racers[c].dest) {
       if (cp.dested[c] == 0) {
-        if (lastcolido[c] == 0) {
+        if (racers[c].lastcolido == 0) {
           cp.dested[c] = 1;
         } else {
           cp.dested[c] = 2;
@@ -10044,10 +10124,10 @@ function drive() {
     car[c].mat[8] = xmt[2];
     car[c].mat[9] = ymt[2];
     car[c].mat[10] = zmt[2];
-    if (embodir[c]) {
-      car[c].mat[embodir[c] * 4] *= embomag[c];
-      car[c].mat[embodir[c] * 4 + 1] *= embomag[c];
-      car[c].mat[embodir[c] * 4 + 2] *= embomag[c];
+    if (racers[c].embodir) {
+      car[c].mat[racers[c].embodir * 4] *= racers[c].embomag;
+      car[c].mat[racers[c].embodir * 4 + 1] *= racers[c].embomag;
+      car[c].mat[racers[c].embodir * 4 + 2] *= racers[c].embomag;
     }
   }
 }
@@ -10060,15 +10140,15 @@ function colide(c, xc) {
     xkz = [];
   for (var i = 0; i < 4; i++) {
     kx[i] = car[c].x + car[c].keyx[i];
-    if (capsized[c]) {
-      ky[i] = car[c].y + cd.flipy[car[c].typ] + squash[c];
+    if (racers[c].capsized) {
+      ky[i] = car[c].y + cd.flipy[car[c].typ] + racers[c].squash;
     } else {
       ky[i] = car[c].y + car[c].grat;
     }
     kz[i] = car[c].z + car[c].keyz[i];
     xkx[i] = car[xc].x + car[xc].keyx[i];
-    if (capsized[xc]) {
-      xky[i] = car[xc].y + cd.flipy[car[xc].typ] + squash[xc];
+    if (racers[xc].capsized) {
+      xky[i] = car[xc].y + cd.flipy[car[xc].typ] + racers[xc].squash;
     } else {
       xky[i] = car[xc].y + car[xc].grat;
     }
@@ -10086,68 +10166,71 @@ function colide(c, xc) {
       carobj[car[xc].typ].colrad * carobj[car[xc].typ].colrad) *
       1.5
   ) {
-    if (!caught[c][xc] && (speed[c] != 0 || speed[xc] != 0)) {
+    if (
+      !racers[c].caught[xc] &&
+      (racers[c].speed != 0 || racers[xc].speed != 0)
+    ) {
       if (
-        Math.abs(power[c] * speed[c] * cd.moment[car[c].typ]) !=
-        Math.abs(power[xc] * speed[xc] * cd.moment[car[xc].typ])
+        Math.abs(racers[c].power * racers[c].speed * cd.moment[car[c].typ]) !=
+        Math.abs(racers[xc].power * racers[xc].speed * cd.moment[car[xc].typ])
       ) {
         if (
-          Math.abs(power[c] * speed[c] * cd.moment[car[c].typ]) >
-          Math.abs(power[xc] * speed[xc] * cd.moment[car[xc].typ])
+          Math.abs(racers[c].power * racers[c].speed * cd.moment[car[c].typ]) >
+          Math.abs(racers[xc].power * racers[xc].speed * cd.moment[car[xc].typ])
         ) {
-          dominate[c][xc] = true;
+          racers[c].dominate[xc] = true;
         } else {
-          dominate[c][xc] = false;
+          racers[c].dominate[xc] = false;
         }
       } else {
         if (cd.moment[car[c].typ] > cd.moment[car[xc].typ]) {
-          dominate[c][xc] = true;
+          racers[c].dominate[xc] = true;
         } else {
-          dominate[c][xc] = false;
+          racers[c].dominate[xc] = false;
         }
       }
-      caught[c][xc] = true;
+      racers[c].caught[xc] = true;
     }
   } else {
-    if (caught[c][xc]) {
-      caught[c][xc] = false;
-      dominate[c][xc] = false;
+    if (racers[c].caught[xc]) {
+      racers[c].caught[xc] = false;
+      racers[c].dominate[xc] = false;
     }
   }
-  if (dominate[c][xc]) {
+  if (racers[c].dominate[xc]) {
     var crad =
-      ((scz[c][0] -
-        scz[xc][0] +
-        scz[c][1] -
-        scz[xc][1] +
-        scz[c][2] -
-        scz[xc][2] +
-        scz[c][3] -
-        scz[xc][3]) *
-        (scz[c][0] -
-          scz[xc][0] +
-          scz[c][1] -
-          scz[xc][1] +
-          scz[c][2] -
-          scz[xc][2] +
-          scz[c][3] -
-          scz[xc][3]) +
-        (scx[c][0] -
-          scx[xc][0] +
-          scx[c][1] -
-          scx[xc][1] +
-          scx[c][2] -
-          scx[xc][2] +
-          scx[c][3] -
-          scx[xc][3]) *
-          (scx[c][0] -
-            scx[xc][0] +
-            scx[c][1] -
-            scx[xc][1] +
-            scx[c][2] -
-            scx[xc][2] +
-            scx[c][3] -
-            scx[xc][3])) /
+      ((racers[c].scz[0] -
+        racers[xc].scz[0] +
+        racers[c].scz[1] -
+        racers[xc].scz[1] +
+        racers[c].scz[2] -
+        racers[xc].scz[2] +
+        racers[c].scz[3] -
+        racers[xc].scz[3]) *
+        (racers[c].scz[0] -
+          racers[xc].scz[0] +
+          racers[c].scz[1] -
+          racers[xc].scz[1] +
+          racers[c].scz[2] -
+          racers[xc].scz[2] +
+          racers[c].scz[3] -
+          racers[xc].scz[3]) +
+        (racers[c].scx[0] -
+          racers[xc].scx[0] +
+          racers[c].scx[1] -
+          racers[xc].scx[1] +
+          racers[c].scx[2] -
+          racers[xc].scx[2] +
+          racers[c].scx[3] -
+          racers[xc].scx[3]) *
+          (racers[c].scx[0] -
+            racers[xc].scx[0] +
+            racers[c].scx[1] -
+            racers[xc].scx[1] +
+            racers[c].scx[2] -
+            racers[xc].scx[2] +
+            racers[c].scx[3] -
+            racers[xc].scx[3])) /
       16;
     var arad = 70;
     for (var i = 0; i < 4; i++) {
@@ -10158,40 +10241,40 @@ function colide(c, xc) {
           (crad + arad) * (cd.comprad[car[xc].typ] + cd.comprad[car[c].typ])
         ) {
           if (
-            Math.abs(scx[c][i] * cd.moment[car[c].typ]) >
-            Math.abs(scx[xc][j] * cd.moment[car[xc].typ])
+            Math.abs(racers[c].scx[i] * cd.moment[car[c].typ]) >
+            Math.abs(racers[xc].scx[j] * cd.moment[car[xc].typ])
           ) {
-            var tm = scx[xc][j] * cd.revpush[car[c].typ];
+            var tm = racers[xc].scx[j] * cd.revpush[car[c].typ];
             if (tm > 30) {
               tm = 30;
             }
             if (tm < -30) {
               tm = -30;
             }
-            var vctm = scx[c][i] * cd.push[car[c].typ];
+            var vctm = racers[c].scx[i] * cd.push[car[c].typ];
             if (vctm > 30) {
               vctm = 30;
             }
             if (vctm < -30) {
               vctm = -30;
             }
-            scx[xc][j] += vctm;
+            racers[xc].scx[j] += vctm;
             if (c == game.player) {
-              colidim[xc] = true;
+              racers[xc].colidim = true;
             }
             regn(0, j, vctm * cd.moment[car[c].typ], xc);
-            if (colidim[xc]) {
-              colidim[xc] = false;
+            if (racers[xc].colidim) {
+              racers[xc].colidim = false;
             }
-            scx[c][i] -= tm;
+            racers[c].scx[i] -= tm;
             regn(0, i, -tm * cd.moment[car[c].typ], c);
-            scy[c][i] += cd.revlift[car[c].typ];
+            racers[c].scy[i] += cd.revlift[car[c].typ];
             if (c == game.player) {
-              colidim[xc] = true;
+              racers[xc].colidim = true;
             }
             regn(2, j, cd.revlift[car[c].typ] * 7, xc);
-            if (colidim[xc]) {
-              colidim[xc] = false;
+            if (racers[xc].colidim) {
+              racers[xc].colidim = false;
             }
             if (random.fx() > random.fx()) {
               sprks(
@@ -10199,48 +10282,48 @@ function colide(c, xc) {
                 (kx[i] + xkx[j]) / 2,
                 (ky[i] + xky[j]) / 2,
                 (kz[i] + xkz[j]) / 2,
-                (scx[xc][j] + scx[c][i]) / 4,
-                (scy[xc][j] + scy[c][i]) / 4,
-                (scz[xc][j] + scz[c][i]) / 4,
+                (racers[xc].scx[j] + racers[c].scx[i]) / 4,
+                (racers[xc].scy[j] + racers[c].scy[i]) / 4,
+                (racers[xc].scz[j] + racers[c].scz[i]) / 4,
                 2,
               );
             }
           }
           if (
-            Math.abs(scz[c][i] * cd.moment[car[c].typ]) >
-            Math.abs(scz[xc][j] * cd.moment[car[xc].typ])
+            Math.abs(racers[c].scz[i] * cd.moment[car[c].typ]) >
+            Math.abs(racers[xc].scz[j] * cd.moment[car[xc].typ])
           ) {
-            var tm = scz[xc][j] * cd.revpush[car[c].typ];
+            var tm = racers[xc].scz[j] * cd.revpush[car[c].typ];
             if (tm > 30) {
               tm = 30;
             }
             if (tm < -30) {
               tm = -30;
             }
-            var vctm = scz[c][i] * cd.push[car[c].typ];
+            var vctm = racers[c].scz[i] * cd.push[car[c].typ];
             if (vctm > 30) {
               vctm = 30;
             }
             if (vctm < -30) {
               vctm = -30;
             }
-            scz[xc][j] += vctm;
+            racers[xc].scz[j] += vctm;
             if (c == game.player) {
-              colidim[xc] = true;
+              racers[xc].colidim = true;
             }
             regn(1, j, vctm * cd.moment[car[c].typ], xc);
-            if (colidim[xc]) {
-              colidim[xc] = false;
+            if (racers[xc].colidim) {
+              racers[xc].colidim = false;
             }
-            scz[c][i] -= tm;
+            racers[c].scz[i] -= tm;
             regn(1, i, -tm * cd.moment[car[c].typ], c);
-            scy[c][i] += cd.revlift[car[c].typ];
+            racers[c].scy[i] += cd.revlift[car[c].typ];
             if (c == game.player) {
-              colidim[xc] = true;
+              racers[xc].colidim = true;
             }
             regn(2, j, cd.revlift[car[c].typ] * 7, xc);
-            if (colidim[xc]) {
-              colidim[xc] = false;
+            if (racers[xc].colidim) {
+              racers[xc].colidim = false;
             }
             if (random.fx() > random.fx()) {
               sprks(
@@ -10248,24 +10331,24 @@ function colide(c, xc) {
                 (kx[i] + xkx[j]) / 2,
                 (ky[i] + xky[j]) / 2,
                 (kz[i] + xkz[j]) / 2,
-                (scx[xc][j] + scx[c][i]) / 4,
-                (scy[xc][j] + scy[c][i]) / 4,
-                (scz[xc][j] + scz[c][i]) / 4,
+                (racers[xc].scx[j] + racers[c].scx[i]) / 4,
+                (racers[xc].scy[j] + racers[c].scy[i]) / 4,
+                (racers[xc].scz[j] + racers[c].scz[i]) / 4,
                 2,
               );
             }
           }
           if (c == game.player) {
-            lastcolido[xc] = 70;
+            racers[xc].lastcolido = 70;
           }
           if (xc == game.player) {
-            lastcolido[c] = 70;
+            racers[c].lastcolido = 70;
           }
-          scy[xc][j] += cd.lift[car[c].typ];
+          racers[xc].scy[j] += cd.lift[car[c].typ];
           gotcol = true;
         }
       }
-      if (!gotcol && mtouch[c] && mtouch[xc]) {
+      if (!gotcol && racers[c].mtouch && racers[xc].mtouch) {
         var intrsct = false;
         var aro = Math.abs(
           (xkx[1] - xkx[0]) * (xkz[2] - xkz[0]) -
@@ -10318,40 +10401,40 @@ function colide(c, xc) {
             }
           }
           if (
-            Math.abs(scx[c][i] * cd.moment[car[c].typ]) >
-            Math.abs(scx[xc][j] * cd.moment[car[xc].typ])
+            Math.abs(racers[c].scx[i] * cd.moment[car[c].typ]) >
+            Math.abs(racers[xc].scx[j] * cd.moment[car[xc].typ])
           ) {
-            var tm = scx[xc][j] * cd.revpush[car[c].typ];
+            var tm = racers[xc].scx[j] * cd.revpush[car[c].typ];
             if (tm > 30) {
               tm = 30;
             }
             if (tm < -30) {
               tm = -30;
             }
-            var vctm = scx[c][i] * cd.push[car[c].typ];
+            var vctm = racers[c].scx[i] * cd.push[car[c].typ];
             if (vctm > 30) {
               vctm = 30;
             }
             if (vctm < -30) {
               vctm = -30;
             }
-            scx[xc][j] += vctm;
+            racers[xc].scx[j] += vctm;
             if (c == game.player) {
-              colidim[xc] = true;
+              racers[xc].colidim = true;
             }
             regn(0, j, vctm * cd.moment[car[c].typ], xc);
-            if (colidim[xc]) {
-              colidim[xc] = false;
+            if (racers[xc].colidim) {
+              racers[xc].colidim = false;
             }
-            scx[c][i] -= tm;
+            racers[c].scx[i] -= tm;
             regn(0, i, -tm * cd.moment[car[c].typ], c);
-            scy[c][i] += cd.revlift[car[c].typ];
+            racers[c].scy[i] += cd.revlift[car[c].typ];
             if (c == game.player) {
-              colidim[xc] = true;
+              racers[xc].colidim = true;
             }
             regn(2, j, cd.revlift[car[c].typ] * 7, xc);
-            if (colidim[xc]) {
-              colidim[xc] = false;
+            if (racers[xc].colidim) {
+              racers[xc].colidim = false;
             }
             if (random.fx() > random.fx()) {
               sprks(
@@ -10359,48 +10442,48 @@ function colide(c, xc) {
                 (kx[i] + xkx[j]) / 2,
                 (ky[i] + xky[j]) / 2,
                 (kz[i] + xkz[j]) / 2,
-                (scx[xc][j] + scx[c][i]) / 4,
-                (scy[xc][j] + scy[c][i]) / 4,
-                (scz[xc][j] + scz[c][i]) / 4,
+                (racers[xc].scx[j] + racers[c].scx[i]) / 4,
+                (racers[xc].scy[j] + racers[c].scy[i]) / 4,
+                (racers[xc].scz[j] + racers[c].scz[i]) / 4,
                 2,
               );
             }
           }
           if (
-            Math.abs(scz[c][i] * cd.moment[car[c].typ]) >
-            Math.abs(scz[xc][j] * cd.moment[car[xc].typ])
+            Math.abs(racers[c].scz[i] * cd.moment[car[c].typ]) >
+            Math.abs(racers[xc].scz[j] * cd.moment[car[xc].typ])
           ) {
-            var tm = scz[xc][j] * cd.revpush[car[c].typ];
+            var tm = racers[xc].scz[j] * cd.revpush[car[c].typ];
             if (tm > 30) {
               tm = 30;
             }
             if (tm < -30) {
               tm = -30;
             }
-            var vctm = scz[c][i] * cd.push[car[c].typ];
+            var vctm = racers[c].scz[i] * cd.push[car[c].typ];
             if (vctm > 30) {
               vctm = 30;
             }
             if (vctm < -30) {
               vctm = -30;
             }
-            scz[xc][j] += vctm;
+            racers[xc].scz[j] += vctm;
             if (c == game.player) {
-              colidim[xc] = true;
+              racers[xc].colidim = true;
             }
             regn(1, j, vctm * cd.moment[car[c].typ], xc);
-            if (colidim[xc]) {
-              colidim[xc] = false;
+            if (racers[xc].colidim) {
+              racers[xc].colidim = false;
             }
-            scz[c][i] -= tm;
+            racers[c].scz[i] -= tm;
             regn(1, i, -tm * cd.moment[car[c].typ], c);
-            scy[c][i] += cd.revlift[car[c].typ];
+            racers[c].scy[i] += cd.revlift[car[c].typ];
             if (c == game.player) {
-              colidim[xc] = true;
+              racers[xc].colidim = true;
             }
             regn(2, j, cd.revlift[car[c].typ] * 7, xc);
-            if (colidim[xc]) {
-              colidim[xc] = false;
+            if (racers[xc].colidim) {
+              racers[xc].colidim = false;
             }
             if (random.fx() > random.fx()) {
               sprks(
@@ -10408,26 +10491,26 @@ function colide(c, xc) {
                 (kx[i] + xkx[j]) / 2,
                 (ky[i] + xky[j]) / 2,
                 (kz[i] + xkz[j]) / 2,
-                (scx[xc][j] + scx[c][i]) / 4,
-                (scy[xc][j] + scy[c][i]) / 4,
-                (scz[xc][j] + scz[c][i]) / 4,
+                (racers[xc].scx[j] + racers[c].scx[i]) / 4,
+                (racers[xc].scy[j] + racers[c].scy[i]) / 4,
+                (racers[xc].scz[j] + racers[c].scz[i]) / 4,
                 2,
               );
             }
           }
           if (c == game.player) {
-            lastcolido[xc] = 70;
+            racers[xc].lastcolido = 70;
           }
           if (xc == game.player) {
-            lastcolido[c] = 70;
+            racers[c].lastcolido = 70;
           }
-          scy[xc][j] += cd.lift[car[c].typ];
+          racers[xc].scy[j] += cd.lift[car[c].typ];
         }
       }
     }
   }
 }
-var colidim = [false, false, false, false, false, false, false];
+
 function regn(nr, k, mag, c) {
   if (game.phase == PHASE.race) {
     mag *= cd.dammult[car[c].typ];
@@ -10438,7 +10521,7 @@ function regn(nr, k, mag, c) {
       repcar[c].regnr[repcar[c].nreg] = nr;
       repcar[c].regk[repcar[c].nreg] = k;
       repcar[c].regmag[repcar[c].nreg] = mag;
-      repcar[c].regmtch[repcar[c].nreg] = mtouch[c];
+      repcar[c].regmtch[repcar[c].nreg] = racers[c].mtouch;
       repcar[c].nreg++;
     }
     if (mag > 10) {
@@ -10478,23 +10561,23 @@ function regn(nr, k, mag, c) {
       if (rxy > 330 || rxy < 30) {
         xsing = 1;
       }
-      if (xsing * zsing == 0 || mtouch[c]) {
+      if (xsing * zsing == 0 || racers[c].mtouch) {
         nr2stop = false;
       }
       if (xsing * zsing == -1) {
-        if (nbsq[c] > 0) {
+        if (racers[c].nbsq > 0) {
           nr2stop = false;
           nr = 3;
-          nbsq[c] = 0;
+          racers[c].nbsq = 0;
         } else {
-          nbsq[c]++;
+          racers[c].nbsq++;
         }
       }
-      if (game.phase == PHASE.race && (c == game.player || colidim[c])) {
+      if (game.phase == PHASE.race && (c == game.player || racers[c].colidim)) {
         crashsnd(mag, xsing * zsing);
       }
     } else {
-      if (game.phase == PHASE.race && (c == game.player || colidim[c])) {
+      if (game.phase == PHASE.race && (c == game.player || racers[c].colidim)) {
         crashsnd(mag, 0);
       }
     }
@@ -10568,16 +10651,18 @@ function regn(nr, k, mag, c) {
             }
           }
           if (game.phase == PHASE.race) {
-            hitmag[c] += Math.abs(tmag) * 0.667;
+            racers[c].hitmag += Math.abs(tmag) * 0.667;
           }
           modpix = 1;
         }
         if (
           nr == 3 &&
-          (Math.abs(rad.dvert[i * 3 + 1] - cd.flipy[car[c].typ] - squash[c]) <
+          (Math.abs(
+            rad.dvert[i * 3 + 1] - cd.flipy[car[c].typ] - racers[c].squash,
+          ) <
             cd.msquash[c][car[c].typ] * 3 ||
-            rad.dvert[i * 3 + 1] > cd.flipy[car[c].typ] + squash[c]) &&
-          Math.abs(squash[c]) < cd.msquash[car[c].typ]
+            rad.dvert[i * 3 + 1] > cd.flipy[car[c].typ] + racers[c].squash) &&
+          Math.abs(racers[c].squash) < cd.msquash[car[c].typ]
         ) {
           tmag = (mag / 15) * random.sim();
           rad.dvert[i * 3 + 1] -= tmag;
@@ -10597,7 +10682,7 @@ function regn(nr, k, mag, c) {
             }
           }
           if (game.phase == PHASE.race) {
-            hitmag[c] += Math.abs(tmag) * 0.667;
+            racers[c].hitmag += Math.abs(tmag) * 0.667;
           }
           modpix = 2;
         }
@@ -10711,7 +10796,7 @@ function regn(nr, k, mag, c) {
         }
       }
       if (nr == 3 && nsq > 0) {
-        squash[c] += tsq / nsq;
+        racers[c].squash += tsq / nsq;
       }
       if (pixelread) {
         gl.bindTexture(gl.TEXTURE_2D, rad.texture[1]);
@@ -10758,7 +10843,7 @@ function burn(c) {
   if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE) {
     pixels = new Uint8Array(256 * 256 * 4);
     gl.readPixels(0, 0, 256, 256, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
-    for (var p = bshft[c]; p < 256 * 256 * 4; p += 12) {
+    for (var p = racers[c].bshft; p < 256 * 256 * 4; p += 12) {
       pixels[p] = 14 + pixels[p] * 0.6667;
       pixels[p + 1] = 4 + pixels[p + 1] * 0.6667;
       pixels[p + 2] = pixels[p + 2] * 0.6667;
@@ -10778,9 +10863,9 @@ function burn(c) {
     gl.generateMipmap(gl.TEXTURE_2D);
   }
   gl.deleteFramebuffer(framebuffer);
-  bshft[c] += 4;
-  if (bshft[c] == 12) {
-    bshft[c] = 0;
+  racers[c].bshft += 4;
+  if (racers[c].bshft == 12) {
+    racers[c].bshft = 0;
   }
 }
 function chipburn(c) {
@@ -10946,44 +11031,44 @@ function gameloop() {
             }
           }
           if (gp[i].buttons[0].pressed || aup) {
-            u[game.player].up = true;
+            racers[game.player].u.up = true;
             gpress[i] = 10;
           } else {
             if (gpress[i]) {
-              u[game.player].up = false;
+              racers[game.player].u.up = false;
             }
           }
           if (gp[i].buttons[2].pressed || adown) {
-            u[game.player].down = true;
+            racers[game.player].u.down = true;
             gpress[i] = 10;
           } else {
             if (gpress[i]) {
-              u[game.player].down = false;
+              racers[game.player].u.down = false;
             }
           }
           if (gp[i].buttons[3].pressed || aleft) {
-            u[game.player].left = true;
+            racers[game.player].u.left = true;
             gpress[i] = 10;
           } else {
             if (gpress[i]) {
-              u[game.player].left = false;
+              racers[game.player].u.left = false;
             }
           }
           if (gp[i].buttons[1].pressed || aright) {
-            u[game.player].right = true;
+            racers[game.player].u.right = true;
             gpress[i] = 10;
           } else {
             if (gpress[i]) {
-              u[game.player].right = false;
+              racers[game.player].u.right = false;
             }
           }
           if (gp[i].buttons.length > 7) {
             if (gp[i].buttons[4].pressed) {
               if (!gparr) {
-                if (u[game.player].arrace) {
-                  u[game.player].arrace = false;
+                if (racers[game.player].u.arrace) {
+                  racers[game.player].u.arrace = false;
                 } else {
-                  u[game.player].arrace = true;
+                  racers[game.player].u.arrace = true;
                 }
                 gparr = true;
               }
@@ -10994,11 +11079,11 @@ function gameloop() {
               }
             }
             if (gp[i].buttons[5].pressed) {
-              u[game.player].handb = true;
+              racers[game.player].u.handb = true;
               gpress[i] = 10;
             } else {
               if (gpress[i]) {
-                u[game.player].handb = false;
+                racers[game.player].u.handb = false;
               }
             }
             if (gp[i].buttons[6].pressed) {
@@ -11335,74 +11420,71 @@ function enginsnd() {
     var atmax = false;
     var pedl = false;
     if (
-      (u[game.player].up && speed[game.player] > 0) ||
-      (u[game.player].down && speed[game.player] < 0)
+      (racers[game.player].u.up && racers[game.player].speed > 0) ||
+      (racers[game.player].u.down && racers[game.player].speed < 0)
     ) {
       pedl = true;
     }
-    if (wtouch[game.player] && !capsized[game.player]) {
-      if (mtouch[game.player]) {
+    if (racers[game.player].wtouch && !racers[game.player].capsized) {
+      if (racers[game.player].mtouch) {
         var flexd =
-          (skid[game.player] == 1 && u[game.player].handb) ||
+          (racers[game.player].skid == 1 && racers[game.player].u.handb) ||
           Math.abs(
-            scz[game.player][0] -
-              (scz[game.player][1] +
-                scz[game.player][0] +
-                scz[game.player][2] +
-                scz[game.player][3]) /
+            racers[game.player].scz[0] -
+              (racers[game.player].scz[1] +
+                racers[game.player].scz[0] +
+                racers[game.player].scz[2] +
+                racers[game.player].scz[3]) /
                 4,
           ) > 0.1 ||
           Math.abs(
-            scx[game.player][0] -
-              (scx[game.player][1] +
-                scx[game.player][0] +
-                scx[game.player][2] +
-                scx[game.player][3]) /
+            racers[game.player].scx[0] -
+              (racers[game.player].scx[1] +
+                racers[game.player].scx[0] +
+                racers[game.player].scx[2] +
+                racers[game.player].scx[3]) /
                 4,
           ) > 0.1;
         if (!flexd) {
           if (pedl) {
             if (
-              Math.abs(speed[game.player]) > 0 &&
-              Math.abs(speed[game.player]) <=
+              Math.abs(racers[game.player].speed) > 0 &&
+              Math.abs(racers[game.player].speed) <=
                 cd.swits[game.carTypes[game.player]][0]
             ) {
               var amp =
-                Math.abs(speed[game.player]) /
+                Math.abs(racers[game.player].speed) /
                 cd.swits[game.carTypes[game.player]][0];
               amp *= amp;
               reqvol = 1 + amp;
               reqpbr = 1 + amp;
             }
             if (
-              Math.abs(speed[game.player]) >
+              Math.abs(racers[game.player].speed) >
                 cd.swits[game.carTypes[game.player]][0] &&
-              Math.abs(speed[game.player]) <=
+              Math.abs(racers[game.player].speed) <=
                 cd.swits[game.carTypes[game.player]][1]
             ) {
               var amp =
-                (Math.abs(speed[game.player]) -
+                (Math.abs(racers[game.player].speed) -
                   cd.swits[game.carTypes[game.player]][0]) /
                 (cd.swits[game.carTypes[game.player]][1] -
                   cd.swits[game.carTypes[game.player]][0]);
               amp *= amp;
               reqvol = 1 + amp;
-              if (speed < 0) {
-                amp *= 1.5;
-              }
               reqpbr = 1.2 + amp;
               if (reqpbr > 2.1) {
                 reqpbr = 2.1;
               }
             }
             if (
-              Math.abs(speed[game.player]) >
+              Math.abs(racers[game.player].speed) >
                 cd.swits[game.carTypes[game.player]][1] &&
-              Math.abs(speed[game.player]) <=
+              Math.abs(racers[game.player].speed) <=
                 cd.swits[game.carTypes[game.player]][2]
             ) {
               var amp =
-                (Math.abs(speed[game.player]) -
+                (Math.abs(racers[game.player].speed) -
                   cd.swits[game.carTypes[game.player]][1]) /
                 (cd.swits[game.carTypes[game.player]][2] -
                   cd.swits[game.carTypes[game.player]][1]);
@@ -11416,7 +11498,7 @@ function enginsnd() {
             }
           } else {
             var amp =
-              Math.abs(speed[game.player]) /
+              Math.abs(racers[game.player].speed) /
               cd.swits[game.carTypes[game.player]][2];
             reqvol = 1 + amp * 0.5;
             reqpbr = 1 + amp;
@@ -11499,7 +11581,7 @@ function enginsnd() {
           reqpbr = 1.4;
         }
       }
-      if (revfase == 4 && mtouch[game.player]) {
+      if (revfase == 4 && racers[game.player].mtouch) {
         if (pedl) {
           reqpbr += 0.1;
         } else {
@@ -11791,19 +11873,19 @@ function pausedgame() {
     }
     afterquitgame();
   }
-  if (u[game.player].up) {
+  if (racers[game.player].u.up) {
     onhip--;
     if (onhip == -1) {
       onhip = 3;
     }
-    u[game.player].up = false;
+    racers[game.player].u.up = false;
   }
-  if (u[game.player].down) {
+  if (racers[game.player].u.down) {
     onhip++;
     if (onhip == 4) {
       onhip = 0;
     }
-    u[game.player].down = false;
+    racers[game.player].u.down = false;
   }
   if (noten) {
     if (aflk) {
@@ -12130,11 +12212,11 @@ function drawmain() {
     if (fredo == 40) {
       gotGamepads();
       game.player = 0;
-      u[game.player].left = false;
-      u[game.player].right = false;
-      u[game.player].up = false;
-      u[game.player].down = false;
-      u[game.player].handb = false;
+      racers[game.player].u.left = false;
+      racers[game.player].u.right = false;
+      racers[game.player].u.up = false;
+      racers[game.player].u.down = false;
+      racers[game.player].u.handb = false;
       flyout = 1;
       carms = 0;
       carmy = 100;
@@ -13077,7 +13159,7 @@ function drawloading() {
     );
   }
 }
-var switchp = [];
+
 function createswitches() {
   var cgr1 = [200, 200, 200, 192];
   var cgr2 = [200, 200, 200, 64];
@@ -13098,29 +13180,29 @@ function createswitches() {
     }
   }
   for (var c = 0; c < game.carCount; c++) {
-    if (switchp[c] == null) {
-      switchp[c] = newParticleModel();
+    if (racers[c].switchp == null) {
+      racers[c].switchp = newParticleModel();
     }
-    if (switchp[c].loaded == 1) {
-      gl.deleteBuffer(switchp[c].vbuf);
-      switchp[c].vbuf = null;
-      gl.deleteBuffer(switchp[c].cbuf);
-      switchp[c].cbuf = null;
-      gl.deleteBuffer(switchp[c].ibuf);
-      switchp[c].ibuf = null;
+    if (racers[c].switchp.loaded == 1) {
+      gl.deleteBuffer(racers[c].switchp.vbuf);
+      racers[c].switchp.vbuf = null;
+      gl.deleteBuffer(racers[c].switchp.cbuf);
+      racers[c].switchp.cbuf = null;
+      gl.deleteBuffer(racers[c].switchp.ibuf);
+      racers[c].switchp.ibuf = null;
     }
-    switchp[c].on = false;
+    racers[c].switchp.on = false;
     var nodo = false;
     if (cp.wasted == game.carCount - 2 && c != game.player) {
       nodo = true;
     }
-    if (!dest[c] && !nodo) {
+    if (!racers[c].dest && !nodo) {
       var cpp = c;
       cpp++;
       if (cpp == game.carCount) {
         cpp = 0;
       }
-      while (dest[cpp]) {
+      while (racers[cpp].dest) {
         cpp++;
         if (cpp == game.carCount) {
           cpp = 0;
@@ -13141,9 +13223,9 @@ function createswitches() {
         car[cpp].z,
       ];
       var indice = [0, 1, 2, 2, 3, 1];
-      switchp[c].ni = 6;
-      switchp[c].vbuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, switchp[c].vbuf);
+      racers[c].switchp.ni = 6;
+      racers[c].switchp.vbuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, racers[c].switchp.vbuf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vert), gl.STATIC_DRAW);
       var col = [];
       for (var i = 0; i < 4; i++) {
@@ -13157,20 +13239,20 @@ function createswitches() {
           }
         }
       }
-      switchp[c].cbuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, switchp[c].cbuf);
+      racers[c].switchp.cbuf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, racers[c].switchp.cbuf);
       gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
-      switchp[c].ibuf = gl.createBuffer();
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, switchp[c].ibuf);
+      racers[c].switchp.ibuf = gl.createBuffer();
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, racers[c].switchp.ibuf);
       gl.bufferData(
         gl.ELEMENT_ARRAY_BUFFER,
         new Uint16Array(indice),
         gl.STATIC_DRAW,
       );
-      switchp[c].alpha = true;
-      switchp[c].mat = mat4.create();
-      switchp[c].loaded = 1;
-      switchp[c].on = true;
+      racers[c].switchp.alpha = true;
+      racers[c].switchp.mat = mat4.create();
+      racers[c].switchp.loaded = 1;
+      racers[c].switchp.on = true;
     }
   }
 }
@@ -13201,7 +13283,7 @@ function drawswitch() {
     if (camera.nextTarget == game.carCount) {
       camera.nextTarget = 0;
     }
-    while (dest[camera.nextTarget]) {
+    while (racers[camera.nextTarget].dest) {
       camera.nextTarget++;
       if (camera.nextTarget == game.carCount) {
         camera.nextTarget = 0;
@@ -13211,7 +13293,7 @@ function drawswitch() {
   }
   if (switcnt < 20) {
     camera.pitch = 10;
-    var kcxz = cxz[camera.target] - 180 + swing;
+    var kcxz = racers[camera.target].cxz - 180 + swing;
     camera.yaw = kcxz;
     camera.x = car[camera.target].x - slide * msin(kcxz);
     camera.z = car[camera.target].z + slide * mcos(kcxz);
@@ -13222,7 +13304,9 @@ function drawswitch() {
     var fcs2 = switcnt - 20;
     camera.pitch = 10;
     var kcxz =
-      (cxz[camera.target] * fcs1 + cxz[camera.nextTarget] * fcs2) / 80 -
+      (racers[camera.target].cxz * fcs1 +
+        racers[camera.nextTarget].cxz * fcs2) /
+        80 -
       180 +
       swing;
     camera.yaw = kcxz;
@@ -13237,7 +13321,7 @@ function drawswitch() {
   }
   if (switcnt >= 100) {
     camera.pitch = 10;
-    var kcxz = cxz[camera.nextTarget] - 180 + swing;
+    var kcxz = racers[camera.nextTarget].cxz - 180 + swing;
     camera.yaw = kcxz;
     camera.x = car[camera.nextTarget].x - slide * msin(kcxz);
     camera.z = car[camera.nextTarget].z + slide * mcos(kcxz);
@@ -13323,18 +13407,18 @@ function drawswitch() {
   if (switcnt == 125) {
     onlastcheck = false;
     for (var i = 0; i < game.carCount; i++) {
-      pcleared[i] = cp.pcs;
-      clear[i] = 0;
-      nlaps[i] = 0;
-      missedcp[i] = 0;
-      focus[i] = -1;
+      racers[i].pcleared = cp.pcs;
+      racers[i].clear = 0;
+      racers[i].nlaps = 0;
+      racers[i].missedcp = 0;
+      racers[i].focus = -1;
     }
-    u[camera.nextTarget].left = u[game.player].left;
-    u[camera.nextTarget].right = u[game.player].right;
-    u[camera.nextTarget].up = u[game.player].up;
-    u[camera.nextTarget].down = u[game.player].down;
-    u[camera.nextTarget].handb = u[game.player].handb;
-    u[camera.nextTarget].arrace = u[game.player].arrace;
+    racers[camera.nextTarget].u.left = racers[game.player].u.left;
+    racers[camera.nextTarget].u.right = racers[game.player].u.right;
+    racers[camera.nextTarget].u.up = racers[game.player].u.up;
+    racers[camera.nextTarget].u.down = racers[game.player].u.down;
+    racers[camera.nextTarget].u.handb = racers[game.player].u.handb;
+    racers[camera.nextTarget].u.arrace = racers[game.player].u.arrace;
     iclear = 0;
     game.player = camera.nextTarget;
     camera.target = game.player;
@@ -13510,8 +13594,8 @@ function inishinter() {
   flw = 2;
   flh = 0.5;
   for (var i = 0; i < 7; i++) {
-    u[i].arrace = false;
-    u[i].zyinv = false;
+    racers[i].u.arrace = false;
+    racers[i].u.zyinv = false;
   }
 }
 function drawinter() {
@@ -13593,23 +13677,23 @@ function drawinter() {
       rd.globalAlpha = 1;
     }
     if (wasu) {
-      u[game.player].up = false;
+      racers[game.player].u.up = false;
       wasu = false;
     }
     if (wasd) {
-      u[game.player].down = false;
+      racers[game.player].u.down = false;
       wasd = false;
     }
     if (wasl) {
-      u[game.player].left = false;
+      racers[game.player].u.left = false;
       wasl = false;
     }
     if (wasr) {
-      u[game.player].right = false;
+      racers[game.player].u.right = false;
       wasr = false;
     }
     if (wash) {
-      u[game.player].handb = false;
+      racers[game.player].u.handb = false;
       wash = false;
     }
     var notwast = 0;
@@ -13649,31 +13733,31 @@ function drawinter() {
           }
         }
         if (onkb == 0) {
-          u[game.player].left = true;
+          racers[game.player].u.left = true;
           wasl = true;
         }
         if (onkb == 1) {
-          u[game.player].right = true;
+          racers[game.player].u.right = true;
           wasr = true;
         }
         if (onkb == 2) {
-          u[game.player].up = true;
+          racers[game.player].u.up = true;
           wasu = true;
         }
         if (onkb == 3) {
-          u[game.player].down = true;
+          racers[game.player].u.down = true;
           wasd = true;
         }
         if (onkb == 4) {
-          u[game.player].handb = true;
+          racers[game.player].u.handb = true;
           wash = true;
         }
         if (onkb == 5) {
           if (!wast) {
-            if (u[game.player].arrace) {
-              u[game.player].arrace = false;
+            if (racers[game.player].u.arrace) {
+              racers[game.player].u.arrace = false;
             } else {
-              u[game.player].arrace = true;
+              racers[game.player].u.arrace = true;
             }
             wast = true;
           }
@@ -13706,13 +13790,13 @@ function drawinter() {
     winner = true;
   }
   if (!holdit) {
-    if (dest[game.player] && cntwis == 16) {
+    if (racers[game.player].dest && cntwis == 16) {
       drawcs(132, "You're Wasted!", 0, 0, 0, 3);
       holdit = true;
       winner = false;
     }
   }
-  if (cntdest[game.player] != 0 && cntwis < 16) {
+  if (racers[game.player].cntdest != 0 && cntwis < 16) {
     cntwis++;
     if (cntwis == 1) {
       playSound(31, 1);
@@ -13780,9 +13864,9 @@ function drawinter() {
     }
     holdcnt++;
     var exitnow = false;
-    if (u[game.player].handb && holdcnt > 50) {
+    if (racers[game.player].u.handb && holdcnt > 50) {
       exitnow = true;
-      u[game.player].handb = false;
+      racers[game.player].u.handb = false;
     }
     if (enter == 1) {
       exitnow = true;
@@ -13868,10 +13952,10 @@ function drawinter() {
     }
     if (
       game.carCount != 1 &&
-      arrace != u[game.player].arrace &&
+      arrace != racers[game.player].u.arrace &&
       cp.stage != 16
     ) {
-      arrace = u[game.player].arrace;
+      arrace = racers[game.player].u.arrace;
       if (arrace) {
         wasay = true;
         say = " Arrow now pointing at >  CARS";
@@ -13885,10 +13969,13 @@ function drawinter() {
       }
     }
     if (!holdit && starcnt == 0 && camera.mode == 0 && cp.stage != 16) {
-      arrow(point[game.player], missedcp[game.player], arrace);
-      if (!arrace && auscnt == 45 && capcnt[game.player] == 0) {
-        if (missedcp[game.player] > 0) {
-          if (missedcp[game.player] > 15 && missedcp[game.player] < 50) {
+      arrow(racers[game.player].point, racers[game.player].missedcp, arrace);
+      if (!arrace && auscnt == 45 && racers[game.player].capcnt == 0) {
+        if (racers[game.player].missedcp > 0) {
+          if (
+            racers[game.player].missedcp > 15 &&
+            racers[game.player].missedcp < 50
+          ) {
             if (flk) {
               drawcs(112, "Check Point Missed!", 255, 0, 0, 1);
             } else {
@@ -13896,13 +13983,13 @@ function drawinter() {
             }
           }
           if (frgm >= m) {
-            missedcp[game.player]++;
-            if (missedcp[game.player] == 70) {
-              missedcp[game.player] = -2;
+            racers[game.player].missedcp++;
+            if (racers[game.player].missedcp == 70) {
+              racers[game.player].missedcp = -2;
             }
           }
         } else {
-          if (mtouch[game.player] && cntovn < 70) {
+          if (racers[game.player].mtouch && cntovn < 70) {
             if (frgm >= m) {
               if (Math.abs(ana) > 100) {
                 cntan++;
@@ -13944,7 +14031,7 @@ function drawinter() {
     rd.letterSpacing = "2px";
     rd.fillStyle = "#000078";
     rd.fillText(
-      "" + (nlaps[game.player] + 1) + "/" + cp.nlaps + "",
+      "" + (racers[game.player].nlaps + 1) + "/" + cp.nlaps + "",
       68 * view.scale,
       19 * view.scale,
     );
@@ -13999,7 +14086,7 @@ function drawinter() {
             false,
           )
         ) {
-          u[game.player].arrace = false;
+          racers[game.player].u.arrace = false;
         }
       } else {
         if (
@@ -14022,7 +14109,7 @@ function drawinter() {
             false,
           )
         ) {
-          u[game.player].arrace = true;
+          racers[game.player].u.arrace = true;
         }
       }
     }
@@ -14035,7 +14122,8 @@ function drawinter() {
     rd.fillStyle = "#000000";
     rd.fillText("Damage", lalign - 15 * view.scale, 19 * view.scale);
     rd.fillText("Power", lalign - 15 * view.scale, 55 * view.scale);
-    var trav = 98 * (hitmag[game.player] / cd.maxmag[car[game.player].typ]);
+    var trav =
+      98 * (racers[game.player].hitmag / cd.maxmag[car[game.player].typ]);
     if (trav > 98) {
       trav = 98;
     }
@@ -14070,10 +14158,10 @@ function drawinter() {
       trav / 98,
     );
     r = 128;
-    if (power[game.player] == 98) {
+    if (racers[game.player].power == 98) {
       r = 64;
     }
-    g = 190 + power[game.player] * 0.37;
+    g = 190 + racers[game.player].power * 0.37;
     b = 255;
     if (auscnt < 45 && aflk) {
       r = 128;
@@ -14086,7 +14174,7 @@ function drawinter() {
       "#00B0DC",
       "#005C96",
       "rgb(" + r + "," + g + "," + b + ")",
-      power[game.player] / 98,
+      racers[game.player].power / 98,
     );
     var adwn = 0;
     if (view.width / view.height < 1.3) {
@@ -14251,22 +14339,22 @@ function drawinter() {
     }
     if (looped != 0) {
       if (
-        loop[game.player] == 2 &&
-        (Math.abs(travxy[game.player]) > 110 ||
-          Math.abs(travzy[game.player]) > 110)
+        racers[game.player].loop == 2 &&
+        (Math.abs(racers[game.player].travxy) > 110 ||
+          Math.abs(racers[game.player].travzy) > 110)
       ) {
         looped = 0;
       }
-      if (looped == 1 && !mtouch[game.player]) {
+      if (looped == 1 && !racers[game.player].mtouch) {
         looped = 2;
       }
     }
-    if (power[game.player] < 40) {
+    if (racers[game.player].power < 40) {
       if (
         tcnt == 30 &&
         auscnt == 45 &&
-        mtouch[game.player] &&
-        capcnt[game.player] == 0
+        racers[game.player].mtouch &&
+        racers[game.player].capcnt == 0
       ) {
         if (looped != 3) {
           if (pwcnt < 70 || (pwcnt < 100 && looped != 0)) {
@@ -14321,7 +14409,7 @@ function drawinter() {
         pwcnt = 0;
       }
     }
-    if (capcnt[game.player] == 0) {
+    if (racers[game.player].capcnt == 0) {
       if (tcnt < 30) {
         if (tflk) {
           drawcs(167, say, 0, 0, 0, 1);
@@ -14363,17 +14451,17 @@ function drawinter() {
         tflk = true;
       }
     }
-    if (trcnt[game.player] == 10 && frgm >= m) {
+    if (racers[game.player].trcnt == 10 && frgm >= m) {
       loopin = "";
       spin = "";
       asay = "";
       var lp = 0;
-      while (travzy[game.player] > 225) {
-        travzy[game.player] -= 360;
+      while (racers[game.player].travzy > 225) {
+        racers[game.player].travzy -= 360;
         lp++;
       }
-      while (travzy[game.player] < -225) {
-        travzy[game.player] += 360;
+      while (racers[game.player].travzy < -225) {
+        racers[game.player].travzy += 360;
         lp--;
       }
       if (lp == 1) {
@@ -14401,30 +14489,30 @@ function drawinter() {
         loopin = "massive Back looping";
       }
       if (lp == 0) {
-        if (ftab[game.player] && btab[game.player]) {
+        if (racers[game.player].ftab && racers[game.player].btab) {
           loopin = "Tabletop and reversed Tabletop";
         } else {
-          if (ftab[game.player] || btab[game.player]) {
+          if (racers[game.player].ftab || racers[game.player].btab) {
             loopin = "Tabletop";
           }
         }
       }
-      if (lp > 0 && btab[game.player]) {
+      if (lp > 0 && racers[game.player].btab) {
         loopin = "Hanged " + loopin;
       }
-      if (lp < 0 && ftab[game.player]) {
+      if (lp < 0 && racers[game.player].ftab) {
         loopin = "Hanged " + loopin;
       }
       if (loopin != "") {
         asay += " " + loopin;
       }
       lp = 0;
-      travxy[game.player] = Math.abs(travxy[game.player]);
-      while (travxy[game.player] > 270) {
-        travxy[game.player] -= 360;
+      racers[game.player].travxy = Math.abs(racers[game.player].travxy);
+      while (racers[game.player].travxy > 270) {
+        racers[game.player].travxy -= 360;
         lp++;
       }
-      if (lp == 0 && rtab[game.player]) {
+      if (lp == 0 && racers[game.player].rtab) {
         if (loopin == "") {
           spin = "Tabletop";
         } else {
@@ -14445,9 +14533,9 @@ function drawinter() {
       }
       lp = 0;
       var beyond = false;
-      travxz[game.player] = Math.abs(travxz[game.player]);
-      while (travxz[game.player] > 90) {
-        travxz[game.player] -= 180;
+      racers[game.player].travxz = Math.abs(racers[game.player].travxz);
+      while (racers[game.player].travxz > 90) {
+        racers[game.player].travxz -= 180;
         lp += 180;
         if (lp > 900) {
           lp = 900;
@@ -14503,16 +14591,16 @@ function drawinter() {
           auscnt = -20;
         }
         var prp = 0;
-        if (powerup[game.player] > 20) {
+        if (racers[game.player].powerup > 20) {
           prp = 1;
         }
-        if (powerup[game.player] > 40) {
+        if (racers[game.player].powerup > 40) {
           prp = 2;
         }
-        if (powerup[game.player] > 150) {
+        if (racers[game.player].powerup > 150) {
           prp = 3;
         }
-        if (surfer[game.player]) {
+        if (racers[game.player].surfer) {
           asay = " " + adj[4][Math.floor(random.fx() * 2.99)] + asay;
         }
         if (prp != 3) {
@@ -14522,9 +14610,11 @@ function drawinter() {
         }
         if (!wasay) {
           tcnt = auscnt;
-          if (power[game.player] != 98) {
+          if (racers[game.player].power != 98) {
             say =
-              "POWER UP " + Math.floor((100 * powerup[game.player]) / 98) + "%";
+              "POWER UP " +
+              Math.floor((100 * racers[game.player].powerup) / 98) +
+              "%";
           } else {
             say = "POWER TO THE MAX";
           }
@@ -14554,12 +14644,12 @@ function drawinter() {
         }
       }
     }
-    if (iclear != clear[game.player] && clear[game.player] != 0) {
+    if (iclear != racers[game.player].clear && racers[game.player].clear != 0) {
       if (!wasay) {
         say = "Check Point";
         tcnt = 15;
       }
-      iclear = clear[game.player];
+      iclear = racers[game.player].clear;
       playSound(28, 1);
       cntovn = 0;
       if (cntan != 0) {
@@ -15396,19 +15486,19 @@ function drawcarselect() {
       640 * view.scaleX,
       120 * view.scaleY,
     );
-    if (u[0].right) {
+    if (racers[0].u.right) {
       if (game.carTypes[0] != 18) {
         nextc = 1;
         flyout = 2;
       }
-      u[0].right = false;
+      racers[0].u.right = false;
     }
-    if (u[0].left) {
+    if (racers[0].u.left) {
       if (game.carTypes[0] != 0) {
         nextc = -1;
         flyout = 2;
       }
-      u[0].left = false;
+      racers[0].u.left = false;
     }
     if (game.carTypes[0] != 0) {
       if (
@@ -16144,7 +16234,7 @@ function drawstageselect() {
       var rgb2 = hslToRgb(hsl[0] + 0.05, 1, 0.6);
       var rgb3 = hslToRgb(hsl[0] - 0.05, 1, 0.2);
       var rgb4 = hslToRgb(hsl[0] + 0.05, 1, 0.2);
-      if (u[0].right) {
+      if (racers[0].u.right) {
         if (cp.stage < 17) {
           if (cp.stage != game.unlocked) {
             cp.stage++;
@@ -16154,15 +16244,15 @@ function drawstageselect() {
             flkun = 1;
           }
         }
-        u[0].right = false;
+        racers[0].u.right = false;
       }
-      if (u[0].left) {
+      if (racers[0].u.left) {
         if (cp.stage > 1) {
           cp.stage--;
           stageload = -1;
           flkun = 1;
         }
-        u[0].left = false;
+        racers[0].u.left = false;
       }
       if (
         drawbutton(
@@ -17488,14 +17578,29 @@ function record() {
       repcar[c].zy[429] = car[c].zy;
       repcar[c].wzy[429] = car[c].wzy;
       repcar[c].wxz[429] = car[c].wxz;
-      repcar[c].avnx[429] = (scx[c][0] + scx[c][1] + scx[c][2] + scx[c][3]) / 4;
-      repcar[c].avny[429] = (scy[c][0] + scy[c][1] + scy[c][2] + scy[c][3]) / 4;
-      repcar[c].avnz[429] = (scz[c][0] + scz[c][1] + scz[c][2] + scz[c][3]) / 4;
-      repcar[c].cxz[429] = cxz[c];
-      repcar[c].hitmag[429] = hitmag[c];
-      repcar[c].clear[429] = clear[c];
-      repcar[c].pcleared[429] = pcleared[c];
-      repcar[c].nlaps[429] = nlaps[c];
+      repcar[c].avnx[429] =
+        (racers[c].scx[0] +
+          racers[c].scx[1] +
+          racers[c].scx[2] +
+          racers[c].scx[3]) /
+        4;
+      repcar[c].avny[429] =
+        (racers[c].scy[0] +
+          racers[c].scy[1] +
+          racers[c].scy[2] +
+          racers[c].scy[3]) /
+        4;
+      repcar[c].avnz[429] =
+        (racers[c].scz[0] +
+          racers[c].scz[1] +
+          racers[c].scz[2] +
+          racers[c].scz[3]) /
+        4;
+      repcar[c].cxz[429] = racers[c].cxz;
+      repcar[c].hitmag[429] = racers[c].hitmag;
+      repcar[c].clear[429] = racers[c].clear;
+      repcar[c].pcleared[429] = racers[c].pcleared;
+      repcar[c].nlaps[429] = racers[c].nlaps;
       for (var i = 0; i < repcar[c].nreg; i++) {
         repcar[c].regat[i]--;
       }
@@ -17652,25 +17757,25 @@ function catchnow(hty) {
   }
 }
 var fr = 0;
-var destnow = [];
+
 function rewindreplay() {
   game.phase = PHASE.replayRewind;
   fr = 0;
   camera.mode = 1;
   camera.target = game.player;
   for (var c = 0; c < game.carCount; c++) {
-    destnow[c] = false;
-    cntdest[c] = 0;
-    embos[c] = 0;
-    embodir[c] = 0;
-    squash[c] = 0;
-    nbsq[c] = 0;
+    racers[c].destnow = false;
+    racers[c].cntdest = 0;
+    racers[c].embos = 0;
+    racers[c].embodir = 0;
+    racers[c].squash = 0;
+    racers[c].nbsq = 0;
     car[c].fcnt = 0;
     fixcar(c);
     carobj[car[c].typ].alpha = 1;
     if (repcar[c].destat < 0) {
-      destnow[c] = true;
-      cntdest[c] = 7;
+      racers[c].destnow = true;
+      racers[c].cntdest = 7;
     }
     var foundnegfix = 0;
     for (var i = repcar[c].nfix - 1; i >= 0; i--) {
@@ -17688,7 +17793,7 @@ function rewindreplay() {
           }
         }
         if (!frget) {
-          mtouch[c] = repcar[c].regmtch[i];
+          racers[c].mtouch = repcar[c].regmtch[i];
           regn(repcar[c].regnr[i], repcar[c].regk[i], repcar[c].regmag[i], c);
         }
       }
@@ -17699,41 +17804,41 @@ function rewindreplay() {
 function replay() {
   for (var c = 0; c < game.carCount; c++) {
     if (repcar[c].destat == fr) {
-      destnow[c] = true;
+      racers[c].destnow = true;
     }
-    if (destnow[c]) {
-      if (cntdest[c] < 6) {
-        if (embos[c] == 0) {
+    if (racers[c].destnow) {
+      if (racers[c].cntdest < 6) {
+        if (racers[c].embos == 0) {
           carobj[car[c].typ].alpha = 1;
-          embodir[c] = Math.floor(random.fx() * 3);
-          if (embodir[c] == 3) {
-            embodir[c] = 0;
+          racers[c].embodir = Math.floor(random.fx() * 3);
+          if (racers[c].embodir == 3) {
+            racers[c].embodir = 0;
           }
-          embomag[c] = 1.2 + random.fx() * 0.2;
+          racers[c].embomag = 1.2 + random.fx() * 0.2;
         }
-        if (embos[c] == 1) {
+        if (racers[c].embos == 1) {
           carobj[car[c].typ].alpha = 2;
         }
-        embos[c]++;
-        if (embos[c] == 2) {
-          embos[c] = 0;
-          cntdest[c]++;
+        racers[c].embos++;
+        if (racers[c].embos == 2) {
+          racers[c].embos = 0;
+          racers[c].cntdest++;
         }
       } else {
-        if (cntdest[c] == 6) {
+        if (racers[c].cntdest == 6) {
           carobj[car[c].typ].alpha = 1;
-          embodir[c] = 0;
+          racers[c].embodir = 0;
           chipburn(c);
-          embos[c] = 0;
-          cntdest[c] = 7;
+          racers[c].embos = 0;
+          racers[c].cntdest = 7;
         }
         firexp(c, repcar[c].avnx[fr], repcar[c].avny[fr], repcar[c].avnz[fr]);
-        if (cntdest[c] < 24) {
-          embos[c]++;
-          if (embos[c] == 5) {
+        if (racers[c].cntdest < 24) {
+          racers[c].embos++;
+          if (racers[c].embos == 5) {
             burn(c);
-            embos[c] = 0;
-            cntdest[c]++;
+            racers[c].embos = 0;
+            racers[c].cntdest++;
           }
         }
       }
@@ -17758,8 +17863,8 @@ function replay() {
       }
       if (frgm >= m) {
         if (car[c].fcnt == 20) {
-          squash[c] = 0;
-          nbsq[c] = 0;
+          racers[c].squash = 0;
+          racers[c].nbsq = 0;
         }
         if (car[c].fcnt == 15) {
           newcar[c] = true;
@@ -17772,7 +17877,7 @@ function replay() {
     }
     for (var i = 0; i < repcar[c].nreg; i++) {
       if (repcar[c].regat[i] == fr) {
-        mtouch[c] = repcar[c].regmtch[i];
+        racers[c].mtouch = repcar[c].regmtch[i];
         regn(repcar[c].regnr[i], repcar[c].regk[i], repcar[c].regmag[i], c);
       }
     }
@@ -17816,10 +17921,10 @@ function replay() {
     car[c].mat[8] = xmt[2];
     car[c].mat[9] = ymt[2];
     car[c].mat[10] = zmt[2];
-    if (embodir[c]) {
-      car[c].mat[embodir[c] * 4] *= embomag[c];
-      car[c].mat[embodir[c] * 4 + 1] *= embomag[c];
-      car[c].mat[embodir[c] * 4 + 2] *= embomag[c];
+    if (racers[c].embodir) {
+      car[c].mat[racers[c].embodir * 4] *= racers[c].embomag;
+      car[c].mat[racers[c].embodir * 4 + 1] *= racers[c].embomag;
+      car[c].mat[racers[c].embodir * 4 + 2] *= racers[c].embomag;
     }
   }
   for (var i = 0; i < repsprks.n; i++) {
@@ -17851,8 +17956,8 @@ function fastforwardexit() {
   game.phase = PHASE.replayRewind;
   for (var c = 0; c < game.carCount; c++) {
     if (repcar[c].destat != 700 && repcar[c].destat >= fr) {
-      embos[c] = 0;
-      cntdest[c] = 7;
+      racers[c].embos = 0;
+      racers[c].cntdest = 7;
     }
     var foundnegfix = 0;
     for (var i = repcar[c].nfix - 1; i >= 0; i--) {
@@ -17862,8 +17967,8 @@ function fastforwardexit() {
       }
     }
     if (foundnegfix) {
-      squash[c] = 0;
-      nbsq[c] = 0;
+      racers[c].squash = 0;
+      racers[c].nbsq = 0;
       car[c].fcnt = 0;
       fixcar(c);
     }
@@ -17876,7 +17981,7 @@ function fastforwardexit() {
           }
         }
         if (!frget) {
-          mtouch[c] = repcar[c].regmtch[i];
+          racers[c].mtouch = repcar[c].regmtch[i];
           regn(repcar[c].regnr[i], repcar[c].regk[i], repcar[c].regmag[i], c);
         }
       }
@@ -17898,18 +18003,18 @@ function hrewindhreplay() {
   game.phase = PHASE.replayRewind;
   fr = 0;
   for (var c = 0; c < game.carCount; c++) {
-    destnow[c] = false;
-    cntdest[c] = 0;
-    embos[c] = 0;
-    embodir[c] = 0;
-    squash[c] = 0;
-    nbsq[c] = 0;
+    racers[c].destnow = false;
+    racers[c].cntdest = 0;
+    racers[c].embos = 0;
+    racers[c].embodir = 0;
+    racers[c].squash = 0;
+    racers[c].nbsq = 0;
     car[c].fcnt = 0;
     fixcar(c);
     carobj[car[c].typ].alpha = 1;
     if (hrepcar[c].destat < 0) {
-      destnow[c] = true;
-      cntdest[c] = 7;
+      racers[c].destnow = true;
+      racers[c].cntdest = 7;
     }
     var foundnegfix = 0;
     for (var i = hrepcar[c].nfix - 1; i >= 0; i--) {
@@ -17927,7 +18032,7 @@ function hrewindhreplay() {
           }
         }
         if (!frget) {
-          mtouch[c] = hrepcar[c].regmtch[i];
+          racers[c].mtouch = hrepcar[c].regmtch[i];
           regn(
             hrepcar[c].regnr[i],
             hrepcar[c].regk[i],
@@ -17956,35 +18061,35 @@ function hrewindhreplay() {
 function hreplay() {
   for (var c = 0; c < game.carCount; c++) {
     if (hrepcar[c].destat == fr) {
-      destnow[c] = true;
+      racers[c].destnow = true;
     }
-    if (destnow[c]) {
-      if (cntdest[c] < 6) {
-        if (embos[c] == 0) {
+    if (racers[c].destnow) {
+      if (racers[c].cntdest < 6) {
+        if (racers[c].embos == 0) {
           carobj[car[c].typ].alpha = 1;
-          embodir[c] = Math.floor(random.fx() * 3);
-          if (embodir[c] == 3) {
-            embodir[c] = 0;
+          racers[c].embodir = Math.floor(random.fx() * 3);
+          if (racers[c].embodir == 3) {
+            racers[c].embodir = 0;
           }
-          embomag[c] = 1.2 + random.fx() * 0.2;
+          racers[c].embomag = 1.2 + random.fx() * 0.2;
         }
-        if (embos[c] == 1) {
+        if (racers[c].embos == 1) {
           carobj[car[c].typ].alpha = 2;
         }
-        embos[c]++;
-        if (embos[c] == 2) {
-          embos[c] = 0;
+        racers[c].embos++;
+        if (racers[c].embos == 2) {
+          racers[c].embos = 0;
           if (!onpausefr) {
-            cntdest[c]++;
+            racers[c].cntdest++;
           }
         }
       } else {
-        if (cntdest[c] == 6) {
+        if (racers[c].cntdest == 6) {
           carobj[car[c].typ].alpha = 1;
-          embodir[c] = 0;
+          racers[c].embodir = 0;
           chipburn(c);
-          embos[c] = 0;
-          cntdest[c] = 7;
+          racers[c].embos = 0;
+          racers[c].cntdest = 7;
         }
         firexp(
           c,
@@ -17992,12 +18097,12 @@ function hreplay() {
           hrepcar[c].avny[fr],
           hrepcar[c].avnz[fr],
         );
-        if (cntdest[c] < 24) {
-          embos[c]++;
-          if (embos[c] == 5) {
+        if (racers[c].cntdest < 24) {
+          racers[c].embos++;
+          if (racers[c].embos == 5) {
             burn(c);
-            embos[c] = 0;
-            cntdest[c]++;
+            racers[c].embos = 0;
+            racers[c].cntdest++;
           }
         }
       }
@@ -18022,8 +18127,8 @@ function hreplay() {
       }
       if (frgm >= m) {
         if (car[c].fcnt == 20) {
-          squash[c] = 0;
-          nbsq[c] = 0;
+          racers[c].squash = 0;
+          racers[c].nbsq = 0;
         }
         if (car[c].fcnt == 15) {
           newcar[c] = true;
@@ -18037,7 +18142,7 @@ function hreplay() {
     if (!onpausefr) {
       for (var i = 0; i < hrepcar[c].nreg; i++) {
         if (hrepcar[c].regat[i] == fr) {
-          mtouch[c] = hrepcar[c].regmtch[i];
+          racers[c].mtouch = hrepcar[c].regmtch[i];
           regn(
             hrepcar[c].regnr[i],
             hrepcar[c].regk[i],
@@ -18087,10 +18192,10 @@ function hreplay() {
     car[c].mat[8] = xmt[2];
     car[c].mat[9] = ymt[2];
     car[c].mat[10] = zmt[2];
-    if (embodir[c]) {
-      car[c].mat[embodir[c] * 4] *= embomag[c];
-      car[c].mat[embodir[c] * 4 + 1] *= embomag[c];
-      car[c].mat[embodir[c] * 4 + 2] *= embomag[c];
+    if (racers[c].embodir) {
+      car[c].mat[racers[c].embodir * 4] *= racers[c].embomag;
+      car[c].mat[racers[c].embodir * 4 + 1] *= racers[c].embomag;
+      car[c].mat[racers[c].embodir * 4 + 2] *= racers[c].embomag;
     }
   }
   for (var i = 0; i < hrepsprks.n; i++) {
@@ -18116,12 +18221,12 @@ function preprevtime() {
   camera.target = game.player;
   game.phase = PHASE.replayRewind;
   for (var c = 0; c < game.carCount; c++) {
-    destnow[c] = false;
-    cntdest[c] = 0;
-    embos[c] = 0;
-    embodir[c] = 0;
-    squash[c] = 0;
-    nbsq[c] = 0;
+    racers[c].destnow = false;
+    racers[c].cntdest = 0;
+    racers[c].embos = 0;
+    racers[c].embodir = 0;
+    racers[c].squash = 0;
+    racers[c].nbsq = 0;
     car[c].fcnt = 0;
     fixcar(c);
     carobj[car[c].typ].alpha = 1;
@@ -18146,7 +18251,7 @@ function preprevtime() {
           }
         }
         if (!frget) {
-          mtouch[c] = repcar[c].regmtch[i];
+          racers[c].mtouch = repcar[c].regmtch[i];
           regn(repcar[c].regnr[i], repcar[c].regk[i], repcar[c].regmag[i], c);
         }
       }
@@ -18200,18 +18305,18 @@ function revtime() {
     car[c].zy = repcar[c].zy[fr];
     car[c].wzy = repcar[c].wzy[fr];
     car[c].wxz = repcar[c].wxz[fr];
-    pxy[c] = car[c].xy;
-    pzy[c] = car[c].zy;
+    racers[c].pxy = car[c].xy;
+    racers[c].pzy = car[c].zy;
     for (var k = 0; k < 4; k++) {
-      scx[c][k] = repcar[c].avnx[fr];
-      scy[c][k] = repcar[c].avny[fr];
-      scz[c][k] = repcar[c].avnz[fr];
+      racers[c].scx[k] = repcar[c].avnx[fr];
+      racers[c].scy[k] = repcar[c].avny[fr];
+      racers[c].scz[k] = repcar[c].avnz[fr];
     }
-    hitmag[c] = repcar[c].hitmag[fr];
-    clear[c] = repcar[c].clear[fr];
-    pcleared[c] = repcar[c].pcleared[fr];
-    nlaps[c] = repcar[c].nlaps[fr];
-    cxz[c] = repcar[c].cxz[fr];
+    racers[c].hitmag = repcar[c].hitmag[fr];
+    racers[c].clear = repcar[c].clear[fr];
+    racers[c].pcleared = repcar[c].pcleared[fr];
+    racers[c].nlaps = repcar[c].nlaps[fr];
+    racers[c].cxz = repcar[c].cxz[fr];
     var xmt = [1, 0, 0];
     var ymt = [0, 1, 0];
     var zmt = [0, 0, 1];
@@ -18237,32 +18342,32 @@ function revtime() {
   }
   if (fr <= 429 - nrec) {
     for (var c = 0; c < game.carCount; c++) {
-      pan[c] = 0;
-      attack[c] = 0;
-      acr[c] = 0;
-      afta[c] = false;
-      trfix[c] = 0;
-      acuracy[c] = 0;
-      upwait[c] = 0;
-      forget[c] = false;
-      bulistc[c] = false;
-      runbul[c] = 0;
-      revstart[c] = 0;
-      oupnt[c] = 0;
-      gowait[c] = false;
-      apunch[c] = 0;
-      exitattack[c] = false;
-      focus[c] = -1;
-      missedcp[c] = 0;
-      nofocus[c] = false;
+      racers[c].pan = 0;
+      racers[c].attack = 0;
+      racers[c].acr = 0;
+      racers[c].afta = false;
+      racers[c].trfix = 0;
+      racers[c].acuracy = 0;
+      racers[c].upwait = 0;
+      racers[c].forget = false;
+      racers[c].bulistc = false;
+      racers[c].runbul = 0;
+      racers[c].revstart = 0;
+      racers[c].oupnt = 0;
+      racers[c].gowait = false;
+      racers[c].apunch = 0;
+      racers[c].exitattack = false;
+      racers[c].focus = -1;
+      racers[c].missedcp = 0;
+      racers[c].nofocus = false;
       carobj[car[c].typ].alpha = 1;
       if (repcar[c].destat > 0) {
-        dest[c] = false;
+        racers[c].dest = false;
         repcar[c].destat = 700;
       }
     }
     cntwis = 0;
-    iclear = clear[game.player];
+    iclear = racers[game.player].clear;
     tcnt = 30;
     auscnt = 45;
     cp.haltall = false;
@@ -18294,19 +18399,19 @@ function confirmkey(pressed) {
 // What the keys do (see input/keyboard.js).
 function onKey(action, pressed) {
   if (action == "accelerate") {
-    u[game.player].up = pressed;
+    racers[game.player].u.up = pressed;
   }
   if (action == "brake") {
-    u[game.player].down = pressed;
+    racers[game.player].u.down = pressed;
   }
   if (action == "steerLeft") {
-    u[game.player].left = pressed;
+    racers[game.player].u.left = pressed;
   }
   if (action == "steerRight") {
-    u[game.player].right = pressed;
+    racers[game.player].u.right = pressed;
   }
   if (action == "handbrake") {
-    u[game.player].handb = pressed;
+    racers[game.player].u.handb = pressed;
     if (game.phase != PHASE.race) {
       confirmkey(pressed);
     }
@@ -18320,7 +18425,7 @@ function onKey(action, pressed) {
         keyonx = 1;
       }
     } else {
-      u[game.player].arrace = !u[game.player].arrace;
+      racers[game.player].u.arrace = !racers[game.player].u.arrace;
       keyonx = 0;
     }
   }

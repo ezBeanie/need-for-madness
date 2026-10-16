@@ -65,7 +65,7 @@ export const startRace = async ({
 export const autopilot = (ctx) => {
   const car = ctx.car[0];
   const cp = ctx.cp;
-  const target = (ctx.point[0] + 2) % cp.n;
+  const target = (ctx.racers[0].point + 2) % cp.n;
   const dx = cp.x[target] - car.x;
   const dz = cp.z[target] - car.z;
   let pan = 90 + (dx >= 0 ? 180 : 0) + Math.atan(dz / dx) / DEG;
@@ -98,14 +98,14 @@ export const raceState = (ctx) => ({
       car.zy,
       car.wxz,
       car.wzy,
-      ctx.speed[i],
-      ctx.power[i],
-      ctx.hitmag[i],
-      ctx.dest[i],
-      ctx.clear[i],
-      ctx.pcleared[i],
+      ctx.racers[i].speed,
+      ctx.racers[i].power,
+      ctx.racers[i].hitmag,
+      ctx.racers[i].dest,
+      ctx.racers[i].clear,
+      ctx.racers[i].pcleared,
       ctx.cp.pos[i],
-      ctx.mtouch[i],
+      ctx.racers[i].mtouch,
     ].map(round);
   }),
 });
@@ -137,7 +137,7 @@ export const racingAutopilot = () => {
     const diff = normalizeAngle(normalizeAngle(car.xz) - normalizeAngle(pan));
     return {
       ...NO_INPUT,
-      up: Math.abs(diff) < 50 || ctx.speed[0] < 12,
+      up: Math.abs(diff) < 50 || ctx.racers[0].speed < 12,
       left: diff > 4,
       right: diff < -4,
     };

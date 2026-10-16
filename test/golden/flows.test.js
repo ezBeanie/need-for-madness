@@ -32,10 +32,10 @@ const finishAndPlayOn = () => {
   return (ctx, frame, game) => {
     keys.releaseAfterFrame(game);
     if (finishedAt === null) {
-      Object.assign(ctx.u[0], drive(ctx));
+      Object.assign(ctx.racers[0].u, drive(ctx));
       if (ctx.holdcnt) {
         finishedAt = frame;
-        Object.assign(ctx.u[0], NO_INPUT);
+        Object.assign(ctx.racers[0].u, NO_INPUT);
       }
       return;
     }
@@ -53,9 +53,9 @@ const driveThen = (afterFrames, action) => {
   return (ctx, frame, game) => {
     keys.releaseAfterFrame(game);
     if (frame < afterFrames) {
-      Object.assign(ctx.u[0], drive(ctx));
+      Object.assign(ctx.racers[0].u, drive(ctx));
     } else if (frame === afterFrames) {
-      Object.assign(ctx.u[0], NO_INPUT);
+      Object.assign(ctx.racers[0].u, NO_INPUT);
       action(ctx, game, keys);
     }
   };
