@@ -66,13 +66,13 @@ export const openGame = async (page, { storage = {} } = {}) => {
     },
     // How many ticks loading takes depends on the network. Once everything is loaded, this
     // resets what carries over from those ticks: the random sources (now separate for
-    // simulation and effects) and frgm, which decides in which ticks per-tick events happen.
+    // simulation and effects) and tick.fraction, which decides in which ticks per-tick events happen.
     settle: async () => {
       await page.waitForLoadState("networkidle");
       await page.evaluate(() => {
         window.gameState.random.sim = window.seededRandom(1);
         window.gameState.random.fx = window.seededRandom(1001);
-        window.gameState.frgm = 0;
+        window.gameState.tick.fraction = 0;
       });
     },
     tap: async (key) => {
