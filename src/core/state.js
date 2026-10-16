@@ -25,6 +25,8 @@ export const PHASE = {
 
 // The most cars a race can have; the championship races with 7.
 export const MAX_CARS = 20;
+// the field sizes the stage select offers, 7 as in the original
+export const RACE_SIZES = [7, 10, 15, 20];
 
 // What the game is doing: the screen it shows, the race setup and the player's progress.
 export const game = {

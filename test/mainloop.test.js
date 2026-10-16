@@ -1,11 +1,12 @@
 import { expect, test } from "vitest";
 import { loadGame } from "./harness/loadGame.js";
 
-// While loading (phase 0) every logic tick advances reqload by one, up to 9.
+// While loading every logic tick advances loading.step by one, up to 9.
 const ticksAfter = async (frameTimes) => {
   const { ctx } = await loadGame();
+  const { loading } = await import("../src/loading/progress.js");
   frameTimes.forEach((now) => ctx.mainloop(now));
-  return ctx.loading.step;
+  return loading.step;
 };
 
 test("a 120 Hz display still gets one logic tick every 35 ms", async () => {
