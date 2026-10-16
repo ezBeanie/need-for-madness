@@ -227,8 +227,9 @@ export const recordFlow = async ({
   frames,
   script,
   userAgent,
+  unlocked,
 }) => {
-  const game = await startRace({ stage, car, seed, userAgent });
+  const game = await startRace({ stage, car, seed, userAgent, unlocked });
   const states = [];
   const canvas = recordCanvas();
   const webgl = recordWebGL();

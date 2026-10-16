@@ -422,6 +422,19 @@ const flows = [
     frames: 1500,
     script: stageSelectTour,
   },
+  ...[
+    [2, "start-hint-stage-02"],
+    [4, "start-hint-stage-04"],
+    [4, "start-hint-phone-stage-04", "iPhone"],
+  ].map(([stage, name, userAgent]) => ({
+    // a stage just unlocked: Insano tells how to win it while the race starts
+    name,
+    stage,
+    frames: 260,
+    script: () => () => {},
+    unlocked: stage,
+    userAgent,
+  })),
   {
     name: "rewind-time-stage-02",
     stage: 2,
@@ -433,7 +446,7 @@ const flows = [
 describe("game flows match the golden master", () => {
   test.each(flows)(
     "$name",
-    async ({ name, stage, frames, script, userAgent }) => {
+    async ({ name, stage, frames, script, userAgent, unlocked }) => {
       const car = 15;
       const recording = await recordFlow({
         stage,
@@ -442,6 +455,7 @@ describe("game flows match the golden master", () => {
         frames,
         script: script(),
         userAgent,
+        unlocked,
       });
       expectMatchesGolden(name, { stage, car }, recording);
       expectDrawingMatchesGolden(name, recording);
