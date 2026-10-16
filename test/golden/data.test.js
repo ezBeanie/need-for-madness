@@ -64,12 +64,12 @@ describe("car data matches the golden master", () => {
   test("stats, wheels and models of all cars", async () => {
     const { ctx } = await startRace({ stage: 1, car: 5 });
     const stats = Object.fromEntries(
-      Object.entries(ctx.cd).filter(([, v]) => Array.isArray(v)),
+      Object.entries(ctx.carStats).filter(([, v]) => Array.isArray(v)),
     );
     const cars = Array.from({ length: CAR_COUNT }, (_, i) => {
       const model = ctx.carobj[i];
       return {
-        name: ctx.cd.names[i],
+        name: ctx.carStats.names[i],
         wheels: { x: ctx.wlx[i], y: ctx.wly[i], z: ctx.wlz[i], h: ctx.wlh[i] },
         model: {
           bounds: [model.bx, model.by, model.bz],
