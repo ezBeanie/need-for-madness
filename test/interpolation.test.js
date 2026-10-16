@@ -6,13 +6,13 @@ let rad;
 
 // Draws rad as it would be drawn right after the given logic tick.
 const drawAt = (tick, alpha, x, rotationDeg) => {
-  ctx.tickcount = tick;
-  ctx.tickalpha = alpha;
+  ctx.interpolation.tick = tick;
+  ctx.interpolation.alpha = alpha;
   rad.x = x;
   ctx.mat4.identity(rad.mat);
   ctx.mat4.rotateY(rad.mat, rad.mat, (rotationDeg * Math.PI) / 180);
-  ctx.placemodel(rad);
-  const m = ctx.drawmat;
+  ctx.placeModel(rad);
+  const m = ctx.drawMatrix;
   return { x: m[12], angle: (Math.atan2(m[8], m[0]) * 180) / Math.PI };
 };
 

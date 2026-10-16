@@ -12,7 +12,7 @@ const screens = {
 const countNewInstances = (ctx) => {
   const states = new WeakMap();
   let created = 0;
-  ctx.lerpstates = {
+  ctx.interpolation.states = {
     get: (mat) => states.get(mat),
     set: (mat, state) => {
       created++;
@@ -27,7 +27,7 @@ describe("interpolated drawing in the menus", () => {
     "%s keeps every drawn instance from tick to tick",
     async (screen) => {
       const { ctx, step } = await screens[screen]();
-      ctx.tickalpha = 0.5;
+      ctx.interpolation.alpha = 0.5;
       const created = countNewInstances(ctx);
       for (let i = 0; i < 30; i++) {
         step();
@@ -60,15 +60,15 @@ describe("interpolated drawing in the menus", () => {
     for (let i = 0; i < 100; i++) {
       step();
       for (const alpha of [0.25, 0.5, 0.75]) {
-        ctx.tickalpha = alpha;
-        ctx.placecamera();
+        ctx.interpolation.alpha = alpha;
+        ctx.placeCamera(ctx.camx, ctx.camy, ctx.camz, ctx.cmat);
         const drawn = drawnMatrix(ctx, ctx.bgst, ctx.bgst);
         worst = Math.max(
           worst,
           Math.abs(Math.hypot(drawn[12], drawn[13], drawn[14]) - 106),
         );
       }
-      ctx.tickalpha = 1;
+      ctx.interpolation.alpha = 1;
     }
     expect(worst).toBeLessThan(1);
   });

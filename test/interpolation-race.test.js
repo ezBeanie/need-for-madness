@@ -30,7 +30,7 @@ describe("interpolated drawing in a real race", () => {
         worst = Math.max(worst, wheelSlip(ctx, ctx.car[c].typ, ctx.car[c]));
         checked++;
       }
-      ctx.tickalpha = 1;
+      ctx.interpolation.alpha = 1;
     });
     expect(checked).toBeGreaterThan(10_000);
     expect(worst).toBeLessThan(0.05);
@@ -40,7 +40,7 @@ describe("interpolated drawing in a real race", () => {
   // it has to stay under the car body, not jump ahead to the next tick.
   test("shadows stay under their car between ticks", async () => {
     const offset = (ctx, c, alpha) => {
-      ctx.tickalpha = alpha;
+      ctx.interpolation.alpha = alpha;
       const typ = ctx.car[c].typ;
       const body = drawnMatrix(ctx, ctx.carobj[typ], ctx.car[c]);
       const shadow = drawnMatrix(ctx, ctx.shad[typ], ctx.shad[typ]);
@@ -57,7 +57,7 @@ describe("interpolated drawing in a real race", () => {
         }
         checked++;
       }
-      ctx.tickalpha = 1;
+      ctx.interpolation.alpha = 1;
     });
     expect(checked).toBeGreaterThan(10_000);
     // a shadow switching to another side of a tilted car is drawn without transition

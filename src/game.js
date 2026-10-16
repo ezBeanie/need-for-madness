@@ -17,6 +17,15 @@ import {
   rotatePoints as rotate,
   sinDeg as msin,
 } from "./core/math.js";
+import {
+  attachTo,
+  drawCamera,
+  drawMatrix,
+  interpolation,
+  placeCamera,
+  placeModel,
+  resetMatrix,
+} from "./render/interpolation.js";
 
 // Separate sources: effects may consume randomness at any rate without changing the race.
 // eslint-disable-next-line no-restricted-properties
@@ -1457,7 +1466,7 @@ function setwheelspos() {
       wlx[cn][0] * car[c].mat[2] -
       wly[cn][0] * car[c].mat[6] +
       wlz[cn][0] * car[c].mat[10];
-    whl[cn][0].mat = resetmat(whl[cn][0].mat);
+    whl[cn][0].mat = resetMatrix(whl[cn][0].mat);
     for (var k = 0; k < 12; k++) {
       whl[cn][0].mat[k] = car[c].mat[k];
     }
@@ -1488,7 +1497,7 @@ function setwheelspos() {
       wlx[cn][0] * car[c].mat[2] -
       wly[cn][0] * car[c].mat[6] +
       wlz[cn][0] * car[c].mat[10];
-    whl[cn][1].mat = resetmat(whl[cn][1].mat);
+    whl[cn][1].mat = resetMatrix(whl[cn][1].mat);
     for (var k = 0; k < 12; k++) {
       whl[cn][1].mat[k] = car[c].mat[k];
     }
@@ -1519,7 +1528,7 @@ function setwheelspos() {
       wlx[cn][1] * car[c].mat[2] -
       wly[cn][1] * car[c].mat[6] +
       wlz[cn][1] * car[c].mat[10];
-    whl[cn][2].mat = resetmat(whl[cn][2].mat);
+    whl[cn][2].mat = resetMatrix(whl[cn][2].mat);
     for (var k = 0; k < 12; k++) {
       whl[cn][2].mat[k] = car[c].mat[k];
     }
@@ -1550,7 +1559,7 @@ function setwheelspos() {
       wlx[cn][1] * car[c].mat[2] -
       wly[cn][1] * car[c].mat[6] +
       wlz[cn][1] * car[c].mat[10];
-    whl[cn][3].mat = resetmat(whl[cn][3].mat);
+    whl[cn][3].mat = resetMatrix(whl[cn][3].mat);
     for (var k = 0; k < 12; k++) {
       whl[cn][3].mat[k] = car[c].mat[k];
     }
@@ -1929,238 +1938,13 @@ function colorbgstforend() {
   gl.bindBuffer(gl.ARRAY_BUFFER, bgst.cbuf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
 }
-// Drawing happens every display frame, the logic only every tickms. Everything drawn is
-// interpolated between its state at the last two ticks, tickalpha being the position in
-// between. Draw instances are told apart by their matrix object (car[c].mat, dust[i].mat...).
-var tickcount = 0;
-var tickalpha = 1;
-var renderframe = 0;
-var lerpstates = new WeakMap();
-var drawmat = mat4.create();
-var dcmat = mat4.create();
-var dcamx = 0,
-  dcamy = 0,
-  dcamz = 0;
-var camstate = null;
-// Moves further than this between two ticks are teleports (reset, reused particle, camera cut).
-var lerpjump = 300;
-// Turning further than 90 degrees within one tick is a flip back onto the wheels, not a motion.
-var lerpturn = Math.cos(Math.PI / 4);
-var lerpquat = quat.create();
-var lerpscale = vec3.create();
-var lerppos = vec3.create();
-var lerpparentnow = mat4.create();
-var lerpparentdrawn = mat4.create();
-// Most matrices are rotations (rigid, possibly scaled and mirrored) and are interpolated
-// as such. Others, like car shadows projected onto a slope, are interpolated element-wise.
-function newlerpshot() {
-  return {
-    x: 0,
-    y: 0,
-    z: 0,
-    m: new Float32Array(16),
-    rigid: false,
-    mirrored: false,
-    rot: quat.create(),
-    scale: vec3.create(),
-  };
-}
-function takelerpshot(shot, x, y, z, mat) {
-  shot.x = x;
-  shot.y = y;
-  shot.z = z;
-  mat4.copy(shot.m, mat);
-  mat4.getScaling(shot.scale, mat);
-  var rotmat = mat4.clone(mat);
-  for (var col = 0; col < 3; col++) {
-    for (var row = 0; row < 3; row++) {
-      rotmat[col * 4 + row] /= shot.scale[col] || 1;
-    }
-  }
-  shot.rigid = true;
-  for (var i = 0; i < 3; i++) {
-    var j = (i + 1) % 3;
-    var dot =
-      rotmat[i * 4] * rotmat[j * 4] +
-      rotmat[i * 4 + 1] * rotmat[j * 4 + 1] +
-      rotmat[i * 4 + 2] * rotmat[j * 4 + 2];
-    if (Math.abs(dot) > 0.01) {
-      shot.rigid = false;
-    }
-  }
-  shot.mirrored = mat4.determinant(rotmat) < 0;
-  if (shot.mirrored) {
-    rotmat[8] = -rotmat[8];
-    rotmat[9] = -rotmat[9];
-    rotmat[10] = -rotmat[10];
-  }
-  mat4.getRotation(shot.rot, rotmat);
-}
-function rigidpair(from, to) {
-  return from.rigid && to.rigid && from.mirrored == to.mirrored;
-}
-// Whether the change between two tick states is a motion and not a jump.
-function lerpable(from, to) {
-  if (pyd(from.x, to.x, from.y, to.y, from.z, to.z) >= lerpjump) {
-    return false;
-  }
-  if (rigidpair(from, to)) {
-    return Math.abs(quat.dot(from.rot, to.rot)) > lerpturn;
-  }
-  for (var i = 0; i < 11; i++) {
-    if (i % 4 != 3 && Math.abs(to.m[i] - from.m[i]) > 1) {
-      return false;
-    }
-  }
-  return true;
-}
-// The latest two tick states of one draw instance, recorded the first time it is drawn after a tick.
-function lerpentry(mat) {
-  var st = lerpstates.get(mat);
-  if (!st) {
-    st = {
-      tick: -1,
-      prev: newlerpshot(),
-      cur: newlerpshot(),
-      hasprev: false,
-      parent: null,
-      parentframe: -1,
-    };
-    lerpstates.set(mat, st);
-  }
-  return st;
-}
-function lerpstateof(rad) {
-  var st = lerpentry(rad.mat);
-  if (st.tick != tickcount) {
-    var old = st.prev;
-    st.prev = st.cur;
-    st.cur = old;
-    takelerpshot(st.cur, rad.x, rad.y, rad.z, rad.mat);
-    st.hasprev = st.tick == tickcount - 1 && lerpable(st.prev, st.cur);
-    st.tick = tickcount;
-  }
-  return st;
-}
-// Per-tick matrices are reset instead of recreated: interpolation tells draw instances apart
-// by their matrix object.
-function resetmat(mat) {
-  return mat ? mat4.identity(mat) : mat4.create();
-}
-// Wheels must not be interpolated on their own: a car rotating fast would pull them inwards.
-// An attached instance is drawn where it sits on its interpolated parent instead.
-function lerpattach(childmat, parent) {
-  var st = lerpentry(childmat);
-  st.parent = parent;
-  st.parentframe = renderframe;
-}
-// The world matrix of a tick state, or of the state between two ticks.
-function shotmatrix(out, from, to, a) {
-  lerppos[0] = from.x + (to.x - from.x) * a;
-  lerppos[1] = from.y + (to.y - from.y) * a;
-  lerppos[2] = from.z + (to.z - from.z) * a;
-  if (!rigidpair(from, to)) {
-    for (var i = 0; i < 12; i++) {
-      out[i] = from.m[i] + (to.m[i] - from.m[i]) * a;
-    }
-    out[12] = lerppos[0];
-    out[13] = lerppos[1];
-    out[14] = lerppos[2];
-    out[15] = 1;
-    return out;
-  }
-  quat.slerp(lerpquat, from.rot, to.rot, a);
-  vec3.lerp(lerpscale, from.scale, to.scale, a);
-  mat4.fromRotationTranslationScale(out, lerpquat, lerppos, lerpscale);
-  if (to.mirrored) {
-    out[8] = -out[8];
-    out[9] = -out[9];
-    out[10] = -out[10];
-  }
-  return out;
-}
-// Fills drawmat with the model matrix to draw rad with, relative to the drawn camera.
-function placemodel(rad) {
-  rad.mat[12] = rad.x - camx;
-  rad.mat[13] = rad.y - camy;
-  rad.mat[14] = rad.z - camz;
-  mat4.copy(drawmat, rad.mat);
-  drawmat[12] = rad.x;
-  drawmat[13] = rad.y;
-  drawmat[14] = rad.z;
-  var st = lerpstateof(rad);
-  if (tickalpha < 1) {
-    if (st.parent && st.parentframe == renderframe) {
-      var pst = lerpstateof(st.parent);
-      if (pst.hasprev) {
-        shotmatrix(lerpparentnow, pst.cur, pst.cur, 0);
-        shotmatrix(lerpparentdrawn, pst.prev, pst.cur, tickalpha);
-        mat4.invert(lerpparentnow, lerpparentnow);
-        mat4.multiply(drawmat, lerpparentnow, drawmat);
-        mat4.multiply(drawmat, lerpparentdrawn, drawmat);
-      }
-    } else {
-      var moved = st.cur.x != rad.x || st.cur.y != rad.y || st.cur.z != rad.z;
-      if (st.hasprev && !moved) {
-        shotmatrix(drawmat, st.prev, st.cur, tickalpha);
-      }
-    }
-  }
-  drawmat[12] -= dcamx;
-  drawmat[13] -= dcamy;
-  drawmat[14] -= dcamz;
-}
-// Sets the camera to draw with (dcamx..., dcmat) between the last two ticks' cameras.
-function placecamera() {
-  if (!cmat) {
-    return;
-  }
-  if (!camstate) {
-    camstate = { tick: -1, prev: null, cur: null };
-  }
-  if (camstate.tick != tickcount) {
-    camstate.prev = camstate.tick == tickcount - 1 ? camstate.cur : null;
-    camstate.cur = { x: camx, y: camy, z: camz, mat: mat4.clone(cmat) };
-    camstate.tick = tickcount;
-  }
-  var prev = camstate.prev;
-  var cur = camstate.cur;
-  var a = tickalpha;
-  if (
-    !prev ||
-    a >= 1 ||
-    pyd(prev.x, cur.x, prev.y, cur.y, prev.z, cur.z) > lerpjump ||
-    camcut(prev.mat, cur.mat)
-  ) {
-    dcamx = camx;
-    dcamy = camy;
-    dcamz = camz;
-    mat4.copy(dcmat, cmat);
-    return;
-  }
-  dcamx = prev.x + (cur.x - prev.x) * a;
-  dcamy = prev.y + (cur.y - prev.y) * a;
-  dcamz = prev.z + (cur.z - prev.z) * a;
-  for (var i = 0; i < 16; i++) {
-    dcmat[i] = prev.mat[i] + (cur.mat[i] - prev.mat[i]) * a;
-  }
-}
-// A camera rotating that much within one tick is a cut, not a pan.
-function camcut(prevmat, curmat) {
-  for (var i = 0; i < 16; i++) {
-    if (Math.abs(curmat[i] - prevmat[i]) > 0.5) {
-      return true;
-    }
-  }
-  return false;
-}
 function drawparticle(rad) {
   if (rad.loaded) {
     if (rad.alpha) {
       gl.enable(gl.BLEND);
       gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
     }
-    placemodel(rad);
+    placeModel(rad);
     gl.bindBuffer(gl.ARRAY_BUFFER, rad.vbuf);
     gl.vertexAttribPointer(
       programInfo[0].attribLocations.vertexPosition,
@@ -2186,12 +1970,12 @@ function drawparticle(rad) {
     gl.uniformMatrix4fv(
       programInfo[0].uniformLocations.projectionMatrix,
       false,
-      dcmat,
+      drawCamera.projection,
     );
     gl.uniformMatrix4fv(
       programInfo[0].uniformLocations.modelViewMatrix,
       false,
-      drawmat,
+      drawMatrix,
     );
     gl.drawElements(gl.TRIANGLES, rad.ni, gl.UNSIGNED_SHORT, 0);
     if (rad.alpha) {
@@ -2223,11 +2007,11 @@ function drawrad3D(rad) {
         pro = 4;
       }
     }
-    placemodel(rad);
+    placeModel(rad);
     var normalMatrix = null;
     if (pro == 1) {
       normalMatrix = mat4.create();
-      mat4.invert(normalMatrix, drawmat);
+      mat4.invert(normalMatrix, drawMatrix);
       mat4.transpose(normalMatrix, normalMatrix);
     }
     gl.bindBuffer(gl.ARRAY_BUFFER, rad.vbuf);
@@ -2267,12 +2051,12 @@ function drawrad3D(rad) {
     gl.uniformMatrix4fv(
       programInfo[pro].uniformLocations.projectionMatrix,
       false,
-      dcmat,
+      drawCamera.projection,
     );
     gl.uniformMatrix4fv(
       programInfo[pro].uniformLocations.modelViewMatrix,
       false,
-      drawmat,
+      drawMatrix,
     );
     if (pro == 1) {
       gl.uniformMatrix4fv(
@@ -3588,7 +3372,7 @@ function cpanimate() {
     fixdisk.ont = 0;
   }
   if (onelec) {
-    elec.mat = resetmat(elec.mat);
+    elec.mat = resetMatrix(elec.mat);
     mat4.rotate(elec.mat, elec.mat, camxz * (Math.PI / 180), [0, -1, 0]);
     mat4.rotate(elec.mat, elec.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
     elec.ont++;
@@ -4026,7 +3810,7 @@ function dustfly() {
       } else {
         mlt = 1 + (1 - Math.abs(msin(camxz) * msin(camxz) - vfz));
       }
-      dust[i].mat = resetmat(dust[i].mat);
+      dust[i].mat = resetMatrix(dust[i].mat);
       mat4.rotate(
         dust[i].mat,
         dust[i].mat,
@@ -4170,7 +3954,7 @@ function expburn() {
   var nfly = false;
   for (var i = 0; i < nexp; i++) {
     if (exp[i].ani != -1) {
-      exp[i].mat = resetmat(exp[i].mat);
+      exp[i].mat = resetMatrix(exp[i].mat);
       mat4.rotate(exp[i].mat, exp[i].mat, camxz * (Math.PI / 180), [0, -1, 0]);
       mat4.rotate(exp[i].mat, exp[i].mat, camzy * (Math.PI / 180), [-1, 0, 0]);
       mat4.rotate(
@@ -4616,7 +4400,7 @@ function gameworks() {
   skydom.x = camx;
   skydom.z = camz;
   var skf = 0.6 + camy / 4000;
-  skydom.mat = resetmat(skydom.mat);
+  skydom.mat = resetMatrix(skydom.mat);
   skydom.mat[4] *= skf;
   skydom.mat[5] *= skf;
   skydom.mat[6] *= skf;
@@ -4667,10 +4451,10 @@ function carselect() {
   bg3D.x = 0;
   bg3D.y = 14;
   bg3D.z = -99;
-  bg3D.mat = resetmat(bg3D.mat);
+  bg3D.mat = resetMatrix(bg3D.mat);
   mat4.rotate(bg3D.mat, bg3D.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
   for (var i = 0; i < 9; i++) {
-    smoke[i].mat = resetmat(smoke[i].mat);
+    smoke[i].mat = resetMatrix(smoke[i].mat);
     smoke[i].x += smoke[i].sx;
     if (smoke[i].sx < 0 && smoke[i].x < -60) {
       smoke[i].sx = 0.05 + fxrandom() * 0.3;
@@ -4832,7 +4616,7 @@ function carselect() {
     wlx[sel[0]][0] * carobj[sel[0]].mat[2] -
     wly[sel[0]][0] * carobj[sel[0]].mat[6] +
     wlz[sel[0]][0] * carobj[sel[0]].mat[10];
-  whl[sel[0]][0].mat = resetmat(whl[sel[0]][0].mat);
+  whl[sel[0]][0].mat = resetMatrix(whl[sel[0]][0].mat);
   for (var k = 0; k < 12; k++) {
     whl[sel[0]][0].mat[k] = carobj[sel[0]].mat[k];
   }
@@ -4857,7 +4641,7 @@ function carselect() {
     wlx[sel[0]][0] * carobj[sel[0]].mat[2] -
     wly[sel[0]][0] * carobj[sel[0]].mat[6] +
     wlz[sel[0]][0] * carobj[sel[0]].mat[10];
-  whl[sel[0]][1].mat = resetmat(whl[sel[0]][1].mat);
+  whl[sel[0]][1].mat = resetMatrix(whl[sel[0]][1].mat);
   for (var k = 0; k < 12; k++) {
     whl[sel[0]][1].mat[k] = carobj[sel[0]].mat[k];
   }
@@ -4882,7 +4666,7 @@ function carselect() {
     wlx[sel[0]][1] * carobj[sel[0]].mat[2] -
     wly[sel[0]][1] * carobj[sel[0]].mat[6] +
     wlz[sel[0]][1] * carobj[sel[0]].mat[10];
-  whl[sel[0]][2].mat = resetmat(whl[sel[0]][2].mat);
+  whl[sel[0]][2].mat = resetMatrix(whl[sel[0]][2].mat);
   for (var k = 0; k < 12; k++) {
     whl[sel[0]][2].mat[k] = carobj[sel[0]].mat[k];
   }
@@ -4907,7 +4691,7 @@ function carselect() {
     wlx[sel[0]][1] * carobj[sel[0]].mat[2] -
     wly[sel[0]][1] * carobj[sel[0]].mat[6] +
     wlz[sel[0]][1] * carobj[sel[0]].mat[10];
-  whl[sel[0]][3].mat = resetmat(whl[sel[0]][3].mat);
+  whl[sel[0]][3].mat = resetMatrix(whl[sel[0]][3].mat);
   for (var k = 0; k < 12; k++) {
     whl[sel[0]][3].mat[k] = carobj[sel[0]].mat[k];
   }
@@ -5042,7 +4826,7 @@ function stageselect() {
   if (chkflk >= 5) {
     chkflk = 0;
   }
-  bgst.mat = resetmat(bgst.mat);
+  bgst.mat = resetMatrix(bgst.mat);
   mat4.rotate(bgst.mat, bgst.mat, camxz * (Math.PI / 180), [0, -1, 0]);
   mat4.rotate(bgst.mat, bgst.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
   bgst.mat[0] *= aspect * 0.5625;
@@ -5126,7 +4910,7 @@ function unlockedcar() {
       wlx[sel[0]][0] * carobj[sel[0]].mat[2] -
       wly[sel[0]][0] * carobj[sel[0]].mat[6] +
       wlz[sel[0]][0] * carobj[sel[0]].mat[10];
-    whl[sel[0]][0].mat = resetmat(whl[sel[0]][0].mat);
+    whl[sel[0]][0].mat = resetMatrix(whl[sel[0]][0].mat);
     for (var k = 0; k < 12; k++) {
       whl[sel[0]][0].mat[k] = carobj[sel[0]].mat[k];
     }
@@ -5151,7 +4935,7 @@ function unlockedcar() {
       wlx[sel[0]][0] * carobj[sel[0]].mat[2] -
       wly[sel[0]][0] * carobj[sel[0]].mat[6] +
       wlz[sel[0]][0] * carobj[sel[0]].mat[10];
-    whl[sel[0]][1].mat = resetmat(whl[sel[0]][1].mat);
+    whl[sel[0]][1].mat = resetMatrix(whl[sel[0]][1].mat);
     for (var k = 0; k < 12; k++) {
       whl[sel[0]][1].mat[k] = carobj[sel[0]].mat[k];
     }
@@ -5176,7 +4960,7 @@ function unlockedcar() {
       wlx[sel[0]][1] * carobj[sel[0]].mat[2] -
       wly[sel[0]][1] * carobj[sel[0]].mat[6] +
       wlz[sel[0]][1] * carobj[sel[0]].mat[10];
-    whl[sel[0]][2].mat = resetmat(whl[sel[0]][2].mat);
+    whl[sel[0]][2].mat = resetMatrix(whl[sel[0]][2].mat);
     for (var k = 0; k < 12; k++) {
       whl[sel[0]][2].mat[k] = carobj[sel[0]].mat[k];
     }
@@ -5201,7 +4985,7 @@ function unlockedcar() {
       wlx[sel[0]][1] * carobj[sel[0]].mat[2] -
       wly[sel[0]][1] * carobj[sel[0]].mat[6] +
       wlz[sel[0]][1] * carobj[sel[0]].mat[10];
-    whl[sel[0]][3].mat = resetmat(whl[sel[0]][3].mat);
+    whl[sel[0]][3].mat = resetMatrix(whl[sel[0]][3].mat);
     for (var k = 0; k < 12; k++) {
       whl[sel[0]][3].mat[k] = carobj[sel[0]].mat[k];
     }
@@ -5211,7 +4995,7 @@ function unlockedcar() {
       -90 * (Math.PI / 180),
       [0, 1, 0],
     );
-    bgst.mat = resetmat(bgst.mat);
+    bgst.mat = resetMatrix(bgst.mat);
     mat4.rotate(bgst.mat, bgst.mat, camxz * (Math.PI / 180), [0, -1, 0]);
     mat4.rotate(bgst.mat, bgst.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
     bgst.mat[0] *= aspect * 0.5625;
@@ -5226,12 +5010,12 @@ function unlockedcar() {
   }
 }
 function render(now) {
-  renderframe++;
+  interpolation.frame++;
   if (fase != renderedfase) {
     framefase = -1;
     renderedfase = fase;
   }
-  placecamera();
+  placeCamera(camx, camy, camz, cmat);
   if (
     fase == 7 ||
     fase == 8 ||
@@ -5311,7 +5095,7 @@ function render(now) {
       }
       for (var c = 0; c < ncars; c++) {
         for (var w = 0; w < 4; w++) {
-          lerpattach(whl[car[c].typ][w].mat, car[c]);
+          attachTo(whl[car[c].typ][w].mat, car[c]);
         }
         for (var w = 0; w < 4; w++) {
           var k = 0;
@@ -5427,7 +5211,7 @@ function render(now) {
       gl.depthFunc(gl.LEQUAL);
       drawrad3D(shad[sel[0]]);
       for (var w = 0; w < 4; w++) {
-        lerpattach(whl[sel[0]][w].mat, carobj[sel[0]]);
+        attachTo(whl[sel[0]][w].mat, carobj[sel[0]]);
       }
       for (var w = 0; w < 4; w++) {
         var k = 0;
@@ -5507,7 +5291,7 @@ function render(now) {
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
       for (var w = 0; w < 4; w++) {
-        lerpattach(whl[sel[0]][w].mat, carobj[sel[0]]);
+        attachTo(whl[sel[0]][w].mat, carobj[sel[0]]);
       }
       for (var w = 0; w < 4; w++) {
         var k = 0;
@@ -12379,7 +12163,7 @@ function gameloop() {
     frgm -= 1;
   }
   frgm += m;
-  tickcount++;
+  interpolation.tick++;
 }
 function mainloop(now) {
   if (lasttick == -1) {
@@ -12391,7 +12175,7 @@ function mainloop(now) {
     gameloop();
     ticktime -= tickms;
   }
-  tickalpha = ticktime / tickms;
+  interpolation.alpha = ticktime / tickms;
   render(now);
   requestAnimationFrame(mainloop);
 }
@@ -14843,7 +14627,7 @@ function drawrevtime() {
     }
   }
   switcnt++;
-  timetube.mat = resetmat(timetube.mat);
+  timetube.mat = resetMatrix(timetube.mat);
   mat4.rotate(timetube.mat, timetube.mat, camxz * (Math.PI / 180), [0, -1, 0]);
   mat4.rotate(timetube.mat, timetube.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
   mat4.rotate(timetube.mat, timetube.mat, swing * (Math.PI / 180), [0, 0, 1]);

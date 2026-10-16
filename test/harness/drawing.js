@@ -4,8 +4,8 @@ export const drawnMatrix = (ctx, rad, inst) => {
   rad.y = inst.y;
   rad.z = inst.z;
   rad.mat = inst.mat;
-  ctx.placemodel(rad);
-  return ctx.mat4.clone(ctx.drawmat);
+  ctx.placeModel(rad);
+  return ctx.mat4.clone(ctx.drawMatrix);
 };
 
 // Where the wheels of car type typ are drawn, seen from the drawn car body, as attached
@@ -13,7 +13,7 @@ export const drawnMatrix = (ctx, rad, inst) => {
 // carobj[typ] in the menus.
 export const wheelsOnBody = (ctx, typ, body, alpha) => {
   const { mat4 } = ctx;
-  ctx.tickalpha = alpha;
+  ctx.interpolation.alpha = alpha;
   const fromBody = mat4.invert(
     mat4.create(),
     drawnMatrix(ctx, ctx.carobj[typ], body),
