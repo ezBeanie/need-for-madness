@@ -67,6 +67,7 @@ import {
   newModel,
   newParticleModel,
 } from "./render/models.js";
+import { canvas2D, rd, view } from "./ui/view.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 var camrs, pyclos, pnext, pback, onycl;
@@ -1276,7 +1277,10 @@ function getonscreen(m, rad) {
     (x * m[0 * 4 + 1] + y * m[1 * 4 + 1] + z * m[2 * 4 + 1] + m[3 * 4 + 1]) / w,
     (x * m[0 * 4 + 2] + y * m[1 * 4 + 2] + z * m[2 * 4 + 2] + m[3 * 4 + 2]) / w,
   ];
-  return [(propoint[0] * 0.5 + 0.5) * canw, (propoint[1] * -0.5 + 0.5) * canh];
+  return [
+    (propoint[0] * 0.5 + 0.5) * view.width,
+    (propoint[1] * -0.5 + 0.5) * view.height,
+  ];
 }
 function hslToRgb(h, s, l) {
   var r, g, b;
@@ -1830,22 +1834,26 @@ function loaddata() {
     }
   } else {
     rd.fillStyle = "#000000";
-    rd.fillRect(0, 0, canw, canh);
-    rd.font = "" + 20 * (mh + mw) + "px teko";
+    rd.fillRect(0, 0, view.width, view.height);
+    rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px teko";
     rd.textAlign = "left";
     rd.textBaseline = "middle";
     rd.fillStyle = "#FFFFFF";
     rd.fillText(
       "Sorry, your device does not seem to have WEBGL",
-      30 * mw,
-      100 * mh,
+      30 * view.scaleX,
+      100 * view.scaleY,
     );
     rd.fillText(
       "The game will not be able to work without it",
-      30 * mw,
-      160 * mh,
+      30 * view.scaleX,
+      160 * view.scaleY,
     );
-    rd.fillText("Please try the game on another device", 30 * mw, 220 * mh);
+    rd.fillText(
+      "Please try the game on another device",
+      30 * view.scaleX,
+      220 * view.scaleY,
+    );
   }
 }
 var limr = 0,
@@ -2871,7 +2879,7 @@ function gameworks() {
   var zNear = 0.1;
   var zFar = 7000;
   cmat = mat4.create();
-  mat4.perspective(cmat, fieldOfView, aspect, zNear, zFar);
+  mat4.perspective(cmat, fieldOfView, view.aspect, zNear, zFar);
   onelec = false;
   if (fase == 7) {
     if (starcnt == 0) {
@@ -2917,37 +2925,37 @@ function gameworks() {
       ) {
         rd.drawImage(
           inst[6],
-          50 * mw,
-          canh * 0.5 + 120 * mh,
-          345 * avm,
-          77 * avm,
+          50 * view.scaleX,
+          view.height * 0.5 + 120 * view.scaleY,
+          345 * view.scale,
+          77 * view.scale,
         );
         rd.drawImage(
           inst[5],
-          canw - 80 * mw - 220 * avm,
-          canh * 0.5 + 40 * mh,
-          220 * avm,
-          155 * avm,
+          view.width - 80 * view.scaleX - 220 * view.scale,
+          view.height * 0.5 + 40 * view.scaleY,
+          220 * view.scale,
+          155 * view.scale,
         );
         rd.letterSpacing = "1px";
-        rd.font = "" + 17 * (mh + mw) + "px junk";
+        rd.font = "" + 17 * (view.scaleY + view.scaleX) + "px junk";
         rd.textAlign = "center";
         rd.textBaseline = "middle";
         rd.fillStyle = "#000000";
         rd.fillText(
           "Handbrake / Stunts",
-          50 * mw + 172 * avm,
-          canh * 0.5 + 90 * mh,
+          50 * view.scaleX + 172 * view.scale,
+          view.height * 0.5 + 90 * view.scaleY,
         );
         rd.fillText(
           "Drive / Stunts",
-          canw - 80 * mw - 110 * avm,
-          canh * 0.5 + 10 * mh,
+          view.width - 80 * view.scaleX - 110 * view.scale,
+          view.height * 0.5 + 10 * view.scaleY,
         );
         rd.fillText(
           "Or [W] [A] [S] [D]",
-          canw - 80 * mw - 110 * avm,
-          canh * 0.5 + 70 * mh + 155 * avm,
+          view.width - 80 * view.scaleX - 110 * view.scale,
+          view.height * 0.5 + 70 * view.scaleY + 155 * view.scale,
         );
       }
       if (starcnt < 65) {
@@ -2980,14 +2988,14 @@ function gameworks() {
         revfase = 0;
         reqpbr = 1;
         rd.fillStyle = "#FFFFFF";
-        rd.fillRect(0, 0, canw, canh);
+        rd.fillRect(0, 0, view.width, view.height);
       }
       if (starcnt >= 185) {
         if (starcnt == 185) {
           rd.globalAlpha = 0.5;
         }
         rd.fillStyle = "#FFFFFF";
-        rd.fillRect(0, 0, canw, canh);
+        rd.fillRect(0, 0, view.width, view.height);
         rd.globalAlpha = 1;
       }
     }
@@ -3277,7 +3285,7 @@ function carselect() {
   var zNear = 0.1;
   var zFar = 7000;
   cmat = mat4.create();
-  mat4.perspective(cmat, fieldOfView, aspect, zNear, zFar);
+  mat4.perspective(cmat, fieldOfView, view.aspect, zNear, zFar);
   camx = 0;
   camy = 0;
   camz = 0;
@@ -3598,7 +3606,7 @@ function stageselect() {
   var zNear = 0.1;
   var zFar = 7000;
   cmat = mat4.create();
-  mat4.perspective(cmat, fieldOfView, aspect, zNear, zFar);
+  mat4.perspective(cmat, fieldOfView, view.aspect, zNear, zFar);
   camy = hit + 100;
   camx = trx - 1700 * msin(camxz);
   camz = trz + 1700 * mcos(camxz);
@@ -3664,9 +3672,9 @@ function stageselect() {
   bgst.mat = resetMatrix(bgst.mat);
   mat4.rotate(bgst.mat, bgst.mat, camxz * (Math.PI / 180), [0, -1, 0]);
   mat4.rotate(bgst.mat, bgst.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
-  bgst.mat[0] *= aspect * 0.5625;
-  bgst.mat[1] *= aspect * 0.5625;
-  bgst.mat[2] *= aspect * 0.5625;
+  bgst.mat[0] *= view.aspect * 0.5625;
+  bgst.mat[1] *= view.aspect * 0.5625;
+  bgst.mat[2] *= view.aspect * 0.5625;
   bgst.x = camx - 106 * bgst.mat[8];
   bgst.y = camy - 106 * bgst.mat[9];
   bgst.z = camz - 106 * bgst.mat[10];
@@ -3681,7 +3689,7 @@ function unlockedcar() {
     var zNear = 0.1;
     var zFar = 7000;
     cmat = mat4.create();
-    mat4.perspective(cmat, fieldOfView, aspect, zNear, zFar);
+    mat4.perspective(cmat, fieldOfView, view.aspect, zNear, zFar);
     camx = 0;
     camy = 0;
     camz = 0;
@@ -3833,9 +3841,9 @@ function unlockedcar() {
     bgst.mat = resetMatrix(bgst.mat);
     mat4.rotate(bgst.mat, bgst.mat, camxz * (Math.PI / 180), [0, -1, 0]);
     mat4.rotate(bgst.mat, bgst.mat, camzy * (Math.PI / 180), [-1, 0, 0]);
-    bgst.mat[0] *= aspect * 0.5625;
-    bgst.mat[1] *= aspect * 0.5625;
-    bgst.mat[2] *= aspect * 0.5625;
+    bgst.mat[0] *= view.aspect * 0.5625;
+    bgst.mat[1] *= view.aspect * 0.5625;
+    bgst.mat[2] *= view.aspect * 0.5625;
     bgst.x = 0;
     bgst.y = 0;
     bgst.z = -90;
@@ -10758,32 +10766,28 @@ var ticktime = 0,
   lasttick = -1;
 var m = 0.7;
 var frgm = 0;
-var canw = 1280,
-  canh = 720;
-var aspect = canw / canh;
-var mw = 1,
-  mh = 1;
-var avm = 1;
-var adm = 0;
+
+view.height;
+
 var fase = 0;
 function gameloop() {
-  if (canw != window.innerWidth || canh != window.innerHeight) {
-    canw = window.innerWidth;
-    canh = window.innerHeight;
-    aspect = canw / canh;
-    mw = canw / 1280;
-    mh = canh / 720;
-    avm = (mw + mh) / 2;
-    adm = (canw / canh - 1.777) * 76;
-    canvas3D.width = canw;
-    canvas3D.height = canh;
-    canvas3D.style.width = "" + canw + "px";
-    canvas3D.style.height = "" + canh + "px";
-    canvas2D.width = canw;
-    canvas2D.height = canh;
-    canvas2D.style.width = "" + canw + "px";
-    canvas2D.style.height = "" + canh + "px";
-    gl.viewport(0, 0, canw, canh);
+  if (view.width != window.innerWidth || view.height != window.innerHeight) {
+    view.width = window.innerWidth;
+    view.height = window.innerHeight;
+    view.aspect = view.width / view.height;
+    view.scaleX = view.width / 1280;
+    view.scaleY = view.height / 720;
+    view.scale = (view.scaleX + view.scaleY) / 2;
+    view.widescreenShift = (view.width / view.height - 1.777) * 76;
+    canvas3D.width = view.width;
+    canvas3D.height = view.height;
+    canvas3D.style.width = "" + view.width + "px";
+    canvas3D.style.height = "" + view.height + "px";
+    canvas2D.width = view.width;
+    canvas2D.height = view.height;
+    canvas2D.style.width = "" + view.width + "px";
+    canvas2D.style.height = "" + view.height + "px";
+    gl.viewport(0, 0, view.width, view.height);
   }
   if (gotgamepad) {
     var gp = navigator.getGamepads();
@@ -10967,7 +10971,7 @@ function gameloop() {
   }
   if (fase == 15) {
     rd.fillStyle = "#FFFFFF";
-    rd.fillRect(0, 0, canw, canh);
+    rd.fillRect(0, 0, view.width, view.height);
     cntspark--;
     if (cntspark == 0) {
       aftersparkstart();
@@ -10975,7 +10979,7 @@ function gameloop() {
   }
   if (fase == 17) {
     rd.fillStyle = "#15190D";
-    rd.fillRect(0, 0, canw, canh);
+    rd.fillRect(0, 0, view.width, view.height);
     cntspark--;
     if (cntspark == 0) {
       afterswitch();
@@ -11475,7 +11479,7 @@ var noten = 0;
 var playedforeplay = false;
 function pausedgame() {
   stopEngine();
-  rd.clearRect(0, 0, canw, canh);
+  rd.clearRect(0, 0, view.width, view.height);
   var r = Math.floor(128 - 128 * snap[0]);
   if (r > 255) {
     r = 255;
@@ -11501,12 +11505,12 @@ function pausedgame() {
   var rgb = hslToRgb(hsl[0], 0.3, 0.2);
   rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
   rd.globalAlpha = 0.7;
-  rd.fillRect(0, 0, canw, canh);
+  rd.fillRect(0, 0, view.width, view.height);
   rgb = hslToRgb(hsl[0], 1, 0.5);
   rd.globalAlpha = 0.5;
   drawcoolrect(
-    640 * mw,
-    95 * mh,
+    640 * view.scaleX,
+    95 * view.scaleY,
     400,
     400,
     "#0093F0",
@@ -11528,8 +11532,8 @@ function pausedgame() {
   if (
     drawbutton(
       1,
-      640 * mw,
-      95 * mh + 35 * avm,
+      640 * view.scaleX,
+      95 * view.scaleY + 35 * view.scale,
       350,
       60,
       bton[on][0],
@@ -11560,8 +11564,8 @@ function pausedgame() {
   if (
     drawbutton(
       2,
-      640 * mw,
-      95 * mh + 125 * avm,
+      640 * view.scaleX,
+      95 * view.scaleY + 125 * view.scale,
       350,
       60,
       bton[on][0],
@@ -11593,8 +11597,8 @@ function pausedgame() {
   if (
     drawbutton(
       3,
-      640 * mw,
-      95 * mh + 215 * avm,
+      640 * view.scaleX,
+      95 * view.scaleY + 215 * view.scale,
       380,
       60,
       bton[on][0],
@@ -11627,8 +11631,8 @@ function pausedgame() {
   if (
     drawbutton(
       4,
-      640 * mw,
-      95 * mh + 305 * avm,
+      640 * view.scaleX,
+      95 * view.scaleY + 305 * view.scale,
       250,
       60,
       bton[on][0],
@@ -11689,7 +11693,7 @@ function pausedgame() {
   if (onbreplay) {
     rd.globalAlpha = 0.6;
     rd.fillStyle = "#000000";
-    rd.fillRect(0, 0, canw, canh);
+    rd.fillRect(0, 0, view.width, view.height);
     rd.globalAlpha = 1;
     onbreplay--;
   }
@@ -11786,25 +11790,25 @@ var cnl = 0;
 var relit = "RE-LIT";
 function drawmain() {
   rd.fillStyle = "#000000";
-  rd.fillRect(0, 0, canw, canh);
+  rd.fillRect(0, 0, view.width, view.height);
   if (fredo == 0) {
     playMenuMusic();
     cnf = 0;
   }
-  var lefy = (canw - 1280 * mh) / 2;
-  var rigy = lefy + 1280 * mh;
-  rd.drawImage(mainbg, lefy, 0, 1280 * mh, canh);
-  var ixs = lefy + 270 * mh,
-    iys = 39 * mh;
-  var rxs = lefy + 520 * mh,
-    rys = 43 * mh;
-  var fm = mh;
+  var lefy = (view.width - 1280 * view.scaleY) / 2;
+  var rigy = lefy + 1280 * view.scaleY;
+  rd.drawImage(mainbg, lefy, 0, 1280 * view.scaleY, view.height);
+  var ixs = lefy + 270 * view.scaleY,
+    iys = 39 * view.scaleY;
+  var rxs = lefy + 520 * view.scaleY,
+    rys = 43 * view.scaleY;
+  var fm = view.scaleY;
   var mrg = 1;
   if (lefy < 0) {
     lefy = 0;
-    rigy = canw;
-    fm = avm;
-    mrg = 1 - 0.9752 * ((1 - mw / mh) / 0.4375);
+    rigy = view.width;
+    fm = view.scale;
+    mrg = 1 - 0.9752 * ((1 - view.scaleX / view.scaleY) / 0.4375);
   }
   var ixe = lefy + 40 * fm,
     iye = 186 * fm;
@@ -11816,27 +11820,27 @@ function drawmain() {
   var ryf = (rys * (25 - cnf) + rye * cnf) / 25;
   if (cnf != 0) {
     rd.globalAlpha = 0.2 + (cnf / 25) * 0.8;
-    rd.drawImage(insano[0], ixf, iyf, 274 * mh, 341 * mh);
-    rd.drawImage(rider, rxf, ryf, 386 * mh, 191 * mh);
+    rd.drawImage(insano[0], ixf, iyf, 274 * view.scaleY, 341 * view.scaleY);
+    rd.drawImage(rider, rxf, ryf, 386 * view.scaleY, 191 * view.scaleY);
     rd.globalAlpha = 1;
   }
   if (cnf == 25) {
     rd.drawImage(
       logo,
       lefy + 282 * fm * mrg,
-      canh - 464 * fm,
+      view.height - 464 * fm,
       905 * fm,
       258 * fm,
     );
     rd.letterSpacing = "1px";
-    rd.font = "" + 24 * (mh + mw) + "px junk";
+    rd.font = "" + 24 * (view.scaleY + view.scaleX) + "px junk";
     rd.textAlign = "left";
     rd.textBaseline = "middle";
     var grd = rd.createLinearGradient(
       lefy + 282 * fm * mrg + 760 * fm,
-      canh - 464 * fm + 150 * fm,
+      view.height - 464 * fm + 150 * fm,
       lefy + 282 * fm * mrg + 760 * fm + rd.measureText(relit).width,
-      canh - 464 * fm + 150 * fm,
+      view.height - 464 * fm + 150 * fm,
     );
     grd.addColorStop(0, "#FF5B01");
     grd.addColorStop(1, "#FF9601");
@@ -11844,7 +11848,7 @@ function drawmain() {
     rd.fillText(
       relit,
       lefy + 282 * fm * mrg + 760 * fm,
-      canh - 464 * fm + 150 * fm,
+      view.height - 464 * fm + 150 * fm,
     );
     if (cnl == 0) {
       if (relit == "RE-LI T") {
@@ -11889,8 +11893,8 @@ function drawmain() {
     if (
       drawbutton(
         1,
-        rigy - 230 * avm,
-        720 * mh - 200 * avm,
+        rigy - 230 * view.scale,
+        720 * view.scaleY - 200 * view.scale,
         360,
         60,
         "#FF1301",
@@ -11915,8 +11919,8 @@ function drawmain() {
     if (
       drawbutton(
         3,
-        rigy - 150 * avm,
-        720 * mh - 100 * avm,
+        rigy - 150 * view.scale,
+        720 * view.scaleY - 100 * view.scale,
         200,
         70,
         "#FF3D01",
@@ -11945,8 +11949,8 @@ function drawmain() {
       if (
         drawbutton(
           7,
-          rigy - 450 * avm,
-          720 * mh - 90 * avm,
+          rigy - 450 * view.scale,
+          720 * view.scaleY - 90 * view.scale,
           280,
           60,
           "#FF1301",
@@ -11988,7 +11992,7 @@ function drawmain() {
   if (fredo >= 30) {
     rd.globalAlpha = (fredo - 50) / 10;
     rd.fillStyle = "#000000";
-    rd.fillRect(0, 0, canw, canh);
+    rd.fillRect(0, 0, view.width, view.height);
     rd.globalAlpha = 1;
     if (fredo == 40) {
       gotGamepads();
@@ -12044,12 +12048,12 @@ var ondud = 0;
 var dudo = 0;
 function gameinstructions() {
   rd.fillStyle = "#000000";
-  rd.fillRect(0, 0, canw, canh);
+  rd.fillRect(0, 0, view.width, view.height);
   if (instmain) {
-    var lefy = (canw - 1280 * mh) / 2;
-    rd.drawImage(mainbg, lefy, 0, 1280 * mh, canh);
+    var lefy = (view.width - 1280 * view.scaleY) / 2;
+    rd.drawImage(mainbg, lefy, 0, 1280 * view.scaleY, view.height);
   } else {
-    rd.clearRect(0, 0, canw, canh);
+    rd.clearRect(0, 0, view.width, view.height);
     var r = Math.floor(128 - 128 * snap[0]);
     if (r > 255) {
       r = 255;
@@ -12075,12 +12079,12 @@ function gameinstructions() {
     var rgb = hslToRgb(hsl[0], 0.3, 0.2);
     rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
     rd.globalAlpha = 0.7;
-    rd.fillRect(0, 0, canw, canh);
+    rd.fillRect(0, 0, view.width, view.height);
     rd.globalAlpha = 1;
   }
-  var fm = mw;
-  if (mw / mh > 1.2) {
-    fm *= 1.2 / (mw / mh);
+  var fm = view.scaleX;
+  if (view.scaleX / view.scaleY > 1.2) {
+    fm *= 1.2 / (view.scaleX / view.scaleY);
   }
   if (aflk) {
     aflk = false;
@@ -12101,11 +12105,11 @@ function gameinstructions() {
   rd.drawImage(
     insano[ondud],
     10 * fm,
-    260 * mh,
+    260 * view.scaleY,
     274 * fm * 0.7,
     341 * fm * 0.7,
   );
-  var topo = 260 * mh - 200 * fm;
+  var topo = 260 * view.scaleY - 200 * fm;
   rd.fillStyle = "#FFFFFF";
   rd.globalAlpha = 0.7;
   floatytalk(200 * fm, topo, 1060 * fm, 570 * fm, 20 * fm);
@@ -12188,7 +12192,7 @@ function gameinstructions() {
     );
     rd.fillText("perform stunts!", 200 * fm + 20 * fm, topo + 296 * fm);
     rd.font = "" + 50 * fm + "px verd";
-    rd.fillText("=", 770 * fm, topo + 310 * fm + 55 * avm);
+    rd.fillText("=", 770 * fm, topo + 310 * fm + 55 * view.scale);
     rd.drawImage(
       inst[4],
       200 * fm + 90 * fm,
@@ -12197,16 +12201,20 @@ function gameinstructions() {
       150 * fm,
     );
     rd.letterSpacing = "1px";
-    rd.font = "" + 11 * (mh + mw) + "px junk";
+    rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
     rd.textAlign = "right";
     rd.fillStyle = "#000000";
-    rd.fillText("Power", 945 * fm - 15 * avm, topo + 310 * fm + 55 * avm);
+    rd.fillText(
+      "Power",
+      945 * fm - 15 * view.scale,
+      topo + 310 * fm + 55 * view.scale,
+    );
     var r = 128;
     var g = 190 + 70 * 0.37;
     var b = 255;
     drawbar(
       945 * fm,
-      topo + 310 * fm + 42 * avm,
+      topo + 310 * fm + 42 * view.scale,
       "#00B0DC",
       "#005C96",
       "rgb(" + r + "," + g + "," + b + ")",
@@ -12393,7 +12401,7 @@ function gameinstructions() {
       if (
         drawbutton(
           1,
-          240 * fm + 285 * avm,
+          240 * fm + 285 * view.scale,
           topo + 250 * fm,
           570,
           60,
@@ -12416,7 +12424,7 @@ function gameinstructions() {
       if (
         drawbutton(
           2,
-          240 * fm + 140 * avm,
+          240 * fm + 140 * view.scale,
           topo + 350 * fm,
           280,
           60,
@@ -12440,7 +12448,7 @@ function gameinstructions() {
       if (
         drawbutton(
           2,
-          240 * fm + 140 * avm,
+          240 * fm + 140 * view.scale,
           topo + 300 * fm,
           280,
           60,
@@ -12570,7 +12578,7 @@ function gameinstructions() {
     if (
       drawbutton(
         1,
-        1170 * fm - 75 * avm,
+        1170 * fm - 75 * view.scale,
         topo + 430 * fm,
         150,
         60,
@@ -12658,8 +12666,8 @@ function gameinstructions() {
     if (
       drawbutton(
         4,
-        240 * fm + 75 * avm,
-        topo + 560 * fm - 65 * avm,
+        240 * fm + 75 * view.scale,
+        topo + 560 * fm - 65 * view.scale,
         150,
         60,
         "#0075D8",
@@ -12689,8 +12697,8 @@ function gameinstructions() {
     if (
       drawbutton(
         3,
-        1280 * fm - 70 * fm - 100 * avm,
-        topo + 560 * fm - 65 * avm,
+        1280 * fm - 70 * fm - 100 * view.scale,
+        topo + 560 * fm - 65 * view.scale,
         200,
         60,
         "#0075D8",
@@ -12719,8 +12727,8 @@ function gameinstructions() {
     if (
       drawbutton(
         3,
-        1280 * fm - 70 * fm - 110 * avm,
-        topo + 560 * fm - 65 * avm,
+        1280 * fm - 70 * fm - 110 * view.scale,
+        topo + 560 * fm - 65 * view.scale,
         220,
         60,
         "#0075D8",
@@ -12775,12 +12783,12 @@ function gameinstructions() {
 }
 function resetgame() {
   rd.fillStyle = "#000000";
-  rd.fillRect(0, 0, canw, canh);
-  var lefy = (canw - 1280 * mh) / 2;
-  rd.drawImage(mainbg, lefy, 0, 1280 * mh, canh);
-  var fm = mw;
-  if (mw / mh > 1.2) {
-    fm *= 1.2 / (mw / mh);
+  rd.fillRect(0, 0, view.width, view.height);
+  var lefy = (view.width - 1280 * view.scaleY) / 2;
+  rd.drawImage(mainbg, lefy, 0, 1280 * view.scaleY, view.height);
+  var fm = view.scaleX;
+  if (view.scaleX / view.scaleY > 1.2) {
+    fm *= 1.2 / (view.scaleX / view.scaleY);
   }
   if (aflk) {
     aflk = false;
@@ -12801,11 +12809,11 @@ function resetgame() {
   rd.drawImage(
     insano[ondud],
     10 * fm,
-    260 * mh,
+    260 * view.scaleY,
     274 * fm * 0.7,
     341 * fm * 0.7,
   );
-  var topo = 260 * mh - 200 * fm;
+  var topo = 260 * view.scaleY - 200 * fm;
   rd.fillStyle = "#FFFFFF";
   rd.globalAlpha = 0.7;
   floatytalk(200 * fm, topo, 1060 * fm, 570 * fm, 20 * fm);
@@ -12840,7 +12848,7 @@ function resetgame() {
     drawbutton(
       3,
       730 * fm,
-      topo + 410 * fm - 65 * avm,
+      topo + 410 * fm - 65 * view.scale,
       500,
       60,
       "#0075D8",
@@ -12867,8 +12875,8 @@ function resetgame() {
   if (
     drawbutton(
       4,
-      240 * fm + 100 * avm,
-      topo + 560 * fm - 65 * avm,
+      240 * fm + 100 * view.scale,
+      topo + 560 * fm - 65 * view.scale,
       200,
       60,
       "#0075D8",
@@ -12888,11 +12896,11 @@ function resetgame() {
   }
 }
 function drawloading() {
-  var grd = rd.createLinearGradient(0, 0, canw, canh);
+  var grd = rd.createLinearGradient(0, 0, view.width, view.height);
   grd.addColorStop(0, "#A87700");
   grd.addColorStop(1, "#9A3300");
   rd.fillStyle = grd;
-  rd.fillRect(0, 0, canw, canh);
+  rd.fillRect(0, 0, view.width, view.height);
   var perc = dataload / datacnt;
   if (perc > 1) {
     perc = 1;
@@ -12900,11 +12908,17 @@ function drawloading() {
   if (perc < 0.076) {
     perc = 0.076;
   }
-  rd.drawImage(impimg, 640 * mw - 107 * avm, 100 * mh, 215 * avm, 248 * avm);
-  rd.lineWidth = 4 * avm;
+  rd.drawImage(
+    impimg,
+    640 * view.scaleX - 107 * view.scale,
+    100 * view.scaleY,
+    215 * view.scale,
+    248 * view.scale,
+  );
+  rd.lineWidth = 4 * view.scale;
   drawcoolrect(
-    640 * mw,
-    100 * mh + 248 * avm + 20 * mh,
+    640 * view.scaleX,
+    100 * view.scaleY + 248 * view.scale + 20 * view.scaleY,
     300,
     25,
     "#FF3D01",
@@ -12916,14 +12930,17 @@ function drawloading() {
   rd.letterSpacing = "1px";
   if (rd.measureText("crazy game").width > 102) {
     rd.fillStyle = "#BCD800";
-    rd.font = "" + 30 * avm + "px junk";
+    rd.font = "" + 30 * view.scale + "px junk";
     rd.textBaseline = "middle";
     rd.letterSpacing = "1px";
     rd.textAlign = "center";
     rd.fillText(
       "This Game Is Crazy !",
-      640 * mw,
-      100 * mh + 248 * avm + 20 * mh + 70 * mh,
+      640 * view.scaleX,
+      100 * view.scaleY +
+        248 * view.scale +
+        20 * view.scaleY +
+        70 * view.scaleY,
     );
   }
 }
@@ -13032,7 +13049,7 @@ var swing = 0;
 var swingto = 45;
 var swingdir = false;
 function drawswitch() {
-  rd.clearRect(0, 0, canw, canh);
+  rd.clearRect(0, 0, view.width, view.height);
   if (switcnt == 0) {
     camode = -1;
     slide = 80;
@@ -13154,10 +13171,10 @@ function drawswitch() {
     rd.globalAlpha = 0.6;
     rd.drawImage(
       insano[duds],
-      490 * mw - 230 * avm,
-      10 * mh,
-      274 * avm * 0.7,
-      341 * avm * 0.7,
+      490 * view.scaleX - 230 * view.scale,
+      10 * view.scaleY,
+      274 * view.scale * 0.7,
+      341 * view.scale * 0.7,
     );
     rd.globalAlpha = 1;
   }
@@ -13192,7 +13209,7 @@ function afterswitch() {
   fase = 16;
 }
 function drawrevtime() {
-  rd.clearRect(0, 0, canw, canh);
+  rd.clearRect(0, 0, view.width, view.height);
   if (switcnt == 5) {
     playSound(41, 1);
   }
@@ -13226,10 +13243,10 @@ function drawrevtime() {
     rd.globalAlpha = 0.6;
     rd.drawImage(
       insano[duds],
-      490 * mw - 230 * avm,
-      10 * mh,
-      274 * avm * 0.7,
-      341 * avm * 0.7,
+      490 * view.scaleX - 230 * view.scale,
+      10 * view.scaleY,
+      274 * view.scale * 0.7,
+      341 * view.scale * 0.7,
     );
     rd.globalAlpha = 1;
   }
@@ -13356,7 +13373,7 @@ function inishinter() {
   }
 }
 function drawinter() {
-  rd.clearRect(0, 0, canw, canh);
+  rd.clearRect(0, 0, view.width, view.height);
   var showpcn = isPhone;
   if (showpcn && starcnt > 65 && cp.stage == 2 && unlocked == 2) {
     showpcn = false;
@@ -13370,10 +13387,10 @@ function drawinter() {
     }
     rd.drawImage(
       contimg[0],
-      130 * mw - 64 * avm,
-      622 * mh - 128 * avm,
-      128 * avm,
-      128 * avm,
+      130 * view.scaleX - 64 * view.scale,
+      622 * view.scaleY - 128 * view.scale,
+      128 * view.scale,
+      128 * view.scale,
     );
     rd.globalAlpha = 1;
     if (wasr) {
@@ -13381,10 +13398,10 @@ function drawinter() {
     }
     rd.drawImage(
       contimg[1],
-      320 * mw - 64 * avm,
-      662 * mh - 128 * avm,
-      128 * avm,
-      128 * avm,
+      320 * view.scaleX - 64 * view.scale,
+      662 * view.scaleY - 128 * view.scale,
+      128 * view.scale,
+      128 * view.scale,
     );
     rd.globalAlpha = 1;
     if (wasu) {
@@ -13392,10 +13409,10 @@ function drawinter() {
     }
     rd.drawImage(
       contimg[3],
-      1150 * mw - 64 * avm,
-      622 * mh - 128 * avm,
-      128 * avm,
-      128 * avm,
+      1150 * view.scaleX - 64 * view.scale,
+      622 * view.scaleY - 128 * view.scale,
+      128 * view.scale,
+      128 * view.scale,
     );
     rd.globalAlpha = 1;
     if (wasd) {
@@ -13403,10 +13420,10 @@ function drawinter() {
     }
     rd.drawImage(
       contimg[2],
-      960 * mw - 64 * avm,
-      662 * mh - 128 * avm,
-      128 * avm,
-      128 * avm,
+      960 * view.scaleX - 64 * view.scale,
+      662 * view.scaleY - 128 * view.scale,
+      128 * view.scale,
+      128 * view.scale,
     );
     rd.globalAlpha = 1;
     if (wash) {
@@ -13414,10 +13431,10 @@ function drawinter() {
     }
     rd.drawImage(
       contimg[4],
-      1260 * mw - 154 * avm,
-      440 * mh - 111 * avm,
-      154 * avm,
-      111 * avm,
+      1260 * view.scaleX - 154 * view.scale,
+      440 * view.scaleY - 111 * view.scale,
+      154 * view.scale,
+      111 * view.scale,
     );
     rd.globalAlpha = 1;
     if (ncars != 1 && (cp.stage != 1 || unlocked != 1)) {
@@ -13426,10 +13443,10 @@ function drawinter() {
       }
       rd.drawImage(
         contimg[5],
-        20 * mw,
-        440 * mh - 111 * avm,
-        154 * avm,
-        111 * avm,
+        20 * view.scaleX,
+        440 * view.scaleY - 111 * view.scale,
+        154 * view.scale,
+        111 * view.scale,
       );
       rd.globalAlpha = 1;
     }
@@ -13459,22 +13476,22 @@ function drawinter() {
         var onkbt = false;
         var onkb = -1;
         var xpr = [
-          130 * mw,
-          320 * mw,
-          1150 * mw,
-          960 * mw,
-          1260 * mw - 77 * avm,
-          20 * mw + 77 * avm,
+          130 * view.scaleX,
+          320 * view.scaleX,
+          1150 * view.scaleX,
+          960 * view.scaleX,
+          1260 * view.scaleX - 77 * view.scale,
+          20 * view.scaleX + 77 * view.scale,
         ];
         var ypr = [
-          622 * mh - 64 * avm,
-          662 * mh - 64 * avm,
-          622 * mh - 64 * avm,
-          662 * mh - 64 * avm,
-          440 * mh - 55.5 * avm,
-          440 * mh - 55.5 * avm,
+          622 * view.scaleY - 64 * view.scale,
+          662 * view.scaleY - 64 * view.scale,
+          622 * view.scaleY - 64 * view.scale,
+          662 * view.scaleY - 64 * view.scale,
+          440 * view.scaleY - 55.5 * view.scale,
+          440 * view.scaleY - 55.5 * view.scale,
         ];
-        var pyclos = 200 * avm;
+        var pyclos = 200 * view.scale;
         var nkb = 6;
         if (ncars == 1) {
           nkb = 5;
@@ -13627,8 +13644,8 @@ function drawinter() {
     if (
       drawbutton(
         7,
-        640 * mw,
-        canh - 60 * avm - 40 * mh,
+        640 * view.scaleX,
+        view.height - 60 * view.scale - 40 * view.scaleY,
         250,
         60,
         "#019DFF",
@@ -13666,7 +13683,7 @@ function drawinter() {
     if (onbreplay) {
       rd.globalAlpha = 0.7;
       rd.fillStyle = "#000000";
-      rd.fillRect(0, 0, canw, canh);
+      rd.fillRect(0, 0, view.width, view.height);
       rd.globalAlpha = 1;
       onbreplay--;
     }
@@ -13762,21 +13779,29 @@ function drawinter() {
       }
     }
     rd.letterSpacing = "1px";
-    rd.font = "" + 11 * (mh + mw) + "px junk";
+    rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
     rd.textBaseline = "middle";
     rd.textAlign = "left";
     rd.fillStyle = "#000000";
-    rd.fillText("Lap", 20 * avm, 19 * avm);
-    rd.fillText("Wasted", 130 * avm, 19 * avm);
+    rd.fillText("Lap", 20 * view.scale, 19 * view.scale);
+    rd.fillText("Wasted", 130 * view.scale, 19 * view.scale);
     var adln = 0;
     if (isPhone) {
       adln = 70;
     }
-    rd.fillText("Position", (60 + adln) * avm, 55 * avm);
+    rd.fillText("Position", (60 + adln) * view.scale, 55 * view.scale);
     rd.letterSpacing = "2px";
     rd.fillStyle = "#000078";
-    rd.fillText("" + (nlaps[im] + 1) + "/" + cp.nlaps + "", 68 * avm, 19 * avm);
-    rd.fillText("" + cp.wasted + "/" + (ncars - 1) + "", 217 * avm, 19 * avm);
+    rd.fillText(
+      "" + (nlaps[im] + 1) + "/" + cp.nlaps + "",
+      68 * view.scale,
+      19 * view.scale,
+    );
+    rd.fillText(
+      "" + cp.wasted + "/" + (ncars - 1) + "",
+      217 * view.scale,
+      19 * view.scale,
+    );
     var rank = "th";
     if (cp.pos[im] == 2) {
       rank = "rd";
@@ -13788,18 +13813,22 @@ function drawinter() {
       rank = "st";
     }
     rd.letterSpacing = "1px";
-    rd.font = "" + 15 * (mh + mw) + "px junk";
-    rd.fillText("" + (cp.pos[im] + 1), (157 + adln) * avm, 56 * avm);
-    rd.font = "" + 11 * (mh + mw) + "px junk";
+    rd.font = "" + 15 * (view.scaleY + view.scaleX) + "px junk";
+    rd.fillText(
+      "" + (cp.pos[im] + 1),
+      (157 + adln) * view.scale,
+      56 * view.scale,
+    );
+    rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
     rd.fillStyle = "#000000";
-    rd.fillText(rank, (176 + adln) * avm, 55 * avm);
+    rd.fillText(rank, (176 + adln) * view.scale, 55 * view.scale);
     if (!isPhone && ncars != 1 && (cp.stage != 1 || unlocked != 1)) {
       if (arrace) {
         if (
           drawbutton(
             1,
-            80 * avm,
-            90 * avm,
+            80 * view.scale,
+            90 * view.scale,
             100,
             60,
             "#7DBDFF",
@@ -13821,8 +13850,8 @@ function drawinter() {
         if (
           drawbutton(
             1,
-            80 * avm,
-            90 * avm,
+            80 * view.scale,
+            90 * view.scale,
             100,
             60,
             "#89C800",
@@ -13842,15 +13871,15 @@ function drawinter() {
         }
       }
     }
-    var lalign = canw - 290 * avm;
-    if (canw / canh < 1.3) {
-      lalign = canw - 200 * avm;
+    var lalign = view.width - 290 * view.scale;
+    if (view.width / view.height < 1.3) {
+      lalign = view.width - 200 * view.scale;
     }
-    rd.font = "" + 11 * (mh + mw) + "px junk";
+    rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
     rd.textAlign = "right";
     rd.fillStyle = "#000000";
-    rd.fillText("Damage", lalign - 15 * avm, 19 * avm);
-    rd.fillText("Power", lalign - 15 * avm, 55 * avm);
+    rd.fillText("Damage", lalign - 15 * view.scale, 19 * view.scale);
+    rd.fillText("Power", lalign - 15 * view.scale, 55 * view.scale);
     var trav = 98 * (hitmag[im] / cd.maxmag[car[im].typ]);
     if (trav > 98) {
       trav = 98;
@@ -13879,7 +13908,7 @@ function drawinter() {
     }
     drawbar(
       lalign,
-      6 * avm,
+      6 * view.scale,
       "#FC4D00",
       "#B20000",
       "rgb(" + r + "," + g + "," + b + ")",
@@ -13898,24 +13927,30 @@ function drawinter() {
     }
     drawbar(
       lalign,
-      42 * avm,
+      42 * view.scale,
       "#00B0DC",
       "#005C96",
       "rgb(" + r + "," + g + "," + b + ")",
       power[im] / 98,
     );
     var adwn = 0;
-    if (canw / canh < 1.3) {
-      adwn = 76 * avm;
+    if (view.width / view.height < 1.3) {
+      adwn = 76 * view.scale;
     }
-    var onycl = oncla(2, canw - 87 * avm, 10 * avm + adwn, 77 * avm, 53 * avm);
+    var onycl = oncla(
+      2,
+      view.width - 87 * view.scale,
+      10 * view.scale + adwn,
+      77 * view.scale,
+      53 * view.scale,
+    );
     if (onycl != 2) {
       rd.drawImage(
         muimg[onycl],
-        canw - 87 * avm,
-        10 * avm + adwn,
-        77 * avm,
-        53 * avm,
+        view.width - 87 * view.scale,
+        10 * view.scale + adwn,
+        77 * view.scale,
+        53 * view.scale,
       );
     } else {
       if (!holdit) {
@@ -13925,7 +13960,13 @@ function drawinter() {
         fase = 11;
       }
     }
-    onycl = oncla(3, canw - 77.5 * avm, 73 * avm + adwn, 58 * avm, 42 * avm);
+    onycl = oncla(
+      3,
+      view.width - 77.5 * view.scale,
+      73 * view.scale + adwn,
+      58 * view.scale,
+      42 * view.scale,
+    );
     if (onycl == 1) {
       rd.globalAlpha = 0.5;
     }
@@ -13944,13 +13985,19 @@ function drawinter() {
     }
     rd.drawImage(
       muimg[onycl],
-      canw - 77.5 * avm,
-      73 * avm + adwn,
-      58 * avm,
-      42 * avm,
+      view.width - 77.5 * view.scale,
+      73 * view.scale + adwn,
+      58 * view.scale,
+      42 * view.scale,
     );
     rd.globalAlpha = 1;
-    onycl = oncla(4, canw - 77.5 * avm, 125 * avm + adwn, 58 * avm, 42 * avm);
+    onycl = oncla(
+      4,
+      view.width - 77.5 * view.scale,
+      125 * view.scale + adwn,
+      58 * view.scale,
+      42 * view.scale,
+    );
     if (onycl == 1) {
       rd.globalAlpha = 0.5;
     }
@@ -13968,20 +14015,20 @@ function drawinter() {
     }
     rd.drawImage(
       muimg[onycl],
-      canw - 77.5 * avm,
-      125 * avm + adwn,
-      58 * avm,
-      42 * avm,
+      view.width - 77.5 * view.scale,
+      125 * view.scale + adwn,
+      58 * view.scale,
+      42 * view.scale,
     );
     rd.globalAlpha = 1;
     if (!isPhone && cp.stage >= 2 && cntkeys < 200 && ncars != 1) {
       if (slide < 10 || cntkeys > 100) {
         rd.drawImage(
           inst[9],
-          80 * avm + 50 * avm + 30 * avm,
-          85 * avm,
-          72 * avm,
-          75 * avm,
+          80 * view.scale + 50 * view.scale + 30 * view.scale,
+          85 * view.scale,
+          72 * view.scale,
+          75 * view.scale,
         );
       }
       slide++;
@@ -14032,10 +14079,10 @@ function drawinter() {
       rd.globalAlpha = 0.6;
       rd.drawImage(
         insano[duds],
-        640 * mw - 230 * avm,
-        10 * mh,
-        274 * avm * 0.7,
-        341 * avm * 0.7,
+        640 * view.scaleX - 230 * view.scale,
+        10 * view.scaleY,
+        274 * view.scale * 0.7,
+        341 * view.scale * 0.7,
       );
       rd.globalAlpha = 1;
     }
@@ -14360,11 +14407,11 @@ function drawinter() {
   }
 }
 function drawonbordo() {
-  var fm = mw;
-  if (mw / mh > 1.2) {
-    fm *= 1.2 / (mw / mh);
+  var fm = view.scaleX;
+  if (view.scaleX / view.scaleY > 1.2) {
+    fm *= 1.2 / (view.scaleX / view.scaleY);
   }
-  var topo = 260 * mh;
+  var topo = 260 * view.scaleY;
   if (pwflk) {
     pwflk = false;
   } else {
@@ -14415,7 +14462,7 @@ function drawonbordo() {
   }
   if (cp.stage == 2) {
     rd.font = "" + 50 * fm + "px verd";
-    rd.fillText("=", 770 * fm, topo + 80 * fm + 55 * avm);
+    rd.fillText("=", 770 * fm, topo + 80 * fm + 55 * view.scale);
     rd.drawImage(
       inst[4],
       200 * fm + 90 * fm,
@@ -14424,16 +14471,20 @@ function drawonbordo() {
       150 * fm,
     );
     rd.letterSpacing = "1px";
-    rd.font = "" + 11 * (mh + mw) + "px junk";
+    rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
     rd.textAlign = "right";
     rd.fillStyle = "#000000";
-    rd.fillText("Power", 945 * fm - 15 * avm, topo + 80 * fm + 55 * avm);
+    rd.fillText(
+      "Power",
+      945 * fm - 15 * view.scale,
+      topo + 80 * fm + 55 * view.scale,
+    );
     var r = 128;
     var g = 190 + 70 * 0.37;
     var b = 255;
     drawbar(
       945 * fm,
-      topo + 80 * fm + 42 * avm,
+      topo + 80 * fm + 42 * view.scale,
       "#00B0DC",
       "#005C96",
       "rgb(" + r + "," + g + "," + b + ")",
@@ -14465,8 +14516,8 @@ function drawonbordo() {
         contimg[5],
         200 * fm + 165 * fm,
         topo + 130 * fm,
-        154 * avm,
-        111 * avm,
+        154 * view.scale,
+        111 * view.scale,
       );
     }
     rd.drawImage(
@@ -14479,18 +14530,18 @@ function drawonbordo() {
   }
 }
 function drawreplay() {
-  rd.clearRect(0, 0, canw, canh);
+  rd.clearRect(0, 0, view.width, view.height);
   rd.letterSpacing = "1px";
-  rd.font = "" + 20 * (mh + mw) + "px junk";
+  rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
   rd.textAlign = "left";
   rd.textBaseline = "middle";
   rd.fillStyle = "rgb(0,32,64)";
-  rd.fillText("REPLAY", 20 * mw, 35 * mh);
+  rd.fillText("REPLAY", 20 * view.scaleX, 35 * view.scaleY);
   if (
     drawbutton(
       1,
-      canw - 100 * avm - 30 * mw,
-      canh - 60 * avm - 30 * mh,
+      view.width - 100 * view.scale - 30 * view.scaleX,
+      view.height - 60 * view.scale - 30 * view.scaleY,
       170,
       60,
       "#019DFF",
@@ -14517,12 +14568,12 @@ function drawreplay() {
   }
   if (fr > 425) {
     rd.fillStyle = "#000000";
-    rd.fillRect(0, 0, canw, canh);
+    rd.fillRect(0, 0, view.width, view.height);
   }
   if (onbreplay) {
     rd.globalAlpha = 0.7;
     rd.fillStyle = "#000000";
-    rd.fillRect(0, 0, canw, canh);
+    rd.fillRect(0, 0, view.width, view.height);
     rd.globalAlpha = 1;
     onbreplay--;
   }
@@ -14533,24 +14584,24 @@ var holdf = 0;
 var lwit = false;
 var onpausefr = false;
 function drawhreplay() {
-  rd.clearRect(0, 0, canw, canh);
+  rd.clearRect(0, 0, view.width, view.height);
   rd.letterSpacing = "1px";
-  rd.font = "" + 24 * (mh + mw) + "px junk";
+  rd.font = "" + 24 * (view.scaleY + view.scaleX) + "px junk";
   rd.textAlign = "center";
   rd.textBaseline = "middle";
   var grd = rd.createLinearGradient(
-    640 * mw,
-    40 * mh - 10 * avm,
-    640 * mw,
-    40 * mh + 10 * avm,
+    640 * view.scaleX,
+    40 * view.scaleY - 10 * view.scale,
+    640 * view.scaleX,
+    40 * view.scaleY + 10 * view.scale,
   );
   grd.addColorStop(0, "#006ED4");
   grd.addColorStop(1, "#A3E6FF");
   rd.fillStyle = grd;
-  rd.fillText("Game Highlight", 640 * mw, 40 * mh);
+  rd.fillText("Game Highlight", 640 * view.scaleX, 40 * view.scaleY);
   rd.strokeStyle = "#003E78";
-  rd.lineWidth = 1.5 * avm;
-  rd.strokeText("Game Highlight", 640 * mw, 40 * mh);
+  rd.lineWidth = 1.5 * view.scale;
+  rd.strokeText("Game Highlight", 640 * view.scaleX, 40 * view.scaleY);
   if (htyp == 1) {
     if (cp.stage > 2) {
       drawcs(90, "Stunts!", 0, 32, 64, 1);
@@ -14568,7 +14619,7 @@ function drawhreplay() {
       ) {
         rd.globalAlpha = 0.5;
         rd.fillStyle = "#FFFFFF";
-        rd.fillRect(0, 0, canw, canh);
+        rd.fillRect(0, 0, view.width, view.height);
         rd.globalAlpha = 1;
       }
     }
@@ -14577,7 +14628,7 @@ function drawhreplay() {
         if (holdf % Math.floor(2 + random.fx() * 3) == 0 && !lwit) {
           rd.globalAlpha = 0.5;
           rd.fillStyle = "#FFFFFF";
-          rd.fillRect(0, 0, canw, canh);
+          rd.fillRect(0, 0, view.width, view.height);
           rd.globalAlpha = 1;
           lwit = true;
         } else {
@@ -14609,7 +14660,7 @@ function drawhreplay() {
       if (holdf == 4 || holdf == 44 || holdf == 94) {
         rd.globalAlpha = 0.5;
         rd.fillStyle = "#FFFFFF";
-        rd.fillRect(0, 0, canw, canh);
+        rd.fillRect(0, 0, view.width, view.height);
         rd.globalAlpha = 1;
       }
     }
@@ -14636,7 +14687,7 @@ function drawhreplay() {
     if (holdf == 13 || holdf == 16) {
       rd.globalAlpha = 0.5;
       rd.fillStyle = "#FFFFFF";
-      rd.fillRect(0, 0, canw, canh);
+      rd.fillRect(0, 0, view.width, view.height);
       rd.globalAlpha = 1;
     }
     if (holdf == 0) {
@@ -14816,8 +14867,8 @@ function drawhreplay() {
   if (
     drawbutton(
       1,
-      canw - 100 * avm - 30 * mw,
-      canh - 60 * avm - 30 * mh,
+      view.width - 100 * view.scale - 30 * view.scaleX,
+      view.height - 60 * view.scale - 30 * view.scaleY,
       170,
       60,
       "#019DFF",
@@ -14840,7 +14891,7 @@ function drawhreplay() {
   if (fr >= 428) {
     rd.globalAlpha = 0.7;
     rd.fillStyle = "#000000";
-    rd.fillRect(0, 0, canw, canh);
+    rd.fillRect(0, 0, view.width, view.height);
     rd.globalAlpha = 1;
   }
 }
@@ -14895,29 +14946,35 @@ function iniend() {
   }
 }
 function endgame() {
-  rd.clearRect(0, 0, canw, canh);
+  rd.clearRect(0, 0, view.width, view.height);
   if (fredo == 76) {
     rd.globalAlpha = 0.1;
   }
   rd.save();
   rd.rotate((-15 + morgn * 25) * (Math.PI / 180));
-  rd.drawImage(insano[ondud], 110 * morgn - 60, 200 * mh, 274 * avm, 341 * avm);
+  rd.drawImage(
+    insano[ondud],
+    110 * morgn - 60,
+    200 * view.scaleY,
+    274 * view.scale,
+    341 * view.scale,
+  );
   rd.letterSpacing = "1px";
-  rd.font = "" + 40 * (mh + mw) + "px junk";
+  rd.font = "" + 40 * (view.scaleY + view.scaleX) + "px junk";
   rd.textAlign = "left";
   rd.textBaseline = "middle";
   rd.strokeStyle = "#0A3C00";
-  rd.lineWidth = 10 * avm;
+  rd.lineWidth = 10 * view.scale;
   rd.strokeText(
     "THIS. IS. MADNESS !",
-    110 * morgn - 60 + 274 * avm,
-    200 * mh + 170 * avm,
+    110 * morgn - 60 + 274 * view.scale,
+    200 * view.scaleY + 170 * view.scale,
   );
   rd.fillStyle = "#FEA700";
   rd.fillText(
     "THIS. IS. MADNESS !",
-    110 * morgn - 60 + 274 * avm,
-    200 * mh + 170 * avm,
+    110 * morgn - 60 + 274 * view.scale,
+    200 * view.scaleY + 170 * view.scale,
   );
   rd.restore();
   rd.globalAlpha = 1;
@@ -14951,7 +15008,7 @@ function endgame() {
       alpb = 0.9;
     }
     rd.globalAlpha = alpb;
-    rd.fillRect(0, 0, canw, canh);
+    rd.fillRect(0, 0, view.width, view.height);
     rd.globalAlpha = 1;
   }
   if (fredo >= 50) {
@@ -14960,32 +15017,45 @@ function endgame() {
       contxt = "Game Over";
     }
     rd.letterSpacing = "1px";
-    rd.font = "" + 30 * (mh + mw) + "px junk";
+    rd.font = "" + 30 * (view.scaleY + view.scaleX) + "px junk";
     rd.textAlign = "center";
     rd.textBaseline = "middle";
     rd.strokeStyle = "#783800";
-    rd.lineWidth = 10 * avm;
-    rd.strokeText(contxt, 640 * mw, 100 * mh);
-    var grd = rd.createLinearGradient(640 * mw, 70 * mh, 640 * mw, 130 * mh);
+    rd.lineWidth = 10 * view.scale;
+    rd.strokeText(contxt, 640 * view.scaleX, 100 * view.scaleY);
+    var grd = rd.createLinearGradient(
+      640 * view.scaleX,
+      70 * view.scaleY,
+      640 * view.scaleX,
+      130 * view.scaleY,
+    );
     grd.addColorStop(0, "#FF5B01");
     grd.addColorStop(1, "#FF9601");
     rd.fillStyle = grd;
-    rd.fillText(contxt, 640 * mw, 100 * mh);
+    rd.fillText(contxt, 640 * view.scaleX, 100 * view.scaleY);
     rd.globalAlpha = 0.7;
     rd.letterSpacing = "1px";
-    rd.font = "" + 18 * (mh + mw) + "px junk";
+    rd.font = "" + 18 * (view.scaleY + view.scaleX) + "px junk";
     rd.fillStyle = "#FFA627";
     if (winner) {
-      rd.fillText("You won at stage " + cp.stage + "", 640 * mw, 190 * mh);
+      rd.fillText(
+        "You won at stage " + cp.stage + "",
+        640 * view.scaleX,
+        190 * view.scaleY,
+      );
     } else {
-      rd.fillText("You lost at stage " + cp.stage + "", 640 * mw, 190 * mh);
+      rd.fillText(
+        "You lost at stage " + cp.stage + "",
+        640 * view.scaleX,
+        190 * view.scaleY,
+      );
     }
     rd.fillStyle = "#FF5B01";
-    rd.fillText(cp.name, 640 * mw, 240 * mh);
+    rd.fillText(cp.name, 640 * view.scaleX, 240 * view.scaleY);
     rd.globalAlpha = 1;
     if (winner && unlocked == cp.stage && ncars != 1) {
       rd.letterSpacing = "1px";
-      rd.font = "" + 20 * (mh + mw) + "px junk";
+      rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
       rd.fillStyle = "#94CA00";
       if (aflk) {
         rd.fillStyle = "#BCFA00";
@@ -15000,25 +15070,29 @@ function endgame() {
         }
         rd.fillText(
           "Stage " + (cp.stage + 1) + "" + andcar + " is now unlocked!",
-          640 * mw,
-          340 * mh,
+          640 * view.scaleX,
+          340 * view.scaleY,
         );
       } else {
-        rd.fillText("Wooohooo you finished the game!", 640 * mw, 340 * mh);
+        rd.fillText(
+          "Wooohooo you finished the game!",
+          640 * view.scaleX,
+          340 * view.scaleY,
+        );
         rd.fillText(
           "You're Awesome! You're truly a MAD DRIVER!",
-          640 * mw,
-          410 * mh,
+          640 * view.scaleX,
+          410 * view.scaleY,
         );
         if (confc < 20) {
           if (confg == 0) {
             if (Math.floor(confr) <= 28) {
               rd.drawImage(
                 confe[Math.floor(confr)],
-                confl * 170 * mw,
+                confl * 170 * view.scaleX,
                 0,
-                1280 * mw,
-                720 * mh,
+                1280 * view.scaleX,
+                720 * view.scaleY,
               );
               confr += 0.5;
             } else {
@@ -15039,9 +15113,13 @@ function endgame() {
     }
     if (ncars == 1) {
       rd.letterSpacing = "1px";
-      rd.font = "" + 20 * (mh + mw) + "px junk";
+      rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
       rd.fillStyle = "#94CA00";
-      rd.fillText("Practice game finished", 640 * mw, 340 * mh);
+      rd.fillText(
+        "Practice game finished",
+        640 * view.scaleX,
+        340 * view.scaleY,
+      );
     }
     if (winner && unlocked == cp.stage && ncars != 1) {
       if (enter == 1) {
@@ -15052,8 +15130,8 @@ function endgame() {
       if (
         drawbutton(
           7,
-          640 * mw,
-          canh - 60 * avm - 40 * mh,
+          640 * view.scaleX,
+          view.height - 60 * view.scale - 40 * view.scaleY,
           250,
           60,
           "#FF1301",
@@ -15122,32 +15200,32 @@ function afterend() {
 var lastsel = 0;
 var handson = 0;
 function drawcarselect() {
-  rd.clearRect(0, 0, canw, canh);
-  var lefy = (canw - 1380 * mh) / 2;
-  var rigy = lefy + 1380 * mh;
+  rd.clearRect(0, 0, view.width, view.height);
+  var lefy = (view.width - 1380 * view.scaleY) / 2;
+  var rigy = lefy + 1380 * view.scaleY;
   if (lefy < 0) {
     lefy = 0;
-    rigy = canw;
+    rigy = view.width;
   }
   rd.letterSpacing = "1px";
-  rd.font = "" + 16 * (mh + mw) + "px junk";
+  rd.font = "" + 16 * (view.scaleY + view.scaleX) + "px junk";
   rd.textAlign = "left";
   rd.textBaseline = "middle";
   rd.strokeStyle = "#0C0959";
-  rd.lineWidth = 10 * avm;
-  rd.strokeText("Select your Car", lefy + 20 * avm, 25 * mh);
+  rd.lineWidth = 10 * view.scale;
+  rd.strokeText("Select your Car", lefy + 20 * view.scale, 25 * view.scaleY);
   rd.fillStyle = "#8665FF";
-  rd.fillText("Select your Car", lefy + 20 * avm, 25 * mh);
+  rd.fillText("Select your Car", lefy + 20 * view.scale, 25 * view.scaleY);
   if (flyout == 0) {
     rd.letterSpacing = "1px";
-    rd.font = "" + 20 * (mh + mw) + "px junk";
+    rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
     rd.textAlign = "center";
     rd.textBaseline = "middle";
     rd.strokeStyle = "#001A78";
-    rd.lineWidth = 10 * avm;
-    rd.strokeText(cd.names[sel[0]], 640 * mw, 120 * mh);
+    rd.lineWidth = 10 * view.scale;
+    rd.strokeText(cd.names[sel[0]], 640 * view.scaleX, 120 * view.scaleY);
     rd.fillStyle = "#C1EEFF";
-    rd.fillText(cd.names[sel[0]], 640 * mw, 120 * mh);
+    rd.fillText(cd.names[sel[0]], 640 * view.scaleX, 120 * view.scaleY);
     if (u[0].right) {
       if (sel[0] != 18) {
         nextc = 1;
@@ -15166,8 +15244,8 @@ function drawcarselect() {
       if (
         drawbutton(
           1,
-          lefy + 120 * avm,
-          430 * mh,
+          lefy + 120 * view.scale,
+          430 * view.scaleY,
           140,
           47,
           "#4B00F6",
@@ -15189,10 +15267,10 @@ function drawcarselect() {
       if ((handson > 10 && handson < 20) || (handson > 30 && handson < 40)) {
         rd.drawImage(
           inst[10],
-          lefy + 120 * avm,
-          430 * mh + 30 * avm,
-          56 * avm,
-          62 * avm,
+          lefy + 120 * view.scale,
+          430 * view.scaleY + 30 * view.scale,
+          56 * view.scale,
+          62 * view.scale,
         );
       }
     }
@@ -15200,8 +15278,8 @@ function drawcarselect() {
       if (
         drawbutton(
           2,
-          rigy - 120 * avm,
-          430 * mh,
+          rigy - 120 * view.scale,
+          430 * view.scaleY,
           140,
           47,
           "#4B00F6",
@@ -15223,10 +15301,10 @@ function drawcarselect() {
       if ((handson > 50 && handson < 60) || (handson > 70 && handson < 80)) {
         rd.drawImage(
           inst[10],
-          rigy - 120 * avm,
-          430 * mh + 30 * avm,
-          56 * avm,
-          62 * avm,
+          rigy - 120 * view.scale,
+          430 * view.scaleY + 30 * view.scale,
+          56 * view.scale,
+          62 * view.scale,
         );
       }
     }
@@ -15239,21 +15317,21 @@ function drawcarselect() {
     }
     if (!clocked) {
       rd.letterSpacing = "1px";
-      rd.font = "" + 11 * (mh + mw) + "px junk";
+      rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
       rd.textAlign = "right";
       rd.textBaseline = "middle";
       rd.strokeStyle = "#00284A";
-      rd.lineWidth = 6 * avm;
-      rd.strokeText("Top Speed", lefy + 180 * avm, 200 * mh);
+      rd.lineWidth = 6 * view.scale;
+      rd.strokeText("Top Speed", lefy + 180 * view.scale, 200 * view.scaleY);
       rd.fillStyle = "#A3D5FF";
-      rd.fillText("Top Speed", lefy + 180 * avm, 200 * mh);
+      rd.fillText("Top Speed", lefy + 180 * view.scale, 200 * view.scaleY);
       var perci = (cd.swits[sel[0]][2] - 22) / 9;
       if (perci < 0.2) {
         perci = 0.2;
       }
       drawcoolrect(
-        lefy + 300 * avm,
-        200 * mh - 7 * avm,
+        lefy + 300 * view.scale,
+        200 * view.scaleY - 7 * view.scale,
         200,
         20,
         "#FF1301",
@@ -15262,10 +15340,18 @@ function drawcarselect() {
         perci,
       );
       rd.strokeStyle = "#00284A";
-      rd.lineWidth = 6 * avm;
-      rd.strokeText("Acceleration", lefy + 180 * avm, 200 * mh + 40 * avm);
+      rd.lineWidth = 6 * view.scale;
+      rd.strokeText(
+        "Acceleration",
+        lefy + 180 * view.scale,
+        200 * view.scaleY + 40 * view.scale,
+      );
       rd.fillStyle = "#A3D5FF";
-      rd.fillText("Acceleration", lefy + 180 * avm, 200 * mh + 40 * avm);
+      rd.fillText(
+        "Acceleration",
+        lefy + 180 * view.scale,
+        200 * view.scaleY + 40 * view.scale,
+      );
       perci =
         (cd.acelf[sel[0]][1] *
           cd.acelf[sel[0]][0] *
@@ -15276,8 +15362,8 @@ function drawcarselect() {
         perci = 1;
       }
       drawcoolrect(
-        lefy + 300 * avm,
-        200 * mh - 7 * avm + 40 * avm,
+        lefy + 300 * view.scale,
+        200 * view.scaleY - 7 * view.scale + 40 * view.scale,
         200,
         20,
         "#FF1301",
@@ -15286,14 +15372,22 @@ function drawcarselect() {
         perci,
       );
       rd.strokeStyle = "#00284A";
-      rd.lineWidth = 6 * avm;
-      rd.strokeText("Handling", lefy + 180 * avm, 200 * mh + 80 * avm);
+      rd.lineWidth = 6 * view.scale;
+      rd.strokeText(
+        "Handling",
+        lefy + 180 * view.scale,
+        200 * view.scaleY + 80 * view.scale,
+      );
       rd.fillStyle = "#A3D5FF";
-      rd.fillText("Handling", lefy + 180 * avm, 200 * mh + 80 * avm);
+      rd.fillText(
+        "Handling",
+        lefy + 180 * view.scale,
+        200 * view.scaleY + 80 * view.scale,
+      );
       perci = cd.dishandle[sel[0]];
       drawcoolrect(
-        lefy + 300 * avm,
-        200 * mh - 7 * avm + 80 * avm,
+        lefy + 300 * view.scale,
+        200 * view.scaleY - 7 * view.scale + 80 * view.scale,
         200,
         20,
         "#FF1301",
@@ -15302,18 +15396,18 @@ function drawcarselect() {
         perci,
       );
       rd.strokeStyle = "#00284A";
-      rd.lineWidth = 6 * avm;
-      rd.strokeText("Stunts", rigy - 290 * avm, 200 * mh);
+      rd.lineWidth = 6 * view.scale;
+      rd.strokeText("Stunts", rigy - 290 * view.scale, 200 * view.scaleY);
       rd.fillStyle = "#A3D5FF";
-      rd.fillText("Stunts", rigy - 290 * avm, 200 * mh);
+      rd.fillText("Stunts", rigy - 290 * view.scale, 200 * view.scaleY);
       perci =
         (cd.airc[sel[0]] * 10 * cd.airs[sel[0]] * cd.bounce[sel[0]] + 28) / 139;
       if (perci > 1) {
         perci = 1;
       }
       drawcoolrect(
-        rigy - 170 * avm,
-        200 * mh - 7 * avm,
+        rigy - 170 * view.scale,
+        200 * view.scaleY - 7 * view.scale,
         200,
         20,
         "#FF1301",
@@ -15322,17 +15416,25 @@ function drawcarselect() {
         perci,
       );
       rd.strokeStyle = "#00284A";
-      rd.lineWidth = 6 * avm;
-      rd.strokeText("Strength", rigy - 290 * avm, 200 * mh + 40 * avm);
+      rd.lineWidth = 6 * view.scale;
+      rd.strokeText(
+        "Strength",
+        rigy - 290 * view.scale,
+        200 * view.scaleY + 40 * view.scale,
+      );
       rd.fillStyle = "#A3D5FF";
-      rd.fillText("Strength", rigy - 290 * avm, 200 * mh + 40 * avm);
+      rd.fillText(
+        "Strength",
+        rigy - 290 * view.scale,
+        200 * view.scaleY + 40 * view.scale,
+      );
       perci = (cd.moment[sel[0]] + 0.5) / 2.6;
       if (perci > 1) {
         perci = 1;
       }
       drawcoolrect(
-        rigy - 170 * avm,
-        200 * mh - 7 * avm + 40 * avm,
+        rigy - 170 * view.scale,
+        200 * view.scaleY - 7 * view.scale + 40 * view.scale,
         200,
         20,
         "#FF1301",
@@ -15341,14 +15443,22 @@ function drawcarselect() {
         perci,
       );
       rd.strokeStyle = "#00284A";
-      rd.lineWidth = 6 * avm;
-      rd.strokeText("Endurance", rigy - 290 * avm, 200 * mh + 80 * avm);
+      rd.lineWidth = 6 * view.scale;
+      rd.strokeText(
+        "Endurance",
+        rigy - 290 * view.scale,
+        200 * view.scaleY + 80 * view.scale,
+      );
       rd.fillStyle = "#A3D5FF";
-      rd.fillText("Endurance", rigy - 290 * avm, 200 * mh + 80 * avm);
+      rd.fillText(
+        "Endurance",
+        rigy - 290 * view.scale,
+        200 * view.scaleY + 80 * view.scale,
+      );
       perci = cd.outdam[sel[0]];
       drawcoolrect(
-        rigy - 170 * avm,
-        200 * mh - 7 * avm + 80 * avm,
+        rigy - 170 * view.scale,
+        200 * view.scaleY - 7 * view.scale + 80 * view.scale,
         200,
         20,
         "#FF1301",
@@ -15358,102 +15468,123 @@ function drawcarselect() {
       );
     } else {
       rd.letterSpacing = "1px";
-      rd.font = "" + 17 * (mh + mw) + "px junk";
+      rd.font = "" + 17 * (view.scaleY + view.scaleX) + "px junk";
       rd.textAlign = "center";
       rd.textBaseline = "middle";
       rd.strokeStyle = "#00284A";
-      rd.lineWidth = 10 * avm;
+      rd.lineWidth = 10 * view.scale;
       rd.strokeText(
         "This car unlocks when  stage " + clocked + "  is completed!",
-        640 * mw,
-        200 * mh,
+        640 * view.scaleX,
+        200 * view.scaleY,
       );
       rd.fillStyle = "#A3D5FF";
       rd.fillText(
         "This car unlocks when  stage " + clocked + "  is completed!",
-        640 * mw,
-        200 * mh,
+        640 * view.scaleX,
+        200 * view.scaleY,
       );
     }
     if (clocked) {
       var xp = [
-        640 * mw - 300 * mh - 3 * mh,
-        640 * mw - 300 * mh - 3 * mh,
-        640 * mw - 120 * mh - 3 * mh,
-        640 * mw - 120 * mh - 3 * mh,
+        640 * view.scaleX - 300 * view.scaleY - 3 * view.scaleY,
+        640 * view.scaleX - 300 * view.scaleY - 3 * view.scaleY,
+        640 * view.scaleX - 120 * view.scaleY - 3 * view.scaleY,
+        640 * view.scaleX - 120 * view.scaleY - 3 * view.scaleY,
       ];
-      var yp = [564 * mh, 560 * mh + 108 * mh, 600 * mh + 108 * mh, 604 * mh];
+      var yp = [
+        564 * view.scaleY,
+        560 * view.scaleY + 108 * view.scaleY,
+        600 * view.scaleY + 108 * view.scaleY,
+        604 * view.scaleY,
+      ];
       rd.fillStyle = "#21AEFF";
       rd.globalAlpha = 0.5;
       fillPolygon(xp, yp, 4);
       rd.globalAlpha = 1;
       rd.strokeStyle = "#002748";
-      rd.lineWidth = 2 * mh;
+      rd.lineWidth = 2 * view.scaleY;
       drawPolygon(xp, yp, 4);
       var xp = [
-        640 * mw + 120 * mh - 3 * mh,
-        640 * mw + 120 * mh - 3 * mh,
-        640 * mw - 120 * mh - 3 * mh,
-        640 * mw - 120 * mh - 3 * mh,
+        640 * view.scaleX + 120 * view.scaleY - 3 * view.scaleY,
+        640 * view.scaleX + 120 * view.scaleY - 3 * view.scaleY,
+        640 * view.scaleX - 120 * view.scaleY - 3 * view.scaleY,
+        640 * view.scaleX - 120 * view.scaleY - 3 * view.scaleY,
       ];
-      var yp = [604 * mh, 600 * mh + 108 * mh, 600 * mh + 108 * mh, 604 * mh];
+      var yp = [
+        604 * view.scaleY,
+        600 * view.scaleY + 108 * view.scaleY,
+        600 * view.scaleY + 108 * view.scaleY,
+        604 * view.scaleY,
+      ];
       rd.fillStyle = "#21AEFF";
       rd.globalAlpha = 0.5;
       fillPolygon(xp, yp, 4);
       rd.globalAlpha = 1;
       rd.strokeStyle = "#002748";
-      rd.lineWidth = 2 * mh;
+      rd.lineWidth = 2 * view.scaleY;
       drawPolygon(xp, yp, 4);
       var xp = [
-        640 * mw + 300 * mh - 3 * mh,
-        640 * mw + 300 * mh - 3 * mh,
-        640 * mw + 120 * mh - 3 * mh,
-        640 * mw + 120 * mh - 3 * mh,
+        640 * view.scaleX + 300 * view.scaleY - 3 * view.scaleY,
+        640 * view.scaleX + 300 * view.scaleY - 3 * view.scaleY,
+        640 * view.scaleX + 120 * view.scaleY - 3 * view.scaleY,
+        640 * view.scaleX + 120 * view.scaleY - 3 * view.scaleY,
       ];
-      var yp = [564 * mh, 560 * mh + 108 * mh, 600 * mh + 108 * mh, 604 * mh];
+      var yp = [
+        564 * view.scaleY,
+        560 * view.scaleY + 108 * view.scaleY,
+        600 * view.scaleY + 108 * view.scaleY,
+        604 * view.scaleY,
+      ];
       rd.fillStyle = "#21AEFF";
       rd.globalAlpha = 0.5;
       fillPolygon(xp, yp, 4);
       rd.globalAlpha = 1;
       rd.strokeStyle = "#002748";
-      rd.lineWidth = 2 * mh;
+      rd.lineWidth = 2 * view.scaleY;
       drawPolygon(xp, yp, 4);
       rd.drawImage(
         lbar,
-        640 * mw - 300 * mh - 3 * mh,
-        560 * mh,
-        6 * mh,
-        111 * mh,
+        640 * view.scaleX - 300 * view.scaleY - 3 * view.scaleY,
+        560 * view.scaleY,
+        6 * view.scaleY,
+        111 * view.scaleY,
       );
       rd.drawImage(
         lbar,
-        640 * mw - 120 * mh - 3 * mh,
-        600 * mh,
-        6 * mh,
-        111 * mh,
+        640 * view.scaleX - 120 * view.scaleY - 3 * view.scaleY,
+        600 * view.scaleY,
+        6 * view.scaleY,
+        111 * view.scaleY,
       );
       rd.drawImage(
         rbar,
-        640 * mw + 120 * mh - 3 * mh,
-        600 * mh,
-        6 * mh,
-        111 * mh,
+        640 * view.scaleX + 120 * view.scaleY - 3 * view.scaleY,
+        600 * view.scaleY,
+        6 * view.scaleY,
+        111 * view.scaleY,
       );
       rd.drawImage(
         rbar,
-        640 * mw + 300 * mh - 3 * mh,
-        560 * mh,
-        6 * mh,
-        111 * mh,
+        640 * view.scaleX + 300 * view.scaleY - 3 * view.scaleY,
+        560 * view.scaleY,
+        6 * view.scaleY,
+        111 * view.scaleY,
       );
-      rd.drawImage(lckd, 640 * mw - 29 * mh, 619 * mh, 58 * mh, 72 * mh);
+      rd.drawImage(
+        lckd,
+        640 * view.scaleX - 29 * view.scaleY,
+        619 * view.scaleY,
+        58 * view.scaleY,
+        72 * view.scaleY,
+      );
     }
     if (!clocked) {
       if (
         drawbutton(
           3,
-          rigy - 150 * avm,
-          720 * mh - 100 * avm,
+          rigy - 150 * view.scale,
+          720 * view.scaleY - 100 * view.scale,
           200,
           70,
           "#0057E6",
@@ -15491,8 +15622,8 @@ function drawcarselect() {
         if (
           drawbutton(
             5,
-            640 * mw,
-            720 * mh - 90 * avm,
+            640 * view.scaleX,
+            720 * view.scaleY - 90 * view.scale,
             220,
             60,
             "#0057E6",
@@ -15522,10 +15653,10 @@ function drawcarselect() {
         ) {
           rd.drawImage(
             inst[10],
-            640 * mw,
-            720 * mh - 90 * avm + 25 * avm,
-            56 * avm,
-            62 * avm,
+            640 * view.scaleX,
+            720 * view.scaleY - 90 * view.scale + 25 * view.scale,
+            56 * view.scale,
+            62 * view.scale,
           );
         }
         if (enter == 1) {
@@ -15586,7 +15717,7 @@ var alipha = 0;
 var bgsload = null;
 var stageloadtyp = 0;
 function stageloading() {
-  rd.clearRect(0, 0, canw, canh);
+  rd.clearRect(0, 0, view.width, view.height);
   if (stageload == 0 && (updateframe || stageloadtyp == 2)) {
     stageload = 0;
     loadstage();
@@ -15601,28 +15732,36 @@ function stageloading() {
   if (stageloadtyp == 0 || stageloadtyp == 2) {
     rd.globalAlpha = alipha;
     rd.fillStyle = "#9FD3FF";
-    rd.fillRect(0, 0, canw, canh);
+    rd.fillRect(0, 0, view.width, view.height);
     rd.globalAlpha = 1;
     alipha += 0.02;
     if (alipha > 0.4) {
       alipha = 0.4;
     }
     rd.letterSpacing = "1px";
-    rd.font = "" + 20 * (mh + mw) + "px junk";
+    rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
     rd.textAlign = "center";
     rd.textBaseline = "middle";
     rd.strokeStyle = "#2D9FFF";
-    rd.lineWidth = 10 * avm;
+    rd.lineWidth = 10 * view.scale;
     if (stageloadtyp == 0) {
-      rd.strokeText("Loading Stage " + cp.stage + "", 640 * mw, 330 * mh);
+      rd.strokeText(
+        "Loading Stage " + cp.stage + "",
+        640 * view.scaleX,
+        330 * view.scaleY,
+      );
     } else {
-      rd.strokeText("Loading Stage...", 640 * mw, 330 * mh);
+      rd.strokeText("Loading Stage...", 640 * view.scaleX, 330 * view.scaleY);
     }
     rd.fillStyle = "#C1E3FF";
     if (stageloadtyp == 0) {
-      rd.fillText("Loading Stage " + cp.stage + "", 640 * mw, 330 * mh);
+      rd.fillText(
+        "Loading Stage " + cp.stage + "",
+        640 * view.scaleX,
+        330 * view.scaleY,
+      );
     } else {
-      rd.fillText("Loading Stage...", 640 * mw, 330 * mh);
+      rd.fillText("Loading Stage...", 640 * view.scaleX, 330 * view.scaleY);
     }
   }
   if (stageloadtyp == 1) {
@@ -15655,21 +15794,27 @@ var ysp = [];
 var flkun = 0;
 var flkpl = 0;
 function drawstageselect() {
-  rd.clearRect(0, 0, canw, canh);
+  rd.clearRect(0, 0, view.width, view.height);
   if (flkun && !ontip) {
     rd.globalAlpha = 0.5;
     rd.fillStyle = "#9FD3FF";
-    rd.fillRect(0, 0, canw, canh);
+    rd.fillRect(0, 0, view.width, view.height);
     rd.globalAlpha = 1;
     if (stageload != -1) {
       rd.letterSpacing = "1px";
-      rd.font = "" + 22 * (mh + mw) + "px junk";
+      rd.font = "" + 22 * (view.scaleY + view.scaleX) + "px junk";
       rd.textAlign = "center";
       rd.textBaseline = "middle";
       rd.fillStyle = "#00284A";
-      rd.fillText("Stage Locked", 640 * mw, 380 * mh);
+      rd.fillText("Stage Locked", 640 * view.scaleX, 380 * view.scaleY);
       if (aflk || flkun > 10) {
-        rd.drawImage(lckd, 640 * mw - 29 * mh, 250 * mh, 58 * mh, 72 * mh);
+        rd.drawImage(
+          lckd,
+          640 * view.scaleX - 29 * view.scaleY,
+          250 * view.scaleY,
+          58 * view.scaleY,
+          72 * view.scaleY,
+        );
       }
       if (aflk) {
         aflk = false;
@@ -15683,11 +15828,15 @@ function drawstageselect() {
       }
     } else {
       rd.letterSpacing = "1px";
-      rd.font = "" + 22 * (mh + mw) + "px junk";
+      rd.font = "" + 22 * (view.scaleY + view.scaleX) + "px junk";
       rd.textAlign = "center";
       rd.textBaseline = "middle";
       rd.fillStyle = "#00284A";
-      rd.fillText("Loading Stage " + cp.stage + "", 640 * mw, 330 * mh);
+      rd.fillText(
+        "Loading Stage " + cp.stage + "",
+        640 * view.scaleX,
+        330 * view.scaleY,
+      );
     }
   }
   if (!ontip) {
@@ -15712,27 +15861,27 @@ function drawstageselect() {
       rd.globalAlpha = 0.6;
       rd.drawImage(
         insano[ondud],
-        70 * mw,
-        720 * mh - 222 * avm,
-        274 * avm * 0.8,
-        341 * avm * 0.8,
+        70 * view.scaleX,
+        720 * view.scaleY - 222 * view.scale,
+        274 * view.scale * 0.8,
+        341 * view.scale * 0.8,
       );
       rd.globalAlpha = 1;
       rd.globalAlpha = 0.5;
       rd.fillStyle = "#FFFFFF";
       floatythink(
-        70 * mw + 207 * avm,
-        720 * mh - 115 * avm,
-        30 * avm,
-        30 * avm,
-        10 * avm,
+        70 * view.scaleX + 207 * view.scale,
+        720 * view.scaleY - 115 * view.scale,
+        30 * view.scale,
+        30 * view.scale,
+        10 * view.scale,
       );
       floatythink(
-        70 * mw + 247 * avm,
-        720 * mh - 170 * avm,
-        225 * avm,
-        90 * avm,
-        20 * avm,
+        70 * view.scaleX + 247 * view.scale,
+        720 * view.scaleY - 170 * view.scale,
+        225 * view.scale,
+        90 * view.scale,
+        20 * view.scale,
       );
       rd.globalAlpha = 1;
     }
@@ -15761,7 +15910,7 @@ function drawstageselect() {
   var hsl = rgbToHsl(r, g, b);
   var rgb = hslToRgb(hsl[0], 1, 0.3);
   rd.strokeStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
-  rd.lineWidth = 10 * avm;
+  rd.lineWidth = 10 * view.scale;
   spdPolygon(xsp, ysp, 50);
   rgb = hslToRgb(hsl[0], 1, 0.4);
   rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
@@ -15771,45 +15920,45 @@ function drawstageselect() {
   spPolygon(0, 720, xsp, ysp, 41, 51, 0, 0);
   if (!flkun) {
     rd.letterSpacing = "1px";
-    rd.font = "" + 20 * (mh + mw) + "px junk";
+    rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
     rd.textAlign = "center";
     rd.textBaseline = "middle";
     rgb = hslToRgb(hsl[0], 1, 0.3);
     rd.strokeStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
-    rd.lineWidth = 10 * avm;
-    rd.strokeText(cp.name, 640 * mw, 200 * mh);
+    rd.lineWidth = 10 * view.scale;
+    rd.strokeText(cp.name, 640 * view.scaleX, 200 * view.scaleY);
     rgb = hslToRgb(hsl[0] + 0.05, 1, 0.9);
     rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
-    rd.fillText(cp.name, 640 * mw, 200 * mh);
+    rd.fillText(cp.name, 640 * view.scaleX, 200 * view.scaleY);
     if (cp.stage == 16 && !ontip) {
       rd.letterSpacing = "0px";
-      rd.font = "" + 12 * (mh + mw) + "px verd";
+      rd.font = "" + 12 * (view.scaleY + view.scaleX) + "px verd";
       rd.textBaseline = "middle";
       rd.textAlign = "center";
       rgb = hslToRgb(hsl[0], 1, 0.3);
       rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
       rd.fillText(
         "( Guidance arrow is disabled in this stage... )",
-        640 * mw,
-        260 * mh,
+        640 * view.scaleX,
+        260 * view.scaleY,
       );
     }
     rd.letterSpacing = "1px";
-    rd.font = "" + 22 * (mh + mw) + "px junk";
+    rd.font = "" + 22 * (view.scaleY + view.scaleX) + "px junk";
     rd.textAlign = "center";
     rd.textBaseline = "middle";
-    rd.lineWidth = 10 * avm;
+    rd.lineWidth = 10 * view.scale;
     if (cp.stage != 17) {
-      rd.strokeText("Stage " + cp.stage, 640 * mw, 120 * mh);
+      rd.strokeText("Stage " + cp.stage, 640 * view.scaleX, 120 * view.scaleY);
     } else {
-      rd.strokeText("Final Stage", 640 * mw, 120 * mh);
+      rd.strokeText("Final Stage", 640 * view.scaleX, 120 * view.scaleY);
     }
     rgb = hslToRgb(hsl[0] - 0.05, 1, 0.6);
     rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
     if (cp.stage != 17) {
-      rd.fillText("Stage " + cp.stage, 640 * mw, 120 * mh);
+      rd.fillText("Stage " + cp.stage, 640 * view.scaleX, 120 * view.scaleY);
     } else {
-      rd.fillText("Final Stage", 640 * mw, 120 * mh);
+      rd.fillText("Final Stage", 640 * view.scaleX, 120 * view.scaleY);
       loadconfe();
     }
     if (!ontip) {
@@ -15840,8 +15989,8 @@ function drawstageselect() {
       if (
         drawbutton(
           9,
-          210 * avm,
-          130 * mh,
+          210 * view.scale,
+          130 * view.scaleY,
           150,
           56,
           "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
@@ -15866,14 +16015,14 @@ function drawstageselect() {
         setWorld(snap, fogc, lvx, lvy, lvz, fogdist);
         fase = 2;
         rd.fillStyle = "#FFFFFF";
-        rd.fillRect(0, 0, canw, canh);
+        rd.fillRect(0, 0, view.width, view.height);
       }
       if (cp.stage > 1) {
         if (
           drawbutton(
             3,
-            190 * avm,
-            360 * mh,
+            190 * view.scale,
+            360 * view.scaleY,
             140,
             47,
             "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
@@ -15898,8 +16047,8 @@ function drawstageselect() {
         if (
           drawbutton(
             2,
-            canw - 190 * avm,
-            360 * mh,
+            view.width - 190 * view.scale,
+            360 * view.scaleY,
             140,
             47,
             "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
@@ -15929,8 +16078,8 @@ function drawstageselect() {
           if (
             drawbutton(
               6,
-              70 * mw + 357 * avm,
-              720 * mh - 157 * avm,
+              70 * view.scaleX + 357 * view.scale,
+              720 * view.scaleY - 157 * view.scale,
               120,
               60,
               "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
@@ -15954,8 +16103,8 @@ function drawstageselect() {
             if (
               drawbutton(
                 8,
-                canw - 510 * avm,
-                720 * mh - 180 * avm,
+                view.width - 510 * view.scale,
+                720 * view.scaleY - 180 * view.scale,
                 220,
                 60,
                 "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
@@ -15982,8 +16131,8 @@ function drawstageselect() {
         if (
           drawbutton(
             10,
-            canw - 550 * avm,
-            720 * mh - 190 * avm,
+            view.width - 550 * view.scale,
+            720 * view.scaleY - 190 * view.scale,
             300,
             70,
             "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
@@ -16043,8 +16192,8 @@ function drawstageselect() {
       if (
         drawbutton(
           1,
-          canw - 220 * avm,
-          720 * mh - 190 * avm,
+          view.width - 220 * view.scale,
+          720 * view.scaleY - 190 * view.scale,
           200,
           70,
           "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
@@ -16097,11 +16246,11 @@ function drawstageselect() {
         }
       }
     } else {
-      var fm = mw;
-      if (mw / mh > 1.2) {
-        fm *= 1.2 / (mw / mh);
+      var fm = view.scaleX;
+      if (view.scaleX / view.scaleY > 1.2) {
+        fm *= 1.2 / (view.scaleX / view.scaleY);
       }
-      var topo = 260 * mh;
+      var topo = 260 * view.scaleY;
       if (aflk) {
         aflk = false;
       } else {
@@ -16144,7 +16293,7 @@ function drawstageselect() {
       if (
         drawbutton(
           6,
-          1140 * fm - 80 * avm,
+          1140 * fm - 80 * view.scale,
           topo + 210 * fm,
           160,
           60,
@@ -16195,25 +16344,31 @@ function aftersparkstart() {
 }
 function spPolygon(stx, sty, xd, yd, fm, to, enx, eny) {
   rd.beginPath();
-  rd.moveTo(stx * mw, sty * mh);
+  rd.moveTo(stx * view.scaleX, sty * view.scaleY);
   for (var i = fm; i < to; i++) {
-    rd.lineTo(xd[i] * mw, yd[i] * mh);
+    rd.lineTo(xd[i] * view.scaleX, yd[i] * view.scaleY);
   }
-  rd.lineTo(enx * mw, eny * mh);
+  rd.lineTo(enx * view.scaleX, eny * view.scaleY);
   rd.closePath();
   rd.fill();
 }
 function spdPolygon(xd, yd, nd) {
   rd.beginPath();
-  rd.moveTo(xd[0] * mw, yd[0] * mh);
+  rd.moveTo(xd[0] * view.scaleX, yd[0] * view.scaleY);
   for (var i = 1; i < nd; i++) {
-    rd.lineTo(xd[i] * mw, yd[i] * mh);
+    rd.lineTo(xd[i] * view.scaleX, yd[i] * view.scaleY);
   }
   rd.closePath();
   rd.stroke();
 }
 function musictog() {
-  onycl = oncla(4, canw - 62 * avm, 4 * avm, 58 * avm, 42 * avm);
+  onycl = oncla(
+    4,
+    view.width - 62 * view.scale,
+    4 * view.scale,
+    58 * view.scale,
+    42 * view.scale,
+  );
   if (onycl == 1) {
     rd.globalAlpha = 0.7;
   }
@@ -16229,7 +16384,13 @@ function musictog() {
   } else {
     onycl = 5;
   }
-  rd.drawImage(muimg[onycl], canw - 62 * avm, 4 * avm, 58 * avm, 42 * avm);
+  rd.drawImage(
+    muimg[onycl],
+    view.width - 62 * view.scale,
+    4 * view.scale,
+    58 * view.scale,
+    42 * view.scale,
+  );
   rd.globalAlpha = 1;
 }
 function arrow(pnt, misdcp, pntcar) {
@@ -16362,10 +16523,10 @@ function arrow(pnt, misdcp, pntcar) {
   if (!pntcar) {
     if (an > 7 || misdcp > 0 || misdcp == -2 || cntan != 0) {
       for (var i = 0; i < 7; i++) {
-        xp[i] = xs(xp[i], zp[i]) * 1.6 * avm;
-        yp[i] = ys(yp[i], zp[i]) * 1.6 * avm;
-        xp[i] += 640 * mw;
-        yp[i] += (360 + adm) * mh;
+        xp[i] = xs(xp[i], zp[i]) * 1.6 * view.scale;
+        yp[i] = ys(yp[i], zp[i]) * 1.6 * view.scale;
+        xp[i] += 640 * view.scaleX;
+        yp[i] += (360 + view.widescreenShift) * view.scaleY;
       }
       var r = 190;
       var g = 255;
@@ -16408,16 +16569,16 @@ function arrow(pnt, misdcp, pntcar) {
         }
       }
       rd.strokeStyle = "rgb(" + r + "," + g + "," + b + ")";
-      rd.lineWidth = 2.6 * avm;
+      rd.lineWidth = 2.6 * view.scale;
       drawPolygon(xp, yp, 7);
       rd.globalAlpha = 1;
     }
   } else {
     for (var i = 0; i < 7; i++) {
-      xp[i] = xs(xp[i], zp[i]) * 1.6 * avm;
-      yp[i] = ys(yp[i], zp[i]) * 1.6 * avm;
-      xp[i] += 640 * mw;
-      yp[i] += (360 + adm) * mh;
+      xp[i] = xs(xp[i], zp[i]) * 1.6 * view.scale;
+      yp[i] = ys(yp[i], zp[i]) * 1.6 * view.scale;
+      xp[i] += 640 * view.scaleX;
+      yp[i] += (360 + view.widescreenShift) * view.scaleY;
     }
     var r = 159;
     var g = 207;
@@ -16428,7 +16589,7 @@ function arrow(pnt, misdcp, pntcar) {
     g = 114;
     b = 255;
     rd.strokeStyle = "rgb(" + r + "," + g + "," + b + ")";
-    rd.lineWidth = 2.6 * avm;
+    rd.lineWidth = 2.6 * view.scale;
     drawPolygon(xp, yp, 7);
   }
 }
@@ -16482,7 +16643,10 @@ function findonscreen() {
       }
       if (isinfront) {
         var onscpos = getonscreen(cmat, car[i]);
-        if (onscpos[0] > -(15 * mw) && onscpos[0] < canw + 15 * mw) {
+        if (
+          onscpos[0] > -(15 * view.scaleX) &&
+          onscpos[0] < view.width + 15 * view.scaleX
+        ) {
           onscreen[i] = true;
         }
       }
@@ -16515,18 +16679,18 @@ function ys(y, z) {
 }
 function drawcs(y, cs, r, g, b, typ) {
   rd.letterSpacing = "0px";
-  rd.font = "" + 11 * (mh + mw) + "px verd";
+  rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px verd";
   if (typ == 1 || typ == 2) {
     rd.letterSpacing = "1px";
-    rd.font = "" + 13 * (mh + mw) + "px junk";
+    rd.font = "" + 13 * (view.scaleY + view.scaleX) + "px junk";
   }
   if (typ == 3) {
     rd.letterSpacing = "1px";
-    rd.font = "" + 24 * (mh + mw) + "px junk";
+    rd.font = "" + 24 * (view.scaleY + view.scaleX) + "px junk";
   }
   if (typ == 4) {
     rd.letterSpacing = "1px";
-    rd.font = "" + 17 * (mh + mw) + "px junk";
+    rd.font = "" + 17 * (view.scaleY + view.scaleX) + "px junk";
   }
   rd.textAlign = "center";
   rd.textBaseline = "middle";
@@ -16534,42 +16698,47 @@ function drawcs(y, cs, r, g, b, typ) {
   if (typ == 2) {
     rd.globalAlpha = 0.67;
   }
-  rd.fillText(cs, 640 * mw, y * mh);
+  rd.fillText(cs, 640 * view.scaleX, y * view.scaleY);
   if (typ == 2) {
     rd.globalAlpha = 1;
   }
 }
 function drawbar(xb, yb, cb1, cb2, cbf, fct) {
   rd.fillStyle = cbf;
-  rd.fillRect(xb + 7 * avm, yb + 6 * avm, 166 * fct * avm, 18 * avm);
-  var grd = rd.createLinearGradient(xb, yb, xb, yb + 30 * avm);
+  rd.fillRect(
+    xb + 7 * view.scale,
+    yb + 6 * view.scale,
+    166 * fct * view.scale,
+    18 * view.scale,
+  );
+  var grd = rd.createLinearGradient(xb, yb, xb, yb + 30 * view.scale);
   grd.addColorStop(0, cb1);
   grd.addColorStop(1, cb2);
   rd.fillStyle = grd;
   rd.beginPath();
   rd.moveTo(xb, yb);
-  rd.lineTo(xb - 9 * avm, yb + 10 * avm);
-  rd.lineTo(xb - 1.5 * avm, yb + 27 * avm);
-  rd.lineTo(xb + 10 * avm, yb + 30 * avm);
-  rd.lineTo(xb + 92 * avm, yb + 30 * avm);
-  rd.lineTo(xb + 92 * avm, yb + 24 * avm);
-  rd.lineTo(xb + 7 * avm, yb + 24 * avm);
-  rd.lineTo(xb + 7 * avm, yb + 6 * avm);
-  rd.lineTo(xb + 92 * avm, yb + 6 * avm);
-  rd.lineTo(xb + 92 * avm, yb);
+  rd.lineTo(xb - 9 * view.scale, yb + 10 * view.scale);
+  rd.lineTo(xb - 1.5 * view.scale, yb + 27 * view.scale);
+  rd.lineTo(xb + 10 * view.scale, yb + 30 * view.scale);
+  rd.lineTo(xb + 92 * view.scale, yb + 30 * view.scale);
+  rd.lineTo(xb + 92 * view.scale, yb + 24 * view.scale);
+  rd.lineTo(xb + 7 * view.scale, yb + 24 * view.scale);
+  rd.lineTo(xb + 7 * view.scale, yb + 6 * view.scale);
+  rd.lineTo(xb + 92 * view.scale, yb + 6 * view.scale);
+  rd.lineTo(xb + 92 * view.scale, yb);
   rd.closePath();
   rd.fill();
   rd.beginPath();
-  rd.moveTo(xb + 180 * avm, yb + 30 * avm);
-  rd.lineTo(xb + 189 * avm, yb + 20 * avm);
-  rd.lineTo(xb + 181.5 * avm, yb + 3 * avm);
-  rd.lineTo(xb + 170 * avm, yb);
-  rd.lineTo(xb + 90 * avm, yb);
-  rd.lineTo(xb + 90 * avm, yb + 6 * avm);
-  rd.lineTo(xb + 173 * avm, yb + 6 * avm);
-  rd.lineTo(xb + 173 * avm, yb + 24 * avm);
-  rd.lineTo(xb + 90 * avm, yb + 24 * avm);
-  rd.lineTo(xb + 90 * avm, yb + 30 * avm);
+  rd.moveTo(xb + 180 * view.scale, yb + 30 * view.scale);
+  rd.lineTo(xb + 189 * view.scale, yb + 20 * view.scale);
+  rd.lineTo(xb + 181.5 * view.scale, yb + 3 * view.scale);
+  rd.lineTo(xb + 170 * view.scale, yb);
+  rd.lineTo(xb + 90 * view.scale, yb);
+  rd.lineTo(xb + 90 * view.scale, yb + 6 * view.scale);
+  rd.lineTo(xb + 173 * view.scale, yb + 6 * view.scale);
+  rd.lineTo(xb + 173 * view.scale, yb + 24 * view.scale);
+  rd.lineTo(xb + 90 * view.scale, yb + 24 * view.scale);
+  rd.lineTo(xb + 90 * view.scale, yb + 30 * view.scale);
   rd.closePath();
   rd.fill();
 }
@@ -16593,10 +16762,10 @@ function drawbutton(
   iopa,
   flak,
 ) {
-  wb = wb * avm;
-  hb = hb * avm;
-  var xbd = xb - wb * 0.5 + 5 * avm;
-  var ybd = yb + 4 * avm;
+  wb = wb * view.scale;
+  hb = hb * view.scale;
+  var xbd = xb - wb * 0.5 + 5 * view.scale;
+  var ybd = yb + 4 * view.scale;
   var clknow = false;
   var hasonx = false;
   var mnms = pointer.count;
@@ -16680,20 +16849,20 @@ function drawbutton(
   rd.fill();
   var wti = 0;
   if (typ == 0 || typ == 3) {
-    rd.font = "" + fz * (mh + mw) + "px junk";
+    rd.font = "" + fz * (view.scaleY + view.scaleX) + "px junk";
     rd.letterSpacing = "1px";
     wti =
       rd.measureText(txt).width +
-      10 * avm +
-      img.width * avm * interfaceResolution;
+      10 * view.scale +
+      img.width * view.scale * interfaceResolution;
   }
   if (typ == 1) {
-    rd.font = "" + fz * (mh + mw) + "px junk";
+    rd.font = "" + fz * (view.scaleY + view.scaleX) + "px junk";
     rd.letterSpacing = "1px";
     wti = rd.measureText(txt).width;
   }
   if (typ == 2) {
-    wti = img.width * avm * interfaceResolution;
+    wti = img.width * view.scale * interfaceResolution;
   }
   if (typ == 0 || typ == 1) {
     rd.textBaseline = "middle";
@@ -16702,12 +16871,12 @@ function drawbutton(
     rd.globalAlpha = opa;
     var ydf = 0;
     if (isFirefox) {
-      ydf = fz * avm * 0.35;
+      ydf = fz * view.scale * 0.35;
     }
     rd.fillText(
       txt,
-      xbd + wb * 0.5 - wti * 0.5 + fz * avm * 0.3,
-      ybd + hb * 0.5 - fz * avm * 0.25 + ydf,
+      xbd + wb * 0.5 - wti * 0.5 + fz * view.scale * 0.3,
+      ybd + hb * 0.5 - fz * view.scale * 0.25 + ydf,
     );
     rd.globalAlpha = 1;
   }
@@ -16715,10 +16884,10 @@ function drawbutton(
     rd.globalAlpha = iopa;
     rd.drawImage(
       img,
-      xbd + wb * 0.5 + wti * 0.5 - img.width * avm * interfaceResolution,
-      ybd + hb * 0.5 - img.height * avm * 0.5 * interfaceResolution,
-      img.width * avm * interfaceResolution,
-      img.height * avm * interfaceResolution,
+      xbd + wb * 0.5 + wti * 0.5 - img.width * view.scale * interfaceResolution,
+      ybd + hb * 0.5 - img.height * view.scale * 0.5 * interfaceResolution,
+      img.width * view.scale * interfaceResolution,
+      img.height * view.scale * interfaceResolution,
     );
     rd.globalAlpha = 1;
   }
@@ -16726,14 +16895,17 @@ function drawbutton(
     rd.globalAlpha = iopa;
     var subft = 0;
     if (txt == "Time" || txt == "Rewind Time") {
-      subft = 7 * avm;
+      subft = 7 * view.scale;
     }
     rd.drawImage(
       img,
       xbd + wb * 0.5 - wti * 0.5,
-      ybd + hb * 0.5 - img.height * avm * 0.5 * interfaceResolution - subft,
-      img.width * avm * interfaceResolution,
-      img.height * avm * interfaceResolution,
+      ybd +
+        hb * 0.5 -
+        img.height * view.scale * 0.5 * interfaceResolution -
+        subft,
+      img.width * view.scale * interfaceResolution,
+      img.height * view.scale * interfaceResolution,
     );
     rd.globalAlpha = 1;
     rd.textBaseline = "middle";
@@ -16742,12 +16914,16 @@ function drawbutton(
     rd.globalAlpha = opa;
     var ydf = 0;
     if (isFirefox) {
-      ydf = fz * avm * 0.35;
+      ydf = fz * view.scale * 0.35;
     }
     rd.fillText(
       txt,
-      xbd + wb * 0.5 + wti * 0.5 - rd.measureText(txt).width - fz * avm * 0.3,
-      ybd + hb * 0.5 - fz * avm * 0.25 + ydf,
+      xbd +
+        wb * 0.5 +
+        wti * 0.5 -
+        rd.measureText(txt).width -
+        fz * view.scale * 0.3,
+      ybd + hb * 0.5 - fz * view.scale * 0.25 + ydf,
     );
     rd.globalAlpha = 1;
   }
@@ -16784,8 +16960,8 @@ function oncla(onx, xa, ya, wa, ha) {
   return oncl;
 }
 function drawcoolrect(xb, yb, wb, hb, cb1, cb2, cbs, per) {
-  wb = wb * avm;
-  hb = hb * avm;
+  wb = wb * view.scale;
+  hb = hb * view.scale;
   var xbd = xb - wb * 0.5;
   var ybd = yb;
   var grd = rd.createLinearGradient(
@@ -16808,7 +16984,7 @@ function drawcoolrect(xb, yb, wb, hb, cb1, cb2, cbs, per) {
   rd.lineTo(xbd + wb * per - hb * 0.1, ybd);
   rd.closePath();
   rd.fill();
-  rd.lineWidth = 3 * avm;
+  rd.lineWidth = 3 * view.scale;
   rd.strokeStyle = cbs;
   rd.beginPath();
   rd.moveTo(xbd, ybd);
@@ -16935,13 +17111,13 @@ function floatytalk(x, y, width, height, cornerRadius) {
   );
   rd.lineTo(x + cornerRadius, y + height);
   rd.quadraticCurveTo(x, y + height, x, y + height - cornerRadius);
-  var fm = mw;
-  if (mw / mh > 1.2) {
-    fm *= 1.2 / (mw / mh);
+  var fm = view.scaleX;
+  if (view.scaleX / view.scaleY > 1.2) {
+    fm *= 1.2 / (view.scaleX / view.scaleY);
   }
-  rd.lineTo(x, 260 * mh + 200 * fm);
-  rd.lineTo(150 * fm, 260 * mh + 200 * fm);
-  rd.lineTo(x, 260 * mh + 230 * fm);
+  rd.lineTo(x, 260 * view.scaleY + 200 * fm);
+  rd.lineTo(150 * fm, 260 * view.scaleY + 200 * fm);
+  rd.lineTo(x, 260 * view.scaleY + 230 * fm);
   rd.lineTo(x, y + cornerRadius);
   rd.quadraticCurveTo(x, y, x + cornerRadius, y);
   rd.fill();
@@ -17915,8 +18091,6 @@ function revtime() {
 
 // Canvas, input and start-up (formerly the inline script of index.html).
 
-var canvas2D = document.querySelector("#canvas2D");
-var rd = canvas2D.getContext("2d");
 installPointer(canvas2D, {
   onRelease: checknplay,
   keepPressedWhileTouching: () => fase == 7,
