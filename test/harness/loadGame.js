@@ -13,7 +13,7 @@ const PUBLIC_ROOT = join(PROJECT_ROOT, "public");
 const FRAME_MS = 35;
 
 // mulberry32: tiny, fast and identical on every platform.
-const seededRandom = (seed) => {
+export const seededRandom = (seed) => {
   let a = seed >>> 0;
   return () => {
     a = (a + 0x6d2b79f5) >>> 0;
