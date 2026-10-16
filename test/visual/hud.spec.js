@@ -63,11 +63,12 @@ test("hud: race won", async ({ page }) => {
 
 test("hud: all opponents wasted", async ({ page }) => {
   const game = await racing(page);
-  await set(page, () => {
+  await set(page, async () => {
     const s = window.gameState;
+    const { fixcar } = await import("/src/race/physics.js");
     for (let c = 1; c < s.game.carCount; c++) {
       // damage comes from hits, which shape the dents first; fixcar does that too
-      s.fixcar(c);
+      fixcar(c);
       s.racers[c].hitmag = 1e9;
     }
   });
@@ -77,9 +78,10 @@ test("hud: all opponents wasted", async ({ page }) => {
 
 test("hud: player wasted", async ({ page }) => {
   const game = await racing(page);
-  await set(page, () => {
+  await set(page, async () => {
     const s = window.gameState;
-    s.fixcar(0);
+    const { fixcar } = await import("/src/race/physics.js");
+    fixcar(0);
     s.racers[0].hitmag = 1e9;
   });
   await game.advance(60);
