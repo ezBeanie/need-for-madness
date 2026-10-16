@@ -76,13 +76,20 @@ import {
 } from "./render/models.js";
 import { canvas2D, rd, view } from "./ui/view.js";
 import { camera } from "./render/camera.js";
-import { carModels, carShadows, scene, sparkModels } from "./render/scene.js";
+import {
+  carModels,
+  carShadows,
+  carTextures,
+  scene,
+  sparkModels,
+} from "./render/scene.js";
 import { game, PHASE } from "./core/state.js";
 import { tick } from "./core/tick.js";
 import { car, racers } from "./race/racers.js";
 import { carStats } from "./data/carStats.js";
 import { pieceModels, pieces, track } from "./race/track.js";
 import { recording } from "./race/recording.js";
+import { raceEvents } from "./race/events.js";
 import { control, inishcontrol, resetPursuit } from "./race/ai.js";
 import {
   burn,
@@ -99,7 +106,7 @@ import {
 } from "./race/effects.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
-var camrs, pyclos, pnext, pback, onycl;
+var camrs, pnext, pback, onycl;
 function cartextures() {
   for (var i = 0; i < 19; i++) {
     var loadthis = false;
@@ -132,7 +139,7 @@ function cartextures() {
         gl.RGBA,
         gl.RGBA,
         gl.UNSIGNED_BYTE,
-        cartexture[i],
+        carTextures[i],
       );
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
@@ -197,7 +204,7 @@ function gamecartextures() {
       gl.RGBA,
       gl.RGBA,
       gl.UNSIGNED_BYTE,
-      cartexture[car[c].typ],
+      carTextures[car[c].typ],
     );
     gl.generateMipmap(gl.TEXTURE_2D);
     var framebuffer = gl.createFramebuffer();
@@ -1369,7 +1376,7 @@ var grndimg = [];
 var skydom = newModel();
 var skyimg = [];
 var haloimg = null;
-var cartexture = [];
+
 var tireimg = [];
 var tiredisk = newModel();
 var tire = newParticleModel();
@@ -1423,7 +1430,7 @@ function loaddata() {
         if (game.carTypes[0] == -1) {
           game.carTypes[0] = 5;
           onskip = true;
-          onautocorrect = 2;
+          raceEvents.onautocorrect = 2;
         }
         game.unlocked = getInfo("unlocked");
         if (game.unlocked == -1) {
@@ -1509,11 +1516,11 @@ function loaddata() {
         if (loadthis) {
           loadModel("data/3D/car" + i + ".r3d", carModels[i]);
           loadModel("data/3D/s" + i + ".r3d", carShadows[i]);
-          cartexture[i] = new Image();
-          cartexture[i].onload = function () {
+          carTextures[i] = new Image();
+          carTextures[i].onload = function () {
             dataload += 9;
           };
-          cartexture[i].src = "data/3D/textures/car" + i + ".png";
+          carTextures[i].src = "data/3D/textures/car" + i + ".png";
           tireimg[i] = new Image();
           tireimg[i].onload = function () {
             dataload += 2;
@@ -1882,14 +1889,7 @@ function loaddata() {
     );
   }
 }
-var limr = 0,
-  liml = 0,
-  limt = 0,
-  limb = 0;
-var limro = 0,
-  limlo = 0,
-  limto = 0,
-  limbo = 0;
+
 var adod = 0;
 var lvx = 0,
   lvy = 1,
@@ -2119,8 +2119,8 @@ function loadstage() {
           if (e.command == "maxr") {
             var num = v("count");
             var limit = -(v("limit") / 10);
-            limr = limit + 5;
-            limro = pieces.count;
+            track.limr = limit + 5;
+            track.limro = pieces.count;
             var strt = v("start") / 10;
             for (var c = 0; c < num; c++) {
               pieces.list[pieces.count] = newobo();
@@ -2135,8 +2135,8 @@ function loadstage() {
           if (e.command == "maxl") {
             var num = v("count");
             var limit = -(v("limit") / 10);
-            liml = limit - 5;
-            limlo = pieces.count;
+            track.liml = limit - 5;
+            track.limlo = pieces.count;
             var strt = v("start") / 10;
             for (var c = 0; c < num; c++) {
               pieces.list[pieces.count] = newobo();
@@ -2157,8 +2157,8 @@ function loadstage() {
           if (e.command == "maxt") {
             var num = v("count");
             var limit = v("limit") / 10;
-            limt = limit - 5;
-            limto = pieces.count;
+            track.limt = limit - 5;
+            track.limto = pieces.count;
             var strt = -v("start") / 10;
             for (var c = 0; c < num; c++) {
               pieces.list[pieces.count] = newobo();
@@ -2179,8 +2179,8 @@ function loadstage() {
           if (e.command == "maxb") {
             var num = v("count");
             var limit = v("limit") / 10;
-            limb = limit + 5;
-            limbo = pieces.count;
+            track.limb = limit + 5;
+            track.limbo = pieces.count;
             var strt = -v("start") / 10;
             for (var c = 0; c < num; c++) {
               pieces.list[pieces.count] = newobo();
@@ -2236,7 +2236,6 @@ function loadstage() {
   rawFile.send(null);
 }
 
-var onelec = false;
 function cpanimate() {
   for (var i = 0; i < pieces.fixCount; i++) {
     mat4.rotate(
@@ -2250,7 +2249,7 @@ function cpanimate() {
   if (fixdisk.ont == 5) {
     fixdisk.ont = 0;
   }
-  if (onelec) {
+  if (raceEvents.onelec) {
     elec.mat = resetMatrix(elec.mat);
     mat4.rotate(elec.mat, elec.mat, camera.yaw * (Math.PI / 180), [0, -1, 0]);
     mat4.rotate(elec.mat, elec.mat, camera.pitch * (Math.PI / 180), [-1, 0, 0]);
@@ -2267,12 +2266,12 @@ function cpanimate() {
   if (chkflk >= 5) {
     chkflk = 0;
   }
-  if (oncheckpoint != -1) {
-    cptext.x = pieces.list[track.obn[oncheckpoint]].x;
-    cptext.y = pieces.list[track.obn[oncheckpoint]].y + 80;
-    cptext.z = pieces.list[track.obn[oncheckpoint]].z;
+  if (raceEvents.oncheckpoint != -1) {
+    cptext.x = pieces.list[track.obn[raceEvents.oncheckpoint]].x;
+    cptext.y = pieces.list[track.obn[raceEvents.oncheckpoint]].y + 80;
+    cptext.z = pieces.list[track.obn[raceEvents.oncheckpoint]].z;
     for (var i = 0; i < 16; i++) {
-      cptext.mat[i] = pieces.list[track.obn[oncheckpoint]].mat[i];
+      cptext.mat[i] = pieces.list[track.obn[raceEvents.oncheckpoint]].mat[i];
     }
     var flipit = false;
     if (Math.abs(cptext.mat[8]) > Math.abs(cptext.mat[10])) {
@@ -2303,13 +2302,13 @@ function cpanimate() {
     if (flipit) {
       mat4.rotate(cptext.mat, cptext.mat, 180 * (Math.PI / 180), [0, 1, 0]);
     }
-    if (onlastcheck) {
+    if (raceEvents.onlastcheck) {
       for (var i = 0; i < 16; i++) {
         fntext.mat[i] = cptext.mat[i];
       }
-      fntext.x = pieces.list[track.obn[oncheckpoint]].x;
-      fntext.y = pieces.list[track.obn[oncheckpoint]].y + 52;
-      fntext.z = pieces.list[track.obn[oncheckpoint]].z;
+      fntext.x = pieces.list[track.obn[raceEvents.oncheckpoint]].x;
+      fntext.y = pieces.list[track.obn[raceEvents.oncheckpoint]].y + 52;
+      fntext.z = pieces.list[track.obn[raceEvents.oncheckpoint]].z;
     }
   }
 }
@@ -2324,7 +2323,7 @@ function gameworks() {
   var zFar = 7000;
   camera.matrix = mat4.create();
   mat4.perspective(camera.matrix, fieldOfView, view.aspect, zNear, zFar);
-  onelec = false;
+  raceEvents.onelec = false;
   if (game.phase == PHASE.race) {
     if (starcnt == 0) {
       drive();
@@ -3401,7 +3400,7 @@ function render(now) {
       for (var i = 0; i < pieces.count; i++) {
         if (pieces.list[i].iscp) {
           if (
-            oncheckpoint + 1 == pieces.list[i].iscp &&
+            raceEvents.oncheckpoint + 1 == pieces.list[i].iscp &&
             (Math.round(chkflk) == 0 || chkflk == 1)
           ) {
             if (Math.round(chkflk) == 0) {
@@ -3448,9 +3447,9 @@ function render(now) {
       for (var i = 0; i < effects.nchp; i++) {
         drawModel(effects.chip[i]);
       }
-      if (oncheckpoint != -1) {
+      if (raceEvents.oncheckpoint != -1) {
         drawParticle(cptext);
-        if (onlastcheck) {
+        if (raceEvents.onlastcheck) {
           drawParticle(fntext);
         }
       }
@@ -3494,7 +3493,7 @@ function render(now) {
           drawModel(tired[car[c].typ][k]);
         }
       }
-      if (onelec) {
+      if (raceEvents.onelec) {
         for (var c = 0; c < game.carCount; c++) {
           if (car[c].fcnt) {
             elec.x = car[c].x;
@@ -4164,7 +4163,7 @@ function inishmad() {
     lonorm[i] = 0;
   }
 }
-var onautocorrect = 0;
+
 var flipont = false;
 function drive() {
   if (game.carCount != 1) {
@@ -4176,7 +4175,7 @@ function drive() {
       }
     }
   }
-  if (onautocorrect) {
+  if (raceEvents.onautocorrect) {
     if (racers[0].capsized) {
       if (racers[0].wtouch) {
         if (flipont) {
@@ -5915,15 +5914,15 @@ function drive() {
       }
     }
     for (var k = 0; k < 4; k++) {
-      if (kz[k] < limb + zboundr && kz[k] > limb + zboundr - 20) {
+      if (kz[k] < track.limb + zboundr && kz[k] > track.limb + zboundr - 20) {
         for (var j = 0; j < 4; j++) {
           if (k != j) {
-            if (kz[j] >= limb + zboundr) {
-              kz[j] -= kz[k] - (limb + zboundr);
+            if (kz[j] >= track.limb + zboundr) {
+              kz[j] -= kz[k] - (track.limb + zboundr);
             }
           }
         }
-        kz[k] = limb + zboundr;
+        kz[k] = track.limb + zboundr;
         if (tick.fraction >= tick.scale && ky[k] < 20) {
           racers[c].crank[k]++;
           if (racers[c].crank[k] > 2) {
@@ -5961,17 +5960,17 @@ function drive() {
         }
         racers[c].skid = 2;
         spinlocate = true;
-        racers[c].wall = limbo;
+        racers[c].wall = track.limbo;
       }
-      if (kz[k] > limt - zboundr && kz[k] < limt - zboundr + 20) {
+      if (kz[k] > track.limt - zboundr && kz[k] < track.limt - zboundr + 20) {
         for (var j = 0; j < 4; j++) {
           if (k != j) {
-            if (kz[j] <= limt - zboundr) {
-              kz[j] -= kz[k] - (limt - zboundr);
+            if (kz[j] <= track.limt - zboundr) {
+              kz[j] -= kz[k] - (track.limt - zboundr);
             }
           }
         }
-        kz[k] = limt - zboundr;
+        kz[k] = track.limt - zboundr;
         if (tick.fraction >= tick.scale && ky[k] < 20) {
           racers[c].crank[k]++;
           if (racers[c].crank[k] > 2) {
@@ -6009,17 +6008,17 @@ function drive() {
         }
         racers[c].skid = 2;
         spinlocate = true;
-        racers[c].wall = limto;
+        racers[c].wall = track.limto;
       }
-      if (kx[k] < limr + xboundr && kx[k] > limr + xboundr - 20) {
+      if (kx[k] < track.limr + xboundr && kx[k] > track.limr + xboundr - 20) {
         for (var j = 0; j < 4; j++) {
           if (k != j) {
-            if (kx[j] >= limr + xboundr) {
-              kx[j] -= kx[k] - (limr + xboundr);
+            if (kx[j] >= track.limr + xboundr) {
+              kx[j] -= kx[k] - (track.limr + xboundr);
             }
           }
         }
-        kx[k] = limr + xboundr;
+        kx[k] = track.limr + xboundr;
         if (tick.fraction >= tick.scale && ky[k] < 20) {
           racers[c].crank[k]++;
           if (racers[c].crank[k] > 2) {
@@ -6057,17 +6056,17 @@ function drive() {
         }
         racers[c].skid = 2;
         spinlocate = true;
-        racers[c].wall = limro;
+        racers[c].wall = track.limro;
       }
-      if (kx[k] > liml - xboundr && kx[k] < liml - xboundr + 20) {
+      if (kx[k] > track.liml - xboundr && kx[k] < track.liml - xboundr + 20) {
         for (var j = 0; j < 4; j++) {
           if (k != j) {
-            if (kx[j] <= liml - xboundr) {
-              kx[j] -= kx[k] - (liml - xboundr);
+            if (kx[j] <= track.liml - xboundr) {
+              kx[j] -= kx[k] - (track.liml - xboundr);
             }
           }
         }
-        kx[k] = liml - xboundr;
+        kx[k] = track.liml - xboundr;
         if (tick.fraction >= tick.scale && ky[k] < 20) {
           racers[c].crank[k]++;
           if (racers[c].crank[k] > 2) {
@@ -6105,7 +6104,7 @@ function drive() {
         }
         racers[c].skid = 2;
         spinlocate = true;
-        racers[c].wall = limlo;
+        racers[c].wall = track.limlo;
       }
     }
     if (tick.fraction >= tick.scale) {
@@ -6549,15 +6548,15 @@ function drive() {
       racers[c].nlaps++;
     }
     if (c == game.player) {
-      oncheckpoint = racers[c].clear;
-      while (oncheckpoint >= track.nsp) {
-        oncheckpoint -= track.nsp;
+      raceEvents.oncheckpoint = racers[c].clear;
+      while (raceEvents.oncheckpoint >= track.nsp) {
+        raceEvents.oncheckpoint -= track.nsp;
       }
       if (racers[c].clear == track.nlaps * track.nsp - 1) {
-        onlastcheck = true;
+        raceEvents.onlastcheck = true;
       }
       if (track.haltall) {
-        onlastcheck = false;
+        raceEvents.onlastcheck = false;
       }
     }
     if (racers[c].focus == -1) {
@@ -6712,7 +6711,7 @@ function drive() {
           }
         }
       } else {
-        onelec = true;
+        raceEvents.onelec = true;
         carModels[car[c].typ].alpha = 1;
         if (car[c].fcnt % 2 == 0) {
           if (random.fx() > 0.333) {
@@ -6731,7 +6730,7 @@ function drive() {
             racers[c].cntdest = 0;
             racers[c].dest = false;
             if (c == game.player) {
-              cntwis = 0;
+              raceEvents.cntwis = 0;
             }
           }
           if (car[c].fcnt == 5) {
@@ -6987,6 +6986,7 @@ function drive() {
   }
 }
 function colide(c, xc) {
+  var pyclos;
   var kx = [],
     ky = [],
     kz = [];
@@ -7721,7 +7721,7 @@ function fixcar(c) {
     gl.RGBA,
     gl.RGBA,
     gl.UNSIGNED_BYTE,
-    cartexture[car[c].typ],
+    carTextures[car[c].typ],
   );
   gl.generateMipmap(gl.TEXTURE_2D);
   var framebuffer = gl.createFramebuffer();
@@ -10005,7 +10005,7 @@ function drawswitch() {
   }
   switcnt++;
   if (switcnt == 125) {
-    onlastcheck = false;
+    raceEvents.onlastcheck = false;
     for (var i = 0; i < game.carCount; i++) {
       racers[i].pcleared = track.pcs;
       racers[i].clear = 0;
@@ -10116,8 +10116,7 @@ var wasu = false,
   wast = false;
 
 var timer = 800;
-var oncheckpoint = -1;
-var onlastcheck = false;
+
 var chkflk = 0;
 var arrace = false;
 var ana = 0,
@@ -10152,7 +10151,7 @@ var pwcnt = 0;
 var pwflk = false;
 var dmcnt = 0;
 var dmflk = false;
-var cntwis = 0;
+
 var dested = [];
 var onbreplay = 0;
 var flw = 2;
@@ -10164,8 +10163,8 @@ function inishinter() {
   game.player = 0;
   track.switchtime = 800;
   timer = track.switchtime;
-  oncheckpoint = -1;
-  onlastcheck = false;
+  raceEvents.oncheckpoint = -1;
+  raceEvents.onlastcheck = false;
   chkflk = 0;
   arrace = false;
   ana = 0;
@@ -10188,7 +10187,7 @@ function inishinter() {
   camera.mode = 0;
   camera.target = 0;
   recording.onpausefr = false;
-  cntwis = 0;
+  raceEvents.cntwis = 0;
   dmcnt = 0;
   onbreplay = 0;
   flw = 2;
@@ -10390,18 +10389,18 @@ function drawinter() {
     winner = true;
   }
   if (!holdit) {
-    if (racers[game.player].dest && cntwis == 16) {
+    if (racers[game.player].dest && raceEvents.cntwis == 16) {
       drawcs(132, "You're Wasted!", 0, 0, 0, 3);
       holdit = true;
       winner = false;
     }
   }
-  if (racers[game.player].cntdest != 0 && cntwis < 16) {
-    cntwis++;
-    if (cntwis == 1) {
+  if (racers[game.player].cntdest != 0 && raceEvents.cntwis < 16) {
+    raceEvents.cntwis++;
+    if (raceEvents.cntwis == 1) {
       playSound(31, 1);
     }
-    if (cntwis == 16) {
+    if (raceEvents.cntwis == 16) {
       playSound(30, 1);
     }
   }
@@ -11188,8 +11187,8 @@ function drawinter() {
       }
       if (auscnt < 45) {
         playSound(27, 1);
-        if (onautocorrect) {
-          onautocorrect--;
+        if (raceEvents.onautocorrect) {
+          raceEvents.onautocorrect--;
         }
         if (auscnt < -20) {
           auscnt = -20;
@@ -14233,8 +14232,8 @@ function record() {
       recording.reponcheckpoint[i] = recording.reponcheckpoint[i + 1];
       recording.reponlastcheck[i] = recording.reponlastcheck[i + 1];
     }
-    recording.reponcheckpoint[429] = oncheckpoint;
-    recording.reponlastcheck[429] = onlastcheck;
+    recording.reponcheckpoint[429] = raceEvents.oncheckpoint;
+    recording.reponlastcheck[429] = raceEvents.onlastcheck;
     if (recording.nrec < 430) {
       recording.nrec++;
     }
@@ -14409,7 +14408,7 @@ function replay() {
         }
       }
     } else {
-      onelec = true;
+      raceEvents.onelec = true;
       carModels[car[c].typ].alpha = 1;
       if (car[c].fcnt % 2 == 0) {
         if (random.fx() > 0.333) {
@@ -14502,8 +14501,8 @@ function replay() {
       );
     }
   }
-  oncheckpoint = recording.reponcheckpoint[recording.fr];
-  onlastcheck = recording.reponlastcheck[recording.fr];
+  raceEvents.oncheckpoint = recording.reponcheckpoint[recording.fr];
+  raceEvents.onlastcheck = recording.reponlastcheck[recording.fr];
   if (recording.fr == 429) {
     game.phase = PHASE.paused;
     camera.mode = 0;
@@ -14683,7 +14682,7 @@ function hreplay() {
         }
       }
     } else {
-      onelec = true;
+      raceEvents.onelec = true;
       carModels[car[c].typ].alpha = 1;
       if (car[c].fcnt % 2 == 0) {
         if (random.fx() > 0.333) {
@@ -14778,8 +14777,8 @@ function hreplay() {
       );
     }
   }
-  oncheckpoint = recording.hreponcheckpoint[recording.fr];
-  onlastcheck = recording.hreponlastcheck[recording.fr];
+  raceEvents.oncheckpoint = recording.hreponcheckpoint[recording.fr];
+  raceEvents.onlastcheck = recording.hreponlastcheck[recording.fr];
 }
 function preprevtime() {
   recording.fr = 429;
@@ -14852,7 +14851,7 @@ function revtime() {
         }
       }
     } else {
-      onelec = true;
+      raceEvents.onelec = true;
       carModels[car[c].typ].alpha = 1;
       if (car[c].fcnt % 2 == 0) {
         if (random.fx() > 0.333) {
@@ -14915,8 +14914,8 @@ function revtime() {
     car[c].mat[9] = ymt[2];
     car[c].mat[10] = zmt[2];
   }
-  oncheckpoint = recording.reponcheckpoint[recording.fr];
-  onlastcheck = recording.reponlastcheck[recording.fr];
+  raceEvents.oncheckpoint = recording.reponcheckpoint[recording.fr];
+  raceEvents.onlastcheck = recording.reponlastcheck[recording.fr];
   if (Math.abs(recording.fr - (429 - recording.nrec)) > 100) {
     recording.fr -= 2;
   } else {
@@ -14934,7 +14933,7 @@ function revtime() {
         recording.repcar[c].destat = 700;
       }
     }
-    cntwis = 0;
+    raceEvents.cntwis = 0;
     iclear = racers[game.player].clear;
     tcnt = 30;
     auscnt = 45;

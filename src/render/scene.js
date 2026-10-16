@@ -10,3 +10,6 @@ export const sparkModels = Array.from({ length: 6 }, newParticleModel);
 // Set per stage: the colour tint of everything (r, g, b offsets) and the colour of car
 // windows, which mirror the sky.
 export const scene = { tint: [0, 0, 0], glassColor: [] };
+
+// The textures of every car type (see cartextures).
+export const carTextures = [];

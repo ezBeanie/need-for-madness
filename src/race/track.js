@@ -26,6 +26,15 @@ class Track {
   wasted = 0;
   haltall = false;
   pcleared = 0;
+  // the outer walls (maxr, maxl, maxt, maxb): where they stand and which piece each is
+  limr = 0;
+  liml = 0;
+  limt = 0;
+  limb = 0;
+  limro = 0;
+  limlo = 0;
+  limto = 0;
+  limbo = 0;
   insih() {
     this.pos = [6, 6, 6, 6, 6, 6, 6];
     this.clear = [0, 0, 0, 0, 0, 0, 0];
