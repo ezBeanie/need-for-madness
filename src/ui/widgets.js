@@ -15,7 +15,12 @@ export const buttons = {
   // the pulse of the highlighted button, animated by the screens
   pulseWidth: 2,
   pulseHeight: 1,
+  pulseWidthGrowing: false,
+  pulseHeightGrowing: false,
 };
+
+// Flips every few ticks; the screens blink texts and buttons with it.
+export const blink = { on: false };
 
 // Is a finger or the mouse holding any button?
 export const anyButtonHeld = () => {

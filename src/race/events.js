@@ -12,4 +12,10 @@ export const raceEvents = {
   tcnt: 30,
   iclear: 0,
   switcnt: 0,
+  // ticks until the race starts (the countdown), 0 while racing
+  countdown: 0,
+  // the player won the race
+  winner: false,
+  // the flashing of the checkpoint text
+  checkpointFlash: 0,
 };

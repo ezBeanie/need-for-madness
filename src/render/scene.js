@@ -11,5 +11,8 @@ export const sparkModels = Array.from({ length: 6 }, newParticleModel);
 // windows, which mirror the sky.
 export const scene = { tint: [0, 0, 0], glassColor: [] };
 
+// The tube the time travels through while winding back time (see drawrevtime).
+export const timeTube = newParticleModel();
+
 // The textures of every car type (see cartextures).
 export const carTextures = [];

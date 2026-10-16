@@ -95,7 +95,7 @@ const round = (n) => (typeof n === "boolean" ? Number(n) : n);
 
 export const raceState = (ctx) => ({
   fase: ctx.game.phase,
-  starcnt: ctx.starcnt,
+  starcnt: ctx.raceEvents.countdown,
   wasted: ctx.track.wasted,
   cars: Array.from({ length: ctx.game.carCount }, (_, i) => {
     const car = ctx.car[i];
@@ -195,7 +195,7 @@ const flowState = (ctx) => ({
   ...raceState(ctx),
   stage: ctx.track.stage,
   unlocked: ctx.game.unlocked,
-  winner: ctx.winner,
+  winner: ctx.raceEvents.winner,
   holdcnt: ctx.raceEvents.holdcnt,
 });
 

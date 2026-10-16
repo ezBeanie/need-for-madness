@@ -42,6 +42,7 @@ import {
   BUTTON,
   TEXT,
   anyButtonHeld,
+  blink,
   buttons,
   drawButton,
   drawCenteredText,
@@ -85,7 +86,9 @@ import {
   carTextures,
   scene,
   sparkModels,
+  timeTube,
 } from "./render/scene.js";
+import { pauseMenu } from "./screens/pauseMenu.js";
 import { game, MAX_CARS, PHASE } from "./core/state.js";
 import { tick } from "./core/tick.js";
 import { car, racers } from "./race/racers.js";
@@ -1413,7 +1416,6 @@ var tirelow = newParticleModel();
 var cptext = newParticleModel();
 var fntext = newParticleModel();
 var bgst = newParticleModel();
-var timetube = newParticleModel();
 var fixdisk = newModel();
 var elec = newModel();
 var sprite = newModel();
@@ -1513,7 +1515,7 @@ function loaddata() {
         loadParticleModel("data/3D/tirelow.prt", tirelow);
         loadParticleModel("data/3D/cptext.prt", cptext);
         loadParticleModel("data/3D/fntext.prt", fntext);
-        loadParticleModel("data/3D/timetube.prt", timetube);
+        loadParticleModel("data/3D/timetube.prt", timeTube);
       }
       if (stanza != 1) {
         loadParticleModel("data/3D/bg.prt", bgst);
@@ -1815,9 +1817,9 @@ function loaddata() {
       dataload += 4;
       fntext.loaded++;
     }
-    if (timetube.loaded == 1) {
+    if (timeTube.loaded == 1) {
       dataload++;
-      timetube.loaded++;
+      timeTube.loaded++;
     }
     if (bgst.loaded == 1) {
       dataload++;
@@ -2284,12 +2286,12 @@ function cpanimate() {
     }
   }
   if (track.stage == 1) {
-    chkflk++;
+    raceEvents.checkpointFlash++;
   } else {
-    chkflk += 0.2;
+    raceEvents.checkpointFlash += 0.2;
   }
-  if (chkflk >= 5) {
-    chkflk = 0;
+  if (raceEvents.checkpointFlash >= 5) {
+    raceEvents.checkpointFlash = 0;
   }
   if (raceEvents.oncheckpoint != -1) {
     cptext.x = pieces.list[track.obn[raceEvents.oncheckpoint]].x;
@@ -2350,7 +2352,7 @@ function gameworks() {
   mat4.perspective(camera.matrix, fieldOfView, view.aspect, zNear, zFar);
   raceEvents.onelec = false;
   if (game.phase == PHASE.race) {
-    if (starcnt == 0) {
+    if (raceEvents.countdown == 0) {
       drive();
       setwheelspos();
       shadoworks();
@@ -2365,7 +2367,7 @@ function gameworks() {
       drawinter();
       enginsnd();
     } else {
-      if (starcnt == 186) {
+      if (raceEvents.countdown == 186) {
         camera.orbitHeight = 190;
         camera.pitch = 40;
         camera.orbitAngle = 250;
@@ -2374,19 +2376,23 @@ function gameworks() {
         camera.orbitTilt = 0;
         camera.mode = 1;
       }
-      if (starcnt != 0) {
-        starcnt--;
+      if (raceEvents.countdown != 0) {
+        raceEvents.countdown--;
       }
       setwheelspos();
       shadoworks();
       cpanimate();
       drawinter();
-      if (game.mode == 1 && starcnt < 180 && starcnt > 80) {
+      if (
+        game.mode == 1 &&
+        raceEvents.countdown < 180 &&
+        raceEvents.countdown > 80
+      ) {
         drawCenteredText(132, "SWITCH MODE", 0, 0, 0, TEXT.title);
         drawCenteredText(192, "1 Lap, No Fixing", 0, 64, 128, TEXT.label);
       }
       if (
-        starcnt > 65 &&
+        raceEvents.countdown > 65 &&
         !isPhone &&
         (track.stage == 1 || track.stage == 2) &&
         game.unlocked == 1
@@ -2426,7 +2432,7 @@ function gameworks() {
           view.height * 0.5 + 70 * view.scaleY + 155 * view.scale,
         );
       }
-      if (starcnt < 65) {
+      if (raceEvents.countdown < 65) {
         enginsnd();
       } else {
         if (track.stage == 2 && game.unlocked == 2) {
@@ -2436,20 +2442,20 @@ function gameworks() {
           drawonbordo();
         }
       }
-      if (starcnt > 65) {
+      if (raceEvents.countdown > 65) {
         if (
           confirm.state == CONFIRM.pressed ||
           racers[0].u.handb ||
           pointer.down
         ) {
-          starcnt = 65;
+          raceEvents.countdown = 65;
           if (confirm.state == CONFIRM.pressed) {
             confirm.state = CONFIRM.used;
           }
           racers[0].u.handb = false;
         }
       }
-      if (starcnt == 65) {
+      if (raceEvents.countdown == 65) {
         camera.orbitDescending = false;
         camera.orbitHeight = 90;
         camera.orbitAngle = 0;
@@ -2462,8 +2468,8 @@ function gameworks() {
         rd.fillStyle = "#FFFFFF";
         rd.fillRect(0, 0, view.width, view.height);
       }
-      if (starcnt >= 185) {
-        if (starcnt == 185) {
+      if (raceEvents.countdown >= 185) {
+        if (raceEvents.countdown == 185) {
           rd.globalAlpha = 0.5;
         }
         rd.fillStyle = "#FFFFFF";
@@ -3182,9 +3188,9 @@ function stageselect() {
   if (fixdisk.ont == 5) {
     fixdisk.ont = 0;
   }
-  chkflk++;
-  if (chkflk >= 5) {
-    chkflk = 0;
+  raceEvents.checkpointFlash++;
+  if (raceEvents.checkpointFlash >= 5) {
+    raceEvents.checkpointFlash = 0;
   }
   bgst.mat = resetMatrix(bgst.mat);
   mat4.rotate(bgst.mat, bgst.mat, camera.yaw * (Math.PI / 180), [0, -1, 0]);
@@ -3419,7 +3425,7 @@ function render(now) {
       drawModel(ground);
       drawModel(skydom);
       if (game.phase == PHASE.timeRewind) {
-        drawParticle(timetube);
+        drawParticle(timeTube);
       }
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
@@ -3427,9 +3433,10 @@ function render(now) {
         if (pieces.list[i].iscp) {
           if (
             raceEvents.oncheckpoint + 1 == pieces.list[i].iscp &&
-            (Math.round(chkflk) == 0 || chkflk == 1)
+            (Math.round(raceEvents.checkpointFlash) == 0 ||
+              raceEvents.checkpointFlash == 1)
           ) {
-            if (Math.round(chkflk) == 0) {
+            if (Math.round(raceEvents.checkpointFlash) == 0) {
               pieceModels[pieces.list[i].typ].ownshade = true;
             } else {
               pieceModels[pieces.list[i].typ].ownlight = true;
@@ -3646,8 +3653,11 @@ function render(now) {
       if (!flkun) {
         for (var i = 0; i < track.obi[track.n - 1] + adod; i++) {
           if (pieces.list[i].iscp) {
-            if (Math.round(chkflk) == 0 || chkflk == 1) {
-              if (Math.round(chkflk) == 0) {
+            if (
+              Math.round(raceEvents.checkpointFlash) == 0 ||
+              raceEvents.checkpointFlash == 1
+            ) {
+              if (Math.round(raceEvents.checkpointFlash) == 0) {
                 pieceModels[pieces.list[i].typ].ownshade = true;
               } else {
                 pieceModels[pieces.list[i].typ].ownlight = true;
@@ -4616,7 +4626,7 @@ function gotGamepads() {
 function supportsGamepads() {
   return !!navigator.getGamepads;
 }
-var onhip = 0;
+
 var noten = 0;
 var playedforeplay = false;
 function pausedgame() {
@@ -4668,7 +4678,7 @@ function pausedgame() {
   bton[0] = ["#019DFF", "#01EAFF", "#004A78", "#016D77"];
   bton[1] = ["#01DEFF", "#49FFE3", "#016877", "#017765"];
   var on = 0;
-  if (onhip == 0) {
+  if (pauseMenu.selected == 0) {
     on = 1;
   }
   if (
@@ -4700,7 +4710,7 @@ function pausedgame() {
     game.phase = PHASE.race;
   }
   on = 0;
-  if (onhip == 1) {
+  if (pauseMenu.selected == 1) {
     on = 1;
   }
   if (
@@ -4733,7 +4743,7 @@ function pausedgame() {
     }
   }
   on = 0;
-  if (onhip == 2) {
+  if (pauseMenu.selected == 2) {
     on = 1;
   }
   if (
@@ -4767,7 +4777,7 @@ function pausedgame() {
     game.phase = PHASE.instructions;
   }
   on = 0;
-  if (onhip == 3) {
+  if (pauseMenu.selected == 3) {
     on = 1;
   }
   if (
@@ -4801,26 +4811,26 @@ function pausedgame() {
     afterquitgame();
   }
   if (racers[game.player].u.up) {
-    onhip--;
-    if (onhip == -1) {
-      onhip = 3;
+    pauseMenu.selected--;
+    if (pauseMenu.selected == -1) {
+      pauseMenu.selected = 3;
     }
     racers[game.player].u.up = false;
   }
   if (racers[game.player].u.down) {
-    onhip++;
-    if (onhip == 4) {
-      onhip = 0;
+    pauseMenu.selected++;
+    if (pauseMenu.selected == 4) {
+      pauseMenu.selected = 0;
     }
     racers[game.player].u.down = false;
   }
   if (noten) {
-    if (aflk) {
+    if (blink.on) {
       rgb = hslToRgb(hsl[0], 1, 0.7);
-      aflk = false;
+      blink.on = false;
     } else {
       rgb = hslToRgb(hsl[0], 1, 0.6);
-      aflk = true;
+      blink.on = true;
     }
     drawCenteredText(
       600,
@@ -4840,7 +4850,7 @@ function pausedgame() {
     onbreplay--;
   }
   if (confirm.state == CONFIRM.pressed) {
-    if (onhip == 0) {
+    if (pauseMenu.selected == 0) {
       if (!playedforeplay) {
         resumeStageMusic();
       } else {
@@ -4849,7 +4859,7 @@ function pausedgame() {
       game.phase = PHASE.race;
       noten = 0;
     }
-    if (onhip == 1) {
+    if (pauseMenu.selected == 1) {
       if (recording.nrec >= 430) {
         onbreplay = 2;
         resumeStageMusic();
@@ -4859,7 +4869,7 @@ function pausedgame() {
         noten = 30;
       }
     }
-    if (onhip == 2) {
+    if (pauseMenu.selected == 2) {
       noten = 0;
       if (playedforeplay) {
         stopStageMusic();
@@ -4870,7 +4880,7 @@ function pausedgame() {
       dudo = 250;
       game.phase = PHASE.instructions;
     }
-    if (onhip == 3) {
+    if (pauseMenu.selected == 3) {
       for (var c = 0; c < game.carCount; c++) {
         fixcar(c);
       }
@@ -4883,30 +4893,30 @@ function pausedgame() {
     }
     confirm.state = CONFIRM.used;
   }
-  if (!flwg) {
+  if (!buttons.pulseWidthGrowing) {
     buttons.pulseWidth -= 0.03;
     if (buttons.pulseWidth < 0.5) {
       buttons.pulseWidth = 0.5;
-      flwg = true;
+      buttons.pulseWidthGrowing = true;
     }
   } else {
     buttons.pulseWidth += 0.03;
     if (buttons.pulseWidth > 2) {
       buttons.pulseWidth = 2;
-      flwg = false;
+      buttons.pulseWidthGrowing = false;
     }
   }
-  if (!flhg) {
+  if (!buttons.pulseHeightGrowing) {
     buttons.pulseHeight -= 0.5;
     if (buttons.pulseHeight < 0.1) {
       buttons.pulseHeight = 0.1;
-      flhg = true;
+      buttons.pulseHeightGrowing = true;
     }
   } else {
     buttons.pulseHeight += 0.5;
     if (buttons.pulseHeight > 2) {
       buttons.pulseHeight = 2;
-      flhg = false;
+      buttons.pulseHeightGrowing = false;
     }
   }
 }
@@ -5162,30 +5172,30 @@ function drawmain() {
       game.phase = PHASE.carSelect;
     }
   }
-  if (!flwg) {
+  if (!buttons.pulseWidthGrowing) {
     buttons.pulseWidth -= 0.03;
     if (buttons.pulseWidth < 0.5) {
       buttons.pulseWidth = 0.5;
-      flwg = true;
+      buttons.pulseWidthGrowing = true;
     }
   } else {
     buttons.pulseWidth += 0.03;
     if (buttons.pulseWidth > 2) {
       buttons.pulseWidth = 2;
-      flwg = false;
+      buttons.pulseWidthGrowing = false;
     }
   }
-  if (!flhg) {
+  if (!buttons.pulseHeightGrowing) {
     buttons.pulseHeight -= 0.5;
     if (buttons.pulseHeight < 0.1) {
       buttons.pulseHeight = 0.1;
-      flhg = true;
+      buttons.pulseHeightGrowing = true;
     }
   } else {
     buttons.pulseHeight += 0.5;
     if (buttons.pulseHeight > 2) {
       buttons.pulseHeight = 2;
-      flhg = false;
+      buttons.pulseHeightGrowing = false;
     }
   }
 }
@@ -5239,13 +5249,13 @@ function gameinstructions() {
   if (view.scaleX / view.scaleY > 1.2) {
     fm *= 1.2 / (view.scaleX / view.scaleY);
   }
-  if (aflk) {
-    aflk = false;
+  if (blink.on) {
+    blink.on = false;
   } else {
-    aflk = true;
+    blink.on = true;
   }
   if (dudo > 0) {
-    if (aflk) {
+    if (blink.on) {
       ondud = Math.floor(random.fx() * 6);
       if (ondud == 6) {
         ondud = 5;
@@ -5933,13 +5943,13 @@ function resetgame() {
   if (view.scaleX / view.scaleY > 1.2) {
     fm *= 1.2 / (view.scaleX / view.scaleY);
   }
-  if (aflk) {
-    aflk = false;
+  if (blink.on) {
+    blink.on = false;
   } else {
-    aflk = true;
+    blink.on = true;
   }
   if (dudo > 0) {
-    if (aflk) {
+    if (blink.on) {
       ondud = Math.floor(random.fx() * 6);
       if (ondud == 6) {
         ondud = 5;
@@ -6410,20 +6420,20 @@ function drawrevtime() {
     }
   }
   raceEvents.switcnt++;
-  timetube.mat = resetMatrix(timetube.mat);
+  timeTube.mat = resetMatrix(timeTube.mat);
   mat4.rotate(
-    timetube.mat,
-    timetube.mat,
+    timeTube.mat,
+    timeTube.mat,
     camera.yaw * (Math.PI / 180),
     [0, -1, 0],
   );
   mat4.rotate(
-    timetube.mat,
-    timetube.mat,
+    timeTube.mat,
+    timeTube.mat,
     camera.pitch * (Math.PI / 180),
     [-1, 0, 0],
   );
-  mat4.rotate(timetube.mat, timetube.mat, swing * (Math.PI / 180), [0, 0, 1]);
+  mat4.rotate(timeTube.mat, timeTube.mat, swing * (Math.PI / 180), [0, 0, 1]);
   if (Math.abs(recording.fr - (429 - recording.nrec)) > 100) {
     swing += 20;
   } else {
@@ -6432,9 +6442,9 @@ function drawrevtime() {
   if (swing > 360) {
     swing -= 360;
   }
-  timetube.x = car[camera.target].x - timetube.mat[8] * 170;
-  timetube.y = car[camera.target].y - timetube.mat[9] * 170;
-  timetube.z = car[camera.target].z - timetube.mat[10] * 170;
+  timeTube.x = car[camera.target].x - timeTube.mat[8] * 170;
+  timeTube.y = car[camera.target].y - timeTube.mat[9] * 170;
+  timeTube.z = car[camera.target].z - timeTube.mat[10] * 170;
 }
 var wasu = false,
   wasd = false,
@@ -6445,14 +6455,11 @@ var wasu = false,
 
 var timer = 800;
 
-var chkflk = 0;
 var arrace = false;
 var ana = 0,
   cntan = 0,
   cntovn = 0;
 var flk = false;
-var winner = false;
-var starcnt = 0;
 
 var gocnt = 0;
 var gocntdrop = 0;
@@ -6473,7 +6480,6 @@ var loopin = "",
   spin = "",
   asay = "";
 
-var aflk = false;
 var pwcnt = 0;
 var pwflk = false;
 var dmcnt = 0;
@@ -6482,8 +6488,6 @@ var dmflk = false;
 var dested = [];
 var onbreplay = 0;
 
-var flwg = false;
-var flhg = false;
 var cntkeys = 0;
 function inishinter() {
   game.player = 0;
@@ -6491,7 +6495,7 @@ function inishinter() {
   timer = track.switchtime;
   raceEvents.oncheckpoint = -1;
   raceEvents.onlastcheck = false;
-  chkflk = 0;
+  raceEvents.checkpointFlash = 0;
   arrace = false;
   ana = 0;
   cntan = 0;
@@ -6500,7 +6504,7 @@ function inishinter() {
   wasay = false;
   pwcnt = 0;
   raceEvents.auscnt = 45;
-  starcnt = 186;
+  raceEvents.countdown = 186;
   gocnt = 0;
   gocntdrop = 0;
   raceEvents.iclear = 0;
@@ -6524,10 +6528,20 @@ function inishinter() {
 function drawinter() {
   rd.clearRect(0, 0, view.width, view.height);
   var showpcn = isPhone;
-  if (showpcn && starcnt > 65 && track.stage == 2 && game.unlocked == 2) {
+  if (
+    showpcn &&
+    raceEvents.countdown > 65 &&
+    track.stage == 2 &&
+    game.unlocked == 2
+  ) {
     showpcn = false;
   }
-  if (showpcn && starcnt > 65 && track.stage == 4 && game.unlocked == 4) {
+  if (
+    showpcn &&
+    raceEvents.countdown > 65 &&
+    track.stage == 4 &&
+    game.unlocked == 4
+  ) {
     showpcn = false;
   }
   if (showpcn) {
@@ -6698,7 +6712,7 @@ function drawinter() {
   var holdit = false;
   if (track.wasted == game.carCount - 1 && game.carCount != 1) {
     drawCenteredText(132, "You Wasted'em!", 0, 0, 0, TEXT.title);
-    if (aflk) {
+    if (blink.on) {
       drawCenteredText(
         192,
         "You Won, all cars have been wasted!",
@@ -6707,7 +6721,7 @@ function drawinter() {
         0,
         TEXT.small,
       );
-      aflk = false;
+      blink.on = false;
     } else {
       drawCenteredText(
         192,
@@ -6717,20 +6731,20 @@ function drawinter() {
         255,
         TEXT.small,
       );
-      aflk = true;
+      blink.on = true;
     }
     if (!track.haltall) {
       playSound(33, 1);
     }
     track.haltall = true;
     holdit = true;
-    winner = true;
+    raceEvents.winner = true;
   }
   if (!holdit) {
     if (racers[game.player].dest && raceEvents.cntwis == 16) {
       drawCenteredText(132, "You're Wasted!", 0, 0, 0, TEXT.title);
       holdit = true;
-      winner = false;
+      raceEvents.winner = false;
     }
   }
   if (racers[game.player].cntdest != 0 && raceEvents.cntwis < 16) {
@@ -6747,7 +6761,7 @@ function drawinter() {
       if (track.clear[i] == track.nlaps * track.nsp && track.pos[i] == 0) {
         if (i == game.player) {
           drawCenteredText(132, "You Won!", 0, 0, 0, TEXT.title);
-          if (aflk) {
+          if (blink.on) {
             drawCenteredText(
               192,
               "You finished first, nice job!",
@@ -6756,7 +6770,7 @@ function drawinter() {
               0,
               TEXT.small,
             );
-            aflk = false;
+            blink.on = false;
           } else {
             drawCenteredText(
               192,
@@ -6766,15 +6780,15 @@ function drawinter() {
               255,
               TEXT.small,
             );
-            aflk = true;
+            blink.on = true;
           }
-          winner = true;
+          raceEvents.winner = true;
           if (!track.haltall) {
             playSound(32, 1);
           }
         } else {
           drawCenteredText(132, "You Lost!", 0, 0, 0, TEXT.title);
-          if (aflk) {
+          if (blink.on) {
             drawCenteredText(
               192,
               "" +
@@ -6785,7 +6799,7 @@ function drawinter() {
               0,
               TEXT.small,
             );
-            aflk = false;
+            blink.on = false;
           } else {
             drawCenteredText(
               192,
@@ -6797,9 +6811,9 @@ function drawinter() {
               255,
               TEXT.small,
             );
-            aflk = true;
+            blink.on = true;
           }
-          winner = false;
+          raceEvents.winner = false;
         }
         track.haltall = true;
         holdit = true;
@@ -6809,7 +6823,7 @@ function drawinter() {
   if (holdit) {
     if (raceEvents.holdcnt == 0) {
       if (
-        winner &&
+        raceEvents.winner &&
         game.unlocked == track.stage &&
         game.carCount != 1 &&
         track.stage != 17
@@ -6877,16 +6891,16 @@ function drawinter() {
     if (raceEvents.holdcnt != 0) {
       raceEvents.holdcnt = 0;
     }
-    if (confirm.state == CONFIRM.pressed && starcnt <= 65) {
+    if (confirm.state == CONFIRM.pressed && raceEvents.countdown <= 65) {
       confirm.state = CONFIRM.used;
-      onhip = 0;
+      pauseMenu.selected = 0;
       stopStageMusic();
       stopEngine();
       game.phase = PHASE.paused;
     }
   }
-  if (starcnt <= 65) {
-    if (game.mode == 1 && starcnt == 0 && !holdit) {
+  if (raceEvents.countdown <= 65) {
+    if (game.mode == 1 && raceEvents.countdown == 0 && !holdit) {
       timer--;
       var minutes = Math.floor(timer / 800);
       var seconds = Math.floor((timer / 800 - minutes) * 60);
@@ -6930,7 +6944,12 @@ function drawinter() {
         cntan = 20;
       }
     }
-    if (!holdit && starcnt == 0 && camera.mode == 0 && track.stage != 16) {
+    if (
+      !holdit &&
+      raceEvents.countdown == 0 &&
+      camera.mode == 0 &&
+      track.stage != 16
+    ) {
       arrow(racers[game.player].point, racers[game.player].missedcp, arrace);
       if (
         !arrace &&
@@ -7143,7 +7162,7 @@ function drawinter() {
     }
     g = 190 + racers[game.player].power * 0.37;
     b = 255;
-    if (raceEvents.auscnt < 45 && aflk) {
+    if (raceEvents.auscnt < 45 && blink.on) {
       r = 128;
       g = 244;
       b = 255;
@@ -7177,7 +7196,7 @@ function drawinter() {
       );
     } else {
       if (!holdit) {
-        onhip = 0;
+        pauseMenu.selected = 0;
         stopStageMusic();
         stopEngine();
         game.phase = PHASE.paused;
@@ -7262,41 +7281,44 @@ function drawinter() {
     }
   }
   if (!holdit) {
-    if ((starcnt != 0 || gocntdrop > 4) && starcnt < 65) {
-      if (starcnt == 63) {
+    if (
+      (raceEvents.countdown != 0 || gocntdrop > 4) &&
+      raceEvents.countdown < 65
+    ) {
+      if (raceEvents.countdown == 63) {
         gocnt = 3;
         gocntdrop = 16;
         playSound(34, 1);
       }
-      if (starcnt == 41) {
+      if (raceEvents.countdown == 41) {
         gocnt = 2;
         gocntdrop = 16;
         playSound(35, 1);
       }
-      if (starcnt == 24) {
+      if (raceEvents.countdown == 24) {
         gocnt = 1;
         gocntdrop = 16;
         playSound(36, 1);
       }
-      if (starcnt == 2) {
+      if (raceEvents.countdown == 2) {
         gocnt = 0;
         gocntdrop = 16;
         playSound(37, 1);
       }
       var duds = 0;
-      if (starcnt <= 63 && starcnt > 52) {
+      if (raceEvents.countdown <= 63 && raceEvents.countdown > 52) {
         duds = 1;
       }
-      if (starcnt <= 41 && starcnt > 32) {
+      if (raceEvents.countdown <= 41 && raceEvents.countdown > 32) {
         duds = 4;
       }
-      if (starcnt <= 24 && starcnt > 13) {
+      if (raceEvents.countdown <= 24 && raceEvents.countdown > 13) {
         duds = 2;
       }
-      if (starcnt <= 2) {
+      if (raceEvents.countdown <= 2) {
         duds = 3;
       }
-      if (starcnt == 0 && gocntdrop < 7) {
+      if (raceEvents.countdown == 0 && gocntdrop < 7) {
         duds = 1;
       }
       rd.globalAlpha = 0.6;
@@ -7425,12 +7447,12 @@ function drawinter() {
         }
       }
       if (raceEvents.auscnt < 45) {
-        if (aflk) {
+        if (blink.on) {
           drawCenteredText(136, asay, 59, 156, 255, TEXT.small);
-          aflk = false;
+          blink.on = false;
         } else {
           drawCenteredText(136, asay, 0, 107, 216, TEXT.small);
-          aflk = true;
+          blink.on = true;
         }
         if (tick.fraction >= tick.scale) {
           raceEvents.auscnt++;
@@ -7666,7 +7688,7 @@ function drawonbordo() {
   } else {
     pwflk = true;
   }
-  if (starcnt > 130) {
+  if (raceEvents.countdown > 130) {
     if (pwflk) {
       ondud = Math.floor(random.fx() * 6);
       if (ondud == 6) {
@@ -8180,7 +8202,7 @@ function iniend() {
   morgn = random.fx();
   unlcar = -1;
   raceEvents.switcnt = 0;
-  if (winner && game.unlocked == track.stage && game.carCount != 1) {
+  if (raceEvents.winner && game.unlocked == track.stage && game.carCount != 1) {
     if (track.stage == 2) {
       unlcar = 11;
     }
@@ -8283,7 +8305,7 @@ function endgame() {
   }
   if (fredo >= 50) {
     var contxt = "Congradulations!";
-    if (!winner) {
+    if (!raceEvents.winner) {
       contxt = "Game Over";
     }
     rd.letterSpacing = "1px";
@@ -8307,7 +8329,7 @@ function endgame() {
     rd.letterSpacing = "1px";
     rd.font = "" + 18 * (view.scaleY + view.scaleX) + "px junk";
     rd.fillStyle = "#FFA627";
-    if (winner) {
+    if (raceEvents.winner) {
       rd.fillText(
         "You won at stage " + track.stage + "",
         640 * view.scaleX,
@@ -8323,15 +8345,19 @@ function endgame() {
     rd.fillStyle = "#FF5B01";
     rd.fillText(track.name, 640 * view.scaleX, 240 * view.scaleY);
     rd.globalAlpha = 1;
-    if (winner && game.unlocked == track.stage && game.carCount != 1) {
+    if (
+      raceEvents.winner &&
+      game.unlocked == track.stage &&
+      game.carCount != 1
+    ) {
       rd.letterSpacing = "1px";
       rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
       rd.fillStyle = "#94CA00";
-      if (aflk) {
+      if (blink.on) {
         rd.fillStyle = "#BCFA00";
-        aflk = false;
+        blink.on = false;
       } else {
-        aflk = true;
+        blink.on = true;
       }
       if (track.stage != 17) {
         var andcar = "";
@@ -8391,7 +8417,11 @@ function endgame() {
         340 * view.scaleY,
       );
     }
-    if (winner && game.unlocked == track.stage && game.carCount != 1) {
+    if (
+      raceEvents.winner &&
+      game.unlocked == track.stage &&
+      game.carCount != 1
+    ) {
       if (confirm.state == CONFIRM.pressed) {
         stopStageMusic();
         afterend();
@@ -8446,7 +8476,7 @@ function endgame() {
   }
 }
 function afterend() {
-  if (winner && game.unlocked == track.stage && game.carCount != 1) {
+  if (raceEvents.winner && game.unlocked == track.stage && game.carCount != 1) {
     if (track.stage != 17) {
       game.unlocked++;
       track.stage = game.unlocked;
@@ -8971,30 +9001,30 @@ function drawcarselect() {
       }
     }
   }
-  if (!flwg) {
+  if (!buttons.pulseWidthGrowing) {
     buttons.pulseWidth -= 0.03;
     if (buttons.pulseWidth < 0.5) {
       buttons.pulseWidth = 0.5;
-      flwg = true;
+      buttons.pulseWidthGrowing = true;
     }
   } else {
     buttons.pulseWidth += 0.03;
     if (buttons.pulseWidth > 2) {
       buttons.pulseWidth = 2;
-      flwg = false;
+      buttons.pulseWidthGrowing = false;
     }
   }
-  if (!flhg) {
+  if (!buttons.pulseHeightGrowing) {
     buttons.pulseHeight -= 0.5;
     if (buttons.pulseHeight < 0.1) {
       buttons.pulseHeight = 0.1;
-      flhg = true;
+      buttons.pulseHeightGrowing = true;
     }
   } else {
     buttons.pulseHeight += 0.5;
     if (buttons.pulseHeight > 2) {
       buttons.pulseHeight = 2;
-      flhg = false;
+      buttons.pulseHeightGrowing = false;
     }
   }
   drawMusicToggle();
@@ -9093,7 +9123,7 @@ function drawstageselect() {
       rd.textBaseline = "middle";
       rd.fillStyle = "#00284A";
       rd.fillText("Stage Locked", 640 * view.scaleX, 380 * view.scaleY);
-      if (aflk || flkun > 10) {
+      if (blink.on || flkun > 10) {
         rd.drawImage(
           images.locked,
           640 * view.scaleX - 29 * view.scaleY,
@@ -9102,15 +9132,15 @@ function drawstageselect() {
           72 * view.scaleY,
         );
       }
-      if (aflk) {
-        aflk = false;
+      if (blink.on) {
+        blink.on = false;
       } else {
-        aflk = true;
+        blink.on = true;
       }
       flkun++;
       if (flkun == 30) {
         flkun = 0;
-        aflk = false;
+        blink.on = false;
       }
     } else {
       rd.letterSpacing = "1px";
@@ -9127,13 +9157,13 @@ function drawstageselect() {
   }
   if (!ontip) {
     if (hastip && !flkun) {
-      if (aflk) {
-        aflk = false;
+      if (blink.on) {
+        blink.on = false;
       } else {
-        aflk = true;
+        blink.on = true;
       }
       if (dudo > 50) {
-        if (aflk) {
+        if (blink.on) {
           ondud = Math.floor(random.fx() * 6);
           if (ondud == 6) {
             ondud = 5;
@@ -9538,30 +9568,30 @@ function drawstageselect() {
         startflash();
         confirm.state = CONFIRM.used;
       }
-      if (!flwg) {
+      if (!buttons.pulseWidthGrowing) {
         buttons.pulseWidth -= 0.03;
         if (buttons.pulseWidth < 0.5) {
           buttons.pulseWidth = 0.5;
-          flwg = true;
+          buttons.pulseWidthGrowing = true;
         }
       } else {
         buttons.pulseWidth += 0.03;
         if (buttons.pulseWidth > 2) {
           buttons.pulseWidth = 2;
-          flwg = false;
+          buttons.pulseWidthGrowing = false;
         }
       }
-      if (!flhg) {
+      if (!buttons.pulseHeightGrowing) {
         buttons.pulseHeight -= 0.5;
         if (buttons.pulseHeight < 0.1) {
           buttons.pulseHeight = 0.1;
-          flhg = true;
+          buttons.pulseHeightGrowing = true;
         }
       } else {
         buttons.pulseHeight += 0.5;
         if (buttons.pulseHeight > 2) {
           buttons.pulseHeight = 2;
-          flhg = false;
+          buttons.pulseHeightGrowing = false;
         }
       }
     } else {
@@ -9570,13 +9600,13 @@ function drawstageselect() {
         fm *= 1.2 / (view.scaleX / view.scaleY);
       }
       var topo = 260 * view.scaleY;
-      if (aflk) {
-        aflk = false;
+      if (blink.on) {
+        blink.on = false;
       } else {
-        aflk = true;
+        blink.on = true;
       }
       if (dudo < 200) {
-        if (aflk) {
+        if (blink.on) {
           ondud = Math.floor(random.fx() * 6);
           if (ondud == 6) {
             ondud = 5;
@@ -10156,7 +10186,7 @@ function onKey(action, pressed) {
     }
   }
   if (action == "rewind") {
-    if (game.phase == PHASE.race && starcnt == 0) {
+    if (game.phase == PHASE.race && raceEvents.countdown == 0) {
       if (pressed) {
         buttons.pressedByKey = 11;
       } else {
