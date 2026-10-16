@@ -5,7 +5,7 @@ import { loadGame } from "./harness/loadGame.js";
 const ticksAfter = async (frameTimes) => {
   const { ctx } = await loadGame();
   frameTimes.forEach((now) => ctx.mainloop(now));
-  return ctx.reqload;
+  return ctx.loading.step;
 };
 
 test("a 120 Hz display still gets one logic tick every 35 ms", async () => {

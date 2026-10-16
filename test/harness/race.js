@@ -41,7 +41,7 @@ export const openStageSelect = async ({
   ctx.track.stage = stage;
   ctx.stageloadtyp = 0;
   ctx.stageload = 0;
-  ctx.updateframe = true;
+  ctx.menu.redraw = true;
   ctx.game.phase = PHASE.stageLoading;
   stepUntil(() => ctx.game.phase === PHASE.stageSelect, 100, "stage select");
   return game;

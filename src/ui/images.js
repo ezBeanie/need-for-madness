@@ -16,4 +16,6 @@ export const images = {
   menuBackground: null,
   rider: null,
   logo: null,
+  // loaded when first needed (see loadconfe)
+  confetti: [],
 };

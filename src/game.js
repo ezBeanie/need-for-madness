@@ -89,6 +89,8 @@ import {
   timeTube,
 } from "./render/scene.js";
 import { pauseMenu } from "./screens/pauseMenu.js";
+import { menu, showcase } from "./screens/menuState.js";
+import { loading } from "./loading/progress.js";
 import { game, MAX_CARS, PHASE } from "./core/state.js";
 import { tick } from "./core/tick.js";
 import { car, racers } from "./race/racers.js";
@@ -117,22 +119,23 @@ import {
   effects,
 } from "./race/effects.js";
 import { drive, fixcar, inishmad, paintDents } from "./race/physics.js";
+import { hslToRgb, rgbToHsl } from "./ui/color.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 function cartextures() {
   for (var i = 0; i < 19; i++) {
     var loadthis = false;
-    if (stanza == 0) {
+    if (loading.stanza == 0) {
       loadthis = true;
     }
-    if (stanza == 1) {
+    if (loading.stanza == 1) {
       for (var c = 0; c < game.carCount; c++) {
         if (game.carTypes[c] == i) {
           loadthis = true;
         }
       }
     }
-    if (stanza == 2) {
+    if (loading.stanza == 2) {
       loadthis = true;
       for (var c = 0; c < game.carCount; c++) {
         if (game.carTypes[c] == i) {
@@ -694,17 +697,17 @@ function createwheels() {
   ];
   for (var c = 0; c < 19; c++) {
     var loadthis = false;
-    if (stanza == 0) {
+    if (loading.stanza == 0) {
       loadthis = true;
     }
-    if (stanza == 1) {
+    if (loading.stanza == 1) {
       for (var i = 0; i < game.carCount; i++) {
         if (game.carTypes[i] == c) {
           loadthis = true;
         }
       }
     }
-    if (stanza == 2) {
+    if (loading.stanza == 2) {
       loadthis = true;
       for (var i = 0; i < game.carCount; i++) {
         if (game.carTypes[i] == c) {
@@ -1353,54 +1356,6 @@ function getonscreen(m, rad) {
     (propoint[1] * -0.5 + 0.5) * view.height,
   ];
 }
-function hslToRgb(h, s, l) {
-  var r, g, b;
-  if (s == 0) {
-    r = g = b = l;
-  } else {
-    var hue2rgb = function hue2rgb(p, q, t) {
-      if (t < 0) t += 1;
-      if (t > 1) t -= 1;
-      if (t < 1 / 6) return p + (q - p) * 6 * t;
-      if (t < 1 / 2) return q;
-      if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-      return p;
-    };
-    var q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-    var p = 2 * l - q;
-    r = hue2rgb(p, q, h + 1 / 3);
-    g = hue2rgb(p, q, h);
-    b = hue2rgb(p, q, h - 1 / 3);
-  }
-  return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
-}
-function rgbToHsl(r, g, b) {
-  (r /= 255), (g /= 255), (b /= 255);
-  var max = Math.max(r, g, b),
-    min = Math.min(r, g, b);
-  var h,
-    s,
-    l = (max + min) / 2;
-  if (max == min) {
-    h = s = 0;
-  } else {
-    var d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case r:
-        h = (g - b) / d + (g < b ? 6 : 0);
-        break;
-      case g:
-        h = (b - r) / d + 2;
-        break;
-      case b:
-        h = (r - g) / d + 4;
-        break;
-    }
-    h /= 6;
-  }
-  return [h, s, l];
-}
 var impimg = new Image();
 impimg.src = "data/interface" + interfaceResolution + "/loading.png";
 var ground = newModel();
@@ -1427,34 +1382,27 @@ for (var i = 0; i < 3; i++) {
 var bg3D = newModel();
 
 var confeloaded = false;
-var confe = [];
+
 function loadconfe() {
   if (!confeloaded) {
     for (var i = 0; i < 29; i++) {
-      confe[i] = new Image();
-      confe[i].src =
+      images.confetti[i] = new Image();
+      images.confetti[i].src =
         "data/interface" + interfaceResolution + "/conf/" + i + ".png";
     }
     confeloaded = true;
   }
 }
-var reqload = 0;
-var dataload = 500;
-var datacnt = 3816;
-if (isPhone) {
-  datacnt = 3770;
-}
-var stanza = 0;
 function loaddata() {
   if (gl) {
     drawloading();
-    if (reqload == 0) {
-      if (stanza == 0) {
-        onskip = false;
+    if (loading.step == 0) {
+      if (loading.stanza == 0) {
+        menu.skipIntro = false;
         game.carTypes[0] = loadSetting("carsel");
         if (game.carTypes[0] == -1) {
           game.carTypes[0] = 5;
-          onskip = true;
+          menu.skipIntro = true;
           raceEvents.onautocorrect = 2;
         }
         game.unlocked = loadSetting("unlocked");
@@ -1475,14 +1423,14 @@ function loaddata() {
         }
       }
     }
-    if (reqload == 1) {
+    if (loading.step == 1) {
       var frm = 0,
         tro = 3;
-      if (stanza == 1) {
+      if (loading.stanza == 1) {
         frm = 2;
         tro = 3;
       }
-      if (stanza == 2) {
+      if (loading.stanza == 2) {
         frm = 0;
         tro = 2;
       }
@@ -1490,7 +1438,7 @@ function loaddata() {
       for (var i = frm; i < tro; i++) {
         grndimg[i] = new Image();
         grndimg[i].onload = function () {
-          dataload += 17;
+          loading.loaded += 17;
         };
         grndimg[i].src = "data/3D/textures/ground" + (i + 1) + ".png";
       }
@@ -1498,18 +1446,18 @@ function loaddata() {
       for (var i = frm; i < tro; i++) {
         skyimg[i] = new Image();
         skyimg[i].onload = function () {
-          dataload += 24;
+          loading.loaded += 24;
         };
         skyimg[i].src = "data/3D/textures/sky" + (i + 1) + ".png";
       }
       haloimg = new Image();
       haloimg.onload = function () {
-        dataload += 5;
+        loading.loaded += 5;
       };
       haloimg.src = "data/3D/textures/halo.png";
     }
-    if (reqload == 2) {
-      if (stanza != 2) {
+    if (loading.step == 2) {
+      if (loading.stanza != 2) {
         loadModel("data/3D/tiredisk.r3d", tiredisk);
         loadParticleModel("data/3D/tire.prt", tire);
         loadParticleModel("data/3D/tirelow.prt", tirelow);
@@ -1517,24 +1465,24 @@ function loaddata() {
         loadParticleModel("data/3D/fntext.prt", fntext);
         loadParticleModel("data/3D/timetube.prt", timeTube);
       }
-      if (stanza != 1) {
+      if (loading.stanza != 1) {
         loadParticleModel("data/3D/bg.prt", bgst);
       }
     }
-    if (reqload == 3) {
+    if (loading.step == 3) {
       for (var i = 0; i < 19; i++) {
         var loadthis = false;
-        if (stanza == 0) {
+        if (loading.stanza == 0) {
           loadthis = true;
         }
-        if (stanza == 1) {
+        if (loading.stanza == 1) {
           for (var c = 0; c < game.carCount; c++) {
             if (game.carTypes[c] == i) {
               loadthis = true;
             }
           }
         }
-        if (stanza == 2) {
+        if (loading.stanza == 2) {
           loadthis = true;
           for (var c = 0; c < game.carCount; c++) {
             if (game.carTypes[c] == i) {
@@ -1547,18 +1495,18 @@ function loaddata() {
           loadModel("data/3D/s" + i + ".r3d", carShadows[i]);
           carTextures[i] = new Image();
           carTextures[i].onload = function () {
-            dataload += 9;
+            loading.loaded += 9;
           };
           carTextures[i].src = "data/3D/textures/car" + i + ".png";
           tireimg[i] = new Image();
           tireimg[i].onload = function () {
-            dataload += 2;
+            loading.loaded += 2;
           };
           tireimg[i].src = "data/3D/textures/t" + i + ".png";
         }
       }
     }
-    if (reqload == 4) {
+    if (loading.step == 4) {
       var defb = [
         "road",
         "froad",
@@ -1634,17 +1582,17 @@ function loaddata() {
       for (var i = 0; i < 66; i++) {
         if (i != 40) {
           var loadthis = false;
-          if (stanza == 0) {
+          if (loading.stanza == 0) {
             loadthis = true;
           }
-          if (stanza == 1) {
+          if (loading.stanza == 1) {
             for (var k = 0; k < onfrst.length; k++) {
               if (onfrst[k] == i) {
                 loadthis = true;
               }
             }
           }
-          if (stanza == 2) {
+          if (loading.stanza == 2) {
             loadthis = true;
             for (var k = 0; k < onfrst.length; k++) {
               if (onfrst[k] == i) {
@@ -1658,13 +1606,13 @@ function loaddata() {
         }
       }
     }
-    if (reqload == 5) {
-      if (stanza != 2) {
+    if (loading.step == 5) {
+      if (loading.stanza != 2) {
         loadModel("data/3D/sprite.r3d", sprite);
         for (var i = 0; i < 3; i++) {
           spritexture[i] = new Image();
           spritexture[i].onload = function () {
-            dataload++;
+            loading.loaded++;
           };
           spritexture[i].src = "data/3D/textures/sp" + i + ".png";
         }
@@ -1675,21 +1623,21 @@ function loaddata() {
         }
       }
     }
-    if (reqload == 6) {
+    if (loading.step == 6) {
       var onfrst = [0, 1, 2, 3, 4, 5, 6, 8, 9, 10, 17, 18];
       for (var i = 0; i < 19; i++) {
         var loadthis = false;
-        if (stanza == 0) {
+        if (loading.stanza == 0) {
           loadthis = true;
         }
-        if (stanza == 1) {
+        if (loading.stanza == 1) {
           for (var k = 0; k < onfrst.length; k++) {
             if (onfrst[k] == i) {
               loadthis = true;
             }
           }
         }
-        if (stanza == 2) {
+        if (loading.stanza == 2) {
           loadthis = true;
           for (var k = 0; k < onfrst.length; k++) {
             if (onfrst[k] == i) {
@@ -1702,16 +1650,16 @@ function loaddata() {
         }
       }
     }
-    if (reqload == 7) {
-      if (stanza != 1) {
+    if (loading.step == 7) {
+      if (loading.stanza != 1) {
         loadModel("data/3D/bg.r3d", bg3D);
       }
-      if (stanza != 2) {
+      if (loading.stanza != 2) {
         if (isPhone) {
           for (var i = 0; i < 6; i++) {
             images.touchControls[i] = new Image();
             images.touchControls[i].onload = function () {
-              dataload++;
+              loading.loaded++;
             };
             images.touchControls[i].src =
               "data/interface" + interfaceResolution + "/cn" + i + ".png";
@@ -1720,7 +1668,7 @@ function loaddata() {
         for (var i = 0; i < 7; i++) {
           images.buttons[i] = new Image();
           images.buttons[i].onload = function () {
-            dataload++;
+            loading.loaded++;
           };
           images.buttons[i].src =
             "data/interface" + interfaceResolution + "/btn" + (i + 1) + ".png";
@@ -1728,56 +1676,56 @@ function loaddata() {
         for (var i = 0; i < 6; i++) {
           images.soundToggles[i] = new Image();
           images.soundToggles[i].onload = function () {
-            dataload++;
+            loading.loaded++;
           };
           images.soundToggles[i].src =
             "data/interface" + interfaceResolution + "/mu" + i + ".png";
         }
       }
     }
-    if (reqload == 8) {
-      if (stanza != 1) {
+    if (loading.step == 8) {
+      if (loading.stanza != 1) {
         images.loadingBarLeft = new Image();
         images.loadingBarLeft.onload = function () {
-          dataload++;
+          loading.loaded++;
         };
         images.loadingBarLeft.src =
           "data/interface" + interfaceResolution + "/lbar.png";
         images.loadingBarRight = new Image();
         images.loadingBarRight.onload = function () {
-          dataload++;
+          loading.loaded++;
         };
         images.loadingBarRight.src =
           "data/interface" + interfaceResolution + "/rbar.png";
         images.locked = new Image();
         images.locked.onload = function () {
-          dataload++;
+          loading.loaded++;
         };
         images.locked.src =
           "data/interface" + interfaceResolution + "/locked.png";
         images.menuBackground = new Image();
         images.menuBackground.onload = function () {
-          dataload += 402;
+          loading.loaded += 402;
         };
         images.menuBackground.src =
           "data/interface" + interfaceResolution + "/mainbg.png";
         images.rider = new Image();
         images.rider.onload = function () {
-          dataload += 14;
+          loading.loaded += 14;
         };
         images.rider.src =
           "data/interface" + interfaceResolution + "/rider.png";
         images.logo = new Image();
         images.logo.onload = function () {
-          dataload += 20;
+          loading.loaded += 20;
         };
         images.logo.src = "data/interface" + interfaceResolution + "/logo.png";
       }
-      if (stanza != 2) {
+      if (loading.stanza != 2) {
         for (var i = 0; i < 6; i++) {
           images.insano[i] = new Image();
           images.insano[i].onload = function () {
-            dataload += 20;
+            loading.loaded += 20;
           };
           images.insano[i].src =
             "data/interface" + interfaceResolution + "/insano" + i + ".png";
@@ -1786,7 +1734,7 @@ function loaddata() {
           if (i < 5 || !isPhone || i == 8 || i == 10) {
             images.instructions[i] = new Image();
             images.instructions[i].onload = function () {
-              dataload += 13;
+              loading.loaded += 13;
             };
             images.instructions[i].src =
               "data/interface1/int" + (i + 1) + ".png";
@@ -1794,48 +1742,48 @@ function loaddata() {
         }
       }
     }
-    if (reqload != 9) {
-      reqload++;
+    if (loading.step != 9) {
+      loading.step++;
     }
     if (tiredisk.loaded == 1) {
-      dataload++;
+      loading.loaded++;
       tiredisk.loaded++;
     }
     if (tire.loaded == 1) {
-      dataload++;
+      loading.loaded++;
       tire.loaded++;
     }
     if (tirelow.loaded == 1) {
-      dataload++;
+      loading.loaded++;
       tirelow.loaded++;
     }
     if (cptext.loaded == 1) {
-      dataload += 4;
+      loading.loaded += 4;
       cptext.loaded++;
     }
     if (fntext.loaded == 1) {
-      dataload += 4;
+      loading.loaded += 4;
       fntext.loaded++;
     }
     if (timeTube.loaded == 1) {
-      dataload++;
+      loading.loaded++;
       timeTube.loaded++;
     }
     if (bgst.loaded == 1) {
-      dataload++;
+      loading.loaded++;
       bgst.loaded++;
     }
     if (ground.loaded && ground.loaded == ground.nt + 1) {
-      dataload++;
+      loading.loaded++;
       ground.loaded++;
     }
     if (skydom.loaded && skydom.loaded == skydom.nt + 1) {
-      dataload++;
+      loading.loaded++;
       skydom.loaded++;
     }
     for (var i = 0; i < 19; i++) {
       if (carModels[i].loaded && carModels[i].loaded == carModels[i].nt + 1) {
-        dataload += 31;
+        loading.loaded += 31;
         carModels[i].loaded++;
       }
     }
@@ -1845,58 +1793,58 @@ function loaddata() {
         pieceModels[i].loaded &&
         pieceModels[i].loaded == pieceModels[i].nt + 1
       ) {
-        dataload += 7;
+        loading.loaded += 7;
         pieceModels[i].loaded++;
       }
     }
     for (var i = 0; i < 19; i++) {
       if (textureGroups[i].loaded == 1) {
-        dataload += 44;
+        loading.loaded += 44;
         textureGroups[i].loaded++;
       }
     }
     if (sprite.loaded && sprite.loaded == sprite.nt + 1) {
-      dataload++;
+      loading.loaded++;
       sprite.loaded++;
     }
     if (fixdisk.loaded && fixdisk.loaded == fixdisk.nt + 1) {
-      dataload++;
+      loading.loaded++;
       fixdisk.loaded++;
     }
     if (elec.loaded && elec.loaded == elec.nt + 1) {
-      dataload++;
+      loading.loaded++;
       elec.loaded++;
     }
     for (var i = 0; i < 3; i++) {
       if (explode[i].loaded && explode[i].loaded == explode[i].nt + 1) {
-        dataload += 18;
+        loading.loaded += 18;
         explode[i].loaded++;
       }
     }
     if (bg3D.loaded && bg3D.loaded == bg3D.nt + 1) {
-      dataload += 309;
+      loading.loaded += 309;
       bg3D.loaded++;
     }
-    if (dataload == datacnt) {
+    if (loading.loaded == loading.total) {
       cartextures();
       createwheels();
-      if (stanza == 0 || stanza == 1) {
+      if (loading.stanza == 0 || loading.stanza == 1) {
         creatdustextures();
         for (var i = 0; i < 43; i++) {
           loadSound(i);
         }
       }
-      if (stanza == 0) {
-        fredo = 0;
+      if (loading.stanza == 0) {
+        menu.animation = 0;
         game.phase = PHASE.mainMenu;
       }
-      if (stanza == 1) {
+      if (loading.stanza == 1) {
         stageloadtyp = 2;
         stageload = -1;
         game.phase = PHASE.stageLoading;
       }
-      if (stanza == 2) {
-        fredo = 0;
+      if (loading.stanza == 2) {
+        menu.animation = 0;
         game.phase = PHASE.mainMenu;
       }
     }
@@ -2340,7 +2288,6 @@ function cpanimate() {
   }
 }
 
-var updateframe = false;
 // Fase whose 3D scene has been drawn from a finished logic tick and may be redrawn every frame.
 var framefase = -1;
 var renderedfase = -1;
@@ -2756,13 +2703,11 @@ function gameworks() {
     camera.yaw * (Math.PI / 180),
     [0, 1, 0],
   );
-  updateframe = true;
+  menu.redraw = true;
 }
 var csxz = 0,
   cszy = 0;
-var carup = 0;
-var carmy = 100;
-var carms = 0;
+
 var flyout = 1;
 var nextc = 0;
 function newsmoke() {
@@ -2856,55 +2801,55 @@ function carselect() {
     }
   }
   if (flyout == 0) {
-    if (carup >= 1) {
-      if (carup == 1) {
-        carmy += 0.7 + (11 - carmy) / 31;
-        if (carmy > 10) {
-          carmy = 10;
-          carup = 2;
+    if (showcase.bob >= 1) {
+      if (showcase.bob == 1) {
+        showcase.height += 0.7 + (11 - showcase.height) / 31;
+        if (showcase.height > 10) {
+          showcase.height = 10;
+          showcase.bob = 2;
         }
       }
-      if (carup >= 2) {
-        carup++;
-        if (carup == 110) {
-          carup = 0;
+      if (showcase.bob >= 2) {
+        showcase.bob++;
+        if (showcase.bob == 110) {
+          showcase.bob = 0;
         }
       }
     } else {
-      if (carup == 0) {
-        carmy -= 0.2 + (11 - carmy) / 31;
-        if (carmy < -21) {
-          carmy = -21;
-          carup = -1;
+      if (showcase.bob == 0) {
+        showcase.height -= 0.2 + (11 - showcase.height) / 31;
+        if (showcase.height < -21) {
+          showcase.height = -21;
+          showcase.bob = -1;
         }
       }
-      if (carup <= -1) {
-        carup--;
-        if (carup == -50) {
-          carup = 1;
+      if (showcase.bob <= -1) {
+        showcase.bob--;
+        if (showcase.bob == -50) {
+          showcase.bob = 1;
         }
       }
     }
   } else {
     if (flyout == 1) {
       cszy = 0;
-      carms += 0.5;
-      carmy -= carms;
-      if (carmy < -21) {
-        carmy = -21;
-        carup = -30;
+      showcase.dropSpeed += 0.5;
+      showcase.height -= showcase.dropSpeed;
+      if (showcase.height < -21) {
+        showcase.height = -21;
+        showcase.bob = -30;
         flyout = 0;
       }
     }
     if (flyout == 2) {
-      carmy += 7;
+      showcase.height += 7;
       if (nextc == 1) {
         cszy += 20;
       }
       if (nextc == -1) {
         cszy -= 20;
       }
-      if (carmy > 100) {
+      if (showcase.height > 100) {
         if (nextc == 1) {
           game.carTypes[0]++;
           if (game.carTypes[0] == 19) {
@@ -2921,8 +2866,8 @@ function carselect() {
           game.carTypes[0] = lastsel;
         }
         flyout = 1;
-        carms = 0;
-        carmy = 100;
+        showcase.dropSpeed = 0;
+        showcase.height = 100;
       }
     }
   }
@@ -2930,7 +2875,7 @@ function carselect() {
   carModels[game.carTypes[0]].y =
     carStats.wly[game.carTypes[0]][1] +
     1.5 * carStats.wlh[game.carTypes[0]][1] +
-    carmy;
+    showcase.height;
   carModels[game.carTypes[0]].z = -98;
   carModels[game.carTypes[0]].ont = 0;
   csxz += 5;
@@ -3116,7 +3061,7 @@ function carselect() {
     [1, 0, 0],
   );
   drawcarselect();
-  updateframe = true;
+  menu.redraw = true;
 }
 var hit = 4500,
   ptr = 0,
@@ -3214,10 +3159,10 @@ function stageselect() {
     [0, 1, 0],
   );
   drawstageselect();
-  updateframe = true;
+  menu.redraw = true;
 }
 function unlockedcar() {
-  if (fredo == 76) {
+  if (menu.animation == 76) {
     var fieldOfView = (55 * Math.PI) / 180;
     var zNear = 0.1;
     var zFar = 7000;
@@ -3239,26 +3184,26 @@ function unlockedcar() {
     if (csxz > 360) {
       csxz -= 360;
     }
-    cszy = carmy;
-    if (carup) {
-      carmy++;
-      if (carmy > 20) {
-        carmy = 20;
+    cszy = showcase.height;
+    if (showcase.bob) {
+      showcase.height++;
+      if (showcase.height > 20) {
+        showcase.height = 20;
       }
     } else {
-      carmy--;
-      if (carmy < -20) {
-        carmy = -20;
+      showcase.height--;
+      if (showcase.height < -20) {
+        showcase.height = -20;
       }
     }
-    carms--;
-    if (carms == 0) {
-      if (carup == 0) {
-        carup = 1;
+    showcase.dropSpeed--;
+    if (showcase.dropSpeed == 0) {
+      if (showcase.bob == 0) {
+        showcase.bob = 1;
       } else {
-        carup = 0;
+        showcase.bob = 0;
       }
-      carms = 100;
+      showcase.dropSpeed = 100;
     }
     var xmt = [1, 0, 0];
     var ymt = [0, 1, 0];
@@ -3395,7 +3340,7 @@ function unlockedcar() {
       camera.yaw * (Math.PI / 180),
       [0, 1, 0],
     );
-    updateframe = true;
+    menu.redraw = true;
   }
 }
 // About 2 ms per frame for scratching car damage into textures (see paintDents).
@@ -3416,7 +3361,7 @@ function render(now) {
     game.phase == PHASE.switchScreen ||
     game.phase == PHASE.timeRewind
   ) {
-    if (updateframe || framefase == game.phase) {
+    if (menu.redraw || framefase == game.phase) {
       framefase = game.phase;
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
       gl.clearDepth(1.0);
@@ -3585,11 +3530,11 @@ function render(now) {
           drawModel(sprite);
         }
       }
-      updateframe = false;
+      menu.redraw = false;
     }
   }
   if (game.phase == PHASE.carSelect) {
-    if (updateframe || framefase == game.phase) {
+    if (menu.redraw || framefase == game.phase) {
       framefase = game.phase;
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
       gl.clearDepth(1.0);
@@ -3637,11 +3582,11 @@ function render(now) {
         tired[game.carTypes[0]][k].mat = whl[game.carTypes[0]][w].mat;
         drawModel(tired[game.carTypes[0]][k]);
       }
-      updateframe = false;
+      menu.redraw = false;
     }
   }
   if (game.phase == PHASE.stageSelect) {
-    if (updateframe || framefase == game.phase) {
+    if (menu.redraw || framefase == game.phase) {
       framefase = game.phase;
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
       gl.clearDepth(1.0);
@@ -3681,11 +3626,11 @@ function render(now) {
           drawModel(fixdisk);
         }
       }
-      updateframe = false;
+      menu.redraw = false;
     }
   }
-  if (game.phase == PHASE.raceEnd && fredo == 76) {
-    if (updateframe || framefase == game.phase) {
+  if (game.phase == PHASE.raceEnd && menu.animation == 76) {
+    if (menu.redraw || framefase == game.phase) {
       framefase = game.phase;
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
       gl.clearDepth(1.0);
@@ -3720,7 +3665,7 @@ function render(now) {
         tired[game.carTypes[0]][k].mat = whl[game.carTypes[0]][w].mat;
         drawModel(tired[game.carTypes[0]][k]);
       }
-      updateframe = false;
+      menu.redraw = false;
     }
   }
 }
@@ -3872,7 +3817,7 @@ function inishcars() {
 // Chooses the opponents and puts all cars on the start grid.
 function setupcars() {
   track.insih();
-  if (stanza != 1) {
+  if (loading.stanza != 1) {
     sortcars(track.stage);
   }
   inishinter();
@@ -4921,21 +4866,20 @@ function pausedgame() {
   }
 }
 function afterquitgame() {
-  if (stanza == 1) {
-    reqload = 0;
-    dataload = 500;
-    datacnt = 2458;
-    stanza = 2;
-    onskip = false;
+  if (loading.stanza == 1) {
+    loading.step = 0;
+    loading.loaded = 500;
+    loading.total = 2458;
+    loading.stanza = 2;
+    menu.skipIntro = false;
     game.phase = PHASE.loading;
   } else {
-    fredo = 0;
-    onskip = false;
+    menu.animation = 0;
+    menu.skipIntro = false;
     game.phase = PHASE.mainMenu;
   }
 }
-var fredo = 0;
-var onskip = true;
+
 var canreset = false;
 var cnf = 0;
 var cnl = 0;
@@ -4943,7 +4887,7 @@ var relit = "RE-LIT";
 function drawmain() {
   rd.fillStyle = "#000000";
   rd.fillRect(0, 0, view.width, view.height);
-  if (fredo == 0) {
+  if (menu.animation == 0) {
     playMenuMusic();
     cnf = 0;
   }
@@ -5047,7 +4991,7 @@ function drawmain() {
       cnl--;
     }
   }
-  if (!onskip) {
+  if (!menu.skipIntro) {
     if (
       drawButton({
         id: 1,
@@ -5094,12 +5038,12 @@ function drawmain() {
         pulsing: true,
       })
     ) {
-      fredo = 29;
+      menu.animation = 29;
       cnf = 25;
     }
-    if (fredo < 29) {
+    if (menu.animation < 29) {
       if (confirm.state == CONFIRM.pressed) {
-        fredo = 29;
+        menu.animation = 29;
         confirm.state = CONFIRM.used;
       }
     }
@@ -5130,9 +5074,9 @@ function drawmain() {
     }
     drawMusicToggle();
   }
-  if (!onskip) {
-    if (fredo != 15) {
-      fredo++;
+  if (!menu.skipIntro) {
+    if (menu.animation != 15) {
+      menu.animation++;
     } else {
       if (cnf != 25) {
         cnf++;
@@ -5141,17 +5085,17 @@ function drawmain() {
   } else {
     if (cnf != 25) {
       cnf++;
-      fredo = 1;
+      menu.animation = 1;
     } else {
-      fredo++;
+      menu.animation++;
     }
   }
-  if (fredo >= 30) {
-    rd.globalAlpha = (fredo - 50) / 10;
+  if (menu.animation >= 30) {
+    rd.globalAlpha = (menu.animation - 50) / 10;
     rd.fillStyle = "#000000";
     rd.fillRect(0, 0, view.width, view.height);
     rd.globalAlpha = 1;
-    if (fredo == 40) {
+    if (menu.animation == 40) {
       gotGamepads();
       game.player = 0;
       racers[game.player].u.left = false;
@@ -5160,8 +5104,8 @@ function drawmain() {
       racers[game.player].u.down = false;
       racers[game.player].u.handb = false;
       flyout = 1;
-      carms = 0;
-      carmy = 100;
+      showcase.dropSpeed = 0;
+      showcase.height = 100;
       scene.tint = [0, -0.05, 0.6];
       var fogc = [0, 0, 0];
       var lvx = 0,
@@ -5201,7 +5145,7 @@ function drawmain() {
 }
 var instmain = false;
 var ifase = 0;
-var ondud = 0;
+
 var dudo = 0;
 function gameinstructions() {
   rd.fillStyle = "#000000";
@@ -5256,17 +5200,17 @@ function gameinstructions() {
   }
   if (dudo > 0) {
     if (blink.on) {
-      ondud = Math.floor(random.fx() * 6);
-      if (ondud == 6) {
-        ondud = 5;
+      menu.insanoPicture = Math.floor(random.fx() * 6);
+      if (menu.insanoPicture == 6) {
+        menu.insanoPicture = 5;
       }
     }
     dudo--;
   } else {
-    ondud = 2;
+    menu.insanoPicture = 2;
   }
   rd.drawImage(
-    images.insano[ondud],
+    images.insano[menu.insanoPicture],
     10 * fm,
     260 * view.scaleY,
     274 * fm * 0.7,
@@ -5950,17 +5894,17 @@ function resetgame() {
   }
   if (dudo > 0) {
     if (blink.on) {
-      ondud = Math.floor(random.fx() * 6);
-      if (ondud == 6) {
-        ondud = 5;
+      menu.insanoPicture = Math.floor(random.fx() * 6);
+      if (menu.insanoPicture == 6) {
+        menu.insanoPicture = 5;
       }
     }
     dudo--;
   } else {
-    ondud = 2;
+    menu.insanoPicture = 2;
   }
   rd.drawImage(
-    images.insano[ondud],
+    images.insano[menu.insanoPicture],
     10 * fm,
     260 * view.scaleY,
     274 * fm * 0.7,
@@ -6054,7 +5998,7 @@ function drawloading() {
   grd.addColorStop(1, "#9A3300");
   rd.fillStyle = grd;
   rd.fillRect(0, 0, view.width, view.height);
-  var perc = dataload / datacnt;
+  var perc = loading.loaded / loading.total;
   if (perc > 1) {
     perc = 1;
   }
@@ -7690,16 +7634,16 @@ function drawonbordo() {
   }
   if (raceEvents.countdown > 130) {
     if (pwflk) {
-      ondud = Math.floor(random.fx() * 6);
-      if (ondud == 6) {
-        ondud = 5;
+      menu.insanoPicture = Math.floor(random.fx() * 6);
+      if (menu.insanoPicture == 6) {
+        menu.insanoPicture = 5;
       }
     }
   } else {
-    ondud = 2;
+    menu.insanoPicture = 2;
   }
   rd.drawImage(
-    images.insano[ondud],
+    images.insano[menu.insanoPicture],
     10 * fm,
     topo,
     274 * fm * 0.7,
@@ -8194,10 +8138,10 @@ var confc = 0;
 var morgn = random.fx();
 var unlcar = -1;
 function iniend() {
-  fredo = 0;
-  ondud = Math.floor(random.fx() * 6);
-  if (ondud == 6) {
-    ondud = 5;
+  menu.animation = 0;
+  menu.insanoPicture = Math.floor(random.fx() * 6);
+  if (menu.insanoPicture == 6) {
+    menu.insanoPicture = 5;
   }
   morgn = random.fx();
   unlcar = -1;
@@ -8239,13 +8183,13 @@ function iniend() {
 }
 function endgame() {
   rd.clearRect(0, 0, view.width, view.height);
-  if (fredo == 76) {
+  if (menu.animation == 76) {
     rd.globalAlpha = 0.1;
   }
   rd.save();
   rd.rotate((-15 + morgn * 25) * (Math.PI / 180));
   rd.drawImage(
-    images.insano[ondud],
+    images.insano[menu.insanoPicture],
     110 * morgn - 60,
     200 * view.scaleY,
     274 * view.scale,
@@ -8270,7 +8214,7 @@ function endgame() {
   );
   rd.restore();
   rd.globalAlpha = 1;
-  if (fredo != 76) {
+  if (menu.animation != 76) {
     var r = Math.floor(128 - 128 * scene.tint[0]);
     if (r > 255) {
       r = 255;
@@ -8295,7 +8239,7 @@ function endgame() {
     var hsl = rgbToHsl(r, g, b);
     var rgb = hslToRgb(hsl[0], 0.4, 0.1);
     rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
-    var alpb = fredo / 50;
+    var alpb = menu.animation / 50;
     if (alpb > 0.9) {
       alpb = 0.9;
     }
@@ -8303,7 +8247,7 @@ function endgame() {
     rd.fillRect(0, 0, view.width, view.height);
     rd.globalAlpha = 1;
   }
-  if (fredo >= 50) {
+  if (menu.animation >= 50) {
     var contxt = "Congradulations!";
     if (!raceEvents.winner) {
       contxt = "Game Over";
@@ -8384,7 +8328,7 @@ function endgame() {
           if (confg == 0) {
             if (Math.floor(confr) <= 28) {
               rd.drawImage(
-                confe[Math.floor(confr)],
+                images.confetti[Math.floor(confr)],
                 confl * 170 * view.scaleX,
                 0,
                 1280 * view.scaleX,
@@ -8458,18 +8402,18 @@ function endgame() {
       }
     }
   } else {
-    fredo++;
-    if (fredo == 50) {
+    menu.animation++;
+    if (menu.animation == 50) {
       for (var c = 0; c < game.carCount; c++) {
         fixcar(c);
       }
       if (unlcar != -1) {
-        fredo = 76;
+        menu.animation = 76;
         colorbgstforend();
-        updateframe = true;
-        carmy = -20;
-        carup = 0;
-        carms = 100;
+        menu.redraw = true;
+        showcase.height = -20;
+        showcase.bob = 0;
+        showcase.dropSpeed = 100;
         game.carTypes[0] = unlcar;
       }
     }
@@ -8484,16 +8428,16 @@ function afterend() {
       track.stage = Math.floor(3 + random.sim() * 13);
     }
   }
-  if (stanza == 1) {
-    reqload = 0;
-    dataload = 500;
-    datacnt = 2458;
-    stanza = 2;
-    onskip = true;
+  if (loading.stanza == 1) {
+    loading.step = 0;
+    loading.loaded = 500;
+    loading.total = 2458;
+    loading.stanza = 2;
+    menu.skipIntro = true;
     game.phase = PHASE.loading;
   } else {
-    fredo = 0;
-    onskip = true;
+    menu.animation = 0;
+    menu.skipIntro = true;
     game.phase = PHASE.mainMenu;
   }
 }
@@ -9034,7 +8978,7 @@ var bgsload = null;
 var stageloadtyp = 0;
 function stageloading() {
   rd.clearRect(0, 0, view.width, view.height);
-  if (stageload == 0 && (updateframe || stageloadtyp == 2)) {
+  if (stageload == 0 && (menu.redraw || stageloadtyp == 2)) {
     stageload = 0;
     loadstage();
     if (!isEngineLoaded(game.carTypes[0])) {
@@ -9093,7 +9037,7 @@ function stageloading() {
       ontip = false;
       if (hastip) {
         dudo = 0;
-        ondud = 0;
+        menu.insanoPicture = 0;
       }
       game.phase = PHASE.stageSelect;
     } else {
@@ -9164,9 +9108,9 @@ function drawstageselect() {
       }
       if (dudo > 50) {
         if (blink.on) {
-          ondud = Math.floor(random.fx() * 6);
-          if (ondud == 6) {
-            ondud = 5;
+          menu.insanoPicture = Math.floor(random.fx() * 6);
+          if (menu.insanoPicture == 6) {
+            menu.insanoPicture = 5;
           }
         }
       }
@@ -9176,7 +9120,7 @@ function drawstageselect() {
       }
       rd.globalAlpha = 0.6;
       rd.drawImage(
-        images.insano[ondud],
+        images.insano[menu.insanoPicture],
         70 * view.scaleX,
         720 * view.scaleY - 222 * view.scale,
         274 * view.scale * 0.8,
@@ -9607,17 +9551,17 @@ function drawstageselect() {
       }
       if (dudo < 200) {
         if (blink.on) {
-          ondud = Math.floor(random.fx() * 6);
-          if (ondud == 6) {
-            ondud = 5;
+          menu.insanoPicture = Math.floor(random.fx() * 6);
+          if (menu.insanoPicture == 6) {
+            menu.insanoPicture = 5;
           }
         }
         dudo++;
       } else {
-        ondud = 2;
+        menu.insanoPicture = 2;
       }
       rd.drawImage(
-        images.insano[ondud],
+        images.insano[menu.insanoPicture],
         10 * fm,
         topo,
         274 * fm * 0.7,
@@ -9688,7 +9632,7 @@ function aftersparkstart() {
     }
     track.nlaps = 1;
   }
-  updateframe = false;
+  menu.redraw = false;
   game.phase = PHASE.race;
 }
 function arrow(pnt, misdcp, pntcar) {
