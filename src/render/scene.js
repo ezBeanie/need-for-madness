@@ -34,3 +34,10 @@ export const fixHoop = newModel();
 // the sparks of a car being fixed in a fix hoop
 export const electricity = newModel();
 export const dustSprite = newModel();
+
+// the car presented in the menus: its wheels, per car type
+export const showcaseWheels = Array.from({ length: 19 }, () =>
+  Array.from({ length: 4 }, () => ({ x: 0, y: 0, z: 0, mat: null, dist: 0 })),
+);
+// the smoke drifting behind the car select
+export const menuSmoke = [];

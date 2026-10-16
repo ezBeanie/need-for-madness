@@ -12,13 +12,16 @@ import { raceEvents } from "../race/events.js";
 import { fixcar } from "../race/physics.js";
 import { track } from "../race/track.js";
 import { gl } from "../render/renderer.js";
-import { checkpointText, stageBackdrop } from "../render/scene.js";
+import { carModels, checkpointText, stageBackdrop } from "../render/scene.js";
 import { backdropHue, cssRgb, hslToRgb } from "../ui/color.js";
 import { images } from "../ui/images.js";
 import { rd, view } from "../ui/view.js";
 import { BUTTON, blink, drawButton } from "../ui/widgets.js";
-import { menu, showcase } from "./menuState.js";
+import { menu } from "./menuState.js";
+import { poseShowcaseCar, showcase } from "./showcase.js";
 import { insano, pickTalkingPicture } from "../ui/insano.js";
+import { camera, startProjection } from "../render/camera.js";
+import { resetMatrix } from "../render/interpolation.js";
 
 // menu.animation on this screen: it fades in until FADED_IN; an unlocked car is then
 // presented (see unlockedcar) while it is UNLOCKED_CAR_SHOWN.
@@ -331,3 +334,80 @@ const leaveRaceEnd = () => {
     game.phase = PHASE.mainMenu;
   }
 };
+
+// The unlocked car turns in front of the stage backdrop, rocking its nose up and down.
+export function unlockedcar() {
+  if (menu.animation == UNLOCKED_CAR_SHOWN) {
+    startProjection();
+    camera.x = 0;
+    camera.y = 0;
+    camera.z = 0;
+    camera.yaw = 0;
+    camera.pitch = 0;
+    const type = game.carTypes[0];
+    const body = carModels[type];
+    body.x = 0;
+    body.y = carStats.wly[type][1] + 1.5 * carStats.wlh[type][1] - 17;
+    body.z = -80;
+    body.ont = 0;
+    showcase.spin += 2;
+    if (showcase.spin > 360) {
+      showcase.spin -= 360;
+    }
+    // here showcase.height is the pitch, rising while bob is 1, turning every 100 ticks
+    showcase.pitch = showcase.height;
+    if (showcase.bob) {
+      showcase.height++;
+      if (showcase.height > 20) {
+        showcase.height = 20;
+      }
+    } else {
+      showcase.height--;
+      if (showcase.height < -20) {
+        showcase.height = -20;
+      }
+    }
+    showcase.dropSpeed--;
+    if (showcase.dropSpeed == 0) {
+      if (showcase.bob == 0) {
+        showcase.bob = 1;
+      } else {
+        showcase.bob = 0;
+      }
+      showcase.dropSpeed = 100;
+    }
+    poseShowcaseCar(type);
+    stageBackdrop.mat = resetMatrix(stageBackdrop.mat);
+    mat4.rotate(
+      stageBackdrop.mat,
+      stageBackdrop.mat,
+      camera.yaw * (Math.PI / 180),
+      [0, -1, 0],
+    );
+    mat4.rotate(
+      stageBackdrop.mat,
+      stageBackdrop.mat,
+      camera.pitch * (Math.PI / 180),
+      [-1, 0, 0],
+    );
+    stageBackdrop.mat[0] *= view.aspect * 0.5625;
+    stageBackdrop.mat[1] *= view.aspect * 0.5625;
+    stageBackdrop.mat[2] *= view.aspect * 0.5625;
+    stageBackdrop.x = 0;
+    stageBackdrop.y = 0;
+    stageBackdrop.z = -90;
+    mat4.rotate(
+      camera.matrix,
+      camera.matrix,
+      camera.pitch * (Math.PI / 180),
+      [1, 0, 0],
+    );
+    mat4.rotate(
+      camera.matrix,
+      camera.matrix,
+      camera.yaw * (Math.PI / 180),
+      [0, 1, 0],
+    );
+    menu.redraw = true;
+  }
+}

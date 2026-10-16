@@ -10,7 +10,7 @@ export const drawnMatrix = (ctx, rad, inst) => {
 
 // Where the wheels of car type typ are drawn, seen from the drawn car body, as attached
 // to it by the last render(). body and wheels are the instances drawn: car[c] and
-// racers[c].wheels in a race, carModels[typ] and whl[typ] in the menus.
+// racers[c].wheels in a race, carModels[typ] and showcaseWheels[typ] in the menus.
 export const wheelsOnBody = (ctx, typ, body, wheels, alpha) => {
   const { mat4 } = ctx;
   ctx.interpolation.alpha = alpha;

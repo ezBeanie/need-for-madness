@@ -60,8 +60,28 @@ const merge = (src) => {
   return applyEdits(src, edits);
 };
 
+// Named imports appended by extract.cjs may import a name twice, which does not parse, and
+// sit below the code: merge them as text and put them all right below the header comment.
+const NAMED_IMPORT = /^import \{([^}]*)\} from "([^"]+)";\n/gm;
+const mergeAsText = (src) => {
+  src = src.replace(/^\/\/ TODO merge imports:\n/m, "");
+  const matches = [...src.matchAll(NAMED_IMPORT)];
+  const sources = matches.map((m) => m[2]);
+  const header = src.match(/^(?:\/\/.*\n)*\n*/)[0];
+  const atTop = matches.every((m, i) => i === 0 ? m.index === header.length : m.index === matches[i - 1].index + matches[i - 1][0].length);
+  if (!matches.length || (atTop && new Set(sources).size === sources.length)) return src;
+  const bySource = new Map();
+  for (const [, names, source] of matches) {
+    if (!bySource.has(source)) bySource.set(source, new Set());
+    names.split(",").map((n) => n.trim()).filter(Boolean).forEach((n) => bySource.get(source).add(n));
+  }
+  const block = [...bySource].map(([source, names]) => `import { ${[...names].sort().join(", ")} } from "${source}";\n`).join("");
+  const rest = src.replace(NAMED_IMPORT, "").slice(header.length).replace(/^\n+/, "");
+  return (header && !header.endsWith("\n\n") ? header + "\n" : header) + block + "\n" + rest;
+};
+
 for (const file of process.argv.slice(2)) {
-  const { out, removed } = prune(fs.readFileSync(file, "utf8"));
+  const { out, removed } = prune(mergeAsText(fs.readFileSync(file, "utf8")));
   fs.writeFileSync(file, merge(out));
   console.log(file, "removed", removed.join(",") || "nothing");
 }

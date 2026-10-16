@@ -28,7 +28,8 @@ import {
   pulseButtons,
 } from "../ui/widgets.js";
 import { PAGE, TALK_TICKS, instructions } from "./instructions.js";
-import { SHOWCASE, menu, showcase } from "./menuState.js";
+import { menu } from "./menuState.js";
+import { SHOWCASE, showcase } from "./showcase.js";
 
 // menu.animation of the main menu
 const OPENED = 0;

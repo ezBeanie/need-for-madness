@@ -1,3 +1,5 @@
+import { view } from "../ui/view.js";
+
 // The camera, as the game logic moves it every tick (drawing interpolates it, see
 // interpolation.js).
 export const camera = {
@@ -29,4 +31,10 @@ export const camera = {
   relocate: false,
   // mode 3: progress from target to nextTarget, 0..30
   transition: 0,
+};
+
+// A fresh projection with a field of view of 55 degrees; the camera's turns follow it.
+export const startProjection = () => {
+  camera.matrix = mat4.create();
+  mat4.perspective(camera.matrix, (55 * Math.PI) / 180, view.aspect, 0.1, 7000);
 };
