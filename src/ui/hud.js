@@ -1784,275 +1784,241 @@ export function drawHighlightOverlay() {
     darken(0.7);
   }
 }
-export function arrow(pnt, misdcp, pntcar) {
-  var xp = [];
-  var yp = [];
-  var zp = [];
-  var cx = 0;
-  var cy = -315;
-  var cz = 700;
-  for (var i = 0; i < 7; i++) {
-    yp[i] = cy;
-  }
-  xp[0] = cx;
-  zp[0] = cz + 110;
-  xp[1] = cx - 35;
-  zp[1] = cz + 50;
-  xp[2] = cx - 10;
-  zp[2] = cz + 50;
-  xp[3] = cx - 15;
-  zp[3] = cz - 50;
-  xp[4] = cx + 15;
-  zp[4] = cz - 50;
-  xp[5] = cx + 10;
-  zp[5] = cz + 50;
-  xp[6] = cx + 35;
-  zp[6] = cz + 50;
-  var an = 0;
-  if (!pntcar) {
-    var ad = 180;
-    if (track.x[pnt] - car[game.player].x > 0) {
-      ad = 0;
+// The arrow lies on a plane before the screen: its seven corners (x, z) around the
+// centre (ARROW_CENTER_X, ARROW_CENTER_Z), at the height ARROW_Y, seen in perspective.
+const ARROW_CENTER_X = 0;
+const ARROW_CENTER_Z = 700;
+const ARROW_Y = -315;
+const ARROW_X = [0, -35, -10, -15, 15, 10, 35];
+const ARROW_Z = [810, 750, 750, 650, 650, 750, 750];
+
+// The perspective of the arrow's plane.
+const projectX = (x, z) => ((z - 400) * -x) / z + x;
+const projectY = (y, z) => ((z - 400) * -y) / z + y;
+
+// The heading (degrees) from the player's car to (x, z).
+const headingTo = (x, z) => {
+  const half = x - car[game.player].x > 0 ? 0 : 180;
+  return -(
+    90 +
+    half +
+    Math.atan((z - car[game.player].z) / (x - car[game.player].x)) /
+      0.017453292519943295
+  );
+};
+
+// Which opponents are in front of the player's car and on the screen (horizontally).
+const onScreen = [];
+const markCarsOnScreen = () => {
+  const player = car[game.player];
+  const forward = [player.mat[8], player.mat[9], player.mat[10]];
+  const along = [
+    (c) => car[c].x - player.x,
+    (c) => car[c].y - player.y,
+    (c) => car[c].z - player.z,
+  ];
+  for (let i = 0; i < game.carCount; i++) {
+    onScreen[i] = false;
+    if (i == game.player) {
+      continue;
     }
-    an = -(
-      90 +
-      ad +
-      Math.atan(
-        (track.z[pnt] - car[game.player].z) /
-          (track.x[pnt] - car[game.player].x),
-      ) /
-        0.017453292519943295
-    );
-  } else {
-    findonscreen();
-    var pnti = 0;
-    var clospy = -1;
-    var gotons = false;
-    for (var i = 0; i < game.carCount; i++) {
-      if (i != game.player) {
-        var pycar = pyo(
-          car[game.player].x / 10,
-          car[i].x / 10,
-          car[game.player].z / 10,
-          car[i].z / 10,
-        );
-        if (pycar < clospy || clospy == -1) {
-          if (!gotons || onscreen[i]) {
-            if (track.dested[i] == 0) {
-              pnti = i;
-              clospy = pycar;
-              if (onscreen[i]) {
-                gotons = true;
-              }
-            }
-          }
-        }
+    // ahead along the axis the car points along most
+    let inFront = false;
+    for (let axis = 0; axis < 3; axis++) {
+      const others = [0, 1, 2].filter((a) => a != axis);
+      if (others.every((a) => Math.abs(forward[axis]) > Math.abs(forward[a]))) {
+        inFront = forward[axis] > 0 ? along[axis](i) > 0 : along[axis](i) < 0;
       }
     }
-    var ad = 180;
-    if (car[pnti].x - car[game.player].x > 0) {
-      ad = 0;
+    if (inFront) {
+      const position = screenPosition(camera.matrix, car[i]);
+      if (
+        position[0] > -(15 * view.scaleX) &&
+        position[0] < view.width + 15 * view.scaleX
+      ) {
+        onScreen[i] = true;
+      }
     }
-    an = -(
-      90 +
-      ad +
-      Math.atan(
-        (car[pnti].z - car[game.player].z) / (car[pnti].x - car[game.player].x),
-      ) /
-        0.017453292519943295
+  }
+};
+
+// The closest opponent still racing, preferring those on the screen; its name goes on
+// top of the screen.
+const closestOpponent = () => {
+  markCarsOnScreen();
+  let target = 0;
+  let closest = -1;
+  let foundOnScreen = false;
+  for (let i = 0; i < game.carCount; i++) {
+    if (i == game.player) {
+      continue;
+    }
+    const distance = pyo(
+      car[game.player].x / 10,
+      car[i].x / 10,
+      car[game.player].z / 10,
+      car[i].z / 10,
     );
-    var stspace = "";
-    for (var i = 0; i < carStats.names[car[pnti].typ].length; i++) {
-      stspace += "  ";
-    }
-    drawCenteredText(16, "[" + stspace + "]", 76, 67, 240, TEXT.label);
-    drawCenteredText(18, carStats.names[car[pnti].typ], 0, 0, 0, TEXT.label);
-  }
-  an += camera.yaw;
-  while (an < 0) {
-    an += 360;
-  }
-  while (an > 180) {
-    an -= 360;
-  }
-  if (!pntcar) {
-    if (an > 130) {
-      an = 130;
-    }
-    if (an < -130) {
-      an = -130;
-    }
-  } else {
-    if (an > 100) {
-      an = 100;
-    }
-    if (an < -100) {
-      an = -100;
+    if (
+      (distance < closest || closest == -1) &&
+      (!foundOnScreen || onScreen[i]) &&
+      track.dested[i] == 0
+    ) {
+      target = i;
+      closest = distance;
+      if (onScreen[i]) {
+        foundOnScreen = true;
+      }
     }
   }
-  if (Math.abs(arrowAngle - an) < 180) {
-    if (Math.abs(arrowAngle - an) < 10) {
-      arrowAngle = an;
+  return target;
+};
+
+const drawTargetName = (target) => {
+  const name = carStats.names[car[target].typ];
+  drawCenteredText(
+    16,
+    "[" + "  ".repeat(name.length) + "]",
+    76,
+    67,
+    240,
+    TEXT.label,
+  );
+  drawCenteredText(18, name, 0, 0, 0, TEXT.label);
+};
+
+// Turns the drawn arrow towards the heading: in steps of 10 degrees, or 15 the other way
+// round when that is shorter.
+const turnArrowTowards = (heading) => {
+  if (Math.abs(arrowAngle - heading) < 180) {
+    if (Math.abs(arrowAngle - heading) < 10) {
+      arrowAngle = heading;
+    } else if (arrowAngle < heading) {
+      arrowAngle += 10;
     } else {
-      if (arrowAngle < an) {
-        arrowAngle += 10;
-      } else {
-        arrowAngle -= 10;
+      arrowAngle -= 10;
+    }
+    return;
+  }
+  if (heading < 0) {
+    arrowAngle += 15;
+    if (arrowAngle > 180) {
+      arrowAngle -= 360;
+    }
+  }
+  if (heading > 0) {
+    arrowAngle -= 15;
+    if (arrowAngle < -180) {
+      arrowAngle += 360;
+    }
+  }
+};
+
+const projectArrow = (xs, ys, zs) => {
+  for (let i = 0; i < 7; i++) {
+    xs[i] = projectX(xs[i], zs[i]) * 1.6 * view.scale;
+    ys[i] = projectY(ys[i], zs[i]) * 1.6 * view.scale;
+    xs[i] += 640 * view.scaleX;
+    ys[i] += (360 + view.widescreenShift) * view.scaleY;
+  }
+};
+
+// Along the track the arrow fades out when it points straight ahead, turns red when it
+// points backwards, and blinks after a missed checkpoint.
+const drawTrackArrow = (xs, ys, missed) => {
+  const angle = Math.abs(arrowAngle);
+  const fades = angle <= 45 && missed != -2 && wrongWayTicks == 0;
+  let r = 190;
+  let g = 255;
+  const b = 0;
+  if (missed <= 0) {
+    if (fades) {
+      rd.globalAlpha = angle / 45;
+    }
+    if (angle >= 90) {
+      r = (r * (140 - angle) + 255 * (angle - 90)) / 50;
+      if (r > 255) {
+        r = 255;
       }
+    }
+  } else if (warningBlink) {
+    r = 255;
+    warningBlink = false;
+  } else {
+    r = 255;
+    g = 220;
+    warningBlink = true;
+  }
+  rd.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
+  fillPolygon(xs, ys, 7);
+  rd.globalAlpha = 1;
+  r = 115;
+  g = 170;
+  if (missed <= 0) {
+    if (fades) {
+      rd.globalAlpha = angle / 45;
+    }
+  } else if (warningBlink) {
+    r = 255;
+    g = 0;
+  }
+  rd.strokeStyle = "rgb(" + r + "," + g + "," + b + ")";
+  rd.lineWidth = 2.6 * view.scale;
+  strokePolygon(xs, ys, 7);
+  rd.globalAlpha = 1;
+};
+
+const drawCarArrow = (xs, ys) => {
+  rd.fillStyle = "rgb(" + 159 + "," + 207 + "," + 255 + ")";
+  fillPolygon(xs, ys, 7);
+  rd.strokeStyle = "rgb(" + 120 + "," + 114 + "," + 255 + ")";
+  rd.lineWidth = 2.6 * view.scale;
+  strokePolygon(xs, ys, 7);
+};
+
+// The arrow on top of the screen: towards the path point the car heads for, or to the
+// closest opponent. missed is the car's missed checkpoint counter.
+export function arrow(pathPoint, missed, atCars) {
+  const xs = [...ARROW_X];
+  const ys = Array(7).fill(ARROW_Y);
+  const zs = [...ARROW_Z];
+  let heading = 0;
+  if (!atCars) {
+    heading = headingTo(track.x[pathPoint], track.z[pathPoint]);
+  } else {
+    const target = closestOpponent();
+    heading = headingTo(car[target].x, car[target].z);
+    drawTargetName(target);
+  }
+  heading += camera.yaw;
+  while (heading < 0) {
+    heading += 360;
+  }
+  while (heading > 180) {
+    heading -= 360;
+  }
+  // it points at most sideways and a little back
+  const limit = atCars ? 100 : 130;
+  if (heading > limit) {
+    heading = limit;
+  }
+  if (heading < -limit) {
+    heading = -limit;
+  }
+  turnArrowTowards(heading);
+  rotate(xs, zs, ARROW_CENTER_X, ARROW_CENTER_Z, arrowAngle, 7);
+  if (!atCars) {
+    if (
+      Math.abs(arrowAngle) > 7 ||
+      missed > 0 ||
+      missed == -2 ||
+      wrongWayTicks != 0
+    ) {
+      projectArrow(xs, ys, zs);
+      drawTrackArrow(xs, ys, missed);
     }
   } else {
-    if (an < 0) {
-      arrowAngle += 15;
-      if (arrowAngle > 180) {
-        arrowAngle -= 360;
-      }
-    }
-    if (an > 0) {
-      arrowAngle -= 15;
-      if (arrowAngle < -180) {
-        arrowAngle += 360;
-      }
-    }
+    projectArrow(xs, ys, zs);
+    drawCarArrow(xs, ys);
   }
-  rotate(xp, zp, cx, cz, arrowAngle, 7);
-  an = Math.abs(arrowAngle);
-  if (!pntcar) {
-    if (an > 7 || misdcp > 0 || misdcp == -2 || wrongWayTicks != 0) {
-      for (var i = 0; i < 7; i++) {
-        xp[i] = xs(xp[i], zp[i]) * 1.6 * view.scale;
-        yp[i] = ys(yp[i], zp[i]) * 1.6 * view.scale;
-        xp[i] += 640 * view.scaleX;
-        yp[i] += (360 + view.widescreenShift) * view.scaleY;
-      }
-      var r = 190;
-      var g = 255;
-      var b = 0;
-      if (misdcp <= 0) {
-        if (an <= 45 && misdcp != -2 && wrongWayTicks == 0) {
-          rd.globalAlpha = an / 45;
-        }
-        if (an >= 90) {
-          var tr = 255;
-          r = (r * (140 - an) + tr * (an - 90)) / 50;
-          if (r > 255) {
-            r = 255;
-          }
-        }
-      } else {
-        if (warningBlink) {
-          r = 255;
-          warningBlink = false;
-        } else {
-          r = 255;
-          g = 220;
-          warningBlink = true;
-        }
-      }
-      rd.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
-      fillPolygon(xp, yp, 7);
-      rd.globalAlpha = 1;
-      r = 115;
-      g = 170;
-      b = 0;
-      if (misdcp <= 0) {
-        if (an <= 45 && misdcp != -2 && wrongWayTicks == 0) {
-          rd.globalAlpha = an / 45;
-        }
-      } else {
-        if (warningBlink) {
-          r = 255;
-          g = 0;
-        }
-      }
-      rd.strokeStyle = "rgb(" + r + "," + g + "," + b + ")";
-      rd.lineWidth = 2.6 * view.scale;
-      strokePolygon(xp, yp, 7);
-      rd.globalAlpha = 1;
-    }
-  } else {
-    for (var i = 0; i < 7; i++) {
-      xp[i] = xs(xp[i], zp[i]) * 1.6 * view.scale;
-      yp[i] = ys(yp[i], zp[i]) * 1.6 * view.scale;
-      xp[i] += 640 * view.scaleX;
-      yp[i] += (360 + view.widescreenShift) * view.scaleY;
-    }
-    var r = 159;
-    var g = 207;
-    var b = 255;
-    rd.fillStyle = "rgb(" + r + "," + g + "," + b + ")";
-    fillPolygon(xp, yp, 7);
-    r = 120;
-    g = 114;
-    b = 255;
-    rd.strokeStyle = "rgb(" + r + "," + g + "," + b + ")";
-    rd.lineWidth = 2.6 * view.scale;
-    strokePolygon(xp, yp, 7);
-  }
-}
-var onscreen = [];
-function findonscreen() {
-  for (var i = 0; i < game.carCount; i++) {
-    onscreen[i] = false;
-    if (i != game.player) {
-      var isinfront = false;
-      if (
-        Math.abs(car[game.player].mat[8]) > Math.abs(car[game.player].mat[9]) &&
-        Math.abs(car[game.player].mat[8]) > Math.abs(car[game.player].mat[10])
-      ) {
-        if (car[game.player].mat[8] > 0) {
-          if (car[i].x > car[game.player].x) {
-            isinfront = true;
-          }
-        } else {
-          if (car[i].x < car[game.player].x) {
-            isinfront = true;
-          }
-        }
-      }
-      if (
-        Math.abs(car[game.player].mat[9]) > Math.abs(car[game.player].mat[8]) &&
-        Math.abs(car[game.player].mat[9]) > Math.abs(car[game.player].mat[10])
-      ) {
-        if (car[game.player].mat[9] > 0) {
-          if (car[i].y > car[game.player].y) {
-            isinfront = true;
-          }
-        } else {
-          if (car[i].y < car[game.player].y) {
-            isinfront = true;
-          }
-        }
-      }
-      if (
-        Math.abs(car[game.player].mat[10]) >
-          Math.abs(car[game.player].mat[8]) &&
-        Math.abs(car[game.player].mat[10]) > Math.abs(car[game.player].mat[9])
-      ) {
-        if (car[game.player].mat[10] > 0) {
-          if (car[i].z > car[game.player].z) {
-            isinfront = true;
-          }
-        } else {
-          if (car[i].z < car[game.player].z) {
-            isinfront = true;
-          }
-        }
-      }
-      if (isinfront) {
-        var onscpos = screenPosition(camera.matrix, car[i]);
-        if (
-          onscpos[0] > -(15 * view.scaleX) &&
-          onscpos[0] < view.width + 15 * view.scaleX
-        ) {
-          onscreen[i] = true;
-        }
-      }
-    }
-  }
-}
-function xs(x, z) {
-  return ((z - 400) * -x) / z + x;
-}
-function ys(y, z) {
-  return ((z - 400) * -y) / z + y;
 }
