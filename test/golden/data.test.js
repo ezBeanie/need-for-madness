@@ -26,15 +26,15 @@ describe("parsed stage data matches the golden master", () => {
     "stage %i",
     async (stage) => {
       const { ctx } = await startRace({ stage, car: 5 });
-      const cp = ctx.cp;
+      const cp = ctx.track;
       const range = (n) => Array.from({ length: n }, (_, i) => i);
       expectGolden(`stage-${String(stage).padStart(2, "0")}`, {
         name: cp.name,
         nlaps: cp.nlaps,
         checkpoints: cp.nsp,
-        fixPoints: ctx.nf,
-        pieces: range(ctx.nb).map((i) => {
-          const o = ctx.obo[i];
+        fixPoints: ctx.pieces.fixCount,
+        pieces: range(ctx.pieces.count).map((i) => {
+          const o = ctx.pieces.list[i];
           return [
             o.typ,
             o.x,

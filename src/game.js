@@ -71,6 +71,7 @@ import { canvas2D, rd, view } from "./ui/view.js";
 import { camera } from "./render/camera.js";
 import { game, PHASE } from "./core/state.js";
 import { racers } from "./race/racers.js";
+import { pieceModels, pieces, track } from "./race/track.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 var camrs, pyclos, pnext, pback, onycl;
@@ -964,13 +965,13 @@ function shadoworks() {
     shad[car[c].typ].mat[1] = 0;
     shad[car[c].typ].mat[5] = 1;
     shad[car[c].typ].mat[9] = 0;
-    for (var i = 0; i < nb; i++) {
-      if (build[obo[i].typ].intershad) {
-        build[obo[i].typ].x = obo[i].x;
-        build[obo[i].typ].y = obo[i].y;
-        build[obo[i].typ].z = obo[i].z;
-        build[obo[i].typ].mat = obo[i].mat;
-        shadowmap(car[c], shad[car[c].typ], build[obo[i].typ]);
+    for (var i = 0; i < pieces.count; i++) {
+      if (pieceModels[pieces.list[i].typ].intershad) {
+        pieceModels[pieces.list[i].typ].x = pieces.list[i].x;
+        pieceModels[pieces.list[i].typ].y = pieces.list[i].y;
+        pieceModels[pieces.list[i].typ].z = pieces.list[i].z;
+        pieceModels[pieces.list[i].typ].mat = pieces.list[i].mat;
+        shadowmap(car[c], shad[car[c].typ], pieceModels[pieces.list[i].typ]);
       }
     }
   }
@@ -1355,10 +1356,6 @@ var cptext = newParticleModel();
 var fntext = newParticleModel();
 var bgst = newParticleModel();
 var timetube = newParticleModel();
-var build = [];
-for (var i = 0; i < 66; i++) {
-  build[i] = newModel();
-}
 var fixdisk = newModel();
 var elec = newModel();
 var sprite = newModel();
@@ -1410,12 +1407,12 @@ function loaddata() {
         if (game.unlocked == -1) {
           game.unlocked = 1;
         }
-        cp.stage = game.unlocked;
+        track.stage = game.unlocked;
         if (game.unlocked >= 5) {
           cntkeys = 200;
         }
-        if (cp.stage == 17) {
-          cp.stage = Math.floor(3 + random.sim() * 13);
+        if (track.stage == 17) {
+          track.stage = Math.floor(3 + random.sim() * 13);
           canreset = true;
         }
       }
@@ -1598,7 +1595,7 @@ function loaddata() {
             }
           }
           if (loadthis) {
-            loadModel("data/3D/" + defb[i] + ".r3d", build[i]);
+            loadModel("data/3D/" + defb[i] + ".r3d", pieceModels[i]);
           }
         }
       }
@@ -1779,9 +1776,13 @@ function loaddata() {
       }
     }
     for (var i = 0; i < 66; i++) {
-      if (i != 40 && build[i].loaded && build[i].loaded == build[i].nt + 1) {
+      if (
+        i != 40 &&
+        pieceModels[i].loaded &&
+        pieceModels[i].loaded == pieceModels[i].nt + 1
+      ) {
         dataload += 7;
-        build[i].loaded++;
+        pieceModels[i].loaded++;
       }
     }
     for (var i = 0; i < 19; i++) {
@@ -1880,21 +1881,20 @@ var tip = [];
 function newobo() {
   return { typ: 0, x: 0, z: 0, mat: null, bnd: [0, 0, 0, 0], iscp: 0 };
 }
-var nb = 0;
-var obo = [];
+
 var stageload = 0;
 function loadstage() {
   stageload = 1;
   var rawFile = new XMLHttpRequest();
-  rawFile.open("GET", "data/stages/" + cp.stage + ".txt", true);
+  rawFile.open("GET", "data/stages/" + track.stage + ".txt", true);
   rawFile.onreadystatechange = function () {
     if (rawFile.readyState === 4) {
       if (rawFile.status === 200 || rawFile.status == 0) {
         var allText = rawFile.responseText;
-        cp.n = 0;
-        cp.nsp = 0;
-        nb = 0;
-        nf = 0;
+        track.n = 0;
+        track.nsp = 0;
+        pieces.count = 0;
+        pieces.fixCount = 0;
         adod = 0;
         snap = [0, 0, 0];
         var skyc = [];
@@ -1913,10 +1913,10 @@ function loadstage() {
             return valueOf(e, field);
           };
           if (e.command == "name") {
-            cp.name = e.name ?? "";
+            track.name = e.name ?? "";
           }
           if (e.command == "nlaps") {
-            cp.nlaps = v("laps");
+            track.nlaps = v("laps");
           }
           if (e.command == "addon") {
             adod = v("count");
@@ -1952,7 +1952,7 @@ function loadstage() {
               v("saturation"),
             );
           }
-          if (cp.stage >= 3 && game.unlocked == cp.stage) {
+          if (track.stage >= 3 && game.unlocked == track.stage) {
             if (e.command == "tip") {
               tip[hastip] = e.text ?? "";
               tip[hastip] = tip[hastip].replace("[", "(");
@@ -1981,197 +1981,207 @@ function loadstage() {
             bounded = true;
           }
           if (e.command == "set") {
-            obo[nb] = newobo();
-            obo[nb].mat = mat4.create();
-            obo[nb].typ = v("piece") - 10;
+            pieces.list[pieces.count] = newobo();
+            pieces.list[pieces.count].mat = mat4.create();
+            pieces.list[pieces.count].typ = v("piece") - 10;
             if (bounded) {
               for (var k = 0; k < 4; k++) {
-                obo[nb].bnd[k] = bounds[k];
+                pieces.list[pieces.count].bnd[k] = bounds[k];
               }
               bounded = false;
             }
-            obo[nb].x = -(v("x") / 10);
-            obo[nb].y = 0;
-            obo[nb].z = v("z") / 10;
+            pieces.list[pieces.count].x = -(v("x") / 10);
+            pieces.list[pieces.count].y = 0;
+            pieces.list[pieces.count].z = v("z") / 10;
             var rot = v("rotation");
             mat4.rotate(
-              obo[nb].mat,
-              obo[nb].mat,
+              pieces.list[pieces.count].mat,
+              pieces.list[pieces.count].mat,
               rot * (Math.PI / 180),
               [0, 1, 0],
             );
             if (Math.abs(rot) == 90) {
-              obo[nb].bx = build[obo[nb].typ].bz;
-              obo[nb].bz = build[obo[nb].typ].bx;
+              pieces.list[pieces.count].bx =
+                pieceModels[pieces.list[pieces.count].typ].bz;
+              pieces.list[pieces.count].bz =
+                pieceModels[pieces.list[pieces.count].typ].bx;
             } else {
-              obo[nb].bx = build[obo[nb].typ].bx;
-              obo[nb].bz = build[obo[nb].typ].bz;
+              pieces.list[pieces.count].bx =
+                pieceModels[pieces.list[pieces.count].typ].bx;
+              pieces.list[pieces.count].bz =
+                pieceModels[pieces.list[pieces.count].typ].bz;
             }
-            obo[nb].bx += 15;
-            obo[nb].bz += 15;
-            obo[nb].by = build[obo[nb].typ].by;
-            if (obo[nb].typ == 39) {
-              obo[nb].rot = rot;
+            pieces.list[pieces.count].bx += 15;
+            pieces.list[pieces.count].bz += 15;
+            pieces.list[pieces.count].by =
+              pieceModels[pieces.list[pieces.count].typ].by;
+            if (pieces.list[pieces.count].typ == 39) {
+              pieces.list[pieces.count].rot = rot;
             }
             var path = pathType(e);
             if (path !== null) {
-              cp.x[cp.n] = obo[nb].x;
-              cp.z[cp.n] = obo[nb].z;
-              cp.y[cp.n] = 0;
-              cp.typ[cp.n] = path;
-              cp.obi[cp.n] = nb;
-              cp.n++;
+              track.x[track.n] = pieces.list[pieces.count].x;
+              track.z[track.n] = pieces.list[pieces.count].z;
+              track.y[track.n] = 0;
+              track.typ[track.n] = path;
+              track.obi[track.n] = pieces.count;
+              track.n++;
             }
-            nb++;
+            pieces.count++;
           }
           if (e.command == "chk") {
-            obo[nb] = newobo();
-            obo[nb].mat = mat4.create();
-            obo[nb].typ = v("piece") - 10;
-            obo[nb].x = -(v("x") / 10);
-            obo[nb].y = 0.4;
-            obo[nb].z = v("z") / 10;
+            pieces.list[pieces.count] = newobo();
+            pieces.list[pieces.count].mat = mat4.create();
+            pieces.list[pieces.count].typ = v("piece") - 10;
+            pieces.list[pieces.count].x = -(v("x") / 10);
+            pieces.list[pieces.count].y = 0.4;
+            pieces.list[pieces.count].z = v("z") / 10;
             var rot = v("rotation");
             mat4.rotate(
-              obo[nb].mat,
-              obo[nb].mat,
+              pieces.list[pieces.count].mat,
+              pieces.list[pieces.count].mat,
               rot * (Math.PI / 180),
               [0, 1, 0],
             );
-            if (obo[nb].typ == 54) {
-              obo[nb].y = -(v("y") / 10);
+            if (pieces.list[pieces.count].typ == 54) {
+              pieces.list[pieces.count].y = -(v("y") / 10);
             }
             if (Math.abs(rot) == 90) {
-              obo[nb].bx = build[obo[nb].typ].bz;
-              obo[nb].bz = build[obo[nb].typ].bx;
+              pieces.list[pieces.count].bx =
+                pieceModels[pieces.list[pieces.count].typ].bz;
+              pieces.list[pieces.count].bz =
+                pieceModels[pieces.list[pieces.count].typ].bx;
             } else {
-              obo[nb].bx = build[obo[nb].typ].bx;
-              obo[nb].bz = build[obo[nb].typ].bz;
+              pieces.list[pieces.count].bx =
+                pieceModels[pieces.list[pieces.count].typ].bx;
+              pieces.list[pieces.count].bz =
+                pieceModels[pieces.list[pieces.count].typ].bz;
             }
-            obo[nb].bx += 15;
-            obo[nb].bz += 15;
-            obo[nb].by = build[obo[nb].typ].by;
-            cp.x[cp.n] = obo[nb].x;
-            cp.z[cp.n] = obo[nb].z;
-            cp.y[cp.n] = obo[nb].y;
-            cp.obi[cp.n] = nb;
+            pieces.list[pieces.count].bx += 15;
+            pieces.list[pieces.count].bz += 15;
+            pieces.list[pieces.count].by =
+              pieceModels[pieces.list[pieces.count].typ].by;
+            track.x[track.n] = pieces.list[pieces.count].x;
+            track.z[track.n] = pieces.list[pieces.count].z;
+            track.y[track.n] = pieces.list[pieces.count].y;
+            track.obi[track.n] = pieces.count;
             if (rot == 0) {
-              cp.typ[cp.n] = 1;
+              track.typ[track.n] = 1;
             } else {
-              cp.typ[cp.n] = 2;
+              track.typ[track.n] = 2;
             }
-            cp.pcs = cp.n;
-            cp.n++;
-            cp.obn[cp.nsp] = nb;
-            cp.nsp++;
-            obo[nb].iscp = cp.nsp;
-            nb++;
+            track.pcs = track.n;
+            track.n++;
+            track.obn[track.nsp] = pieces.count;
+            track.nsp++;
+            pieces.list[pieces.count].iscp = track.nsp;
+            pieces.count++;
           }
           if (e.command == "fix") {
-            obo[nb] = newobo();
-            obo[nb].mat = mat4.create();
-            obo[nb].typ = v("piece") - 10;
-            obo[nb].x = -(v("x") / 10);
-            obo[nb].z = v("z") / 10;
-            obo[nb].y = -(v("y") / 10) + 25;
+            pieces.list[pieces.count] = newobo();
+            pieces.list[pieces.count].mat = mat4.create();
+            pieces.list[pieces.count].typ = v("piece") - 10;
+            pieces.list[pieces.count].x = -(v("x") / 10);
+            pieces.list[pieces.count].z = v("z") / 10;
+            pieces.list[pieces.count].y = -(v("y") / 10) + 25;
             var rot = v("rotation");
             mat4.rotate(
-              obo[nb].mat,
-              obo[nb].mat,
+              pieces.list[pieces.count].mat,
+              pieces.list[pieces.count].mat,
               rot * (Math.PI / 180),
               [0, 1, 0],
             );
-            cp.special[nf] = isSpecialFix(e);
-            fi[nf] = nb;
-            nf++;
-            nb++;
+            track.special[pieces.fixCount] = isSpecialFix(e);
+            pieces.fixes[pieces.fixCount] = pieces.count;
+            pieces.fixCount++;
+            pieces.count++;
           }
           if (e.command == "maxr") {
             var num = v("count");
             var limit = -(v("limit") / 10);
             limr = limit + 5;
-            limro = nb;
+            limro = pieces.count;
             var strt = v("start") / 10;
             for (var c = 0; c < num; c++) {
-              obo[nb] = newobo();
-              obo[nb].mat = mat4.create();
-              obo[nb].typ = 29;
-              obo[nb].x = limit;
-              obo[nb].y = 0;
-              obo[nb].z = c * 480 + strt;
-              nb++;
+              pieces.list[pieces.count] = newobo();
+              pieces.list[pieces.count].mat = mat4.create();
+              pieces.list[pieces.count].typ = 29;
+              pieces.list[pieces.count].x = limit;
+              pieces.list[pieces.count].y = 0;
+              pieces.list[pieces.count].z = c * 480 + strt;
+              pieces.count++;
             }
           }
           if (e.command == "maxl") {
             var num = v("count");
             var limit = -(v("limit") / 10);
             liml = limit - 5;
-            limlo = nb;
+            limlo = pieces.count;
             var strt = v("start") / 10;
             for (var c = 0; c < num; c++) {
-              obo[nb] = newobo();
-              obo[nb].mat = mat4.create();
-              obo[nb].typ = 29;
-              obo[nb].x = limit;
-              obo[nb].y = 0;
-              obo[nb].z = c * 480 + strt;
+              pieces.list[pieces.count] = newobo();
+              pieces.list[pieces.count].mat = mat4.create();
+              pieces.list[pieces.count].typ = 29;
+              pieces.list[pieces.count].x = limit;
+              pieces.list[pieces.count].y = 0;
+              pieces.list[pieces.count].z = c * 480 + strt;
               mat4.rotate(
-                obo[nb].mat,
-                obo[nb].mat,
+                pieces.list[pieces.count].mat,
+                pieces.list[pieces.count].mat,
                 180 * (Math.PI / 180),
                 [0, 1, 0],
               );
-              nb++;
+              pieces.count++;
             }
           }
           if (e.command == "maxt") {
             var num = v("count");
             var limit = v("limit") / 10;
             limt = limit - 5;
-            limto = nb;
+            limto = pieces.count;
             var strt = -v("start") / 10;
             for (var c = 0; c < num; c++) {
-              obo[nb] = newobo();
-              obo[nb].mat = mat4.create();
-              obo[nb].typ = 29;
-              obo[nb].x = -(c * 480) + strt;
-              obo[nb].y = 0;
-              obo[nb].z = limit;
+              pieces.list[pieces.count] = newobo();
+              pieces.list[pieces.count].mat = mat4.create();
+              pieces.list[pieces.count].typ = 29;
+              pieces.list[pieces.count].x = -(c * 480) + strt;
+              pieces.list[pieces.count].y = 0;
+              pieces.list[pieces.count].z = limit;
               mat4.rotate(
-                obo[nb].mat,
-                obo[nb].mat,
+                pieces.list[pieces.count].mat,
+                pieces.list[pieces.count].mat,
                 90 * (Math.PI / 180),
                 [0, 1, 0],
               );
-              nb++;
+              pieces.count++;
             }
           }
           if (e.command == "maxb") {
             var num = v("count");
             var limit = v("limit") / 10;
             limb = limit + 5;
-            limbo = nb;
+            limbo = pieces.count;
             var strt = -v("start") / 10;
             for (var c = 0; c < num; c++) {
-              obo[nb] = newobo();
-              obo[nb].mat = mat4.create();
-              obo[nb].typ = 29;
-              obo[nb].x = -(c * 480) + strt;
-              obo[nb].y = 0;
-              obo[nb].z = limit;
+              pieces.list[pieces.count] = newobo();
+              pieces.list[pieces.count].mat = mat4.create();
+              pieces.list[pieces.count].typ = 29;
+              pieces.list[pieces.count].x = -(c * 480) + strt;
+              pieces.list[pieces.count].y = 0;
+              pieces.list[pieces.count].z = limit;
               mat4.rotate(
-                obo[nb].mat,
-                obo[nb].mat,
+                pieces.list[pieces.count].mat,
+                pieces.list[pieces.count].mat,
                 -90 * (Math.PI / 180),
                 [0, 1, 0],
               );
-              nb++;
+              pieces.count++;
             }
           }
         }
-        cp.insih();
+        track.insih();
         if (stanza != 1) {
-          sortcars(cp.stage);
+          sortcars(track.stage);
         }
         inishinter();
         inishcars();
@@ -2201,14 +2211,13 @@ function loadstage() {
   };
   rawFile.send(null);
 }
-var nf = 0;
-var fi = [];
+
 var onelec = false;
 function cpanimate() {
-  for (var i = 0; i < nf; i++) {
+  for (var i = 0; i < pieces.fixCount; i++) {
     mat4.rotate(
-      obo[fi[i]].mat,
-      obo[fi[i]].mat,
+      pieces.list[pieces.fixes[i]].mat,
+      pieces.list[pieces.fixes[i]].mat,
       11 * m * (Math.PI / 180),
       [0, 0, 1],
     );
@@ -2226,7 +2235,7 @@ function cpanimate() {
       elec.ont = 0;
     }
   }
-  if (cp.stage == 1) {
+  if (track.stage == 1) {
     chkflk++;
   } else {
     chkflk += 0.2;
@@ -2235,11 +2244,11 @@ function cpanimate() {
     chkflk = 0;
   }
   if (oncheckpoint != -1) {
-    cptext.x = obo[cp.obn[oncheckpoint]].x;
-    cptext.y = obo[cp.obn[oncheckpoint]].y + 80;
-    cptext.z = obo[cp.obn[oncheckpoint]].z;
+    cptext.x = pieces.list[track.obn[oncheckpoint]].x;
+    cptext.y = pieces.list[track.obn[oncheckpoint]].y + 80;
+    cptext.z = pieces.list[track.obn[oncheckpoint]].z;
     for (var i = 0; i < 16; i++) {
-      cptext.mat[i] = obo[cp.obn[oncheckpoint]].mat[i];
+      cptext.mat[i] = pieces.list[track.obn[oncheckpoint]].mat[i];
     }
     var flipit = false;
     if (Math.abs(cptext.mat[8]) > Math.abs(cptext.mat[10])) {
@@ -2274,9 +2283,9 @@ function cpanimate() {
       for (var i = 0; i < 16; i++) {
         fntext.mat[i] = cptext.mat[i];
       }
-      fntext.x = obo[cp.obn[oncheckpoint]].x;
-      fntext.y = obo[cp.obn[oncheckpoint]].y + 52;
-      fntext.z = obo[cp.obn[oncheckpoint]].z;
+      fntext.x = pieces.list[track.obn[oncheckpoint]].x;
+      fntext.y = pieces.list[track.obn[oncheckpoint]].y + 52;
+      fntext.z = pieces.list[track.obn[oncheckpoint]].z;
     }
   }
 }
@@ -2925,7 +2934,7 @@ function gameworks() {
       if (
         starcnt > 65 &&
         !isPhone &&
-        (cp.stage == 1 || cp.stage == 2) &&
+        (track.stage == 1 || track.stage == 2) &&
         game.unlocked == 1
       ) {
         rd.drawImage(
@@ -2966,10 +2975,10 @@ function gameworks() {
       if (starcnt < 65) {
         enginsnd();
       } else {
-        if (cp.stage == 2 && game.unlocked == 2) {
+        if (track.stage == 2 && game.unlocked == 2) {
           drawonbordo();
         }
-        if (cp.stage == 4 && game.unlocked == 4) {
+        if (track.stage == 4 && game.unlocked == 4) {
           drawonbordo();
         }
       }
@@ -3667,8 +3676,8 @@ function stageselect() {
       nrnd = 0;
       ptcnt = 0;
       camera.pitch = 67;
-      atrx = (cp.x[0] - trx) / 116;
-      atrz = (cp.z[0] - trz) / 116;
+      atrx = (track.x[0] - trx) / 116;
+      atrz = (track.z[0] - trz) / 116;
     }
     hit -= fallen;
     fallen += 0.7;
@@ -3687,11 +3696,11 @@ function stageselect() {
     camera.orbitAngle += 3;
   } else {
     camera.orbitAngle++;
-    trx -= (trx - cp.x[ptr]) / 10;
-    trz -= (trz - cp.z[ptr]) / 10;
+    trx -= (trx - track.x[ptr]) / 10;
+    trz -= (trz - track.z[ptr]) / 10;
     if (ptcnt == 10) {
       ptr++;
-      if (ptr == cp.n) {
+      if (ptr == track.n) {
         ptr = 0;
         nrnd++;
       }
@@ -3704,10 +3713,10 @@ function stageselect() {
     camera.orbitAngle -= 360;
   }
   camera.yaw = camera.orbitAngle;
-  for (var i = 0; i < nf; i++) {
+  for (var i = 0; i < pieces.fixCount; i++) {
     mat4.rotate(
-      obo[fi[i]].mat,
-      obo[fi[i]].mat,
+      pieces.list[pieces.fixes[i]].mat,
+      pieces.list[pieces.fixes[i]].mat,
       11 * m * (Math.PI / 180),
       [0, 0, 1],
     );
@@ -3952,32 +3961,32 @@ function render(now) {
       }
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
-      for (var i = 0; i < nb; i++) {
-        if (obo[i].iscp) {
+      for (var i = 0; i < pieces.count; i++) {
+        if (pieces.list[i].iscp) {
           if (
-            oncheckpoint + 1 == obo[i].iscp &&
+            oncheckpoint + 1 == pieces.list[i].iscp &&
             (Math.round(chkflk) == 0 || chkflk == 1)
           ) {
             if (Math.round(chkflk) == 0) {
-              build[obo[i].typ].ownshade = true;
+              pieceModels[pieces.list[i].typ].ownshade = true;
             } else {
-              build[obo[i].typ].ownlight = true;
+              pieceModels[pieces.list[i].typ].ownlight = true;
             }
           } else {
-            build[obo[i].typ].ownshade = false;
-            build[obo[i].typ].ownlight = false;
+            pieceModels[pieces.list[i].typ].ownshade = false;
+            pieceModels[pieces.list[i].typ].ownlight = false;
           }
         }
-        if (obo[i].typ == 29) {
+        if (pieces.list[i].typ == 29) {
           gl.enable(gl.CULL_FACE);
           gl.cullFace(gl.FRONT);
         }
-        build[obo[i].typ].x = obo[i].x;
-        build[obo[i].typ].y = obo[i].y;
-        build[obo[i].typ].z = obo[i].z;
-        build[obo[i].typ].mat = obo[i].mat;
-        drawModel(build[obo[i].typ]);
-        if (obo[i].typ == 29) {
+        pieceModels[pieces.list[i].typ].x = pieces.list[i].x;
+        pieceModels[pieces.list[i].typ].y = pieces.list[i].y;
+        pieceModels[pieces.list[i].typ].z = pieces.list[i].z;
+        pieceModels[pieces.list[i].typ].mat = pieces.list[i].mat;
+        drawModel(pieceModels[pieces.list[i].typ]);
+        if (pieces.list[i].typ == 29) {
           gl.disable(gl.CULL_FACE);
         }
       }
@@ -4065,11 +4074,11 @@ function render(now) {
         }
       }
       if (game.mode != 1) {
-        for (var i = 0; i < nf; i++) {
-          fixdisk.x = obo[fi[i]].x;
-          fixdisk.y = obo[fi[i]].y;
-          fixdisk.z = obo[fi[i]].z;
-          fixdisk.mat = obo[fi[i]].mat;
+        for (var i = 0; i < pieces.fixCount; i++) {
+          fixdisk.x = pieces.list[pieces.fixes[i]].x;
+          fixdisk.y = pieces.list[pieces.fixes[i]].y;
+          fixdisk.z = pieces.list[pieces.fixes[i]].z;
+          fixdisk.mat = pieces.list[pieces.fixes[i]].mat;
           drawModel(fixdisk);
         }
       }
@@ -4165,30 +4174,30 @@ function render(now) {
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
       if (!flkun) {
-        for (var i = 0; i < cp.obi[cp.n - 1] + adod; i++) {
-          if (obo[i].iscp) {
+        for (var i = 0; i < track.obi[track.n - 1] + adod; i++) {
+          if (pieces.list[i].iscp) {
             if (Math.round(chkflk) == 0 || chkflk == 1) {
               if (Math.round(chkflk) == 0) {
-                build[obo[i].typ].ownshade = true;
+                pieceModels[pieces.list[i].typ].ownshade = true;
               } else {
-                build[obo[i].typ].ownlight = true;
+                pieceModels[pieces.list[i].typ].ownlight = true;
               }
             } else {
-              build[obo[i].typ].ownshade = false;
-              build[obo[i].typ].ownlight = false;
+              pieceModels[pieces.list[i].typ].ownshade = false;
+              pieceModels[pieces.list[i].typ].ownlight = false;
             }
           }
-          build[obo[i].typ].x = obo[i].x;
-          build[obo[i].typ].y = obo[i].y;
-          build[obo[i].typ].z = obo[i].z;
-          build[obo[i].typ].mat = obo[i].mat;
-          drawModel(build[obo[i].typ]);
+          pieceModels[pieces.list[i].typ].x = pieces.list[i].x;
+          pieceModels[pieces.list[i].typ].y = pieces.list[i].y;
+          pieceModels[pieces.list[i].typ].z = pieces.list[i].z;
+          pieceModels[pieces.list[i].typ].mat = pieces.list[i].mat;
+          drawModel(pieceModels[pieces.list[i].typ]);
         }
-        for (var i = 0; i < nf; i++) {
-          fixdisk.x = obo[fi[i]].x;
-          fixdisk.y = obo[fi[i]].y;
-          fixdisk.z = obo[fi[i]].z;
-          fixdisk.mat = obo[fi[i]].mat;
+        for (var i = 0; i < pieces.fixCount; i++) {
+          fixdisk.x = pieces.list[pieces.fixes[i]].x;
+          fixdisk.y = pieces.list[pieces.fixes[i]].y;
+          fixdisk.z = pieces.list[pieces.fixes[i]].z;
+          fixdisk.mat = pieces.list[pieces.fixes[i]].mat;
           drawModel(fixdisk);
         }
       }
@@ -4304,92 +4313,67 @@ class CarDefine {
   }
 }
 var cd = new CarDefine();
-class CheckPoints {
-  x = [];
-  y = [];
-  z = [];
-  typ = [];
-  obi = [];
-  pcs = 0;
-  nsp = 0;
-  n = 0;
-  obn = [];
-  special = [];
-  stage = 16;
-  nlaps = 0;
-  nfix = 0;
-  notb = false;
-  name = "hogan rewish";
-  switchtime = 800;
-  pos = [6, 6, 6, 6, 6, 6, 6];
-  clear = [0, 0, 0, 0, 0, 0, 0];
-  dested = [0, 0, 0, 0, 0, 0, 0];
-  magperc = [0, 0, 0, 0, 0, 0, 0];
-  wasted = 0;
-  haltall = false;
-  pcleared = 0;
-  insih() {
-    this.pos = [6, 6, 6, 6, 6, 6, 6];
-    this.clear = [0, 0, 0, 0, 0, 0, 0];
-    this.dested = [0, 0, 0, 0, 0, 0, 0];
-    this.magperc = [0, 0, 0, 0, 0, 0, 0];
-    this.wasted = 0;
-    this.haltall = false;
-    this.pcleared = 0;
-  }
-}
-var cp = new CheckPoints();
 var secar = 0;
 function checkstat() {
-  if (!cp.haltall) {
+  if (!track.haltall) {
     for (var i = 0; i < game.carCount; i++) {
-      cp.magperc[i] = racers[i].hitmag / cd.maxmag[car[i].typ];
-      if (cp.magperc[i] > 1) {
-        cp.magperc[i] = 1;
+      track.magperc[i] = racers[i].hitmag / cd.maxmag[car[i].typ];
+      if (track.magperc[i] > 1) {
+        track.magperc[i] = 1;
       }
-      cp.pos[i] = 0;
-      if (cp.dested[i] == 0) {
-        cp.clear[i] = racers[i].clear;
+      track.pos[i] = 0;
+      if (track.dested[i] == 0) {
+        track.clear[i] = racers[i].clear;
       } else {
-        cp.clear[i] = -1;
+        track.clear[i] = -1;
       }
     }
     for (var i = 0; i < game.carCount; i++) {
       for (var j = i + 1; j < game.carCount; j++) {
-        if (cp.clear[i] != cp.clear[j]) {
-          if (cp.clear[i] < cp.clear[j]) {
-            cp.pos[i]++;
+        if (track.clear[i] != track.clear[j]) {
+          if (track.clear[i] < track.clear[j]) {
+            track.pos[i]++;
           } else {
-            cp.pos[j]++;
+            track.pos[j]++;
           }
         } else {
           var ic = racers[i].pcleared + 1;
-          if (ic >= cp.n) {
+          if (ic >= track.n) {
             ic = 0;
           }
-          while (cp.typ[ic] <= 0) {
+          while (track.typ[ic] <= 0) {
             ic++;
-            if (ic >= cp.n) {
+            if (ic >= track.n) {
               ic = 0;
             }
           }
           if (
-            pyo(car[i].x / 10, cp.x[ic] / 10, car[i].z / 10, cp.z[ic] / 10) >
-            pyo(car[j].x / 10, cp.x[ic] / 10, car[j].z / 10, cp.z[ic] / 10)
+            pyo(
+              car[i].x / 10,
+              track.x[ic] / 10,
+              car[i].z / 10,
+              track.z[ic] / 10,
+            ) >
+            pyo(
+              car[j].x / 10,
+              track.x[ic] / 10,
+              car[j].z / 10,
+              track.z[ic] / 10,
+            )
           ) {
-            cp.pos[i]++;
+            track.pos[i]++;
           } else {
-            cp.pos[j]++;
+            track.pos[j]++;
           }
         }
       }
     }
-    if (cp.stage > 2) {
+    if (track.stage > 2) {
       for (var i = 0; i < game.carCount; i++) {
-        if (cp.clear[i] == cp.nlaps * cp.nsp && cp.pos[i] == 0) {
+        if (track.clear[i] == track.nlaps * track.nsp && track.pos[i] == 0) {
           if (i == game.player) {
             for (var j = 0; j < game.carCount; j++) {
-              if (cp.pos[j] == 1) {
+              if (track.pos[j] == 1) {
                 secar = j;
               }
             }
@@ -4400,13 +4384,13 @@ function checkstat() {
                 car[0].z / 10,
                 car[secar].z / 10,
               ) < 14000 &&
-              cp.clear[0] - racers[secar].clear == 1
+              track.clear[0] - racers[secar].clear == 1
             ) {
               catchfin = 43;
             }
           } else {
             if (
-              cp.pos[0] == 1 &&
+              track.pos[0] == 1 &&
               pyo(car[0].x / 10, car[i].x / 10, car[0].z / 10, car[i].z / 10) <
                 14000 &&
               racers[i].clear - racers[0].clear == 1
@@ -4419,19 +4403,19 @@ function checkstat() {
       }
     }
   }
-  cp.wasted = 0;
+  track.wasted = 0;
   for (var i = 0; i < game.carCount; i++) {
     if (game.player != i) {
       if (racers[i].dest) {
-        cp.wasted++;
+        track.wasted++;
       }
     }
   }
   if (catchfin != 0) {
     catchfin--;
     if (catchfin == 0) {
-      catchnow(4 + cp.pos[0]);
-      if (htyp == 4 + cp.pos[0]) {
+      catchnow(4 + track.pos[0]);
+      if (htyp == 4 + track.pos[0]) {
         hscar = secar;
         if (htyp > 5) {
           htyp = 5;
@@ -4720,40 +4704,40 @@ function sortcars(stage) {
 var fpnt = [0, 0, 0, 0, 0];
 
 function inishcontrol() {
-  if (cp.stage != 9) {
-    for (var j = 0; j < nf; j++) {
+  if (track.stage != 9) {
+    for (var j = 0; j < pieces.fixCount; j++) {
       var pyclos = -10;
-      for (var i = 0; i < cp.n; i++) {
+      for (var i = 0; i < track.n; i++) {
         if (
           pyo(
-            obo[fi[j]].x / 10,
-            cp.x[i] / 10,
-            obo[fi[j]].z / 10,
-            cp.z[i] / 10,
+            pieces.list[pieces.fixes[j]].x / 10,
+            track.x[i] / 10,
+            pieces.list[pieces.fixes[j]].z / 10,
+            track.z[i] / 10,
           ) < pyclos ||
           pyclos == -10
         ) {
           pyclos = pyo(
-            obo[fi[j]].x / 10,
-            cp.x[i] / 10,
-            obo[fi[j]].z / 10,
-            cp.z[i] / 10,
+            pieces.list[pieces.fixes[j]].x / 10,
+            track.x[i] / 10,
+            pieces.list[pieces.fixes[j]].z / 10,
+            track.z[i] / 10,
           );
           fpnt[j] = i;
         }
       }
     }
-    for (var i = 0; i < nf; i++) {
+    for (var i = 0; i < pieces.fixCount; i++) {
       fpnt[i] -= 4;
       if (fpnt[i] < 0) {
-        fpnt[i] += cp.nsp;
+        fpnt[i] += track.nsp;
       }
-      if (cp.stage == 15 && i == 2) {
+      if (track.stage == 15 && i == 2) {
         fpnt[i] = 71;
       }
     }
   } else {
-    if (cp.stage == 9) {
+    if (track.stage == 9) {
       fpnt[1] = 36;
       fpnt[0] = 42;
     }
@@ -4775,19 +4759,19 @@ function inishcontrol() {
     racers[c].apunch = 0;
     racers[c].exitattack = false;
     racers[c].hold = 0;
-    if (cp.stage == 6) {
+    if (track.stage == 6) {
       racers[c].hold = 50;
     }
-    if (cp.stage == 7) {
+    if (track.stage == 7) {
       racers[c].hold = 10;
     }
-    if (cp.stage == 8 && c != 6) {
+    if (track.stage == 8 && c != 6) {
       racers[c].hold = 50;
     }
-    if (cp.stage == 10) {
+    if (track.stage == 10) {
       racers[c].hold = 60;
     }
-    if (cp.stage == 11) {
+    if (track.stage == 11) {
       if (c != 6) {
         racers[c].hold = 35;
         racers[c].revstart = 25;
@@ -4796,7 +4780,7 @@ function inishcontrol() {
       }
       racers[c].statusque = 0;
     }
-    if (cp.stage == 12) {
+    if (track.stage == 12) {
       if (c != 6) {
         racers[c].hold = Math.floor(20 + 10 * random.sim());
         racers[c].revstart = Math.floor(10 + 10 * random.sim());
@@ -4805,17 +4789,17 @@ function inishcontrol() {
       }
       racers[c].statusque = 0;
     }
-    if (cp.stage == 14) {
+    if (track.stage == 14) {
       racers[c].hold = 30;
       racers[c].statusque = 0;
       if (c != 6) {
         racers[c].revstart = 1;
       }
     }
-    if (cp.stage == 15) {
+    if (track.stage == 15) {
       racers[c].hold = 40;
     }
-    if (cp.stage == 16) {
+    if (track.stage == 16) {
       racers[c].hold = 20;
     }
     racers[c].u.left = false;
@@ -4837,66 +4821,66 @@ function control() {
       if (!racers[c].dest) {
         if (racers[c].mtouch) {
           if (racers[c].stcnt > racers[c].statusque) {
-            var tstage = cp.stage;
+            var tstage = track.stage;
             racers[c].acuracy = Math.floor(
-              (7 - cp.pos[c]) * cp.pos[game.player] * (6 - tstage * 2),
+              (7 - track.pos[c]) * track.pos[game.player] * (6 - tstage * 2),
             );
             if (racers[c].acuracy < 0) {
               racers[c].acuracy = 0;
             }
             racers[c].clrnce = 5;
-            if (cp.stage == 6 || cp.stage == 11) {
+            if (track.stage == 6 || track.stage == 11) {
               racers[c].clrnce = 2;
             }
-            if (cp.stage == 12) {
+            if (track.stage == 12) {
               if (racers[c].pcleared == 27 || racers[c].pcleared == 17) {
                 racers[c].clrnce = 3;
               }
             }
-            if (cp.stage == 16) {
+            if (track.stage == 16) {
               racers[c].clrnce = 3;
             }
             var mw = 0;
-            if (cp.stage == 1) {
+            if (track.stage == 1) {
               mw = 2;
             }
-            if (cp.stage == 2) {
+            if (track.stage == 2) {
               mw = 1.5;
             }
-            if (cp.stage == 3 && cn != 12) {
+            if (track.stage == 3 && cn != 12) {
               mw = 0.5;
             }
-            if (cp.stage == 4) {
+            if (track.stage == 4) {
               mw = 0.5;
             }
             racers[c].upwait = Math.floor(
-              (cp.pos[game.player] - cp.pos[c]) *
-                (cp.pos[game.player] - cp.pos[c]) *
-                (cp.pos[game.player] - cp.pos[c]) *
+              (track.pos[game.player] - track.pos[c]) *
+                (track.pos[game.player] - track.pos[c]) *
+                (track.pos[game.player] - track.pos[c]) *
                 mw,
             );
             if (racers[c].upwait > 80) {
               racers[c].upwait = 80;
             }
-            if (cp.stage == 1) {
+            if (track.stage == 1) {
               if (racers[c].upwait < 20) {
                 racers[c].upwait = 20;
               }
             }
             mw = 0;
-            if (cp.stage == 1 || cp.stage == 2) {
+            if (track.stage == 1 || track.stage == 2) {
               mw = 1;
             }
-            if (cp.stage == 3) {
+            if (track.stage == 3) {
               mw = 0.5;
             }
-            if (cp.stage == 4) {
+            if (track.stage == 4) {
               mw = 0.5;
             }
-            if (cp.stage == 5) {
+            if (track.stage == 5) {
               mw = 0.2;
             }
-            if (cp.pos[c] - cp.pos[game.player] >= -1) {
+            if (track.pos[c] - track.pos[game.player] >= -1) {
               racers[c].skiplev -= 0.1;
               if (racers[c].skiplev < 0) {
                 racers[c].skiplev = 0;
@@ -4907,10 +4891,10 @@ function control() {
                 racers[c].skiplev = mw;
               }
             }
-            if (cp.stage == 9 || cp.stage == 12) {
+            if (track.stage == 9 || track.stage == 12) {
               racers[c].skiplev = 1;
             }
-            if (cp.stage == 11) {
+            if (track.stage == 11) {
               racers[c].skiplev = 0;
               if (racers[c].pcleared == 89 || racers[c].pcleared == 18) {
                 racers[c].skiplev = 1;
@@ -4919,10 +4903,10 @@ function control() {
                 racers[c].skiplev = 0.5;
               }
             }
-            if (cp.stage == 13 && racers[c].pcleared == 20) {
+            if (track.stage == 13 && racers[c].pcleared == 20) {
               racers[c].skiplev = 1;
             }
-            if (cp.stage == 14) {
+            if (track.stage == 14) {
               racers[c].skiplev = 1;
               if (cn == 17) {
                 if (random.sim() > 0.8) {
@@ -4932,10 +4916,10 @@ function control() {
                 }
               }
             }
-            if (cp.stage == 15) {
+            if (track.stage == 15) {
               racers[c].skiplev = 0;
             }
-            if (cp.stage == 16) {
+            if (track.stage == 16) {
               if (racers[c].pcleared >= 45) {
                 racers[c].skiplev = 0;
               } else {
@@ -4961,17 +4945,17 @@ function control() {
             if (racers[c].power < 60) {
               racers[c].rampp = 1;
             }
-            if (cp.stage == 11) {
+            if (track.stage == 11) {
               if (racers[c].pcleared == 18) {
                 racers[c].rampp = 2;
               }
             }
-            if (cp.stage == 12) {
+            if (track.stage == 12) {
               if (racers[c].pcleared == 17) {
                 racers[c].rampp = 2;
               }
             }
-            if (cp.stage == 15 || cp.stage == 16) {
+            if (track.stage == 15 || track.stage == 16) {
               racers[c].rampp = 0;
             }
             if (racers[c].cntrn == 0) {
@@ -4980,19 +4964,22 @@ function control() {
               if (racers[c].turntyp == 4) {
                 racers[c].turntyp = 3;
               }
-              if (cp.stage == 3 && cn == 12) {
+              if (track.stage == 3 && cn == 12) {
                 racers[c].turntyp = 1;
                 if (racers[c].attack == 0) {
                   racers[c].agressed = true;
                 }
               }
-              if (cp.pos[game.player] - cp.pos[c] < 0 || cp.stage == 10) {
+              if (
+                track.pos[game.player] - track.pos[c] < 0 ||
+                track.stage == 10
+              ) {
                 racers[c].turntyp = Math.floor(random.sim() * 2);
                 if (racers[c].turntyp == 2) {
                   racers[c].turntyp = 1;
                 }
               }
-              if (cp.stage == 11) {
+              if (track.stage == 11) {
                 if (racers[c].pcleared == 89) {
                   if (racers[c].point >= 5) {
                     racers[c].turntyp = 2;
@@ -5004,7 +4991,7 @@ function control() {
                   racers[c].turntyp = 2;
                 }
               }
-              if (cp.stage == 13) {
+              if (track.stage == 13) {
                 if (
                   racers[c].pcleared == 20 ||
                   racers[c].pcleared == 36 ||
@@ -5017,39 +5004,39 @@ function control() {
                   }
                 }
               }
-              if (cp.stage == 14) {
+              if (track.stage == 14) {
                 racers[c].turntyp = 0;
               }
               if (racers[c].attack != 0) {
                 racers[c].turntyp = 2;
                 if (
-                  cp.stage == 9 ||
-                  cp.stage == 11 ||
-                  cp.stage == 13 ||
-                  cp.stage == 16 ||
-                  cp.stage == 17
+                  track.stage == 9 ||
+                  track.stage == 11 ||
+                  track.stage == 13 ||
+                  track.stage == 16 ||
+                  track.stage == 17
                 ) {
                   racers[c].turntyp = Math.floor(random.sim() * 3);
                   if (racers[c].turntyp == 3) {
                     racers[c].turntyp = 2;
                   }
                 }
-                if (cp.stage == 16) {
+                if (track.stage == 16) {
                   if (cn == 14) {
                     racers[c].turntyp = 0;
                   }
                 }
               }
               if (
-                cp.stage == 6 ||
-                cp.stage == 7 ||
-                cp.stage == 8 ||
-                cp.stage == 10 ||
-                cp.stage == 11 ||
-                cp.stage == 12 ||
-                cp.stage == 14 ||
-                cp.stage == 16 ||
-                cp.stage == 17
+                track.stage == 6 ||
+                track.stage == 7 ||
+                track.stage == 8 ||
+                track.stage == 10 ||
+                track.stage == 11 ||
+                track.stage == 12 ||
+                track.stage == 14 ||
+                track.stage == 16 ||
+                track.stage == 17
               ) {
                 racers[c].agressed = true;
               }
@@ -5064,28 +5051,28 @@ function control() {
               racers[c].saftey = 20;
             }
             mw = 0;
-            if (cp.stage == 1) {
+            if (track.stage == 1) {
               mw = 0.9;
             }
-            if (cp.stage == 2) {
+            if (track.stage == 2) {
               mw = 0.7;
             }
-            if (cp.stage == 3) {
+            if (track.stage == 3) {
               mw = 0.4;
             }
             racers[c].mustland = mw + (random.sim() / 2 - 0.25);
             mw = 1;
-            if (cp.stage == 1) {
+            if (track.stage == 1) {
               mw = 5;
             }
-            if (cp.stage == 2) {
+            if (track.stage == 2) {
               mw = 2;
             }
-            if (cp.stage == 3) {
+            if (track.stage == 3) {
               mw = 1.5;
             }
             if (racers[c].power > 50) {
-              if (cp.pos[game.player] - cp.pos[c] > 0) {
+              if (track.pos[game.player] - track.pos[c] > 0) {
                 racers[c].saftey *= mw;
               } else {
                 racers[c].mustland = 0;
@@ -5093,24 +5080,24 @@ function control() {
             } else {
               racers[c].mustland -= 0.5;
             }
-            if (cp.stage == 6) {
+            if (track.stage == 6) {
               if (cn == 13) {
                 racers[c].mustland = 0;
               }
             }
             if (
-              cp.stage == 8 ||
-              cp.stage == 10 ||
-              cp.stage == 12 ||
-              cp.stage == 14 ||
-              cp.stage == 16
+              track.stage == 8 ||
+              track.stage == 10 ||
+              track.stage == 12 ||
+              track.stage == 14 ||
+              track.stage == 16
             ) {
               racers[c].mustland = 0;
             }
             racers[c].stuntf = 0;
-            if (cp.stage == 10) {
+            if (track.stage == 10) {
               if (
-                cp.pos[c] - cp.pos[game.player] > 1 ||
+                track.pos[c] - track.pos[game.player] > 1 ||
                 random.sim() > random.sim()
               ) {
                 racers[c].stuntf = 1;
@@ -5119,13 +5106,13 @@ function control() {
                 racers[c].stuntf = 2;
               }
             }
-            if (cp.stage == 11 && racers[c].pcleared == 18) {
+            if (track.stage == 11 && racers[c].pcleared == 18) {
               racers[c].stuntf = 2;
             }
-            if (cp.stage == 11 && cn == 16) {
+            if (track.stage == 11 && cn == 16) {
               racers[c].stuntf = 3;
             }
-            if (cp.stage == 14) {
+            if (track.stage == 14) {
               if (cn == 17) {
                 racers[c].stuntf = 4;
                 racers[c].saftey = 20;
@@ -5136,7 +5123,7 @@ function control() {
                 }
               }
             }
-            if (cp.stage == 16) {
+            if (track.stage == 16) {
               racers[c].mustland = 0;
               racers[c].saftey = 20;
               if (racers[c].pcleared == 152 || racers[c].pcleared == 20) {
@@ -5161,37 +5148,37 @@ function control() {
             if (racers[c].power < 60) {
               racers[c].trickprf = -1;
             }
-            if (cp.stage == 3 && cn == 12) {
+            if (track.stage == 3 && cn == 12) {
               if (racers[c].trickprf > 0.7) {
                 racers[c].trickprf = 0.7;
               }
             }
-            if (cp.stage == 6 && cn != 13) {
+            if (track.stage == 6 && cn != 13) {
               if (racers[c].trickprf > 0.3) {
                 racers[c].trickprf = 0.3;
               }
             }
-            if (cp.stage == 8) {
+            if (track.stage == 8) {
               if (racers[c].trickprf > 0.2) {
                 racers[c].trickprf = 0.2;
               }
             }
-            if (cp.stage == 11) {
+            if (track.stage == 11) {
               if (racers[c].trickprf != -1) {
                 racers[c].trickprf *= 0.75;
               }
             }
-            if (cp.stage == 12) {
+            if (track.stage == 12) {
               if (racers[c].pcleared == 55 || racers[c].pcleared == 7) {
                 racers[c].trickprf = -1;
               }
             }
-            if (cp.stage == 14) {
+            if (track.stage == 14) {
               if (racers[c].trickprf > 0.5) {
                 racers[c].trickprf = 0.5;
               }
             }
-            if (cp.stage == 17) {
+            if (track.stage == 17) {
               racers[c].trickprf = -1;
             }
             if (random.sim() > racers[c].power / 100) {
@@ -5199,17 +5186,17 @@ function control() {
             } else {
               racers[c].usebounce = false;
             }
-            if (cp.stage == 4) {
+            if (track.stage == 4) {
               racers[c].usebounce = true;
             }
-            if (cp.stage == 6) {
+            if (track.stage == 6) {
               if (cn == 13) {
                 racers[c].usebounce = false;
               } else {
                 racers[c].usebounce = true;
               }
             }
-            if (cp.stage == 9 || cp.stage == 10 || cp.stage == 14) {
+            if (track.stage == 9 || track.stage == 10 || track.stage == 14) {
               racers[c].usebounce = false;
             }
             if (random.sim() > racers[c].hitmag / cd.maxmag[cn]) {
@@ -5220,99 +5207,99 @@ function control() {
             if ((100 * racers[c].hitmag) / cd.maxmag[cn] > 60) {
               racers[c].perfection = true;
             }
-            if (cp.stage == 3 && cn == 12) {
+            if (track.stage == 3 && cn == 12) {
               racers[c].perfection = true;
             }
             if (
-              cp.stage == 6 ||
-              cp.stage == 8 ||
-              cp.stage == 10 ||
-              cp.stage == 11 ||
-              cp.stage == 12 ||
-              cp.stage == 14 ||
-              cp.stage == 16 ||
-              cp.stage == 17
+              track.stage == 6 ||
+              track.stage == 8 ||
+              track.stage == 10 ||
+              track.stage == 11 ||
+              track.stage == 12 ||
+              track.stage == 14 ||
+              track.stage == 16 ||
+              track.stage == 17
             ) {
               racers[c].perfection = true;
             }
-            if (cp.stage == 15 && cn == 18) {
+            if (track.stage == 15 && cn == 18) {
               racers[c].perfection = true;
             }
             if (racers[c].attack == 0) {
               var startsway = true;
               if (
-                cp.stage == 3 ||
-                cp.stage == 1 ||
-                cp.stage == 4 ||
-                cp.stage == 9 ||
-                cp.stage == 13 ||
-                cp.stage == 16
+                track.stage == 3 ||
+                track.stage == 1 ||
+                track.stage == 4 ||
+                track.stage == 9 ||
+                track.stage == 13 ||
+                track.stage == 16
               ) {
                 startsway = racers[c].afta;
               }
               if (
-                cp.stage == 6 ||
-                cp.stage == 8 ||
-                cp.stage == 10 ||
-                cp.stage == 14
+                track.stage == 6 ||
+                track.stage == 8 ||
+                track.stage == 10 ||
+                track.stage == 14
               ) {
                 startsway = false;
               }
               var onlyou = false;
-              if (cp.stage == 3 && cn == 12) {
+              if (track.stage == 3 && cn == 12) {
                 onlyou = true;
               }
-              if (cp.stage == 8 && cn == 14) {
+              if (track.stage == 8 && cn == 14) {
                 onlyou = true;
               }
               if (
-                cp.stage == 9 &&
-                cp.clear[game.player] >= 8 &&
-                cp.pos[game.player] == 0
+                track.stage == 9 &&
+                track.clear[game.player] >= 8 &&
+                track.pos[game.player] == 0
               ) {
                 onlyou = true;
               }
               if (
-                cp.stage == 11 ||
-                cp.stage == 12 ||
-                cp.stage == 13 ||
-                cp.stage == 15 ||
-                cp.stage == 16
+                track.stage == 11 ||
+                track.stage == 12 ||
+                track.stage == 13 ||
+                track.stage == 15 ||
+                track.stage == 16
               ) {
                 onlyou = true;
               }
               var powtoattack = 60;
-              if (cp.stage == 3 || cp.stage == 17) {
+              if (track.stage == 3 || track.stage == 17) {
                 powtoattack = 30;
               }
-              if (cp.stage == 4) {
+              if (track.stage == 4) {
                 powtoattack = 20;
               }
-              if (cp.stage == 5 && c != 6) {
+              if (track.stage == 5 && c != 6) {
                 powtoattack = 40;
               }
-              if ((cp.stage == 2 || cp.stage == 13) && cn == 16) {
+              if ((track.stage == 2 || track.stage == 13) && cn == 16) {
                 powtoattack = 50;
               }
-              if (cp.stage == 7) {
+              if (track.stage == 7) {
                 powtoattack = 40;
               }
-              if (cp.stage == 8 && cn == 14) {
+              if (track.stage == 8 && cn == 14) {
                 powtoattack = 40;
               }
-              if (cp.stage == 9 && onlyou) {
+              if (track.stage == 9 && onlyou) {
                 powtoattack = 30;
               }
-              if (cp.stage == 11 && racers[c].bulistc) {
+              if (track.stage == 11 && racers[c].bulistc) {
                 powtoattack = 30;
               }
-              if (cp.stage == 12) {
+              if (track.stage == 12) {
                 powtoattack = 50;
               }
-              if (cp.stage == 15 && racers[c].bulistc) {
+              if (track.stage == 15 && racers[c].bulistc) {
                 powtoattack = 40;
               }
-              if (cp.stage == 16) {
+              if (track.stage == 16) {
                 if (cn == 14) {
                   powtoattack = 40;
                 }
@@ -5322,12 +5309,12 @@ function control() {
                 if (cn == 18 || cn == 12) {
                   powtoattack = 50;
                 }
-                if (cp.pos[game.player] > cp.pos[c]) {
+                if (track.pos[game.player] > track.pos[c]) {
                   powtoattack = 80;
                 }
               }
               for (var i = 0; i < game.carCount; i++) {
-                if (i != c && cp.clear[i] != -1) {
+                if (i != c && track.clear[i] != -1) {
                   var myxz = car[c].xz;
                   if (racers[c].u.zyinv) {
                     myxz += 180;
@@ -5358,29 +5345,29 @@ function control() {
                     vis = Math.abs(vis - 360);
                   }
                   var attackrad =
-                    2000 * (Math.abs(cp.clear[i] - racers[c].clear) + 1);
-                  if (cp.stage == 3 && cn == 12) {
+                    2000 * (Math.abs(track.clear[i] - racers[c].clear) + 1);
+                  if (track.stage == 3 && cn == 12) {
                     if (attackrad < 12000) {
                       attackrad = 12000;
                     }
                   }
-                  if (cp.stage == 4) {
+                  if (track.stage == 4) {
                     if (attackrad < 4000) {
                       attackrad = 4000;
                     }
                   }
-                  if (cp.stage == 8 && cn == 14) {
+                  if (track.stage == 8 && cn == 14) {
                     if (attackrad < 12000) {
                       attackrad = 12000;
                     }
                     vis = 10;
                   }
-                  if (cp.stage == 9) {
+                  if (track.stage == 9) {
                     if (onlyou && attackrad < 12000) {
                       attackrad = 12000;
                     }
                   }
-                  if (cp.stage == 11) {
+                  if (track.stage == 11) {
                     if (racers[c].bulistc) {
                       attackrad = 8000;
                       vis = 10;
@@ -5391,24 +5378,24 @@ function control() {
                       }
                     }
                   }
-                  if (cp.stage == 12 && racers[c].bulistc) {
+                  if (track.stage == 12 && racers[c].bulistc) {
                     attackrad = 6000;
                     vis = 10;
                   }
-                  if (cp.stage == 13) {
-                    if (cp.clear[c] - cp.clear[game.player] > 3) {
+                  if (track.stage == 13) {
+                    if (track.clear[c] - track.clear[game.player] > 3) {
                       attackrad = 21000;
                     }
                   }
-                  if (cp.stage == 15) {
-                    attackrad *= Math.abs(cp.clear[i] - racers[c].clear) + 1;
+                  if (track.stage == 15) {
+                    attackrad *= Math.abs(track.clear[i] - racers[c].clear) + 1;
                     if (racers[c].bulistc) {
                       attackrad =
-                        4000 * (Math.abs(cp.clear[i] - racers[c].clear) + 1);
+                        4000 * (Math.abs(track.clear[i] - racers[c].clear) + 1);
                       vis = 10;
                     }
                   }
-                  if (cp.stage == 16) {
+                  if (track.stage == 16) {
                     if (cn == 14) {
                       attackrad = 16000;
                       vis = 10;
@@ -5418,25 +5405,27 @@ function control() {
                       vis = 10;
                     }
                     if (cn == 18 || cn == 12) {
-                      attackrad *= Math.abs(cp.clear[i] - racers[c].clear) + 1;
+                      attackrad *=
+                        Math.abs(track.clear[i] - racers[c].clear) + 1;
                     }
                   }
                   var visan =
-                    85 + 15 * (Math.abs(cp.clear[i] - racers[c].clear) + 1);
-                  if (cp.stage == 9 && !onlyou) {
+                    85 + 15 * (Math.abs(track.clear[i] - racers[c].clear) + 1);
+                  if (track.stage == 9 && !onlyou) {
                     if (
                       car[game.player].typ != 14 ||
-                      cp.clear[c] - cp.clear[game.player] < 8
+                      track.clear[c] - track.clear[game.player] < 8
                     ) {
                       visan = 45;
                     }
                   }
-                  if (cp.stage == 13) {
+                  if (track.stage == 13) {
                     visan = 45;
                   }
-                  if (cp.stage == 16) {
+                  if (track.stage == 16) {
                     if (cn == 18 || cn == 12 || cn == 17) {
-                      visan = 50 + 70 * Math.abs(cp.clear[i] - racers[c].clear);
+                      visan =
+                        50 + 70 * Math.abs(track.clear[i] - racers[c].clear);
                     }
                   }
                   if (
@@ -5450,61 +5439,65 @@ function control() {
                     racers[c].afta &&
                     racers[c].power > powtoattack
                   ) {
-                    var bim = 35 - Math.abs(cp.clear[i] - racers[c].clear) * 10;
+                    var bim =
+                      35 - Math.abs(track.clear[i] - racers[c].clear) * 10;
                     if (bim < 1) {
                       bim = 1;
                     }
-                    var atp = ((cp.pos[c] + 1) * (7 - cp.pos[i])) / bim;
+                    var atp = ((track.pos[c] + 1) * (7 - track.pos[i])) / bim;
                     if (game.mode != 1) {
-                      if (cp.stage != 17) {
+                      if (track.stage != 17) {
                         if (atp > 0.7) {
                           atp = 0.7;
                         }
                       }
-                      if (i != game.player && cp.pos[game.player] < cp.pos[c]) {
+                      if (
+                        i != game.player &&
+                        track.pos[game.player] < track.pos[c]
+                      ) {
                         atp = 0;
                       }
                       if (i != game.player && onlyou) {
                         atp = 0;
                       }
-                      if (cp.stage == 3) {
+                      if (track.stage == 3) {
                         if (cn == 12 || (cn == 16 && racers[c].bulistc)) {
                           atp *= 2;
                         } else {
                           atp *= 0.5;
                         }
                       }
-                      if (cp.stage == 5 && c == 6) {
+                      if (track.stage == 5 && c == 6) {
                         atp *= 0.7;
                       }
-                      if (cp.stage == 6) {
+                      if (track.stage == 6) {
                         atp = 0;
                       }
-                      if (cp.stage == 7 && c == 6 && i == game.player) {
+                      if (track.stage == 7 && c == 6 && i == game.player) {
                         atp *= 1.5;
                       }
-                      if (cp.stage == 8) {
+                      if (track.stage == 8) {
                         if (racers[c].bulistc && i == game.player) {
                           atp = 1;
                         } else {
                           atp = 0;
                         }
                       }
-                      if (cp.stage == 10) {
+                      if (track.stage == 10) {
                         atp = 0;
                       }
-                      if (cp.stage == 11) {
+                      if (track.stage == 11) {
                         if (racers[c].bulistc && i == game.player) {
                           atp = 1;
                         }
                         if (
-                          cp.pos[c] == 0 ||
-                          (cp.pos[c] == 1 && cp.pos[game.player] == 0)
+                          track.pos[c] == 0 ||
+                          (track.pos[c] == 1 && track.pos[game.player] == 0)
                         ) {
                           atp = 0;
                         }
                       }
-                      if (cp.stage == 12) {
+                      if (track.stage == 12) {
                         if (cn != 14 && cn != 16) {
                           atp = 0;
                         }
@@ -5512,24 +5505,27 @@ function control() {
                           atp = 1;
                         }
                       }
-                      if (cp.stage == 14) {
+                      if (track.stage == 14) {
                         atp = 0;
                       }
-                      if (cp.stage == 15) {
-                        if (cp.pos[c] == 0) {
+                      if (track.stage == 15) {
+                        if (track.pos[c] == 0) {
                           atp *= 0.5;
                         }
-                        if (cp.pos[game.player] < cp.pos[c]) {
+                        if (track.pos[game.player] < track.pos[c]) {
                           atp *= 2;
                         }
                         if (racers[c].bulistc && i == game.player) {
                           atp = 1;
                         }
                       }
-                      if (cp.stage == 16) {
+                      if (track.stage == 16) {
                         if (cn != 17) {
-                          if (cp.pos[game.player] < cp.pos[c]) {
-                            if (cp.clear[game.player] - cp.clear[c] != 1) {
+                          if (track.pos[game.player] < track.pos[c]) {
+                            if (
+                              track.clear[game.player] - track.clear[c] !=
+                              1
+                            ) {
                               atp *= 2;
                             }
                           }
@@ -5544,13 +5540,13 @@ function control() {
                           atp = 1;
                         }
                         if (
-                          cp.pos[c] == 0 ||
-                          (cp.pos[c] == 1 && cp.pos[game.player] == 0)
+                          track.pos[c] == 0 ||
+                          (track.pos[c] == 1 && track.pos[game.player] == 0)
                         ) {
                           atp = 0;
                         }
                         if (
-                          cp.clear[c] - cp.clear[game.player] >= 5 &&
+                          track.clear[c] - track.clear[game.player] >= 5 &&
                           i == game.player
                         ) {
                           atp = 1;
@@ -5579,56 +5575,56 @@ function control() {
                     }
                     if (random.sim() < atp) {
                       racers[c].attack =
-                        40 * (Math.abs(cp.clear[i] - racers[c].clear) + 1);
+                        40 * (Math.abs(track.clear[i] - racers[c].clear) + 1);
                       if (racers[c].attack > 500) {
                         racers[c].attack = 500;
                       }
                       racers[c].aim = 0;
-                      if (cp.stage == 3 && cn == 12) {
+                      if (track.stage == 3 && cn == 12) {
                         if (random.sim() > random.sim()) {
                           racers[c].aim = 1;
                         }
                       }
-                      if (cp.stage == 4) {
+                      if (track.stage == 4) {
                         if (
                           i == game.player &&
-                          cp.pos[game.player] < cp.pos[c]
+                          track.pos[game.player] < track.pos[c]
                         ) {
                           racers[c].aim = 1.5;
                         } else {
                           racers[c].aim = random.sim();
                         }
                       }
-                      if (cp.stage == 5) {
+                      if (track.stage == 5) {
                         racers[c].aim = random.sim() * 1.5;
                       }
-                      if (cp.stage == 7) {
+                      if (track.stage == 7) {
                         if (c != 6) {
                           if (
                             random.sim() > random.sim() ||
-                            cp.pos[game.player] < cp.pos[c]
+                            track.pos[game.player] < track.pos[c]
                           ) {
                             racers[c].aim = 1;
                           }
                         }
                       }
-                      if (cp.stage == 8 && cn == 14) {
+                      if (track.stage == 8 && cn == 14) {
                         if (random.sim() > random.sim()) {
                           racers[c].aim = 0.76 + random.sim() * 0.76;
                         }
                       }
-                      if (cp.stage == 9) {
+                      if (track.stage == 9) {
                         racers[c].aim = 1;
                         if (
                           car[game.player].typ != 14 ||
-                          cp.clear[c] - cp.clear[game.player] < 8
+                          track.clear[c] - track.clear[game.player] < 8
                         ) {
                           if (racers[c].attack > 150 && !onlyou) {
                             racers[c].attack = 150;
                           }
                         }
                       }
-                      if (cp.stage == 11) {
+                      if (track.stage == 11) {
                         if (racers[c].bulistc) {
                           racers[c].aim = 0.7;
                           if (racers[c].attack > 150) {
@@ -5638,7 +5634,7 @@ function control() {
                           racers[c].aim = random.sim();
                         }
                       }
-                      if (cp.stage == 12) {
+                      if (track.stage == 12) {
                         if (random.sim() > random.sim()) {
                           racers[c].aim = 0.7;
                           if (cn == 14) {
@@ -5651,12 +5647,12 @@ function control() {
                           }
                         }
                       }
-                      if (cp.stage == 13) {
+                      if (track.stage == 13) {
                         if (racers[c].attack > 60) {
                           racers[c].attack = 60;
                         }
                       }
-                      if (cp.stage == 15) {
+                      if (track.stage == 15) {
                         racers[c].aim = random.sim() * 1.5;
                         racers[c].attack = racers[c].attack / 2;
                         if (random.sim() > random.sim()) {
@@ -5665,7 +5661,7 @@ function control() {
                           racers[c].exitattack = false;
                         }
                       }
-                      if (cp.stage == 16) {
+                      if (track.stage == 16) {
                         if (cn == 14) {
                           racers[c].aim = 0.2 + random.sim() * 0.8;
                           racers[c].attack = 70;
@@ -5681,7 +5677,7 @@ function control() {
                         if (cn == 18 || cn == 12 || cn == 17) {
                           racers[c].aim = random.sim() * 1.5;
                           if (
-                            Math.abs(cp.clear[i] - racers[c].clear) <= 2 ||
+                            Math.abs(track.clear[i] - racers[c].clear) <= 2 ||
                             cn == 17
                           ) {
                             racers[c].attack = racers[c].attack / 3;
@@ -5704,7 +5700,7 @@ function control() {
                       car[c].z / 10,
                       car[i].z / 10,
                     ) < 300 &&
-                    random.sim() > 0.6 - cp.pos[c] / 10
+                    random.sim() > 0.6 - track.pos[c] / 10
                   ) {
                     racers[c].clrnce = 0;
                     racers[c].acuracy = 0;
@@ -5714,27 +5710,27 @@ function control() {
             }
             var norunfix = false;
             if (
-              cp.stage == 6 ||
-              cp.stage == 10 ||
-              cp.stage == 11 ||
-              cp.stage == 14
+              track.stage == 6 ||
+              track.stage == 10 ||
+              track.stage == 11 ||
+              track.stage == 14
             ) {
               norunfix = true;
             }
-            if (cp.stage == 8 && cn != 14) {
+            if (track.stage == 8 && cn != 14) {
               norunfix = true;
             }
-            if (cp.stage == 15 && !racers[c].bulistc) {
+            if (track.stage == 15 && !racers[c].bulistc) {
               norunfix = true;
             }
-            if (cp.stage == 17) {
+            if (track.stage == 17) {
               norunfix = true;
             }
             if (game.mode != 1) {
               if (racers[c].trfix != 3) {
                 racers[c].trfix = 0;
                 var trunfix = 50;
-                if (cp.stage == 16) {
+                if (track.stage == 16) {
                   trunfix = 100;
                 }
                 if ((100 * racers[c].hitmag) / cd.maxmag[cn] > trunfix) {
@@ -5742,7 +5738,7 @@ function control() {
                 }
                 if (!norunfix) {
                   var runfix = 80;
-                  if (cp.stage == 9) {
+                  if (track.stage == 9) {
                     runfix = 70;
                   }
                   if ((100 * racers[c].hitmag) / cd.maxmag[cn] > runfix) {
@@ -5757,25 +5753,25 @@ function control() {
               }
             }
             if (!racers[c].bulistc) {
-              if (cp.stage == 8 && cn == 14) {
+              if (track.stage == 8 && cn == 14) {
                 racers[c].bulistc = true;
               }
-              if (cp.stage == 11 && cn == 16) {
+              if (track.stage == 11 && cn == 16) {
                 racers[c].bulistc = true;
               }
-              if (cp.stage == 12 && cn == 16) {
+              if (track.stage == 12 && cn == 16) {
                 racers[c].bulistc = true;
               }
               if (
-                cp.stage == 15 &&
-                cp.clear[game.player] - cp.clear[c] >= 2 &&
+                track.stage == 15 &&
+                track.clear[game.player] - track.clear[c] >= 2 &&
                 racers[c].trfix == 0
               ) {
                 racers[c].bulistc = true;
                 racers[c].oupnt = -1;
               }
-              if (cp.stage == 16) {
-                if (cn == 14 && cp.clear[c] >= 1) {
+              if (track.stage == 16) {
+                if (cn == 14 && track.clear[c] >= 1) {
                   racers[c].bulistc = true;
                 }
                 if (cn == 16) {
@@ -5783,16 +5779,16 @@ function control() {
                 }
               }
               if (
-                (cp.stage == 5 ||
-                  cp.stage == 6 ||
-                  cp.stage == 8 ||
-                  cp.stage == 10 ||
-                  cp.stage == 14) &&
-                cp.stage != game.unlocked
+                (track.stage == 5 ||
+                  track.stage == 6 ||
+                  track.stage == 8 ||
+                  track.stage == 10 ||
+                  track.stage == 14) &&
+                track.stage != game.unlocked
               ) {
                 if (
                   cn == 16 &&
-                  Math.abs(cp.clear[game.player] - racers[c].clear) >= 2
+                  Math.abs(track.clear[game.player] - racers[c].clear) >= 2
                 ) {
                   racers[c].bulistc = true;
                 }
@@ -5841,13 +5837,13 @@ function control() {
             }
             var pnt = racers[c].point;
             var powbul = 50;
-            if (cp.stage == 8) {
+            if (track.stage == 8) {
               powbul = 20;
             }
-            if (cp.stage == 15) {
+            if (track.stage == 15) {
               powbul = 40;
             }
-            if (cp.stage == 16) {
+            if (track.stage == 16) {
               if (cn == 14 || cn == 16) {
                 powbul = 0;
               }
@@ -5860,71 +5856,72 @@ function control() {
               racers[c].power < powbul
             ) {
               var tpnt = 0;
-              if (racers[c].rampp == 1 && cp.typ[pnt] <= 0) {
+              if (racers[c].rampp == 1 && track.typ[pnt] <= 0) {
                 tpnt = pnt + 1;
-                if (tpnt >= cp.n) {
+                if (tpnt >= track.n) {
                   tpnt = 0;
                 }
-                if (cp.typ[tpnt] == -2) {
+                if (track.typ[tpnt] == -2) {
                   pnt = tpnt;
                 }
               }
               if (racers[c].rampp == -1) {
-                if (cp.typ[pnt] == -2) {
+                if (track.typ[pnt] == -2) {
                   pnt++;
-                  if (pnt >= cp.n) {
+                  if (pnt >= track.n) {
                     pnt = 0;
                   }
                 }
               }
-              if (cp.stage != 9 || pnt != 0) {
+              if (track.stage != 9 || pnt != 0) {
                 if (random.sim() > racers[c].skiplev) {
                   tpnt = pnt;
                   var notimpcp = false;
-                  if (cp.typ[tpnt] > 0) {
+                  if (track.typ[tpnt] > 0) {
                     var ic = 0;
-                    for (var i = 0; i < cp.n; i++) {
-                      if (cp.typ[i] > 0 && i < tpnt) {
+                    for (var i = 0; i < track.n; i++) {
+                      if (track.typ[i] > 0 && i < tpnt) {
                         ic++;
                       }
                     }
-                    notimpcp = racers[c].clear != ic + racers[c].nlaps * cp.nsp;
+                    notimpcp =
+                      racers[c].clear != ic + racers[c].nlaps * track.nsp;
                   }
                   while (
-                    cp.typ[tpnt] == 0 ||
-                    cp.typ[tpnt] == -1 ||
-                    cp.typ[tpnt] == -3 ||
+                    track.typ[tpnt] == 0 ||
+                    track.typ[tpnt] == -1 ||
+                    track.typ[tpnt] == -3 ||
                     notimpcp
                   ) {
                     pnt = tpnt;
                     tpnt++;
-                    if (tpnt >= cp.n) {
+                    if (tpnt >= track.n) {
                       tpnt = 0;
                     }
                     notimpcp = false;
-                    if (cp.typ[tpnt] > 0) {
+                    if (track.typ[tpnt] > 0) {
                       var ic = 0;
-                      for (var i = 0; i < cp.n; i++) {
-                        if (cp.typ[i] > 0 && i < tpnt) {
+                      for (var i = 0; i < track.n; i++) {
+                        if (track.typ[i] > 0 && i < tpnt) {
                           ic++;
                         }
                       }
                       notimpcp =
-                        racers[c].clear != ic + racers[c].nlaps * cp.nsp;
+                        racers[c].clear != ic + racers[c].nlaps * track.nsp;
                     }
                   }
                 } else {
                   if (random.sim() > racers[c].skiplev) {
-                    while (cp.typ[pnt] == -1) {
+                    while (track.typ[pnt] == -1) {
                       pnt++;
-                      if (pnt >= cp.n) {
+                      if (pnt >= track.n) {
                         pnt = 0;
                       }
                     }
                   }
                 }
               }
-              if (cp.stage == 11) {
+              if (track.stage == 11) {
                 if (racers[c].pcleared == 18 && pnt >= 26) {
                   if (pnt <= 32) {
                     pnt = 32;
@@ -5936,17 +5933,17 @@ function control() {
                   pnt = 74;
                 }
               }
-              if (cp.stage == 12) {
+              if (track.stage == 12) {
                 if (racers[c].pcleared == 27 || racers[c].pcleared == 37) {
-                  while (cp.typ[pnt] == -1) {
+                  while (track.typ[pnt] == -1) {
                     pnt++;
-                    if (pnt >= cp.n) {
+                    if (pnt >= track.n) {
                       pnt = 0;
                     }
                   }
                 }
               }
-              if (cp.stage == 13) {
+              if (track.stage == 13) {
                 if (
                   racers[c].pcleared == 20 &&
                   racers[c].focus == 36 &&
@@ -5956,9 +5953,9 @@ function control() {
                   if (
                     pyo(
                       car[c].x / 10,
-                      cp.x[30] / 10,
+                      track.x[30] / 10,
                       car[c].z / 10,
-                      cp.z[30] / 10,
+                      track.z[30] / 10,
                     ) < 1000
                   ) {
                     racers[c].focus = -1;
@@ -5998,7 +5995,7 @@ function control() {
                   }
                 }
               }
-              if (cp.stage == 14) {
+              if (track.stage == 14) {
                 if (
                   racers[c].pcleared == 47 &&
                   pnt > 58 &&
@@ -6007,22 +6004,22 @@ function control() {
                   racers[c].oupnt = 1;
                 }
                 if (cn != 17 || racers[c].acr == 0) {
-                  while (cp.typ[pnt] == -1) {
+                  while (track.typ[pnt] == -1) {
                     pnt++;
-                    if (pnt >= cp.n) {
+                    if (pnt >= track.n) {
                       pnt = 0;
                     }
                   }
                 }
               }
-              if (cp.stage == 15) {
+              if (track.stage == 15) {
                 if (racers[c].pcleared == 10 && racers[c].trfix < 2) {
                   if (pnt != 18) {
                     pnt = 18;
                   }
                 }
               }
-              if (cp.stage == 16) {
+              if (track.stage == 16) {
                 if (racers[c].trfix != 2 && racers[c].trfix != 3) {
                   if (racers[c].pcleared == 152 && car[c].z < 2700) {
                     pnt = 5;
@@ -6071,7 +6068,7 @@ function control() {
                   }
                 }
                 if (
-                  cp.clear[c] - cp.clear[game.player] >= 2 &&
+                  track.clear[c] - track.clear[game.player] >= 2 &&
                   pyo(
                     car[c].x / 10,
                     car[game.player].x / 10,
@@ -6133,7 +6130,7 @@ function control() {
                   myxz -= 360;
                 }
                 for (var i = 0; i < game.carCount; i++) {
-                  if (i != c && cp.clear[i] != -1) {
+                  if (i != c && track.clear[i] != -1) {
                     if (
                       pyo(
                         car[c].x / 10,
@@ -6179,13 +6176,13 @@ function control() {
               }
               if (racers[c].rampp == 2) {
                 tpnt = pnt + 1;
-                if (tpnt >= cp.n) {
+                if (tpnt >= track.n) {
                   tpnt = 0;
                 }
-                if (cp.typ[tpnt] == -2 && pnt != racers[c].point) {
+                if (track.typ[tpnt] == -2 && pnt != racers[c].point) {
                   pnt--;
                   if (pnt < 0) {
-                    pnt += cp.n;
+                    pnt += track.n;
                   }
                 }
               }
@@ -6196,26 +6193,26 @@ function control() {
                 }
               }
             } else {
-              if (cp.stage != 15 || racers[c].runbul == 0) {
+              if (track.stage != 15 || racers[c].runbul == 0) {
                 pnt -= 2;
                 if (pnt < 0) {
-                  pnt += cp.n;
+                  pnt += track.n;
                 }
-                while (cp.typ[pnt] == -4) {
+                while (track.typ[pnt] == -4) {
                   pnt--;
                   if (pnt < 0) {
-                    pnt += cp.n;
+                    pnt += track.n;
                   }
                 }
               }
-              if (cp.stage == 11) {
+              if (track.stage == 11) {
                 if (pnt < 38 && pnt > 25) {
                   pnt = 25;
                 }
               }
-              if (cp.stage == 12) {
+              if (track.stage == 12) {
                 if (!racers[c].gowait) {
-                  if (cp.clear[game.player] == 0) {
+                  if (track.clear[game.player] == 0) {
                     racers[c].wtx = 350;
                     racers[c].wtz = 1900;
                     racers[c].frx = 350;
@@ -6225,7 +6222,7 @@ function control() {
                     racers[c].gowait = true;
                     racers[c].afta = false;
                   }
-                  if (cp.clear[game.player] == 7) {
+                  if (track.clear[game.player] == 7) {
                     racers[c].wtx = 4480;
                     racers[c].wtz = 4032;
                     racers[c].frx = 4480;
@@ -6235,7 +6232,7 @@ function control() {
                     racers[c].gowait = true;
                     racers[c].afta = false;
                   }
-                  if (cp.clear[game.player] == 10) {
+                  if (track.clear[game.player] == 10) {
                     racers[c].wtx = 0;
                     racers[c].wtz = 4873.9;
                     racers[c].frx = 0;
@@ -6245,7 +6242,7 @@ function control() {
                     racers[c].gowait = true;
                     racers[c].afta = false;
                   }
-                  if (cp.clear[game.player] == 14) {
+                  if (track.clear[game.player] == 14) {
                     racers[c].wtx = 350;
                     racers[c].wtz = 1900;
                     racers[c].frx = 1470;
@@ -6255,7 +6252,7 @@ function control() {
                     racers[c].gowait = true;
                     racers[c].afta = false;
                   }
-                  if (cp.clear[game.player] == 18) {
+                  if (track.clear[game.player] == 18) {
                     racers[c].wtx = 4830;
                     racers[c].wtz = -455;
                     racers[c].frx = 4830;
@@ -6317,25 +6314,25 @@ function control() {
                   }
                 }
               }
-              if (cp.stage == 15) {
+              if (track.stage == 15) {
                 if (racers[c].oupnt == -1) {
                   var pyclos = -10;
-                  for (var i = 0; i < cp.n; i++) {
-                    if (cp.typ[i] == -2 && i < 71) {
+                  for (var i = 0; i < track.n; i++) {
+                    if (track.typ[i] == -2 && i < 71) {
                       if (
                         pyo(
                           car[c].x / 10,
-                          cp.x[i] / 10,
+                          track.x[i] / 10,
                           car[c].z / 10,
-                          cp.z[i] / 10,
+                          track.z[i] / 10,
                         ) < pyclos ||
                         pyclos == -10
                       ) {
                         pyclos = pyo(
                           car[c].x / 10,
-                          cp.x[i] / 10,
+                          track.x[i] / 10,
                           car[c].z / 10,
-                          cp.z[i] / 10,
+                          track.z[i] / 10,
                         );
                         racers[c].oupnt = i;
                       }
@@ -6343,17 +6340,17 @@ function control() {
                   }
                   racers[c].oupnt--;
                   if (racers[c].oupnt < 0) {
-                    racers[c].oupnt += cp.n;
+                    racers[c].oupnt += track.n;
                   }
                 }
-                if (racers[c].oupnt >= 0 && racers[c].oupnt < cp.n) {
+                if (racers[c].oupnt >= 0 && racers[c].oupnt < track.n) {
                   pnt = racers[c].oupnt;
                   if (
                     pyo(
                       car[c].x / 10,
-                      cp.x[pnt] / 10,
+                      track.x[pnt] / 10,
                       car[c].z / 10,
-                      cp.z[pnt] / 10,
+                      track.z[pnt] / 10,
                     ) < 800
                   ) {
                     racers[c].oupnt = -Math.floor(75 + random.sim() * 200);
@@ -6367,18 +6364,18 @@ function control() {
                   racers[c].runbul--;
                 }
               }
-              if (cp.stage == 16) {
+              if (track.stage == 16) {
                 if (cn == 14) {
                   if (racers[c].power > 60) {
                     var i = racers[game.player].pcleared;
                     var found = -1;
                     while (found == -1) {
                       i++;
-                      if (i >= cp.n) {
-                        i -= cp.n;
+                      if (i >= track.n) {
+                        i -= track.n;
                         found = 152;
                       }
-                      if (cp.typ[i] == 1 || cp.typ[i] == 2) {
+                      if (track.typ[i] == 1 || track.typ[i] == 2) {
                         found = i;
                       }
                     }
@@ -6388,9 +6385,9 @@ function control() {
                     if (
                       pyo(
                         car[c].x / 10,
-                        cp.x[found] / 10,
+                        track.x[found] / 10,
                         car[c].z / 10,
-                        cp.z[found] / 10,
+                        track.z[found] / 10,
                       ) < 1000
                     ) {
                       racers[c].acr = 0;
@@ -6400,27 +6397,27 @@ function control() {
                     pnt = found;
                   } else {
                     var pyclos = -10;
-                    for (var i = 0; i < cp.n; i++) {
+                    for (var i = 0; i < track.n; i++) {
                       if (
-                        obo[cp.obi[i]].typ == 24 ||
-                        obo[cp.obi[i]].typ == 25 ||
-                        obo[cp.obi[i]].typ == 43 ||
-                        obo[cp.obi[i]].typ == 45
+                        pieces.list[track.obi[i]].typ == 24 ||
+                        pieces.list[track.obi[i]].typ == 25 ||
+                        pieces.list[track.obi[i]].typ == 43 ||
+                        pieces.list[track.obi[i]].typ == 45
                       ) {
                         if (
                           pyo(
                             car[c].x / 10,
-                            cp.x[i] / 10,
+                            track.x[i] / 10,
                             car[c].z / 10,
-                            cp.z[i] / 10,
+                            track.z[i] / 10,
                           ) < pyclos ||
                           pyclos == -10
                         ) {
                           pyclos = pyo(
                             car[c].x / 10,
-                            cp.x[i] / 10,
+                            track.x[i] / 10,
                             car[c].z / 10,
-                            cp.z[i] / 10,
+                            track.z[i] / 10,
                           );
                           pnt = i;
                         }
@@ -6561,7 +6558,7 @@ function control() {
               }
               racers[c].nofocus = true;
             }
-            if (cp.stage != 17 && game.mode != 1) {
+            if (track.stage != 17 && game.mode != 1) {
               if (
                 racers[c].missedcp == 0 ||
                 racers[c].forget ||
@@ -6570,57 +6567,57 @@ function control() {
                 if (racers[c].trfix != 0) {
                   var istr = 0;
                   if (
-                    cp.stage == 9 &&
+                    track.stage == 9 &&
                     car[game.player].typ == 14 &&
-                    cp.clear[c] - cp.clear[game.player] >= 4
+                    track.clear[c] - track.clear[game.player] >= 4
                   ) {
                     istr = 1;
                   }
-                  if (cp.stage == 16) {
+                  if (track.stage == 16) {
                     istr = 2;
                   }
                   if (racers[c].trfix == 2) {
-                    if (cp.stage == 15) {
+                    if (track.stage == 15) {
                       istr = 2;
                     }
                     var pyclos = -10;
                     var closi = 0;
-                    for (var i = istr; i < nf; i++) {
+                    for (var i = istr; i < pieces.fixCount; i++) {
                       if (
                         pyo(
                           car[c].x / 10,
-                          cp.x[fpnt[i]] / 10,
+                          track.x[fpnt[i]] / 10,
                           car[c].z / 10,
-                          cp.z[fpnt[i]] / 10,
+                          track.z[fpnt[i]] / 10,
                         ) < pyclos ||
                         pyclos == -10
                       ) {
                         pyclos = pyo(
                           car[c].x / 10,
-                          cp.x[fpnt[i]] / 10,
+                          track.x[fpnt[i]] / 10,
                           car[c].z / 10,
-                          cp.z[fpnt[i]] / 10,
+                          track.z[fpnt[i]] / 10,
                         );
                         closi = i;
                       }
                     }
-                    if (cp.stage == 12) {
+                    if (track.stage == 12) {
                       closi = 1;
                     }
                     pnt = fpnt[closi];
-                    if (cp.special[closi]) {
+                    if (track.special[closi]) {
                       racers[c].forget = true;
                     } else {
                       racers[c].forget = false;
                     }
                   }
-                  for (var i = istr; i < nf; i++) {
+                  for (var i = istr; i < pieces.fixCount; i++) {
                     if (
                       pyo(
                         car[c].x / 10,
-                        cp.x[fpnt[i]] / 10,
+                        track.x[fpnt[i]] / 10,
                         car[c].z / 10,
-                        cp.z[fpnt[i]] / 10,
+                        track.z[fpnt[i]] / 10,
                       ) < 2000
                     ) {
                       racers[c].forget = false;
@@ -6642,13 +6639,15 @@ function control() {
             if (racers[c].turncnt > racers[c].randtcnt) {
               if (!racers[c].gowait) {
                 var ad = 0;
-                if (cp.x[pnt] - car[c].x >= 0) {
+                if (track.x[pnt] - car[c].x >= 0) {
                   ad = 180;
                 }
                 racers[c].pan = Math.floor(
                   90 +
                     ad +
-                    Math.atan((cp.z[pnt] - car[c].z) / (cp.x[pnt] - car[c].x)) /
+                    Math.atan(
+                      (track.z[pnt] - car[c].z) / (track.x[pnt] - car[c].x),
+                    ) /
                       0.017453292519943295,
                 );
               } else {
@@ -6703,24 +6702,24 @@ function control() {
               racers[c].attack = 0;
             }
             if (
-              cp.stage == 15 &&
+              track.stage == 15 &&
               racers[c].exitattack &&
               !racers[c].bulistc &&
               racers[c].missedcp != 0
             ) {
               racers[c].attack = 0;
             }
-            if (cp.stage == 16 && racers[c].missedcp != 0) {
+            if (track.stage == 16 && racers[c].missedcp != 0) {
               if (
-                cp.pos[c] == 0 ||
-                (cp.pos[c] == 1 && cp.pos[game.player] == 0)
+                track.pos[c] == 0 ||
+                (track.pos[c] == 1 && track.pos[game.player] == 0)
               ) {
                 racers[c].attack = 0;
               }
             }
             if (
-              cp.stage == 16 &&
-              cp.pos[game.player] > cp.pos[c] &&
+              track.stage == 16 &&
+              track.pos[game.player] > track.pos[c] &&
               racers[c].power < 80
             ) {
               racers[c].attack = 0;
@@ -6819,9 +6818,9 @@ function control() {
                 racers[c].u.right = true;
               }
             }
-            if (build[obo[racers[c].wall].typ].dam != 0) {
+            if (pieceModels[pieces.list[racers[c].wall].typ].dam != 0) {
               var hmlt = 1;
-              if (build[obo[racers[c].wall].typ].skid == 1) {
+              if (pieceModels[pieces.list[racers[c].wall].typ].skid == 1) {
                 hmlt = 3;
               }
               racers[c].hold += hmlt;
@@ -6847,19 +6846,19 @@ function control() {
                 (car[c].y + 5)) /
               40;
             var divo = 3;
-            if (cp.stage == 15 || cp.stage == 16) {
+            if (track.stage == 15 || track.stage == 16) {
               divo = 10;
             }
             if (
-              cp.stage == 13 &&
+              track.stage == 13 &&
               racers[c].pcleared == 20 &&
               racers[c].point > 32 &&
-              cp.clear[c] - cp.clear[game.player] <= 3
+              track.clear[c] - track.clear[game.player] <= 3
             ) {
               upv = 0;
             }
             if (
-              cp.stage == 16 &&
+              track.stage == 16 &&
               racers[c].pcleared == 120 &&
               car[c].z < 2200
             ) {
@@ -6913,7 +6912,7 @@ function control() {
                   if (
                     racers[c].stuntf == 4 ||
                     racers[c].stuntf == 5 ||
-                    cp.stage == 16
+                    track.stage == 16
                   ) {
                     racers[c].udstart = 0;
                   }
@@ -6967,14 +6966,14 @@ function control() {
                   }
                 }
               }
-              if (cp.stage == 16 && cn == 16) {
+              if (track.stage == 16 && cn == 16) {
                 racers[c].lrdirect = -1;
                 racers[c].lrstart = 0;
                 racers[c].uddirect = -1;
                 racers[c].udstart = 0;
               }
               if (racers[c].trfix == 3 || racers[c].trfix == 4) {
-                if (cp.stage != 8) {
+                if (track.stage != 8) {
                   if (racers[c].lrdirect == -1) {
                     racers[c].uddirect = -1;
                   }
@@ -7350,7 +7349,7 @@ function inishmad() {
     racers[c].embodir = 0;
     racers[c].embomag = 0;
     racers[c].bshft = 0;
-    racers[c].pcleared = cp.pcs;
+    racers[c].pcleared = track.pcs;
     racers[c].clear = 0;
     racers[c].nlaps = 0;
     racers[c].focus = -1;
@@ -7359,7 +7358,7 @@ function inishmad() {
     racers[c].lastcolido = 0;
     racers[c].nofocus = false;
     racers[c].point = 0;
-    cp.dested[c] = 0;
+    track.dested[c] = 0;
   }
   for (var i = 0; i < 2; i++) {
     lonorm[i] = 0;
@@ -7902,24 +7901,24 @@ function drive() {
     }
     var tskd = 1;
     var ontsprk = false;
-    for (var o = 0; o < nb; o++) {
-      if (build[obo[o].typ].skid != -1) {
+    for (var o = 0; o < pieces.count; o++) {
+      if (pieceModels[pieces.list[o].typ].skid != -1) {
         var bx =
-          obo[o].x +
-          build[obo[o].typ].bx * obo[o].mat[0] +
-          build[obo[o].typ].bz * obo[o].mat[8];
+          pieces.list[o].x +
+          pieceModels[pieces.list[o].typ].bx * pieces.list[o].mat[0] +
+          pieceModels[pieces.list[o].typ].bz * pieces.list[o].mat[8];
         var sx =
-          obo[o].x +
-          build[obo[o].typ].sx * obo[o].mat[0] +
-          build[obo[o].typ].sz * obo[o].mat[8];
+          pieces.list[o].x +
+          pieceModels[pieces.list[o].typ].sx * pieces.list[o].mat[0] +
+          pieceModels[pieces.list[o].typ].sz * pieces.list[o].mat[8];
         var bz =
-          obo[o].z +
-          build[obo[o].typ].bz * obo[o].mat[10] +
-          build[obo[o].typ].bx * obo[o].mat[2];
+          pieces.list[o].z +
+          pieceModels[pieces.list[o].typ].bz * pieces.list[o].mat[10] +
+          pieceModels[pieces.list[o].typ].bx * pieces.list[o].mat[2];
         var sz =
-          obo[o].z +
-          build[obo[o].typ].sz * obo[o].mat[10] +
-          build[obo[o].typ].sx * obo[o].mat[2];
+          pieces.list[o].z +
+          pieceModels[pieces.list[o].typ].sz * pieces.list[o].mat[10] +
+          pieceModels[pieces.list[o].typ].sx * pieces.list[o].mat[2];
         var intr = 0;
         if (bx > sx) {
           if (car[c].x > sx && car[c].x < bx) {
@@ -7940,7 +7939,7 @@ function drive() {
           }
         }
         if (intr == 2) {
-          tskd = build[obo[o].typ].skid;
+          tskd = pieceModels[pieces.list[o].typ].skid;
           ontsprk = true;
         }
       }
@@ -7970,7 +7969,7 @@ function drive() {
       var motorx = -(racers[c].speed * msin(car[c].xz) * mcos(racers[c].pzy));
       var motorz = racers[c].speed * mcos(car[c].xz) * mcos(racers[c].pzy);
       var motory = -(racers[c].speed * msin(racers[c].pzy));
-      if (racers[c].capsized || racers[c].dest || cp.haltall) {
+      if (racers[c].capsized || racers[c].dest || track.haltall) {
         motorx = 0;
         motorz = 0;
         motory = 0;
@@ -8222,51 +8221,60 @@ function drive() {
     var xboundr =
       Math.abs(cd.boundr[cn] * car[c].mat[8]) + Math.abs(2 * car[c].mat[10]);
     var ntron = 0;
-    for (var o = 0; o < nb; o++) {
+    for (var o = 0; o < pieces.count; o++) {
       var ntroff = 0;
       var ntrt = 0;
-      if (build[obo[o].typ].intershad || build[obo[o].typ].interact) {
+      if (
+        pieceModels[pieces.list[o].typ].intershad ||
+        pieceModels[pieces.list[o].typ].interact
+      ) {
         if (
-          Math.abs(car[c].x - obo[o].x) <
-            build[obo[o].typ].colrad + carobj[cn].colrad &&
-          Math.abs(car[c].y - obo[o].y) <
-            build[obo[o].typ].colrad + carobj[cn].colrad &&
-          Math.abs(car[c].z - obo[o].z) <
-            build[obo[o].typ].colrad + carobj[cn].colrad
+          Math.abs(car[c].x - pieces.list[o].x) <
+            pieceModels[pieces.list[o].typ].colrad + carobj[cn].colrad &&
+          Math.abs(car[c].y - pieces.list[o].y) <
+            pieceModels[pieces.list[o].typ].colrad + carobj[cn].colrad &&
+          Math.abs(car[c].z - pieces.list[o].z) <
+            pieceModels[pieces.list[o].typ].colrad + carobj[cn].colrad
         ) {
-          build[obo[o].typ].x = obo[o].x;
-          build[obo[o].typ].y = obo[o].y;
-          build[obo[o].typ].z = obo[o].z;
-          build[obo[o].typ].mat = obo[o].mat;
-          var rad = build[obo[o].typ];
+          pieceModels[pieces.list[o].typ].x = pieces.list[o].x;
+          pieceModels[pieces.list[o].typ].y = pieces.list[o].y;
+          pieceModels[pieces.list[o].typ].z = pieces.list[o].z;
+          pieceModels[pieces.list[o].typ].mat = pieces.list[o].mat;
+          var rad = pieceModels[pieces.list[o].typ];
           var cancelbnd = false;
-          if (obo[o].typ == 33 || obo[o].typ == 34) {
+          if (pieces.list[o].typ == 33 || pieces.list[o].typ == 34) {
             cancelbnd = true;
           }
-          if ((obo[o].typ == 46 || obo[o].typ == 47) && car[c].y > 70) {
+          if (
+            (pieces.list[o].typ == 46 || pieces.list[o].typ == 47) &&
+            car[c].y > 70
+          ) {
             cancelbnd = true;
           }
-          if ((obo[o].typ == 50 || obo[o].typ == 48) && car[c].y > 140) {
+          if (
+            (pieces.list[o].typ == 50 || pieces.list[o].typ == 48) &&
+            car[c].y > 140
+          ) {
             cancelbnd = true;
           }
-          if (obo[o].typ == 49 && car[c].y > 280) {
+          if (pieces.list[o].typ == 49 && car[c].y > 280) {
             cancelbnd = true;
           }
-          if (obo[o].typ == 51 && car[c].y > 310) {
+          if (pieces.list[o].typ == 51 && car[c].y > 310) {
             cancelbnd = true;
           }
-          if (obo[o].typ == 40 && car[c].y > 100) {
+          if (pieces.list[o].typ == 40 && car[c].y > 100) {
             cancelbnd = true;
           }
           var cancelpln = false;
-          if (obo[o].typ == 1) {
+          if (pieces.list[o].typ == 1) {
             cancelpln = true;
           }
           for (var k = 0; k < 4; k++) {
             if (
-              Math.abs(kx[k] - obo[o].x) < obo[o].bx &&
-              Math.abs(kz[k] - obo[o].z) < obo[o].bz &&
-              Math.abs(ky[k] - obo[o].y) < obo[o].by
+              Math.abs(kx[k] - pieces.list[o].x) < pieces.list[o].bx &&
+              Math.abs(kz[k] - pieces.list[o].z) < pieces.list[o].bz &&
+              Math.abs(ky[k] - pieces.list[o].y) < pieces.list[o].by
             ) {
               var normx = 0,
                 normy = 0,
@@ -8299,7 +8307,7 @@ function drive() {
                 if (Math.abs(normy) < rad.walarc && !cancelbnd) {
                   var bncbth = false;
                   if (!rad.interact) {
-                    if (obo[o].typ != 39) {
+                    if (pieces.list[o].typ != 39) {
                       var verlow = 10000;
                       for (var j = 0; j < 3; j++) {
                         if (verty[j] < verlow) {
@@ -8400,7 +8408,7 @@ function drive() {
                       }
                       var colz = lz + rad.z + (tz - lz) * fct;
                       if (
-                        obo[o].bnd[0] != 1 &&
+                        pieces.list[o].bnd[0] != 1 &&
                         normz > 0 &&
                         kz[k] < colz + zboundr &&
                         kz[k] > colz + zboundr - rad.bndmax &&
@@ -8463,17 +8471,17 @@ function drive() {
                         spinlocate = true;
                         racers[c].uwall = true;
                         if (
-                          obo[o].typ != 35 &&
-                          obo[o].typ != 36 &&
-                          (obo[o].typ != 39 || cp.stage == 13) &&
-                          (obo[o].typ != 20 || cp.stage != 14) &&
-                          (obo[o].typ != 1 || cp.stage != 16)
+                          pieces.list[o].typ != 35 &&
+                          pieces.list[o].typ != 36 &&
+                          (pieces.list[o].typ != 39 || track.stage == 13) &&
+                          (pieces.list[o].typ != 20 || track.stage != 14) &&
+                          (pieces.list[o].typ != 1 || track.stage != 16)
                         ) {
                           racers[c].wall = o;
                         }
                       }
                       if (
-                        obo[o].bnd[1] != 1 &&
+                        pieces.list[o].bnd[1] != 1 &&
                         normz < 0 &&
                         kz[k] > colz - zboundr &&
                         kz[k] < colz - zboundr + rad.bndmax &&
@@ -8536,11 +8544,11 @@ function drive() {
                         spinlocate = true;
                         racers[c].uwall = true;
                         if (
-                          obo[o].typ != 35 &&
-                          obo[o].typ != 36 &&
-                          (obo[o].typ != 39 || cp.stage == 13) &&
-                          (obo[o].typ != 20 || cp.stage != 14) &&
-                          (obo[o].typ != 1 || cp.stage != 16)
+                          pieces.list[o].typ != 35 &&
+                          pieces.list[o].typ != 36 &&
+                          (pieces.list[o].typ != 39 || track.stage == 13) &&
+                          (pieces.list[o].typ != 20 || track.stage != 14) &&
+                          (pieces.list[o].typ != 1 || track.stage != 16)
                         ) {
                           racers[c].wall = o;
                         }
@@ -8588,7 +8596,7 @@ function drive() {
                       }
                       var colx = lx + rad.x + (tx - lx) * fct;
                       if (
-                        obo[o].bnd[2] != 1 &&
+                        pieces.list[o].bnd[2] != 1 &&
                         normx > 0 &&
                         kx[k] < colx + xboundr &&
                         kx[k] > colx + xboundr - rad.bndmax &&
@@ -8651,16 +8659,16 @@ function drive() {
                         spinlocate = true;
                         racers[c].uwall = true;
                         if (
-                          obo[o].typ != 35 &&
-                          obo[o].typ != 36 &&
-                          (obo[o].typ != 39 || cp.stage == 13) &&
-                          (obo[o].typ != 1 || cp.stage != 16)
+                          pieces.list[o].typ != 35 &&
+                          pieces.list[o].typ != 36 &&
+                          (pieces.list[o].typ != 39 || track.stage == 13) &&
+                          (pieces.list[o].typ != 1 || track.stage != 16)
                         ) {
                           racers[c].wall = o;
                         }
                       }
                       if (
-                        obo[o].bnd[3] != 1 &&
+                        pieces.list[o].bnd[3] != 1 &&
                         normx < 0 &&
                         kx[k] > colx - xboundr &&
                         kx[k] < colx - xboundr + rad.bndmax &&
@@ -8723,10 +8731,10 @@ function drive() {
                         spinlocate = true;
                         racers[c].uwall = true;
                         if (
-                          obo[o].typ != 35 &&
-                          obo[o].typ != 36 &&
-                          (obo[o].typ != 39 || cp.stage == 13) &&
-                          (obo[o].typ != 1 || cp.stage != 16)
+                          pieces.list[o].typ != 35 &&
+                          pieces.list[o].typ != 36 &&
+                          (pieces.list[o].typ != 39 || track.stage == 13) &&
+                          (pieces.list[o].typ != 1 || track.stage != 16)
                         ) {
                           racers[c].wall = o;
                         }
@@ -8734,7 +8742,7 @@ function drive() {
                     }
                   }
                 }
-                if (obo[o].typ == 26) {
+                if (pieces.list[o].typ == 26) {
                   normy = Math.abs(normy);
                 }
                 if (normy > 0.4 && !cancelpln) {
@@ -8898,7 +8906,7 @@ function drive() {
                               racers[c].scy[k] * bmac,
                             );
                           }
-                          if (obo[o].typ == 39) {
+                          if (pieces.list[o].typ == 39) {
                             for (var ka = 0; ka < 4; ka++) {
                               if (Math.abs(normz) > Math.abs(normx)) {
                                 if (normz > 0) {
@@ -9647,15 +9655,15 @@ function drive() {
     } else {
       cov = 7;
     }
-    for (var i = 0; i < cp.n; i++) {
-      if (cp.typ[i] > 0) {
+    for (var i = 0; i < track.n; i++) {
+      if (track.typ[i] > 0) {
         ic++;
-        if (cp.typ[i] == 1) {
-          if (racers[c].clear == ic + racers[c].nlaps * cp.nsp) {
+        if (track.typ[i] == 1) {
+          if (racers[c].clear == ic + racers[c].nlaps * track.nsp) {
             cov = 1;
           }
           if (
-            Math.abs(car[c].z - cp.z[i]) <
+            Math.abs(car[c].z - track.z[i]) <
               6 +
                 Math.abs(
                   racers[c].scz[0] +
@@ -9664,22 +9672,22 @@ function drive() {
                     racers[c].scz[3],
                 ) /
                   4 &&
-            Math.abs(car[c].x - cp.x[i]) < 70 &&
-            Math.abs(car[c].y - cp.y[i] - 15) < 45
+            Math.abs(car[c].x - track.x[i]) < 70 &&
+            Math.abs(car[c].y - track.y[i] - 15) < 45
           ) {
-            if (racers[c].clear == ic + racers[c].nlaps * cp.nsp - 1) {
-              racers[c].clear = ic + racers[c].nlaps * cp.nsp;
+            if (racers[c].clear == ic + racers[c].nlaps * track.nsp - 1) {
+              racers[c].clear = ic + racers[c].nlaps * track.nsp;
               racers[c].pcleared = i;
               racers[c].focus = -1;
             }
           }
         }
-        if (cp.typ[i] == 2) {
-          if (racers[c].clear == ic + racers[c].nlaps * cp.nsp) {
+        if (track.typ[i] == 2) {
+          if (racers[c].clear == ic + racers[c].nlaps * track.nsp) {
             cov = 1;
           }
           if (
-            Math.abs(car[c].x - cp.x[i]) <
+            Math.abs(car[c].x - track.x[i]) <
               6 +
                 Math.abs(
                   racers[c].scx[0] +
@@ -9688,11 +9696,11 @@ function drive() {
                     racers[c].scx[3],
                 ) /
                   4 &&
-            Math.abs(car[c].z - cp.z[i]) < 70 &&
-            Math.abs(car[c].y - cp.y[i] - 15) < 45
+            Math.abs(car[c].z - track.z[i]) < 70 &&
+            Math.abs(car[c].y - track.y[i] - 15) < 45
           ) {
-            if (racers[c].clear == ic + racers[c].nlaps * cp.nsp - 1) {
-              racers[c].clear = ic + racers[c].nlaps * cp.nsp;
+            if (racers[c].clear == ic + racers[c].nlaps * track.nsp - 1) {
+              racers[c].clear = ic + racers[c].nlaps * track.nsp;
               racers[c].pcleared = i;
               racers[c].focus = -1;
             }
@@ -9700,27 +9708,29 @@ function drive() {
         }
       }
       if (
-        pyo(car[c].x / 10, cp.x[i] / 10, car[c].z / 10, cp.z[i] / 10) * cov <
+        pyo(car[c].x / 10, track.x[i] / 10, car[c].z / 10, track.z[i] / 10) *
+          cov <
           pyclos ||
         pyclos == 0
       ) {
         pnt = i;
         pyclos =
-          pyo(car[c].x / 10, cp.x[i] / 10, car[c].z / 10, cp.z[i] / 10) * cov;
+          pyo(car[c].x / 10, track.x[i] / 10, car[c].z / 10, track.z[i] / 10) *
+          cov;
       }
     }
-    if (racers[c].clear == ic + racers[c].nlaps * cp.nsp) {
+    if (racers[c].clear == ic + racers[c].nlaps * track.nsp) {
       racers[c].nlaps++;
     }
     if (c == game.player) {
       oncheckpoint = racers[c].clear;
-      while (oncheckpoint >= cp.nsp) {
-        oncheckpoint -= cp.nsp;
+      while (oncheckpoint >= track.nsp) {
+        oncheckpoint -= track.nsp;
       }
-      if (racers[c].clear == cp.nlaps * cp.nsp - 1) {
+      if (racers[c].clear == track.nlaps * track.nsp - 1) {
         onlastcheck = true;
       }
-      if (cp.haltall) {
+      if (track.haltall) {
         onlastcheck = false;
       }
     }
@@ -9732,28 +9742,28 @@ function drive() {
       }
       if (!racers[c].nofocus) {
         if (
-          cp.stage == 5 &&
+          track.stage == 5 &&
           (racers[c].pcleared == 27 || racers[c].pcleared == 35) &&
           pnt < 29
         ) {
           pnt = 33;
         }
         ic = racers[c].pcleared + 1;
-        if (ic >= cp.n) {
+        if (ic >= track.n) {
           ic = 0;
         }
-        while (cp.typ[ic] <= 0) {
+        while (track.typ[ic] <= 0) {
           ic++;
-          if (ic >= cp.n) {
+          if (ic >= track.n) {
             ic = 0;
           }
         }
         if (pnt > ic) {
           if (
-            racers[c].clear != racers[c].nlaps * cp.nsp ||
+            racers[c].clear != racers[c].nlaps * track.nsp ||
             pnt < racers[c].pcleared
           ) {
-            if (cp.stage != 9 || ic != 9 || pnt < 16) {
+            if (track.stage != 9 || ic != 9 || pnt < 16) {
               pnt = ic;
               racers[c].focus = pnt;
             } else {
@@ -9762,10 +9772,10 @@ function drive() {
           }
         }
       }
-      if (pnt >= cp.n) {
-        pnt -= cp.n;
+      if (pnt >= track.n) {
+        pnt -= track.n;
       }
-      if (cp.typ[pnt] == -3) {
+      if (track.typ[pnt] == -3) {
         pnt = 0;
       }
       if (c == game.player) {
@@ -9786,9 +9796,9 @@ function drive() {
           Math.sqrt(
             pyo(
               car[c].x / 10,
-              cp.x[racers[c].focus] / 10,
+              track.x[racers[c].focus] / 10,
               car[c].z / 10,
-              cp.z[racers[c].focus] / 10,
+              track.z[racers[c].focus] / 10,
             ),
           ) > 80
         ) {
@@ -9799,9 +9809,9 @@ function drive() {
           Math.sqrt(
             pyo(
               car[c].x / 10,
-              cp.x[racers[c].focus] / 10,
+              track.x[racers[c].focus] / 10,
               car[c].z / 10,
-              cp.z[racers[c].focus] / 10,
+              track.z[racers[c].focus] / 10,
             ),
           ) < 40
         ) {
@@ -9813,9 +9823,9 @@ function drive() {
           Math.sqrt(
             pyo(
               car[c].x / 10,
-              cp.x[racers[c].focus] / 10,
+              track.x[racers[c].focus] / 10,
               car[c].z / 10,
-              cp.z[racers[c].focus] / 10,
+              track.z[racers[c].focus] / 10,
             ),
           ) < 25
         ) {
@@ -9835,11 +9845,19 @@ function drive() {
     racers[c].point = pnt;
     if (game.mode != 1) {
       if (!car[c].fcnt) {
-        for (var i = 0; i < nf; i++) {
-          if (Math.abs(obo[fi[i]].mat[10]) > Math.abs(obo[fi[i]].mat[8])) {
+        for (var i = 0; i < pieces.fixCount; i++) {
+          if (
+            Math.abs(pieces.list[pieces.fixes[i]].mat[10]) >
+            Math.abs(pieces.list[pieces.fixes[i]].mat[8])
+          ) {
             if (
-              Math.abs(car[c].z - obo[fi[i]].z) < 20 &&
-              py(car[c].x, obo[fi[i]].x, car[c].y, obo[fi[i]].y) < 55
+              Math.abs(car[c].z - pieces.list[pieces.fixes[i]].z) < 20 &&
+              py(
+                car[c].x,
+                pieces.list[pieces.fixes[i]].x,
+                car[c].y,
+                pieces.list[pieces.fixes[i]].y,
+              ) < 55
             ) {
               car[c].fcnt = 20;
               repcar[c].fixat[repcar[c].nfix] = 430;
@@ -9850,8 +9868,13 @@ function drive() {
             }
           } else {
             if (
-              Math.abs(car[c].x - obo[fi[i]].x) < 20 &&
-              py(car[c].z, obo[fi[i]].z, car[c].y, obo[fi[i]].y) < 55
+              Math.abs(car[c].x - pieces.list[pieces.fixes[i]].x) < 20 &&
+              py(
+                car[c].z,
+                pieces.list[pieces.fixes[i]].z,
+                car[c].y,
+                pieces.list[pieces.fixes[i]].y,
+              ) < 55
             ) {
               car[c].fcnt = 20;
               repcar[c].fixat[repcar[c].nfix] = 430;
@@ -9960,7 +9983,9 @@ function drive() {
                   c == game.player &&
                   racers[c].powerup > hpowerup &&
                   htyp <= 1 &&
-                  (racers[c].powerup > 60 || cp.stage == 1 || cp.stage == 2)
+                  (racers[c].powerup > 60 ||
+                    track.stage == 1 ||
+                    track.stage == 2)
                 ) {
                   rpdcatch = 43;
                   hpowerup = racers[c].powerup;
@@ -10004,23 +10029,23 @@ function drive() {
           var flmat = 7,
             capto = 30;
           if (c == game.player) {
-            if (cp.stage == 1 && game.unlocked == 1) {
+            if (track.stage == 1 && game.unlocked == 1) {
               flmat = 30;
               capto = 10;
             }
-            if (cp.stage == 2 && game.unlocked == 2) {
+            if (track.stage == 2 && game.unlocked == 2) {
               flmat = 30;
               capto = 10;
             }
-            if (cp.stage == 3 && game.unlocked == 3) {
+            if (track.stage == 3 && game.unlocked == 3) {
               flmat = 25;
               capto = 15;
             }
-            if (cp.stage == 4 && game.unlocked == 4) {
+            if (track.stage == 4 && game.unlocked == 4) {
               flmat = 20;
               capto = 20;
             }
-            if (cp.stage == 5 && game.unlocked == 5) {
+            if (track.stage == 5 && game.unlocked == 5) {
               flmat = 14;
               capto = 25;
             }
@@ -10054,16 +10079,16 @@ function drive() {
         if (racers[c].trcnt == 0 && racers[c].speed != 0) {
           var pfact = 1;
           if (c == game.player) {
-            if (cp.stage == 1 && game.unlocked == 1) {
+            if (track.stage == 1 && game.unlocked == 1) {
               pfact = 0.6;
             }
-            if (cp.stage == 2 && game.unlocked == 2) {
+            if (track.stage == 2 && game.unlocked == 2) {
               pfact = 0.7;
             }
-            if (cp.stage == 3 && game.unlocked == 3) {
+            if (track.stage == 3 && game.unlocked == 3) {
               pfact = 0.8;
             }
-            if (cp.stage == 4 && game.unlocked == 4) {
+            if (track.stage == 4 && game.unlocked == 4) {
               pfact = 0.9;
             }
           }
@@ -10088,16 +10113,16 @@ function drive() {
       racers[c].lastcolido--;
     }
     if (racers[c].dest) {
-      if (cp.dested[c] == 0) {
+      if (track.dested[c] == 0) {
         if (racers[c].lastcolido == 0) {
-          cp.dested[c] = 1;
+          track.dested[c] = 1;
         } else {
-          cp.dested[c] = 2;
+          track.dested[c] = 2;
         }
       }
     } else {
-      if (cp.dested[c] != 0 && cp.dested[c] != 3) {
-        cp.dested[c] = 0;
+      if (track.dested[c] != 0 && track.dested[c] != 3) {
+        track.dested[c] = 0;
       }
     }
     if (c == game.player && rpdcatch != 0 && htyp <= 1) {
@@ -13080,7 +13105,7 @@ function resetgame() {
     )
   ) {
     game.unlocked = 1;
-    cp.stage = game.unlocked;
+    track.stage = game.unlocked;
     saveInfo("unlocked", game.unlocked);
     game.carTypes[0] = 5;
     saveInfo("carsel", game.carTypes[0]);
@@ -13193,7 +13218,7 @@ function createswitches() {
     }
     racers[c].switchp.on = false;
     var nodo = false;
-    if (cp.wasted == game.carCount - 2 && c != game.player) {
+    if (track.wasted == game.carCount - 2 && c != game.player) {
       nodo = true;
     }
     if (!racers[c].dest && !nodo) {
@@ -13407,7 +13432,7 @@ function drawswitch() {
   if (switcnt == 125) {
     onlastcheck = false;
     for (var i = 0; i < game.carCount; i++) {
-      racers[i].pcleared = cp.pcs;
+      racers[i].pcleared = track.pcs;
       racers[i].clear = 0;
       racers[i].nlaps = 0;
       racers[i].missedcp = 0;
@@ -13422,8 +13447,8 @@ function drawswitch() {
     iclear = 0;
     game.player = camera.nextTarget;
     camera.target = game.player;
-    cp.switchtime += 134;
-    timer = cp.switchtime;
+    track.switchtime += 134;
+    timer = track.switchtime;
     game.phase = PHASE.race;
     camera.mode = 0;
   }
@@ -13562,8 +13587,8 @@ var flhg = false;
 var cntkeys = 0;
 function inishinter() {
   game.player = 0;
-  cp.switchtime = 800;
-  timer = cp.switchtime;
+  track.switchtime = 800;
+  timer = track.switchtime;
   oncheckpoint = -1;
   onlastcheck = false;
   chkflk = 0;
@@ -13601,10 +13626,10 @@ function inishinter() {
 function drawinter() {
   rd.clearRect(0, 0, view.width, view.height);
   var showpcn = isPhone;
-  if (showpcn && starcnt > 65 && cp.stage == 2 && game.unlocked == 2) {
+  if (showpcn && starcnt > 65 && track.stage == 2 && game.unlocked == 2) {
     showpcn = false;
   }
-  if (showpcn && starcnt > 65 && cp.stage == 4 && game.unlocked == 4) {
+  if (showpcn && starcnt > 65 && track.stage == 4 && game.unlocked == 4) {
     showpcn = false;
   }
   if (showpcn) {
@@ -13663,7 +13688,7 @@ function drawinter() {
       111 * view.scale,
     );
     rd.globalAlpha = 1;
-    if (game.carCount != 1 && (cp.stage != 1 || game.unlocked != 1)) {
+    if (game.carCount != 1 && (track.stage != 1 || game.unlocked != 1)) {
       if (wast) {
         rd.globalAlpha = 0.4;
       }
@@ -13722,7 +13747,7 @@ function drawinter() {
         if (game.carCount == 1) {
           nkb = 5;
         }
-        if (cp.stage == 1 && game.unlocked == 1) {
+        if (track.stage == 1 && game.unlocked == 1) {
           nkb = 5;
         }
         for (var k = 0; k < nkb; k++) {
@@ -13773,7 +13798,7 @@ function drawinter() {
     }
   }
   var holdit = false;
-  if (cp.wasted == game.carCount - 1 && game.carCount != 1) {
+  if (track.wasted == game.carCount - 1 && game.carCount != 1) {
     drawcs(132, "You Wasted'em!", 0, 0, 0, 3);
     if (aflk) {
       drawcs(192, "You Won, all cars have been wasted!", 0, 0, 0, 0);
@@ -13782,10 +13807,10 @@ function drawinter() {
       drawcs(192, "You Won, all cars have been wasted!", 0, 128, 255, 0);
       aflk = true;
     }
-    if (!cp.haltall) {
+    if (!track.haltall) {
       playSound(33, 1);
     }
-    cp.haltall = true;
+    track.haltall = true;
     holdit = true;
     winner = true;
   }
@@ -13807,7 +13832,7 @@ function drawinter() {
   }
   if (!holdit) {
     for (var i = 0; i < game.carCount; i++) {
-      if (cp.clear[i] == cp.nlaps * cp.nsp && cp.pos[i] == 0) {
+      if (track.clear[i] == track.nlaps * track.nsp && track.pos[i] == 0) {
         if (i == game.player) {
           drawcs(132, "You Won!", 0, 0, 0, 3);
           if (aflk) {
@@ -13818,7 +13843,7 @@ function drawinter() {
             aflk = true;
           }
           winner = true;
-          if (!cp.haltall) {
+          if (!track.haltall) {
             playSound(32, 1);
           }
         } else {
@@ -13846,7 +13871,7 @@ function drawinter() {
           }
           winner = false;
         }
-        cp.haltall = true;
+        track.haltall = true;
         holdit = true;
       }
     }
@@ -13855,9 +13880,9 @@ function drawinter() {
     if (holdcnt == 0) {
       if (
         winner &&
-        game.unlocked == cp.stage &&
+        game.unlocked == track.stage &&
         game.carCount != 1 &&
-        cp.stage != 17
+        track.stage != 17
       ) {
         saveInfo("unlocked", game.unlocked + 1);
       }
@@ -13953,7 +13978,7 @@ function drawinter() {
     if (
       game.carCount != 1 &&
       arrace != racers[game.player].u.arrace &&
-      cp.stage != 16
+      track.stage != 16
     ) {
       arrace = racers[game.player].u.arrace;
       if (arrace) {
@@ -13968,7 +13993,7 @@ function drawinter() {
         cntan = 20;
       }
     }
-    if (!holdit && starcnt == 0 && camera.mode == 0 && cp.stage != 16) {
+    if (!holdit && starcnt == 0 && camera.mode == 0 && track.stage != 16) {
       arrow(racers[game.player].point, racers[game.player].missedcp, arrace);
       if (!arrace && auscnt == 45 && racers[game.player].capcnt == 0) {
         if (racers[game.player].missedcp > 0) {
@@ -14031,29 +14056,29 @@ function drawinter() {
     rd.letterSpacing = "2px";
     rd.fillStyle = "#000078";
     rd.fillText(
-      "" + (racers[game.player].nlaps + 1) + "/" + cp.nlaps + "",
+      "" + (racers[game.player].nlaps + 1) + "/" + track.nlaps + "",
       68 * view.scale,
       19 * view.scale,
     );
     rd.fillText(
-      "" + cp.wasted + "/" + (game.carCount - 1) + "",
+      "" + track.wasted + "/" + (game.carCount - 1) + "",
       217 * view.scale,
       19 * view.scale,
     );
     var rank = "th";
-    if (cp.pos[game.player] == 2) {
+    if (track.pos[game.player] == 2) {
       rank = "rd";
     }
-    if (cp.pos[game.player] == 1) {
+    if (track.pos[game.player] == 1) {
       rank = "nd";
     }
-    if (cp.pos[game.player] == 0) {
+    if (track.pos[game.player] == 0) {
       rank = "st";
     }
     rd.letterSpacing = "1px";
     rd.font = "" + 15 * (view.scaleY + view.scaleX) + "px junk";
     rd.fillText(
-      "" + (cp.pos[game.player] + 1),
+      "" + (track.pos[game.player] + 1),
       (157 + adln) * view.scale,
       56 * view.scale,
     );
@@ -14063,7 +14088,7 @@ function drawinter() {
     if (
       !isPhone &&
       game.carCount != 1 &&
-      (cp.stage != 1 || game.unlocked != 1)
+      (track.stage != 1 || game.unlocked != 1)
     ) {
       if (arrace) {
         if (
@@ -14264,7 +14289,7 @@ function drawinter() {
       42 * view.scale,
     );
     rd.globalAlpha = 1;
-    if (!isPhone && cp.stage >= 2 && cntkeys < 200 && game.carCount != 1) {
+    if (!isPhone && track.stage >= 2 && cntkeys < 200 && game.carCount != 1) {
       if (slide < 10 || cntkeys > 100) {
         rd.drawImage(
           inst[9],
@@ -14629,8 +14654,8 @@ function drawinter() {
     }
     if (game.carCount != 1) {
       for (var i = 0; i < game.carCount; i++) {
-        if (dested[i] != cp.dested[i] && i != game.player) {
-          dested[i] = cp.dested[i];
+        if (dested[i] != track.dested[i] && i != game.player) {
+          dested[i] = track.dested[i];
           if (dested[i] == 1) {
             wasay = true;
             say = "" + cd.names[game.carTypes[i]] + " has been wasted!";
@@ -14683,7 +14708,7 @@ function drawonbordo() {
   rd.fillStyle = "#FFFFFF";
   rd.globalAlpha = 0.7;
   var fldn = 250;
-  if (cp.stage == 4) {
+  if (track.stage == 4) {
     fldn = 280;
   }
   floatytalk(200 * fm, topo, 1060 * fm, fldn * fm, 20 * fm);
@@ -14693,14 +14718,14 @@ function drawonbordo() {
   rd.textBaseline = "middle";
   rd.textAlign = "left";
   rd.fillStyle = "#002748";
-  if (cp.stage == 2) {
+  if (track.stage == 2) {
     rd.fillText(
       "Preform stunts to power up your car!",
       200 * fm + 20 * fm,
       topo + 36 * fm,
     );
   }
-  if (cp.stage == 4) {
+  if (track.stage == 4) {
     rd.fillText(
       "It is easier to just waste the other cars in this stage!",
       200 * fm + 20 * fm,
@@ -14712,7 +14737,7 @@ function drawonbordo() {
       topo + 96 * fm,
     );
   }
-  if (cp.stage == 2) {
+  if (track.stage == 2) {
     rd.font = "" + 50 * fm + "px verd";
     rd.fillText("=", 770 * fm, topo + 80 * fm + 55 * view.scale);
     rd.drawImage(
@@ -14743,7 +14768,7 @@ function drawonbordo() {
       70 / 98,
     );
   }
-  if (cp.stage == 4) {
+  if (track.stage == 4) {
     if (!isPhone) {
       drawbutton(
         1,
@@ -14855,7 +14880,7 @@ function drawhreplay() {
   rd.lineWidth = 1.5 * view.scale;
   rd.strokeText("Game Highlight", 640 * view.scaleX, 40 * view.scaleY);
   if (htyp == 1) {
-    if (cp.stage > 2) {
+    if (track.stage > 2) {
       drawcs(90, "Stunts!", 0, 32, 64, 1);
     } else {
       drawcs(90, "Best Stunt!", 0, 32, 64, 1);
@@ -15135,7 +15160,7 @@ function drawhreplay() {
       0.7,
       false,
     ) ||
-    (pointer.down && cp.stage == 1 && game.unlocked == 1)
+    (pointer.down && track.stage == 1 && game.unlocked == 1)
   ) {
     iniend();
     game.phase = PHASE.raceEnd;
@@ -15162,32 +15187,32 @@ function iniend() {
   morgn = random.fx();
   unlcar = -1;
   switcnt = 0;
-  if (winner && game.unlocked == cp.stage && game.carCount != 1) {
-    if (cp.stage == 2) {
+  if (winner && game.unlocked == track.stage && game.carCount != 1) {
+    if (track.stage == 2) {
       unlcar = 11;
     }
-    if (cp.stage == 4) {
+    if (track.stage == 4) {
       unlcar = 12;
     }
-    if (cp.stage == 6) {
+    if (track.stage == 6) {
       unlcar = 13;
     }
-    if (cp.stage == 8) {
+    if (track.stage == 8) {
       unlcar = 14;
     }
-    if (cp.stage == 10) {
+    if (track.stage == 10) {
       unlcar = 15;
     }
-    if (cp.stage == 12) {
+    if (track.stage == 12) {
       unlcar = 16;
     }
-    if (cp.stage == 14) {
+    if (track.stage == 14) {
       unlcar = 17;
     }
-    if (cp.stage == 16) {
+    if (track.stage == 16) {
       unlcar = 18;
     }
-    if (cp.stage == 17) {
+    if (track.stage == 17) {
       confc = 0;
       confg = 0;
       confr = 0;
@@ -15291,21 +15316,21 @@ function endgame() {
     rd.fillStyle = "#FFA627";
     if (winner) {
       rd.fillText(
-        "You won at stage " + cp.stage + "",
+        "You won at stage " + track.stage + "",
         640 * view.scaleX,
         190 * view.scaleY,
       );
     } else {
       rd.fillText(
-        "You lost at stage " + cp.stage + "",
+        "You lost at stage " + track.stage + "",
         640 * view.scaleX,
         190 * view.scaleY,
       );
     }
     rd.fillStyle = "#FF5B01";
-    rd.fillText(cp.name, 640 * view.scaleX, 240 * view.scaleY);
+    rd.fillText(track.name, 640 * view.scaleX, 240 * view.scaleY);
     rd.globalAlpha = 1;
-    if (winner && game.unlocked == cp.stage && game.carCount != 1) {
+    if (winner && game.unlocked == track.stage && game.carCount != 1) {
       rd.letterSpacing = "1px";
       rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
       rd.fillStyle = "#94CA00";
@@ -15315,13 +15340,13 @@ function endgame() {
       } else {
         aflk = true;
       }
-      if (cp.stage != 17) {
+      if (track.stage != 17) {
         var andcar = "";
         if (unlcar != -1) {
           andcar = " and " + cd.names[unlcar] + "";
         }
         rd.fillText(
-          "Stage " + (cp.stage + 1) + "" + andcar + " is now unlocked!",
+          "Stage " + (track.stage + 1) + "" + andcar + " is now unlocked!",
           640 * view.scaleX,
           340 * view.scaleY,
         );
@@ -15373,7 +15398,7 @@ function endgame() {
         340 * view.scaleY,
       );
     }
-    if (winner && game.unlocked == cp.stage && game.carCount != 1) {
+    if (winner && game.unlocked == track.stage && game.carCount != 1) {
       if (enter == 1) {
         stopStageMusic();
         afterend();
@@ -15428,12 +15453,12 @@ function endgame() {
   }
 }
 function afterend() {
-  if (winner && game.unlocked == cp.stage && game.carCount != 1) {
-    if (cp.stage != 17) {
+  if (winner && game.unlocked == track.stage && game.carCount != 1) {
+    if (track.stage != 17) {
       game.unlocked++;
-      cp.stage = game.unlocked;
+      track.stage = game.unlocked;
     } else {
-      cp.stage = Math.floor(3 + random.sim() * 13);
+      track.stage = Math.floor(3 + random.sim() * 13);
     }
   }
   if (stanza == 1) {
@@ -15869,11 +15894,11 @@ function drawcarselect() {
         )
       ) {
         saveInfo("carsel", game.carTypes[0]);
-        if (cp.stage > game.unlocked) {
-          cp.stage = game.unlocked;
+        if (track.stage > game.unlocked) {
+          track.stage = game.unlocked;
         }
         if (game.unlocked != 17 && game.mode == 1) {
-          cp.stage = game.unlocked;
+          track.stage = game.unlocked;
           game.mode = 0;
         }
         stageloadtyp = 0;
@@ -15909,7 +15934,7 @@ function drawcarselect() {
         ) {
           saveInfo("carsel", game.carTypes[0]);
           pauseMenuMusic();
-          cp.stage = 2;
+          track.stage = 2;
           stageloadtyp = 2;
           stageload = -1;
           game.phase = PHASE.stageLoading;
@@ -15930,7 +15955,7 @@ function drawcarselect() {
         if (enter == 1) {
           saveInfo("carsel", game.carTypes[0]);
           pauseMenuMusic();
-          cp.stage = 2;
+          track.stage = 2;
           stageloadtyp = 2;
           stageload = -1;
           game.phase = PHASE.stageLoading;
@@ -15939,11 +15964,11 @@ function drawcarselect() {
       } else {
         if (enter == 1) {
           saveInfo("carsel", game.carTypes[0]);
-          if (cp.stage > game.unlocked) {
-            cp.stage = game.unlocked;
+          if (track.stage > game.unlocked) {
+            track.stage = game.unlocked;
           }
           if (game.unlocked != 17 && game.mode == 1) {
-            cp.stage = game.unlocked;
+            track.stage = game.unlocked;
             game.mode = 0;
           }
           stageloadtyp = 0;
@@ -16014,7 +16039,7 @@ function stageloading() {
     rd.lineWidth = 10 * view.scale;
     if (stageloadtyp == 0) {
       rd.strokeText(
-        "Loading Stage " + cp.stage + "",
+        "Loading Stage " + track.stage + "",
         640 * view.scaleX,
         330 * view.scaleY,
       );
@@ -16024,7 +16049,7 @@ function stageloading() {
     rd.fillStyle = "#C1E3FF";
     if (stageloadtyp == 0) {
       rd.fillText(
-        "Loading Stage " + cp.stage + "",
+        "Loading Stage " + track.stage + "",
         640 * view.scaleX,
         330 * view.scaleY,
       );
@@ -16051,7 +16076,7 @@ function stageloading() {
     } else {
       game.carCount = 1;
       pauseMenuMusic();
-      playStageMusic(cp.stage);
+      playStageMusic(track.stage);
       game.phase = PHASE.race;
     }
   }
@@ -16101,7 +16126,7 @@ function drawstageselect() {
       rd.textBaseline = "middle";
       rd.fillStyle = "#00284A";
       rd.fillText(
-        "Loading Stage " + cp.stage + "",
+        "Loading Stage " + track.stage + "",
         640 * view.scaleX,
         330 * view.scaleY,
       );
@@ -16194,11 +16219,11 @@ function drawstageselect() {
     rgb = hslToRgb(hsl[0], 1, 0.3);
     rd.strokeStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
     rd.lineWidth = 10 * view.scale;
-    rd.strokeText(cp.name, 640 * view.scaleX, 200 * view.scaleY);
+    rd.strokeText(track.name, 640 * view.scaleX, 200 * view.scaleY);
     rgb = hslToRgb(hsl[0] + 0.05, 1, 0.9);
     rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
-    rd.fillText(cp.name, 640 * view.scaleX, 200 * view.scaleY);
-    if (cp.stage == 16 && !ontip) {
+    rd.fillText(track.name, 640 * view.scaleX, 200 * view.scaleY);
+    if (track.stage == 16 && !ontip) {
       rd.letterSpacing = "0px";
       rd.font = "" + 12 * (view.scaleY + view.scaleX) + "px verd";
       rd.textBaseline = "middle";
@@ -16216,15 +16241,19 @@ function drawstageselect() {
     rd.textAlign = "center";
     rd.textBaseline = "middle";
     rd.lineWidth = 10 * view.scale;
-    if (cp.stage != 17) {
-      rd.strokeText("Stage " + cp.stage, 640 * view.scaleX, 120 * view.scaleY);
+    if (track.stage != 17) {
+      rd.strokeText(
+        "Stage " + track.stage,
+        640 * view.scaleX,
+        120 * view.scaleY,
+      );
     } else {
       rd.strokeText("Final Stage", 640 * view.scaleX, 120 * view.scaleY);
     }
     rgb = hslToRgb(hsl[0] - 0.05, 1, 0.6);
     rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
-    if (cp.stage != 17) {
-      rd.fillText("Stage " + cp.stage, 640 * view.scaleX, 120 * view.scaleY);
+    if (track.stage != 17) {
+      rd.fillText("Stage " + track.stage, 640 * view.scaleX, 120 * view.scaleY);
     } else {
       rd.fillText("Final Stage", 640 * view.scaleX, 120 * view.scaleY);
       loadconfe();
@@ -16235,9 +16264,9 @@ function drawstageselect() {
       var rgb3 = hslToRgb(hsl[0] - 0.05, 1, 0.2);
       var rgb4 = hslToRgb(hsl[0] + 0.05, 1, 0.2);
       if (racers[0].u.right) {
-        if (cp.stage < 17) {
-          if (cp.stage != game.unlocked) {
-            cp.stage++;
+        if (track.stage < 17) {
+          if (track.stage != game.unlocked) {
+            track.stage++;
             stageload = -1;
             flkun = 1;
           } else {
@@ -16247,8 +16276,8 @@ function drawstageselect() {
         racers[0].u.right = false;
       }
       if (racers[0].u.left) {
-        if (cp.stage > 1) {
-          cp.stage--;
+        if (track.stage > 1) {
+          track.stage--;
           stageload = -1;
           flkun = 1;
         }
@@ -16285,7 +16314,7 @@ function drawstageselect() {
         rd.fillStyle = "#FFFFFF";
         rd.fillRect(0, 0, view.width, view.height);
       }
-      if (cp.stage > 1) {
+      if (track.stage > 1) {
         if (
           drawbutton(
             3,
@@ -16306,12 +16335,12 @@ function drawstageselect() {
             false,
           )
         ) {
-          cp.stage--;
+          track.stage--;
           stageload = -1;
           flkun = 1;
         }
       }
-      if (cp.stage < 17) {
+      if (track.stage < 17) {
         if (
           drawbutton(
             2,
@@ -16332,8 +16361,8 @@ function drawstageselect() {
             false,
           )
         ) {
-          if (cp.stage != game.unlocked) {
-            cp.stage++;
+          if (track.stage != game.unlocked) {
+            track.stage++;
             stageload = -1;
             flkun = 1;
           } else {
@@ -16367,7 +16396,7 @@ function drawstageselect() {
             dudo = 0;
           }
         } else {
-          if (cp.stage == 1 || cp.stage == 2) {
+          if (track.stage == 1 || track.stage == 2) {
             if (
               drawbutton(
                 8,
@@ -16395,7 +16424,7 @@ function drawstageselect() {
           }
         }
       }
-      if (cp.stage != game.unlocked && cp.stage >= 3) {
+      if (track.stage != game.unlocked && track.stage >= 3) {
         if (
           drawbutton(
             10,
@@ -16454,7 +16483,7 @@ function drawstageselect() {
       rgb3 = hslToRgb(hsl[0] - 0.05, 1, 0.2);
       rgb4 = hslToRgb(hsl[0] + 0.05, 1, 0.2);
       var bbtn = 220;
-      if (cp.stage != game.unlocked && cp.stage >= 3) {
+      if (track.stage != game.unlocked && track.stage >= 3) {
         bbtn = 740;
       }
       if (
@@ -16597,7 +16626,7 @@ function startflash() {
   game.phase = PHASE.startFlash;
 }
 function aftersparkstart() {
-  playStageMusic(cp.stage);
+  playStageMusic(track.stage);
   setWorld(snap, fogc, lvx, lvy, lvz, fogdist);
   if (game.mode == 1) {
     for (var c = 1; c < game.carCount; c++) {
@@ -16605,7 +16634,7 @@ function aftersparkstart() {
         loadEngine(game.carTypes[c]);
       }
     }
-    cp.nlaps = 1;
+    track.nlaps = 1;
   }
   updateframe = false;
   game.phase = PHASE.race;
@@ -16688,14 +16717,15 @@ function arrow(pnt, misdcp, pntcar) {
   var an = 0;
   if (!pntcar) {
     var ad = 180;
-    if (cp.x[pnt] - car[game.player].x > 0) {
+    if (track.x[pnt] - car[game.player].x > 0) {
       ad = 0;
     }
     an = -(
       90 +
       ad +
       Math.atan(
-        (cp.z[pnt] - car[game.player].z) / (cp.x[pnt] - car[game.player].x),
+        (track.z[pnt] - car[game.player].z) /
+          (track.x[pnt] - car[game.player].x),
       ) /
         0.017453292519943295
     );
@@ -16714,7 +16744,7 @@ function arrow(pnt, misdcp, pntcar) {
         );
         if (pycar < clospy || clospy == -1) {
           if (!gotons || onscreen[i]) {
-            if (cp.dested[i] == 0) {
+            if (track.dested[i] == 0) {
               pnti = i;
               clospy = pycar;
               if (onscreen[i]) {
@@ -17322,7 +17352,7 @@ function createbordo() {
   }
   cntout = 0;
   var vony = 876;
-  if (cp.stage == 1 || cp.stage == 2) {
+  if (track.stage == 1 || track.stage == 2) {
     vony = 580;
   }
   for (var i = 25; i < 39; i++) {
@@ -18370,7 +18400,7 @@ function revtime() {
     iclear = racers[game.player].clear;
     tcnt = 30;
     auscnt = 45;
-    cp.haltall = false;
+    track.haltall = false;
     game.phase = PHASE.race;
     nrec = 0;
     fr = 0;

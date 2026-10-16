@@ -36,7 +36,7 @@ export const openStageSelect = async ({
   // Same state the car select screen leaves behind before "PLAY".
   ctx.game.carTypes[0] = car;
   ctx.game.unlocked = unlocked;
-  ctx.cp.stage = stage;
+  ctx.track.stage = stage;
   ctx.stageloadtyp = 0;
   ctx.stageload = 0;
   ctx.updateframe = true;
@@ -64,7 +64,7 @@ export const startRace = async ({
 // Deliberately naive: crashes and wrecks are as interesting for the tests as clean laps.
 export const autopilot = (ctx) => {
   const car = ctx.car[0];
-  const cp = ctx.cp;
+  const cp = ctx.track;
   const target = (ctx.racers[0].point + 2) % cp.n;
   const dx = cp.x[target] - car.x;
   const dz = cp.z[target] - car.z;
@@ -86,7 +86,7 @@ const round = (n) => (typeof n === "boolean" ? Number(n) : n);
 export const raceState = (ctx) => ({
   fase: ctx.game.phase,
   starcnt: ctx.starcnt,
-  wasted: ctx.cp.wasted,
+  wasted: ctx.track.wasted,
   cars: Array.from({ length: ctx.game.carCount }, (_, i) => {
     const car = ctx.car[i];
     return [
@@ -104,7 +104,7 @@ export const raceState = (ctx) => ({
       ctx.racers[i].dest,
       ctx.racers[i].clear,
       ctx.racers[i].pcleared,
-      ctx.cp.pos[i],
+      ctx.track.pos[i],
       ctx.racers[i].mtouch,
     ].map(round);
   }),
@@ -123,7 +123,7 @@ export const racingAutopilot = () => {
   let next = 0;
   return (ctx) => {
     const car = ctx.car[0];
-    const cp = ctx.cp;
+    const cp = ctx.track;
     for (
       let skipped = 0;
       skipped < 3 && Math.hypot(cp.x[next] - car.x, cp.z[next] - car.z) < 350;
@@ -183,7 +183,7 @@ export const recordRace = async ({
 // The race state plus where the game flow is: menus, results, unlocked stages.
 const flowState = (ctx) => ({
   ...raceState(ctx),
-  stage: ctx.cp.stage,
+  stage: ctx.track.stage,
   unlocked: ctx.game.unlocked,
   winner: ctx.winner,
   holdcnt: ctx.holdcnt,
