@@ -12,292 +12,216 @@ import { car } from "./racers.js";
 import { inishrecord } from "./recording.js";
 import { track } from "./track.js";
 
+const CAR_TYPES = 19;
+const LAST_STAGE = 17;
+// the original's field; beyond it there are not enough car types to have no twins
+const ORIGINAL_FIELD = 7;
+
 // The start grid: one car in the middle, then two side by side, and so on backwards.
-var xstart = Array.from({ length: MAX_CARS }, (_, i) => [0, -35, 35][i % 3]);
-var zstart = Array.from(
+const gridX = Array.from({ length: MAX_CARS }, (_, i) => [0, -35, 35][i % 3]);
+const gridZ = Array.from(
   { length: MAX_CARS },
   (_, i) => -76 + 38 * (Math.floor(i / 3) * 2 + (i % 3 == 0 ? 0 : 1)),
 );
-function inishcars() {
-  for (var i = 0; i < game.carCount; i++) {
-    car[i].typ = game.carTypes[i];
-    car[i].x = xstart[i] + 4 * random.sim() - 2;
-    car[i].z = zstart[i];
-    car[i].grat =
-      carStats.wly[car[i].typ][1] + 1.5 * carStats.wlh[car[i].typ][1];
-    car[i].y = car[i].grat;
-    car[i].xy = 0;
-    car[i].xz = 0;
-    car[i].zy = 0;
-    car[i].wzy = 0;
-    car[i].wxz = 0;
-    car[i].keyx[0] = -carStats.wlx[car[i].typ][0];
-    car[i].keyz[0] = carStats.wlz[car[i].typ][0];
-    car[i].keyx[1] = carStats.wlx[car[i].typ][0];
-    car[i].keyz[1] = carStats.wlz[car[i].typ][0];
-    car[i].keyx[2] = -carStats.wlx[car[i].typ][1];
-    car[i].keyz[2] = carStats.wlz[car[i].typ][1];
-    car[i].keyx[3] = carStats.wlx[car[i].typ][1];
-    car[i].keyz[3] = carStats.wlz[car[i].typ][1];
-    car[i].mat = mat4.create();
-    car[i].ctxl[0] = random.fx();
-    car[i].ctxl[1] = random.fx();
-    car[i].fcnt = 0;
-  }
-}
+
 // Chooses the opponents and puts all cars on the start grid.
 export function setupcars() {
   track.insih();
   sortcars(track.stage);
-
   inishinter();
-  inishcars();
+  placeOnGrid();
   inishcontrol();
   inishmad();
   inishrecord();
 }
-// the field size the cars were chosen for; it can change in the stage select after the stage loaded with its cars.
-let sortedcars = 0;
+
+// The field size the cars were chosen for: it can change in the stage select after the
+// stage loaded with its cars.
+let fieldSize = 0;
+
 export function applyracecars() {
-  if (sortedcars != game.raceCars) {
+  if (fieldSize != game.raceCars) {
     setupcars();
     gamecartextures();
   }
 }
-function sortcars(stage) {
-  game.carCount = game.raceCars;
-  sortedcars = game.raceCars;
-  for (var i = 1; i < game.carCount; i++) {
-    game.carTypes[i] = -1;
-  }
-  var oks = [];
-  var ti = game.carCount;
-  if (game.carTypes[0] != Math.floor(10 + (stage + 1) / 2) && stage != 17) {
-    game.carTypes[game.carCount - 1] = Math.floor(10 + (stage + 1) / 2);
-    ti = game.carCount - 1;
-  }
-  for (var i = 1; i < ti; i++) {
-    oks[i] = false;
-    var tries = 0;
-    while (!oks[i]) {
-      tries++;
-      game.carTypes[i] = Math.floor(random.sim() * (28 + 10 * (stage / 17)));
-      if (game.carTypes[i] >= 19) {
-        game.carTypes[i] -= 19;
-      }
-      if (game.carTypes[i] == 19) {
-        game.carTypes[i] = 18;
-      }
-      oks[i] = true;
-      // the original seven always differ; beyond them there are not enough car types
-      if (i < 7 || tries < 50) {
-        for (var j = 0; j < game.carCount; j++) {
-          if (i != j && game.carTypes[i] == game.carTypes[j]) {
-            oks[i] = false;
-          }
-        }
-      }
-      if ((stage != 15 && stage != 16) || game.unlocked != stage) {
-        var outproba = ((18 - game.carTypes[i]) / 18) * (stage / 16);
-        if (outproba > 0.8) {
-          outproba = 0.8;
-        }
-        if (stage == 17) {
-          if (outproba > 0.5) {
-            outproba = 0.5;
-          }
-        }
-        if (outproba > random.sim()) {
-          oks[i] = false;
-        }
-      }
-      if ((game.carTypes[i] - 10) * 2 > game.unlocked) {
-        oks[i] = false;
-      }
-      if (
-        stage == 6 &&
-        game.unlocked == 6 &&
-        (game.carTypes[i] == 2 ||
-          game.carTypes[i] == 4 ||
-          game.carTypes[i] == 6 ||
-          game.carTypes[i] == 9)
-      ) {
-        oks[i] = false;
-      }
-      if (
-        stage == 8 &&
-        game.unlocked == 8 &&
-        (game.carTypes[i] == 4 ||
-          game.carTypes[i] == 6 ||
-          game.carTypes[i] == 9)
-      ) {
-        if (random.sim() > random.sim()) {
-          oks[i] = false;
-        }
-      }
-      if (
-        stage == 9 &&
-        game.unlocked == 9 &&
-        (game.carTypes[i] == 4 ||
-          game.carTypes[i] == 3 ||
-          game.carTypes[i] == 0 ||
-          game.carTypes[i] == 2)
-      ) {
-        if (random.sim() > random.sim()) {
-          oks[i] = false;
-        }
-      }
-      if (
-        stage == 10 &&
-        game.unlocked == 10 &&
-        (game.carTypes[i] == 2 ||
-          game.carTypes[i] == 6 ||
-          game.carTypes[i] == 9 ||
-          game.carTypes[i] == 14)
-      ) {
-        if (random.sim() > random.sim()) {
-          oks[i] = false;
-        }
-      }
-      if (
-        stage == 11 &&
-        game.unlocked == 11 &&
-        (game.carTypes[i] == 0 ||
-          game.carTypes[i] == 1 ||
-          game.carTypes[i] == 2 ||
-          game.carTypes[i] == 3 ||
-          game.carTypes[i] == 4 ||
-          game.carTypes[i] == 14)
-      ) {
-        oks[i] = false;
-      }
-      if (stage == 12 && game.unlocked == 12 && game.carTypes[i] <= 4) {
-        oks[i] = false;
-      }
-      if (stage == 13 && game.unlocked == 13) {
-        if (game.carTypes[i] <= 4) {
-          oks[i] = false;
-        }
-        if (game.carTypes[i] == 14 || game.carTypes[i] == 16) {
-          if (random.sim() > random.sim()) {
-            oks[i] = false;
-          }
-        }
-      }
-      if (
-        stage == 14 &&
-        game.unlocked == 14 &&
-        (game.carTypes[i] == 0 ||
-          game.carTypes[i] == 2 ||
-          game.carTypes[i] == 3 ||
-          game.carTypes[i] == 4 ||
-          game.carTypes[i] == 6 ||
-          game.carTypes[i] == 9 ||
-          game.carTypes[i] == 14 ||
-          game.carTypes[i] == 16)
-      ) {
-        oks[i] = false;
-      }
-      if (stage == 15 && game.unlocked == 15) {
-        if (game.carTypes[i] < 5) {
-          oks[i] = false;
-        }
-        if (game.carTypes[i] < 11) {
-          if (random.sim() > 0.1) {
-            oks[i] = false;
-          }
-        }
-      }
-      if (stage == 16 && game.unlocked == 16) {
-        if (game.carTypes[i] < 11) {
-          oks[i] = false;
-        }
-      }
-    }
-  }
-  if (stage == 6 && game.unlocked == 6) {
-    var okcar = false;
-    for (var i = 0; i < game.carCount; i++) {
-      if (game.carTypes[i] == 11) {
-        okcar = true;
-      }
-    }
-    if (!okcar) {
-      var ssel = 18;
-      var ssi = 1;
-      for (var i = 1; i < ti; i++) {
-        if (game.carTypes[i] < ssel) {
-          ssel = game.carTypes[i];
-          ssi = i;
-        }
-      }
-      game.carTypes[ssi] = 11;
-    }
-  }
-  if (stage == 12 && game.unlocked == 12) {
-    var okcar = false;
-    for (var i = 0; i < game.carCount; i++) {
-      if (game.carTypes[i] == 14) {
-        okcar = true;
-      }
-    }
-    if (!okcar) {
-      var ssi = Math.floor(1 + 5 * random.sim());
-      if (ssi == 6) {
-        ssi = 5;
-      }
-      game.carTypes[ssi] = 14;
-    }
-  }
-  if (stage == 16 && game.unlocked == 16) {
-    var okcar = false;
-    for (var i = 0; i < game.carCount; i++) {
-      if (game.carTypes[i] == 16) {
-        okcar = true;
-      }
-    }
-    if (!okcar) {
-      var ssi = Math.floor(1 + 5 * random.sim());
-      if (ssi == 6) {
-        ssi = 5;
-      }
-      game.carTypes[ssi] = 16;
-    }
-    var tk = 1;
-    if (random.sim() > random.sim()) {
-      tk = 2;
-    }
-    for (var i = 3; i < 6; i++) {
-      if (game.carTypes[i] == 16) {
-        game.carTypes[i] = game.carTypes[tk];
-        game.carTypes[tk] = 16;
-      }
-    }
-    if (tk == 1) {
-      tk = 2;
-    } else {
-      tk = 1;
-    }
-    for (var i = 3; i < 6; i++) {
-      if (game.carTypes[i] == 14) {
-        game.carTypes[i] = game.carTypes[tk];
-        game.carTypes[tk] = 14;
-      }
-    }
-    tk = 4;
-    if (random.sim() > random.sim()) {
-      tk = 5;
-    }
-    for (var i = 1; i < 4; i++) {
-      if (game.carTypes[i] == 15) {
-        game.carTypes[i] = game.carTypes[tk];
-        game.carTypes[tk] = 15;
-      }
-    }
-  }
-}
+
 export function nextRaceSize() {
   game.raceCars =
     RACE_SIZES[(RACE_SIZES.indexOf(game.raceCars) + 1) % RACE_SIZES.length];
   saveSetting("racecars", game.raceCars);
 }
+
+const placeOnGrid = () => {
+  for (let i = 0; i < game.carCount; i++) {
+    const body = car[i];
+    const type = game.carTypes[i];
+    body.typ = type;
+    body.x = gridX[i] + 4 * random.sim() - 2;
+    body.z = gridZ[i];
+    body.grat = carStats.wly[type][1] + 1.5 * carStats.wlh[type][1];
+    body.y = body.grat;
+    body.xy = 0;
+    body.xz = 0;
+    body.zy = 0;
+    body.wzy = 0;
+    body.wxz = 0;
+    // the wheels' places: front left, front right, rear left, rear right
+    body.keyx[0] = -carStats.wlx[type][0];
+    body.keyz[0] = carStats.wlz[type][0];
+    body.keyx[1] = carStats.wlx[type][0];
+    body.keyz[1] = carStats.wlz[type][0];
+    body.keyx[2] = -carStats.wlx[type][1];
+    body.keyz[2] = carStats.wlz[type][1];
+    body.keyx[3] = carStats.wlx[type][1];
+    body.keyz[3] = carStats.wlz[type][1];
+    body.mat = mat4.create();
+    body.ctxl[0] = random.fx();
+    body.ctxl[1] = random.fx();
+    body.fcnt = 0;
+  }
+};
+
+// The car the stage unlocks (on odd stages: the next stage) races as the last car, unless
+// the player drives it.
+const stageBoss = (stage) => Math.floor(10 + (stage + 1) / 2);
+
+const coinFlip = () => random.sim() > random.sim();
+
+// While a stage is the next to win, some cars may not race on it (or only by chance).
+const NEW_STAGE_RULES = {
+  6: (type) => ![2, 4, 6, 9].includes(type),
+  8: (type) => !([4, 6, 9].includes(type) && coinFlip()),
+  9: (type) => !([4, 3, 0, 2].includes(type) && coinFlip()),
+  10: (type) => !([2, 6, 9, 14].includes(type) && coinFlip()),
+  11: (type) => ![0, 1, 2, 3, 4, 14].includes(type),
+  12: (type) => type > 4,
+  13: (type) => {
+    let allowed = type > 4;
+    if ((type == 14 || type == 16) && coinFlip()) {
+      allowed = false;
+    }
+    return allowed;
+  },
+  14: (type) => ![0, 2, 3, 4, 6, 9, 14, 16].includes(type),
+  15: (type) => {
+    let allowed = type >= 5;
+    if (type < 11 && random.sim() > 0.1) {
+      allowed = false;
+    }
+    return allowed;
+  },
+  16: (type) => type >= 11,
+};
+
+function sortcars(stage) {
+  game.carCount = game.raceCars;
+  fieldSize = game.raceCars;
+  for (let i = 1; i < game.carCount; i++) {
+    game.carTypes[i] = -1;
+  }
+  let randomUpTo = game.carCount;
+  const boss = stageBoss(stage);
+  if (game.carTypes[0] != boss && stage != LAST_STAGE) {
+    game.carTypes[game.carCount - 1] = boss;
+    randomUpTo = game.carCount - 1;
+  }
+  for (let i = 1; i < randomUpTo; i++) {
+    pickOpponent(i, stage);
+  }
+  if (game.unlocked == stage) {
+    if (stage == 6) {
+      makeSureOfOnStage6(randomUpTo);
+    }
+    if (stage == 12) {
+      makeSureOf(14);
+    }
+    if (stage == 16) {
+      makeSureOf(16);
+      lineUpStage16();
+    }
+  }
+}
+
+// Random types, weaker cars dropping out more often on later stages, no cars the player
+// has not unlocked yet, and no twins (in the original's field, or until 50 tries failed).
+const pickOpponent = (i, stage) => {
+  const newStage = game.unlocked == stage;
+  let tries = 0;
+  let ok = false;
+  while (!ok) {
+    tries++;
+    let type = Math.floor(random.sim() * (28 + 10 * (stage / 17)));
+    if (type >= CAR_TYPES) {
+      type -= CAR_TYPES;
+    }
+    game.carTypes[i] = type;
+    ok = true;
+    if (i < ORIGINAL_FIELD || tries < 50) {
+      for (let j = 0; j < game.carCount; j++) {
+        if (i != j && type == game.carTypes[j]) {
+          ok = false;
+        }
+      }
+    }
+    if ((stage != 15 && stage != 16) || !newStage) {
+      let dropOut = ((18 - type) / 18) * (stage / 16);
+      dropOut = Math.min(dropOut, stage == LAST_STAGE ? 0.5 : 0.8);
+      if (dropOut > random.sim()) {
+        ok = false;
+      }
+    }
+    if ((type - 10) * 2 > game.unlocked) {
+      ok = false;
+    }
+    const rule = newStage ? NEW_STAGE_RULES[stage] : undefined;
+    if (rule && !rule(type)) {
+      ok = false;
+    }
+  }
+};
+
+// Stage 6 needs car 11: it replaces the lowest type of the random opponents.
+const makeSureOfOnStage6 = (randomUpTo) => {
+  if (game.carTypes.slice(0, game.carCount).includes(11)) {
+    return;
+  }
+  let lowest = 18;
+  let slot = 1;
+  for (let i = 1; i < randomUpTo; i++) {
+    if (game.carTypes[i] < lowest) {
+      lowest = game.carTypes[i];
+      slot = i;
+    }
+  }
+  game.carTypes[slot] = 11;
+};
+
+// The car races, in one of the slots 1 to 5.
+const makeSureOf = (type) => {
+  if (game.carTypes.slice(0, game.carCount).includes(type)) {
+    return;
+  }
+  let slot = Math.floor(1 + 5 * random.sim());
+  if (slot == 6) {
+    slot = 5;
+  }
+  game.carTypes[slot] = type;
+};
+
+// On stage 16 cars 16 and 14 start in front (slots 1 and 2, in random order), car 15
+// behind them (slot 4 or 5).
+const lineUpStage16 = () => {
+  const moveTo = (type, slot, from, to) => {
+    for (let i = from; i < to; i++) {
+      if (game.carTypes[i] == type) {
+        game.carTypes[i] = game.carTypes[slot];
+        game.carTypes[slot] = type;
+      }
+    }
+  };
+  const first = coinFlip() ? 2 : 1;
+  moveTo(16, first, 3, 6);
+  moveTo(14, first == 1 ? 2 : 1, 3, 6);
+  moveTo(15, coinFlip() ? 5 : 4, 1, 4);
+};
