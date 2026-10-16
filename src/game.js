@@ -1,7 +1,6 @@
 import {
   cosDeg as mcos,
   distance as pyd,
-  distanceSquaredXZ as pyo,
   sinDeg as msin,
 } from "./core/math.js";
 import { isPhone } from "./core/platform.js";
@@ -88,8 +87,6 @@ import { car, racers } from "./race/racers.js";
 import { carStats } from "./data/carStats.js";
 import { pieceModels, pieces, spinFixHoops, track } from "./race/track.js";
 import {
-  HIGHLIGHT,
-  catchnow,
   hreplay,
   inishrecord,
   preprevtime,
@@ -118,6 +115,7 @@ import { drawStartHint } from "./ui/insano.js";
 import { drawmain, resetgame } from "./screens/mainMenu.js";
 import { gamecartextures } from "./render/generated.js";
 import { loaddata } from "./loading/assets.js";
+import { checkstat } from "./race/standings.js";
 
 function setwheelspos() {
   for (var c = 0; c < game.carCount; c++) {
@@ -1092,117 +1090,6 @@ function render(now) {
   }
 }
 
-var secar = 0;
-function checkstat() {
-  if (!track.haltall) {
-    for (var i = 0; i < game.carCount; i++) {
-      track.magperc[i] = racers[i].hitmag / carStats.maxmag[car[i].typ];
-      if (track.magperc[i] > 1) {
-        track.magperc[i] = 1;
-      }
-      track.pos[i] = 0;
-      if (track.dested[i] == 0) {
-        track.clear[i] = racers[i].clear;
-      } else {
-        track.clear[i] = -1;
-      }
-    }
-    for (var i = 0; i < game.carCount; i++) {
-      for (var j = i + 1; j < game.carCount; j++) {
-        if (track.clear[i] != track.clear[j]) {
-          if (track.clear[i] < track.clear[j]) {
-            track.pos[i]++;
-          } else {
-            track.pos[j]++;
-          }
-        } else {
-          var ic = racers[i].pcleared + 1;
-          if (ic >= track.n) {
-            ic = 0;
-          }
-          while (track.typ[ic] <= 0) {
-            ic++;
-            if (ic >= track.n) {
-              ic = 0;
-            }
-          }
-          if (
-            pyo(
-              car[i].x / 10,
-              track.x[ic] / 10,
-              car[i].z / 10,
-              track.z[ic] / 10,
-            ) >
-            pyo(
-              car[j].x / 10,
-              track.x[ic] / 10,
-              car[j].z / 10,
-              track.z[ic] / 10,
-            )
-          ) {
-            track.pos[i]++;
-          } else {
-            track.pos[j]++;
-          }
-        }
-      }
-    }
-    if (track.stage > 2) {
-      for (var i = 0; i < game.carCount; i++) {
-        if (track.clear[i] == track.nlaps * track.nsp && track.pos[i] == 0) {
-          if (i == game.player) {
-            for (var j = 0; j < game.carCount; j++) {
-              if (track.pos[j] == 1) {
-                secar = j;
-              }
-            }
-            if (
-              pyo(
-                car[0].x / 10,
-                car[secar].x / 10,
-                car[0].z / 10,
-                car[secar].z / 10,
-              ) < 14000 &&
-              track.clear[0] - racers[secar].clear == 1
-            ) {
-              recording.catchfin = 43;
-            }
-          } else {
-            if (
-              track.pos[0] == 1 &&
-              pyo(car[0].x / 10, car[i].x / 10, car[0].z / 10, car[i].z / 10) <
-                14000 &&
-              racers[i].clear - racers[0].clear == 1
-            ) {
-              recording.catchfin = 43;
-              secar = i;
-            }
-          }
-        }
-      }
-    }
-  }
-  track.wasted = 0;
-  for (var i = 0; i < game.carCount; i++) {
-    if (game.player != i) {
-      if (racers[i].dest) {
-        track.wasted++;
-      }
-    }
-  }
-  if (recording.catchfin != 0) {
-    recording.catchfin--;
-    if (recording.catchfin == 0) {
-      catchnow(HIGHLIGHT.closeWin + track.pos[0]);
-      if (recording.highlight == HIGHLIGHT.closeWin + track.pos[0]) {
-        recording.otherCar = secar;
-        if (recording.highlight > HIGHLIGHT.closeLoss) {
-          recording.highlight = HIGHLIGHT.closeLoss;
-        }
-      }
-    }
-  }
-}
 // The start grid: one car in the middle, then two side by side, and so on backwards.
 var xstart = Array.from({ length: MAX_CARS }, (_, i) => [0, -35, 35][i % 3]);
 var zstart = Array.from(

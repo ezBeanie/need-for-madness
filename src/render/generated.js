@@ -1,4 +1,5 @@
-// Textures and models the game makes itself: the cars' textures, ground, sky, dust,\nsparks and the checkpoint text's colours.
+// Textures and models the game makes itself: the cars' textures, ground, sky, dust,
+// sparks and the checkpoint text's colours.
 
 import { random } from "../core/random.js";
 import { game } from "../core/state.js";
