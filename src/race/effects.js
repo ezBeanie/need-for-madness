@@ -9,7 +9,6 @@ import { camera } from "../render/camera.js";
 import { resetMatrix } from "../render/interpolation.js";
 import { newModel } from "../render/models.js";
 import { gl } from "../render/renderer.js";
-import { carModels } from "../render/scene.js";
 import { car, racers } from "./racers.js";
 import { recording } from "./recording.js";
 
@@ -150,7 +149,7 @@ export function chipaway(c, x, y, z, ctmag) {
       gl.STATIC_DRAW,
     );
     effects.chip[ui].mat = mat4.create();
-    effects.chip[ui].texture = carModels[car[c].typ].texture[1];
+    effects.chip[ui].texture = racers[c].body.texture[1];
     effects.chip[ui].loaded = 1;
   }
 }
@@ -517,7 +516,7 @@ export function firexp(c, vsx, vsy, vsz) {
     ui = effects.nexp;
     effects.nexp++;
   }
-  var rad = carModels[car[c].typ];
+  var rad = racers[c].body;
   var ir = Math.floor(rad.ni * random.fx());
   if (ir == rad.ni) {
     ir = 0;
@@ -630,7 +629,7 @@ export function expburn() {
   }
 }
 export function burn(c) {
-  var rad = carModels[car[c].typ];
+  var rad = racers[c].body;
   var pixels = rad.damagePixels;
   if (pixels != null) {
     for (var p = racers[c].bshft; p < 256 * 256 * 4; p += 12) {
@@ -646,7 +645,7 @@ export function burn(c) {
   }
 }
 export function chipburn(c) {
-  var rad = carModels[car[c].typ];
+  var rad = racers[c].body;
   for (var i = 0; i < rad.ni; i++) {
     if (random.fx() > random.fx() && random.fx() > random.fx()) {
       car[c].ctxl[0] = random.fx();

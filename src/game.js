@@ -240,6 +240,27 @@ function gamecartextures() {
     carModels[car[c].typ].ont = 1;
     carModels[car[c].typ].loaded = 4;
   }
+  // The first car of a type dents the type's model, as every car did when all types
+  // differed. Further cars of that type get their own copy to dent and scratch, sharing
+  // what never changes (normals, texture coordinates, the paint texture).
+  for (var c = 0; c < game.carCount; c++) {
+    var model = carModels[car[c].typ];
+    var shared = false;
+    for (var o = 0; o < c; o++) {
+      if (car[o].typ == car[c].typ) {
+        shared = true;
+      }
+    }
+    racers[c].body = model;
+    if (shared) {
+      racers[c].body = {
+        ...model,
+        texture: [model.texture[0], null],
+        vbuf: null,
+      };
+      fixcar(c);
+    }
+  }
 }
 function groundtexture(n, r, g, b, huef, satf) {
   if (ground.loaded == 4) {
@@ -3461,11 +3482,11 @@ function render(now) {
             drawParticle(tirel[car[c].typ][k]);
           }
         }
-        carModels[car[c].typ].x = car[c].x;
-        carModels[car[c].typ].y = car[c].y;
-        carModels[car[c].typ].z = car[c].z;
-        carModels[car[c].typ].mat = car[c].mat;
-        drawModel(carModels[car[c].typ]);
+        racers[c].body.x = car[c].x;
+        racers[c].body.y = car[c].y;
+        racers[c].body.z = car[c].z;
+        racers[c].body.mat = car[c].mat;
+        drawModel(racers[c].body);
         for (var w = 0; w < 4; w++) {
           var k = 0;
           if (w >= 2) {

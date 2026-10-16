@@ -4,7 +4,6 @@ import { random } from "../core/random.js";
 import { PHASE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { camera } from "../render/camera.js";
-import { carModels } from "../render/scene.js";
 import { resetPursuit } from "./ai.js";
 import { burn, chipburn, dustup, firexp, sprks } from "./effects.js";
 import { raceEvents } from "./events.js";
@@ -338,7 +337,7 @@ export function rewindreplay() {
     racers[c].nbsq = 0;
     car[c].fcnt = 0;
     fixcar(c);
-    carModels[car[c].typ].alpha = 1;
+    racers[c].body.alpha = 1;
     if (recording.repcar[c].destat < 0) {
       racers[c].destnow = true;
       racers[c].cntdest = 7;
@@ -380,7 +379,7 @@ export function replay() {
     if (racers[c].destnow) {
       if (racers[c].cntdest < 6) {
         if (racers[c].embos == 0) {
-          carModels[car[c].typ].alpha = 1;
+          racers[c].body.alpha = 1;
           racers[c].embodir = Math.floor(random.fx() * 3);
           if (racers[c].embodir == 3) {
             racers[c].embodir = 0;
@@ -388,7 +387,7 @@ export function replay() {
           racers[c].embomag = 1.2 + random.fx() * 0.2;
         }
         if (racers[c].embos == 1) {
-          carModels[car[c].typ].alpha = 2;
+          racers[c].body.alpha = 2;
         }
         racers[c].embos++;
         if (racers[c].embos == 2) {
@@ -397,7 +396,7 @@ export function replay() {
         }
       } else {
         if (racers[c].cntdest == 6) {
-          carModels[car[c].typ].alpha = 1;
+          racers[c].body.alpha = 1;
           racers[c].embodir = 0;
           chipburn(c);
           racers[c].embos = 0;
@@ -427,13 +426,13 @@ export function replay() {
       }
     } else {
       raceEvents.onelec = true;
-      carModels[car[c].typ].alpha = 1;
+      racers[c].body.alpha = 1;
       if (car[c].fcnt % 2 == 0) {
         if (random.fx() > 0.333) {
           if (random.fx() > random.fx()) {
-            carModels[car[c].typ].alpha = 3;
+            racers[c].body.alpha = 3;
           } else {
-            carModels[car[c].typ].alpha = 2;
+            racers[c].body.alpha = 2;
           }
         }
       }
@@ -597,7 +596,7 @@ export function hrewindhreplay() {
     racers[c].nbsq = 0;
     car[c].fcnt = 0;
     fixcar(c);
-    carModels[car[c].typ].alpha = 1;
+    racers[c].body.alpha = 1;
     if (recording.hrepcar[c].destat < 0) {
       racers[c].destnow = true;
       racers[c].cntdest = 7;
@@ -652,7 +651,7 @@ export function hreplay() {
     if (racers[c].destnow) {
       if (racers[c].cntdest < 6) {
         if (racers[c].embos == 0) {
-          carModels[car[c].typ].alpha = 1;
+          racers[c].body.alpha = 1;
           racers[c].embodir = Math.floor(random.fx() * 3);
           if (racers[c].embodir == 3) {
             racers[c].embodir = 0;
@@ -660,7 +659,7 @@ export function hreplay() {
           racers[c].embomag = 1.2 + random.fx() * 0.2;
         }
         if (racers[c].embos == 1) {
-          carModels[car[c].typ].alpha = 2;
+          racers[c].body.alpha = 2;
         }
         racers[c].embos++;
         if (racers[c].embos == 2) {
@@ -671,7 +670,7 @@ export function hreplay() {
         }
       } else {
         if (racers[c].cntdest == 6) {
-          carModels[car[c].typ].alpha = 1;
+          racers[c].body.alpha = 1;
           racers[c].embodir = 0;
           chipburn(c);
           racers[c].embos = 0;
@@ -701,13 +700,13 @@ export function hreplay() {
       }
     } else {
       raceEvents.onelec = true;
-      carModels[car[c].typ].alpha = 1;
+      racers[c].body.alpha = 1;
       if (car[c].fcnt % 2 == 0) {
         if (random.fx() > 0.333) {
           if (random.fx() > random.fx()) {
-            carModels[car[c].typ].alpha = 3;
+            racers[c].body.alpha = 3;
           } else {
-            carModels[car[c].typ].alpha = 2;
+            racers[c].body.alpha = 2;
           }
         }
       }
@@ -812,7 +811,7 @@ export function preprevtime() {
     racers[c].nbsq = 0;
     car[c].fcnt = 0;
     fixcar(c);
-    carModels[car[c].typ].alpha = 1;
+    racers[c].body.alpha = 1;
     if (recording.repcar[c].destat < 0) {
       for (var i = 0; i < 16; i++) {
         burn(c);
@@ -870,13 +869,13 @@ export function revtime() {
       }
     } else {
       raceEvents.onelec = true;
-      carModels[car[c].typ].alpha = 1;
+      racers[c].body.alpha = 1;
       if (car[c].fcnt % 2 == 0) {
         if (random.fx() > 0.333) {
           if (random.fx() > random.fx()) {
-            carModels[car[c].typ].alpha = 3;
+            racers[c].body.alpha = 3;
           } else {
-            carModels[car[c].typ].alpha = 2;
+            racers[c].body.alpha = 2;
           }
         }
       }
@@ -945,7 +944,7 @@ export function revtime() {
       racers[c].focus = -1;
       racers[c].missedcp = 0;
       racers[c].nofocus = false;
-      carModels[car[c].typ].alpha = 1;
+      racers[c].body.alpha = 1;
       if (recording.repcar[c].destat > 0) {
         racers[c].dest = false;
         recording.repcar[c].destat = 700;

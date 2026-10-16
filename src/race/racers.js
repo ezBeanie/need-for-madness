@@ -31,6 +31,9 @@ const newRacer = () => ({
   // placed every tick, so cars of the same type each have their own
   wheels: Array.from({ length: 4 }, newWheel),
   shadow: newShadow(),
+  // the car model it dents and scratches, its own when another car has the same type
+  // (see gamecartextures)
+  body: null,
   carnchp: 0,
   wall: -1,
   colidim: false,

@@ -2402,7 +2402,7 @@ export function drive() {
         }
         if (racers[c].cntdest < 6) {
           if (racers[c].embos == 0) {
-            carModels[car[c].typ].alpha = 1;
+            racers[c].body.alpha = 1;
             racers[c].embodir = Math.floor(random.fx() * 3);
             if (racers[c].embodir == 3) {
               racers[c].embodir = 0;
@@ -2410,7 +2410,7 @@ export function drive() {
             racers[c].embomag = 1.2 + random.fx() * 0.2;
           }
           if (racers[c].embos == 1) {
-            carModels[car[c].typ].alpha = 2;
+            racers[c].body.alpha = 2;
           }
           racers[c].embos++;
           if (racers[c].embos == 2) {
@@ -2419,7 +2419,7 @@ export function drive() {
           }
         } else {
           if (racers[c].cntdest == 6) {
-            carModels[car[c].typ].alpha = 1;
+            racers[c].body.alpha = 1;
             racers[c].embodir = 0;
             chipburn(c);
             racers[c].embos = 0;
@@ -2698,13 +2698,13 @@ export function drive() {
         }
       } else {
         raceEvents.onelec = true;
-        carModels[car[c].typ].alpha = 1;
+        racers[c].body.alpha = 1;
         if (car[c].fcnt % 2 == 0) {
           if (random.fx() > 0.333) {
             if (random.fx() > random.fx()) {
-              carModels[car[c].typ].alpha = 3;
+              racers[c].body.alpha = 3;
             } else {
-              carModels[car[c].typ].alpha = 2;
+              racers[c].body.alpha = 2;
             }
           }
         }
@@ -2982,8 +2982,8 @@ function colide(c, xc) {
       car[c].z,
       car[xc].z,
     ) <
-    (carModels[car[c].typ].colrad * carModels[car[c].typ].colrad +
-      carModels[car[xc].typ].colrad * carModels[car[xc].typ].colrad) *
+    (racers[c].body.colrad * racers[c].body.colrad +
+      racers[xc].body.colrad * racers[xc].body.colrad) *
       1.5
   ) {
     if (
@@ -3595,7 +3595,7 @@ export function regn(nr, k, mag, c) {
         crashSound(mag, 0);
       }
     }
-    var rad = carModels[car[c].typ];
+    var rad = racers[c].body;
     if (!nr2stop) {
       if (rad.iscar == 1) {
         rad.dvert = [];
@@ -3709,7 +3709,7 @@ export function regn(nr, k, mag, c) {
   }
 }
 export function fixcar(c) {
-  var rad = carModels[car[c].typ];
+  var rad = racers[c].body;
   rad.alpha = 1;
   rad.dvert = [];
   for (var i = 0; i < rad.ni; i++) {
