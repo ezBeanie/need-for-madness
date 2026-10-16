@@ -60,17 +60,27 @@ describe("parsed stage data matches the golden master", () => {
   );
 });
 
+// the wheels are checked per car below; shadadj was never part of this golden master
+const WHEEL_KEYS = ["wlx", "wly", "wlz", "wlh", "shadadj"];
+
 describe("car data matches the golden master", () => {
   test("stats, wheels and models of all cars", async () => {
     const { ctx } = await startRace({ stage: 1, car: 5 });
     const stats = Object.fromEntries(
-      Object.entries(ctx.carStats).filter(([, v]) => Array.isArray(v)),
+      Object.entries(ctx.carStats).filter(
+        ([key, v]) => Array.isArray(v) && !WHEEL_KEYS.includes(key),
+      ),
     );
     const cars = Array.from({ length: CAR_COUNT }, (_, i) => {
       const model = ctx.carModels[i];
       return {
         name: ctx.carStats.names[i],
-        wheels: { x: ctx.wlx[i], y: ctx.wly[i], z: ctx.wlz[i], h: ctx.wlh[i] },
+        wheels: {
+          x: ctx.carStats.wlx[i],
+          y: ctx.carStats.wly[i],
+          z: ctx.carStats.wlz[i],
+          h: ctx.carStats.wlh[i],
+        },
         model: {
           bounds: [model.bx, model.by, model.bz],
           colrad: model.colrad,

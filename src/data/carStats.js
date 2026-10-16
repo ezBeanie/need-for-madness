@@ -4,6 +4,12 @@ import cars from "./cars.json";
 class CarDefine {
   constructor() {
     this.names = cars.map((car) => car.name);
+    // wheel positions (x, y, z), wheel height and shadow size per car type
+    this.wlx = cars.map((car) => car.wheels.x);
+    this.wly = cars.map((car) => car.wheels.y);
+    this.wlz = cars.map((car) => car.wheels.z);
+    this.wlh = cars.map((car) => car.wheels.h);
+    this.shadadj = cars.map((car) => car.shadadj);
     for (var key of [
       "swits",
       "acelf",

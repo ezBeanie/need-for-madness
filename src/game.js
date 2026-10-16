@@ -4,7 +4,6 @@ import {
   pathType,
   valueOf,
 } from "./data/stageFormat.js";
-import cars from "./data/cars.json";
 import {
   cosDeg as mcos,
   distance as pyd,
@@ -594,10 +593,7 @@ for (var i = 0; i < 19; i++) {
     whl[i][k] = wheel();
   }
 }
-var wlx = cars.map((car) => car.wheels.x);
-var wly = cars.map((car) => car.wheels.y);
-var wlz = cars.map((car) => car.wheels.z);
-var wlh = cars.map((car) => car.wheels.h);
+
 function createwheels() {
   var wlw = [
     [1.8, 1.8],
@@ -671,9 +667,11 @@ function createwheels() {
         for (var i = 0; i < tired[c][k].ni; i++) {
           indice[i] = i;
           vert[i * 3] =
-            tiredisk.vrt[tiredisk.tri[i * 3] * 3] * wlh[c][k] * 1.05;
+            tiredisk.vrt[tiredisk.tri[i * 3] * 3] * carStats.wlh[c][k] * 1.05;
           vert[i * 3 + 1] =
-            tiredisk.vrt[tiredisk.tri[i * 3] * 3 + 1] * wlh[c][k] * 1.05;
+            tiredisk.vrt[tiredisk.tri[i * 3] * 3 + 1] *
+            carStats.wlh[c][k] *
+            1.05;
           vert[i * 3 + 2] =
             tiredisk.vrt[tiredisk.tri[i * 3] * 3 + 2] * wlw[c][k] * 1.1;
           if (tiredisk.tri[i * 3] == 12) {
@@ -735,8 +733,8 @@ function createwheels() {
         var norm = [];
         var col = [];
         for (var i = 0; i < tire.vert.length / 3; i++) {
-          vert[i * 3] = tire.vert[i * 3] * 1.1 * wlh[c][k];
-          vert[i * 3 + 1] = tire.vert[i * 3 + 1] * 1.1 * wlh[c][k];
+          vert[i * 3] = tire.vert[i * 3] * 1.1 * carStats.wlh[c][k];
+          vert[i * 3 + 1] = tire.vert[i * 3 + 1] * 1.1 * carStats.wlh[c][k];
           vert[i * 3 + 2] = tire.vert[i * 3 + 2] * 1.1 * wlw[c][k];
           norm[i * 3] = -1;
           norm[i * 3 + 1] = 0;
@@ -768,8 +766,8 @@ function createwheels() {
         var vert = [];
         var col = [];
         for (var i = 0; i < tirelow.vert.length / 3; i++) {
-          vert[i * 3] = tirelow.vert[i * 3] * 1.1 * wlh[c][k];
-          vert[i * 3 + 1] = tirelow.vert[i * 3 + 1] * 1.1 * wlh[c][k];
+          vert[i * 3] = tirelow.vert[i * 3] * 1.1 * carStats.wlh[c][k];
+          vert[i * 3 + 1] = tirelow.vert[i * 3 + 1] * 1.1 * carStats.wlh[c][k];
           vert[i * 3 + 2] = tirelow.vert[i * 3 + 2] * 1.1 * wlw[c][k];
           col[i * 4] = 0.02;
           col[i * 4 + 1] = 0.02;
@@ -800,19 +798,19 @@ function setwheelspos() {
     var cn = car[c].typ;
     whl[cn][0].x =
       car[c].x -
-      wlx[cn][0] * car[c].mat[0] -
-      wly[cn][0] * car[c].mat[4] +
-      wlz[cn][0] * car[c].mat[8];
+      carStats.wlx[cn][0] * car[c].mat[0] -
+      carStats.wly[cn][0] * car[c].mat[4] +
+      carStats.wlz[cn][0] * car[c].mat[8];
     whl[cn][0].y =
       car[c].y -
-      wlx[cn][0] * car[c].mat[1] -
-      wly[cn][0] * car[c].mat[5] +
-      wlz[cn][0] * car[c].mat[9];
+      carStats.wlx[cn][0] * car[c].mat[1] -
+      carStats.wly[cn][0] * car[c].mat[5] +
+      carStats.wlz[cn][0] * car[c].mat[9];
     whl[cn][0].z =
       car[c].z -
-      wlx[cn][0] * car[c].mat[2] -
-      wly[cn][0] * car[c].mat[6] +
-      wlz[cn][0] * car[c].mat[10];
+      carStats.wlx[cn][0] * car[c].mat[2] -
+      carStats.wly[cn][0] * car[c].mat[6] +
+      carStats.wlz[cn][0] * car[c].mat[10];
     whl[cn][0].mat = resetMatrix(whl[cn][0].mat);
     for (var k = 0; k < 12; k++) {
       whl[cn][0].mat[k] = car[c].mat[k];
@@ -831,19 +829,19 @@ function setwheelspos() {
     );
     whl[cn][1].x =
       car[c].x +
-      wlx[cn][0] * car[c].mat[0] -
-      wly[cn][0] * car[c].mat[4] +
-      wlz[cn][0] * car[c].mat[8];
+      carStats.wlx[cn][0] * car[c].mat[0] -
+      carStats.wly[cn][0] * car[c].mat[4] +
+      carStats.wlz[cn][0] * car[c].mat[8];
     whl[cn][1].y =
       car[c].y +
-      wlx[cn][0] * car[c].mat[1] -
-      wly[cn][0] * car[c].mat[5] +
-      wlz[cn][0] * car[c].mat[9];
+      carStats.wlx[cn][0] * car[c].mat[1] -
+      carStats.wly[cn][0] * car[c].mat[5] +
+      carStats.wlz[cn][0] * car[c].mat[9];
     whl[cn][1].z =
       car[c].z +
-      wlx[cn][0] * car[c].mat[2] -
-      wly[cn][0] * car[c].mat[6] +
-      wlz[cn][0] * car[c].mat[10];
+      carStats.wlx[cn][0] * car[c].mat[2] -
+      carStats.wly[cn][0] * car[c].mat[6] +
+      carStats.wlz[cn][0] * car[c].mat[10];
     whl[cn][1].mat = resetMatrix(whl[cn][1].mat);
     for (var k = 0; k < 12; k++) {
       whl[cn][1].mat[k] = car[c].mat[k];
@@ -862,19 +860,19 @@ function setwheelspos() {
     );
     whl[cn][2].x =
       car[c].x -
-      wlx[cn][1] * car[c].mat[0] -
-      wly[cn][1] * car[c].mat[4] +
-      wlz[cn][1] * car[c].mat[8];
+      carStats.wlx[cn][1] * car[c].mat[0] -
+      carStats.wly[cn][1] * car[c].mat[4] +
+      carStats.wlz[cn][1] * car[c].mat[8];
     whl[cn][2].y =
       car[c].y -
-      wlx[cn][1] * car[c].mat[1] -
-      wly[cn][1] * car[c].mat[5] +
-      wlz[cn][1] * car[c].mat[9];
+      carStats.wlx[cn][1] * car[c].mat[1] -
+      carStats.wly[cn][1] * car[c].mat[5] +
+      carStats.wlz[cn][1] * car[c].mat[9];
     whl[cn][2].z =
       car[c].z -
-      wlx[cn][1] * car[c].mat[2] -
-      wly[cn][1] * car[c].mat[6] +
-      wlz[cn][1] * car[c].mat[10];
+      carStats.wlx[cn][1] * car[c].mat[2] -
+      carStats.wly[cn][1] * car[c].mat[6] +
+      carStats.wlz[cn][1] * car[c].mat[10];
     whl[cn][2].mat = resetMatrix(whl[cn][2].mat);
     for (var k = 0; k < 12; k++) {
       whl[cn][2].mat[k] = car[c].mat[k];
@@ -893,19 +891,19 @@ function setwheelspos() {
     );
     whl[cn][3].x =
       car[c].x +
-      wlx[cn][1] * car[c].mat[0] -
-      wly[cn][1] * car[c].mat[4] +
-      wlz[cn][1] * car[c].mat[8];
+      carStats.wlx[cn][1] * car[c].mat[0] -
+      carStats.wly[cn][1] * car[c].mat[4] +
+      carStats.wlz[cn][1] * car[c].mat[8];
     whl[cn][3].y =
       car[c].y +
-      wlx[cn][1] * car[c].mat[1] -
-      wly[cn][1] * car[c].mat[5] +
-      wlz[cn][1] * car[c].mat[9];
+      carStats.wlx[cn][1] * car[c].mat[1] -
+      carStats.wly[cn][1] * car[c].mat[5] +
+      carStats.wlz[cn][1] * car[c].mat[9];
     whl[cn][3].z =
       car[c].z +
-      wlx[cn][1] * car[c].mat[2] -
-      wly[cn][1] * car[c].mat[6] +
-      wlz[cn][1] * car[c].mat[10];
+      carStats.wlx[cn][1] * car[c].mat[2] -
+      carStats.wly[cn][1] * car[c].mat[6] +
+      carStats.wlz[cn][1] * car[c].mat[10];
     whl[cn][3].mat = resetMatrix(whl[cn][3].mat);
     for (var k = 0; k < 12; k++) {
       whl[cn][3].mat[k] = car[c].mat[k];
@@ -934,7 +932,7 @@ function setwheelspos() {
     }
   }
 }
-var shadadj = cars.map((car) => car.shadadj);
+
 function shadoworks() {
   for (var c = 0; c < game.carCount; c++) {
     var cat = 0.5;
@@ -954,9 +952,9 @@ function shadoworks() {
         carShadows[car[c].typ].mat[10] = -car[c].mat[6];
       } else {
         carShadows[car[c].typ].x =
-          car[c].x - shadadj[car[c].typ] * car[c].mat[8];
+          car[c].x - carStats.shadadj[car[c].typ] * car[c].mat[8];
         carShadows[car[c].typ].z =
-          car[c].z - shadadj[car[c].typ] * car[c].mat[10];
+          car[c].z - carStats.shadadj[car[c].typ] * car[c].mat[10];
         carShadows[car[c].typ].ont = 1;
         carShadows[car[c].typ].mat[0] = car[c].mat[8];
         carShadows[car[c].typ].mat[2] = car[c].mat[10];
@@ -966,9 +964,10 @@ function shadoworks() {
         carShadows[car[c].typ].mat[10] = -car[c].mat[6];
       }
     } else {
-      carShadows[car[c].typ].x = car[c].x - shadadj[car[c].typ] * car[c].mat[8];
+      carShadows[car[c].typ].x =
+        car[c].x - carStats.shadadj[car[c].typ] * car[c].mat[8];
       carShadows[car[c].typ].z =
-        car[c].z - shadadj[car[c].typ] * car[c].mat[10];
+        car[c].z - carStats.shadadj[car[c].typ] * car[c].mat[10];
       carShadows[car[c].typ].ont = 0;
       carShadows[car[c].typ].mat[0] = car[c].mat[8];
       carShadows[car[c].typ].mat[2] = car[c].mat[10];
@@ -2524,7 +2523,8 @@ function sprks(cn, x, y, z, sx, sy, sz, cap) {
       }
       effects.sprk[ui].x = x + (random.fx() * 3 - 1.5);
       if (cap == 2) {
-        effects.sprk[ui].y = y + wlh[cn][0] * 2.4 + (random.fx() * 3 - 1.5);
+        effects.sprk[ui].y =
+          y + carStats.wlh[cn][0] * 2.4 + (random.fx() * 3 - 1.5);
       } else {
         effects.sprk[ui].y = y + random.fx() * 2;
       }
@@ -3490,7 +3490,9 @@ function carselect() {
   }
   carModels[game.carTypes[0]].x = 0;
   carModels[game.carTypes[0]].y =
-    wly[game.carTypes[0]][1] + 1.5 * wlh[game.carTypes[0]][1] + carmy;
+    carStats.wly[game.carTypes[0]][1] +
+    1.5 * carStats.wlh[game.carTypes[0]][1] +
+    carmy;
   carModels[game.carTypes[0]].z = -98;
   carModels[game.carTypes[0]].ont = 0;
   csxz += 5;
@@ -3513,19 +3515,19 @@ function carselect() {
   carModels[game.carTypes[0]].mat[10] = zmt[2];
   whl[game.carTypes[0]][0].x =
     carModels[game.carTypes[0]].x -
-    wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[0] -
-    wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[4] +
-    wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[8];
+    carStats.wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[0] -
+    carStats.wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[4] +
+    carStats.wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[8];
   whl[game.carTypes[0]][0].y =
     carModels[game.carTypes[0]].y -
-    wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[1] -
-    wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[5] +
-    wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[9];
+    carStats.wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[1] -
+    carStats.wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[5] +
+    carStats.wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[9];
   whl[game.carTypes[0]][0].z =
     carModels[game.carTypes[0]].z -
-    wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[2] -
-    wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[6] +
-    wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[10];
+    carStats.wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[2] -
+    carStats.wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[6] +
+    carStats.wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[10];
   whl[game.carTypes[0]][0].mat = resetMatrix(whl[game.carTypes[0]][0].mat);
   for (var k = 0; k < 12; k++) {
     whl[game.carTypes[0]][0].mat[k] = carModels[game.carTypes[0]].mat[k];
@@ -3538,19 +3540,19 @@ function carselect() {
   );
   whl[game.carTypes[0]][1].x =
     carModels[game.carTypes[0]].x +
-    wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[0] -
-    wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[4] +
-    wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[8];
+    carStats.wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[0] -
+    carStats.wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[4] +
+    carStats.wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[8];
   whl[game.carTypes[0]][1].y =
     carModels[game.carTypes[0]].y +
-    wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[1] -
-    wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[5] +
-    wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[9];
+    carStats.wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[1] -
+    carStats.wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[5] +
+    carStats.wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[9];
   whl[game.carTypes[0]][1].z =
     carModels[game.carTypes[0]].z +
-    wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[2] -
-    wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[6] +
-    wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[10];
+    carStats.wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[2] -
+    carStats.wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[6] +
+    carStats.wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[10];
   whl[game.carTypes[0]][1].mat = resetMatrix(whl[game.carTypes[0]][1].mat);
   for (var k = 0; k < 12; k++) {
     whl[game.carTypes[0]][1].mat[k] = carModels[game.carTypes[0]].mat[k];
@@ -3563,19 +3565,19 @@ function carselect() {
   );
   whl[game.carTypes[0]][2].x =
     carModels[game.carTypes[0]].x -
-    wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[0] -
-    wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[4] +
-    wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[8];
+    carStats.wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[0] -
+    carStats.wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[4] +
+    carStats.wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[8];
   whl[game.carTypes[0]][2].y =
     carModels[game.carTypes[0]].y -
-    wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[1] -
-    wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[5] +
-    wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[9];
+    carStats.wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[1] -
+    carStats.wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[5] +
+    carStats.wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[9];
   whl[game.carTypes[0]][2].z =
     carModels[game.carTypes[0]].z -
-    wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[2] -
-    wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[6] +
-    wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[10];
+    carStats.wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[2] -
+    carStats.wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[6] +
+    carStats.wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[10];
   whl[game.carTypes[0]][2].mat = resetMatrix(whl[game.carTypes[0]][2].mat);
   for (var k = 0; k < 12; k++) {
     whl[game.carTypes[0]][2].mat[k] = carModels[game.carTypes[0]].mat[k];
@@ -3588,19 +3590,19 @@ function carselect() {
   );
   whl[game.carTypes[0]][3].x =
     carModels[game.carTypes[0]].x +
-    wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[0] -
-    wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[4] +
-    wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[8];
+    carStats.wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[0] -
+    carStats.wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[4] +
+    carStats.wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[8];
   whl[game.carTypes[0]][3].y =
     carModels[game.carTypes[0]].y +
-    wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[1] -
-    wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[5] +
-    wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[9];
+    carStats.wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[1] -
+    carStats.wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[5] +
+    carStats.wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[9];
   whl[game.carTypes[0]][3].z =
     carModels[game.carTypes[0]].z +
-    wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[2] -
-    wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[6] +
-    wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[10];
+    carStats.wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[2] -
+    carStats.wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[6] +
+    carStats.wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[10];
   whl[game.carTypes[0]][3].mat = resetMatrix(whl[game.carTypes[0]][3].mat);
   for (var k = 0; k < 12; k++) {
     whl[game.carTypes[0]][3].mat[k] = carModels[game.carTypes[0]].mat[k];
@@ -3637,10 +3639,11 @@ function carselect() {
       carShadows[game.carTypes[0]].ont = 1;
       carShadows[game.carTypes[0]].x =
         carModels[game.carTypes[0]].x -
-        shadadj[game.carTypes[0]] * carModels[game.carTypes[0]].mat[8];
+        carStats.shadadj[game.carTypes[0]] * carModels[game.carTypes[0]].mat[8];
       carShadows[game.carTypes[0]].z =
         carModels[game.carTypes[0]].z -
-        shadadj[game.carTypes[0]] * carModels[game.carTypes[0]].mat[10];
+        carStats.shadadj[game.carTypes[0]] *
+          carModels[game.carTypes[0]].mat[10];
       carShadows[game.carTypes[0]].mat[0] = carModels[game.carTypes[0]].mat[8];
       carShadows[game.carTypes[0]].mat[2] = carModels[game.carTypes[0]].mat[10];
       carShadows[game.carTypes[0]].mat[4] = carModels[game.carTypes[0]].mat[0];
@@ -3653,10 +3656,10 @@ function carselect() {
     carShadows[game.carTypes[0]].ont = 0;
     carShadows[game.carTypes[0]].x =
       carModels[game.carTypes[0]].x -
-      shadadj[game.carTypes[0]] * carModels[game.carTypes[0]].mat[8];
+      carStats.shadadj[game.carTypes[0]] * carModels[game.carTypes[0]].mat[8];
     carShadows[game.carTypes[0]].z =
       carModels[game.carTypes[0]].z -
-      shadadj[game.carTypes[0]] * carModels[game.carTypes[0]].mat[10];
+      carStats.shadadj[game.carTypes[0]] * carModels[game.carTypes[0]].mat[10];
     carShadows[game.carTypes[0]].mat[0] = carModels[game.carTypes[0]].mat[8];
     carShadows[game.carTypes[0]].mat[2] = carModels[game.carTypes[0]].mat[10];
     carShadows[game.carTypes[0]].mat[4] = carModels[game.carTypes[0]].mat[4];
@@ -3792,7 +3795,9 @@ function unlockedcar() {
     camera.pitch = 0;
     carModels[game.carTypes[0]].x = 0;
     carModels[game.carTypes[0]].y =
-      wly[game.carTypes[0]][1] + 1.5 * wlh[game.carTypes[0]][1] - 17;
+      carStats.wly[game.carTypes[0]][1] +
+      1.5 * carStats.wlh[game.carTypes[0]][1] -
+      17;
     carModels[game.carTypes[0]].z = -80;
     carModels[game.carTypes[0]].ont = 0;
     csxz += 2;
@@ -3836,19 +3841,19 @@ function unlockedcar() {
     carModels[game.carTypes[0]].mat[10] = zmt[2];
     whl[game.carTypes[0]][0].x =
       carModels[game.carTypes[0]].x -
-      wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[0] -
-      wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[4] +
-      wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[8];
+      carStats.wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[0] -
+      carStats.wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[4] +
+      carStats.wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[8];
     whl[game.carTypes[0]][0].y =
       carModels[game.carTypes[0]].y -
-      wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[1] -
-      wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[5] +
-      wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[9];
+      carStats.wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[1] -
+      carStats.wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[5] +
+      carStats.wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[9];
     whl[game.carTypes[0]][0].z =
       carModels[game.carTypes[0]].z -
-      wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[2] -
-      wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[6] +
-      wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[10];
+      carStats.wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[2] -
+      carStats.wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[6] +
+      carStats.wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[10];
     whl[game.carTypes[0]][0].mat = resetMatrix(whl[game.carTypes[0]][0].mat);
     for (var k = 0; k < 12; k++) {
       whl[game.carTypes[0]][0].mat[k] = carModels[game.carTypes[0]].mat[k];
@@ -3861,19 +3866,19 @@ function unlockedcar() {
     );
     whl[game.carTypes[0]][1].x =
       carModels[game.carTypes[0]].x +
-      wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[0] -
-      wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[4] +
-      wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[8];
+      carStats.wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[0] -
+      carStats.wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[4] +
+      carStats.wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[8];
     whl[game.carTypes[0]][1].y =
       carModels[game.carTypes[0]].y +
-      wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[1] -
-      wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[5] +
-      wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[9];
+      carStats.wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[1] -
+      carStats.wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[5] +
+      carStats.wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[9];
     whl[game.carTypes[0]][1].z =
       carModels[game.carTypes[0]].z +
-      wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[2] -
-      wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[6] +
-      wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[10];
+      carStats.wlx[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[2] -
+      carStats.wly[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[6] +
+      carStats.wlz[game.carTypes[0]][0] * carModels[game.carTypes[0]].mat[10];
     whl[game.carTypes[0]][1].mat = resetMatrix(whl[game.carTypes[0]][1].mat);
     for (var k = 0; k < 12; k++) {
       whl[game.carTypes[0]][1].mat[k] = carModels[game.carTypes[0]].mat[k];
@@ -3886,19 +3891,19 @@ function unlockedcar() {
     );
     whl[game.carTypes[0]][2].x =
       carModels[game.carTypes[0]].x -
-      wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[0] -
-      wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[4] +
-      wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[8];
+      carStats.wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[0] -
+      carStats.wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[4] +
+      carStats.wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[8];
     whl[game.carTypes[0]][2].y =
       carModels[game.carTypes[0]].y -
-      wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[1] -
-      wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[5] +
-      wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[9];
+      carStats.wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[1] -
+      carStats.wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[5] +
+      carStats.wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[9];
     whl[game.carTypes[0]][2].z =
       carModels[game.carTypes[0]].z -
-      wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[2] -
-      wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[6] +
-      wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[10];
+      carStats.wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[2] -
+      carStats.wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[6] +
+      carStats.wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[10];
     whl[game.carTypes[0]][2].mat = resetMatrix(whl[game.carTypes[0]][2].mat);
     for (var k = 0; k < 12; k++) {
       whl[game.carTypes[0]][2].mat[k] = carModels[game.carTypes[0]].mat[k];
@@ -3911,19 +3916,19 @@ function unlockedcar() {
     );
     whl[game.carTypes[0]][3].x =
       carModels[game.carTypes[0]].x +
-      wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[0] -
-      wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[4] +
-      wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[8];
+      carStats.wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[0] -
+      carStats.wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[4] +
+      carStats.wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[8];
     whl[game.carTypes[0]][3].y =
       carModels[game.carTypes[0]].y +
-      wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[1] -
-      wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[5] +
-      wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[9];
+      carStats.wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[1] -
+      carStats.wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[5] +
+      carStats.wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[9];
     whl[game.carTypes[0]][3].z =
       carModels[game.carTypes[0]].z +
-      wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[2] -
-      wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[6] +
-      wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[10];
+      carStats.wlx[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[2] -
+      carStats.wly[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[6] +
+      carStats.wlz[game.carTypes[0]][1] * carModels[game.carTypes[0]].mat[10];
     whl[game.carTypes[0]][3].mat = resetMatrix(whl[game.carTypes[0]][3].mat);
     for (var k = 0; k < 12; k++) {
       whl[game.carTypes[0]][3].mat[k] = carModels[game.carTypes[0]].mat[k];
@@ -4395,21 +4400,22 @@ function inishcars() {
     car[i].typ = game.carTypes[i];
     car[i].x = xstart[i] + 4 * random.sim() - 2;
     car[i].z = zstart[i];
-    car[i].grat = wly[car[i].typ][1] + 1.5 * wlh[car[i].typ][1];
+    car[i].grat =
+      carStats.wly[car[i].typ][1] + 1.5 * carStats.wlh[car[i].typ][1];
     car[i].y = car[i].grat;
     car[i].xy = 0;
     car[i].xz = 0;
     car[i].zy = 0;
     car[i].wzy = 0;
     car[i].wxz = 0;
-    car[i].keyx[0] = -wlx[car[i].typ][0];
-    car[i].keyz[0] = wlz[car[i].typ][0];
-    car[i].keyx[1] = wlx[car[i].typ][0];
-    car[i].keyz[1] = wlz[car[i].typ][0];
-    car[i].keyx[2] = -wlx[car[i].typ][1];
-    car[i].keyz[2] = wlz[car[i].typ][1];
-    car[i].keyx[3] = wlx[car[i].typ][1];
-    car[i].keyz[3] = wlz[car[i].typ][1];
+    car[i].keyx[0] = -carStats.wlx[car[i].typ][0];
+    car[i].keyz[0] = carStats.wlz[car[i].typ][0];
+    car[i].keyx[1] = carStats.wlx[car[i].typ][0];
+    car[i].keyz[1] = carStats.wlz[car[i].typ][0];
+    car[i].keyx[2] = -carStats.wlx[car[i].typ][1];
+    car[i].keyz[2] = carStats.wlz[car[i].typ][1];
+    car[i].keyx[3] = carStats.wlx[car[i].typ][1];
+    car[i].keyz[3] = carStats.wlz[car[i].typ][1];
     car[i].mat = mat4.create();
     car[i].ctxl[0] = random.fx();
     car[i].ctxl[1] = random.fx();
