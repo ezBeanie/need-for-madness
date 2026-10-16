@@ -82,6 +82,7 @@ import { tick } from "./core/tick.js";
 import { car, racers } from "./race/racers.js";
 import { carStats } from "./data/carStats.js";
 import { pieceModels, pieces, track } from "./race/track.js";
+import { recording } from "./race/recording.js";
 import { control, inishcontrol, resetPursuit } from "./race/ai.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
@@ -2304,7 +2305,7 @@ var nchp = 0;
 var chip = [];
 
 function chipaway(c, x, y, z, ctmag) {
-  if (racers[c].carnchp < 120 && !onpausefr) {
+  if (racers[c].carnchp < 120 && !recording.onpausefr) {
     var ui = -1;
     for (var i = 0; i < nchp; i++) {
       if (chip[i].loaded == 0) {
@@ -2493,7 +2494,7 @@ var nspr = 0;
 var sprk = [];
 function sprks(cn, x, y, z, sx, sy, sz, cap) {
   var vdist = Math.sqrt(sx * sx + sy * sy + sz * sz);
-  if (vdist > 5 && !onpausefr) {
+  if (vdist > 5 && !recording.onpausefr) {
     if (game.phase == PHASE.race) {
       recordsprks(cn, x, y, z, sx, sy, sz, cap);
     }
@@ -2602,7 +2603,7 @@ function dustup(tskd, c, mst, x, y, z, sx, sz, smag, tlt, capsz) {
   if (bk > 1) {
     bk = 1;
   }
-  if (bk > 0.2 && !tilted && !onpausefr) {
+  if (bk > 0.2 && !tilted && !recording.onpausefr) {
     if (game.phase == PHASE.race) {
       recordust(tskd, c, mst, x, y, z, sx, sz, smag, tlt, capsz);
     }
@@ -2663,7 +2664,7 @@ function dustfly() {
   var nfly = false;
   for (var i = 0; i < ndst; i++) {
     if (dust[i].stg != 0) {
-      if (!onpausefr) {
+      if (!recording.onpausefr) {
         dust[i].x += dust[i].sx / (dust[i].stg + 1);
         dust[i].z += dust[i].sz / (dust[i].stg + 1);
         dust[i].y = dust[i].dy + 3 * dust[i].mag;
@@ -2710,7 +2711,7 @@ function dustfly() {
         dust[i].mat[k * 4 + 1] *= dust[i].mag * mt;
         dust[i].mat[k * 4 + 2] *= dust[i].mag * mt;
       }
-      if (!onpausefr) {
+      if (!recording.onpausefr) {
         dust[i].mag += 0.05 + random.fx() * 0.05;
         if (dust[i].stg >= 2) {
           dust[i].ta += 0.45;
@@ -3040,7 +3041,7 @@ function gameworks() {
     hreplay();
     setwheelspos();
     shadoworks();
-    if (!onpausefr) {
+    if (!recording.onpausefr) {
       chipsfly();
       sprksfly();
     }
@@ -4329,7 +4330,7 @@ function checkstat() {
               ) < 14000 &&
               track.clear[0] - racers[secar].clear == 1
             ) {
-              catchfin = 43;
+              recording.catchfin = 43;
             }
           } else {
             if (
@@ -4338,7 +4339,7 @@ function checkstat() {
                 14000 &&
               racers[i].clear - racers[0].clear == 1
             ) {
-              catchfin = 43;
+              recording.catchfin = 43;
               secar = i;
             }
           }
@@ -4354,14 +4355,14 @@ function checkstat() {
       }
     }
   }
-  if (catchfin != 0) {
-    catchfin--;
-    if (catchfin == 0) {
+  if (recording.catchfin != 0) {
+    recording.catchfin--;
+    if (recording.catchfin == 0) {
       catchnow(4 + track.pos[0]);
-      if (htyp == 4 + track.pos[0]) {
-        hscar = secar;
-        if (htyp > 5) {
-          htyp = 5;
+      if (recording.htyp == 4 + track.pos[0]) {
+        recording.hscar = secar;
+        if (recording.htyp > 5) {
+          recording.htyp = 5;
         }
       }
     }
@@ -6984,10 +6985,10 @@ function drive() {
     }
     if (tick.fraction >= tick.scale) {
       if (racers[c].hitmag >= carStats.maxmag[cn]) {
-        if (repcar[c].destat == 700) {
-          repcar[c].destat = 430;
+        if (recording.repcar[c].destat == 700) {
+          recording.repcar[c].destat = 430;
           if (racers[c].lastcolido != 0) {
-            repcar[c].destedbyzero = racers[c].lastcolido;
+            recording.repcar[c].destedbyzero = racers[c].lastcolido;
           }
         }
         if (racers[c].cntdest < 6) {
@@ -7252,8 +7253,8 @@ function drive() {
               ) < 55
             ) {
               car[c].fcnt = 20;
-              repcar[c].fixat[repcar[c].nfix] = 430;
-              repcar[c].nfix++;
+              recording.repcar[c].fixat[recording.repcar[c].nfix] = 430;
+              recording.repcar[c].nfix++;
               if (c == game.player) {
                 playSound(29, 1);
               }
@@ -7269,8 +7270,8 @@ function drive() {
               ) < 55
             ) {
               car[c].fcnt = 20;
-              repcar[c].fixat[repcar[c].nfix] = 430;
-              repcar[c].nfix++;
+              recording.repcar[c].fixat[recording.repcar[c].nfix] = 430;
+              recording.repcar[c].nfix++;
               if (c == game.player) {
                 playSound(29, 1);
               }
@@ -7373,14 +7374,14 @@ function drive() {
                 racers[c].power += racers[c].powerup;
                 if (
                   c == game.player &&
-                  racers[c].powerup > hpowerup &&
-                  htyp <= 1 &&
+                  racers[c].powerup > recording.hpowerup &&
+                  recording.htyp <= 1 &&
                   (racers[c].powerup > 60 ||
                     track.stage == 1 ||
                     track.stage == 2)
                 ) {
-                  rpdcatch = 43;
-                  hpowerup = racers[c].powerup;
+                  recording.rpdcatch = 43;
+                  recording.hpowerup = racers[c].powerup;
                 }
                 if (racers[c].power > 98) {
                   racers[c].power = 98;
@@ -7521,12 +7522,12 @@ function drive() {
         track.dested[c] = 0;
       }
     }
-    if (c == game.player && rpdcatch != 0 && htyp <= 1) {
-      rpdcatch--;
-      if (rpdcatch == 0) {
+    if (c == game.player && recording.rpdcatch != 0 && recording.htyp <= 1) {
+      recording.rpdcatch--;
+      if (recording.rpdcatch == 0) {
         catchnow(1);
-        if (htyp == 1) {
-          hat = 265 + random.fx() * 30;
+        if (recording.htyp == 1) {
+          recording.hat = 265 + random.fx() * 30;
         }
       }
     }
@@ -7947,12 +7948,12 @@ function regn(nr, k, mag, c) {
   }
   if (Math.abs(mag) > 10) {
     if (game.phase == PHASE.race) {
-      repcar[c].regat[repcar[c].nreg] = 430;
-      repcar[c].regnr[repcar[c].nreg] = nr;
-      repcar[c].regk[repcar[c].nreg] = k;
-      repcar[c].regmag[repcar[c].nreg] = mag;
-      repcar[c].regmtch[repcar[c].nreg] = racers[c].mtouch;
-      repcar[c].nreg++;
+      recording.repcar[c].regat[recording.repcar[c].nreg] = 430;
+      recording.repcar[c].regnr[recording.repcar[c].nreg] = nr;
+      recording.repcar[c].regk[recording.repcar[c].nreg] = k;
+      recording.repcar[c].regmag[recording.repcar[c].nreg] = mag;
+      recording.repcar[c].regmtch[recording.repcar[c].nreg] = racers[c].mtouch;
+      recording.repcar[c].nreg++;
     }
     if (mag > 10) {
       mag -= 10;
@@ -9018,7 +9019,7 @@ function pausedgame() {
       on,
     )
   ) {
-    if (nrec >= 430) {
+    if (recording.nrec >= 430) {
       onbreplay = 2;
       resumeStageMusic();
       playedforeplay = true;
@@ -9145,7 +9146,7 @@ function pausedgame() {
       noten = 0;
     }
     if (onhip == 1) {
-      if (nrec >= 430) {
+      if (recording.nrec >= 430) {
         onbreplay = 2;
         resumeStageMusic();
         playedforeplay = true;
@@ -10692,8 +10693,8 @@ function drawrevtime() {
     );
     rd.globalAlpha = 1;
   }
-  if (Math.abs(fr - (429 - nrec)) > 30) {
-    if (Math.abs(fr - (429 - nrec)) > 100) {
+  if (Math.abs(recording.fr - (429 - recording.nrec)) > 30) {
+    if (Math.abs(recording.fr - (429 - recording.nrec)) > 100) {
       if (switcnt % 30 == 0) {
         playSound(42, 1);
       }
@@ -10718,7 +10719,7 @@ function drawrevtime() {
     [-1, 0, 0],
   );
   mat4.rotate(timetube.mat, timetube.mat, swing * (Math.PI / 180), [0, 0, 1]);
-  if (Math.abs(fr - (429 - nrec)) > 100) {
+  if (Math.abs(recording.fr - (429 - recording.nrec)) > 100) {
     swing += 20;
   } else {
     swing += 10;
@@ -10809,7 +10810,7 @@ function inishinter() {
   holdcnt = 0;
   camera.mode = 0;
   camera.target = 0;
-  onpausefr = false;
+  recording.onpausefr = false;
   cntwis = 0;
   dmcnt = 0;
   onbreplay = 0;
@@ -11123,7 +11124,7 @@ function drawinter() {
     /*if (winner){if (holdcnt==150) { exitnow=true; }}else{if (drawbutton(7,(640*mw),(canh-(55*avm)-(20*mh)),270,60,"#89C800","#CADC00","#4B6E00","#778200",0,"Continue ",20,0.8,btimg[1],0.8,false)) { exitnow=true; }}*/ if (
       exitnow
     ) {
-      if (htyp) {
+      if (recording.htyp) {
         onbreplay = 2;
       } else {
         iniend();
@@ -12044,7 +12045,7 @@ function drawreplay() {
   if (onbreplay == 1) {
     fastforwardexit();
   }
-  if (fr > 425) {
+  if (recording.fr > 425) {
     rd.fillStyle = "#000000";
     rd.fillRect(0, 0, view.width, view.height);
   }
@@ -12060,7 +12061,7 @@ var cntreps = 0;
 var rmode = 0;
 var holdf = 0;
 var lwit = false;
-var onpausefr = false;
+
 function drawhreplay() {
   rd.clearRect(0, 0, view.width, view.height);
   rd.letterSpacing = "1px";
@@ -12080,7 +12081,7 @@ function drawhreplay() {
   rd.strokeStyle = "#003E78";
   rd.lineWidth = 1.5 * view.scale;
   rd.strokeText("Game Highlight", 640 * view.scaleX, 40 * view.scaleY);
-  if (htyp == 1) {
+  if (recording.htyp == 1) {
     if (track.stage > 2) {
       drawcs(90, "Stunts!", 0, 32, 64, 1);
     } else {
@@ -12114,25 +12115,25 @@ function drawhreplay() {
         }
       }
     }
-    if (fr > hat && holdf != rmode) {
+    if (recording.fr > recording.hat && holdf != rmode) {
       holdf++;
     }
     camera.mode = 1;
-    camera.target = hcim;
-    onpausefr = false;
+    camera.target = recording.hcim;
+    recording.onpausefr = false;
     if (holdf == 0 || holdf == rmode) {
-      fr++;
-      if (fr == 430) {
-        fr = 0;
+      recording.fr++;
+      if (recording.fr == 430) {
+        recording.fr = 0;
         holdf = 0;
         hrewindhreplay();
         cntreps++;
       }
     } else {
-      onpausefr = true;
+      recording.onpausefr = true;
     }
   }
-  if (htyp == 2) {
+  if (recording.htyp == 2) {
     drawcs(90, "Wasted!", 0, 32, 64, 1);
     if (rmode == 95) {
       if (holdf == 4 || holdf == 44 || holdf == 94) {
@@ -12142,25 +12143,25 @@ function drawhreplay() {
         rd.globalAlpha = 1;
       }
     }
-    if (fr > hat && holdf != rmode) {
+    if (recording.fr > recording.hat && holdf != rmode) {
       holdf++;
     }
     camera.mode = 1;
-    camera.target = hcim;
-    onpausefr = false;
+    camera.target = recording.hcim;
+    recording.onpausefr = false;
     if (holdf == 0 || holdf == rmode) {
-      fr++;
-      if (fr == 430) {
-        fr = 0;
+      recording.fr++;
+      if (recording.fr == 430) {
+        recording.fr = 0;
         holdf = 0;
         hrewindhreplay();
         cntreps++;
       }
     } else {
-      onpausefr = true;
+      recording.onpausefr = true;
     }
   }
-  if (htyp == 3) {
+  if (recording.htyp == 3) {
     drawcs(90, "You Wasted'em!", 0, 32, 64, 1);
     if (holdf == 13 || holdf == 16) {
       rd.globalAlpha = 0.5;
@@ -12170,151 +12171,151 @@ function drawhreplay() {
     }
     if (holdf == 0) {
       camera.mode = 1;
-      camera.target = hcim;
+      camera.target = recording.hcim;
     }
     if (holdf > 0 && holdf < 30) {
       camera.mode = 3;
-      camera.target = hcim;
-      camera.nextTarget = hscar;
+      camera.target = recording.hcim;
+      camera.nextTarget = recording.hscar;
       camera.transition = holdf;
     }
     if (holdf == 30) {
       camera.mode = 1;
-      camera.target = hscar;
+      camera.target = recording.hscar;
     }
-    if (fr > hat && holdf != 30) {
+    if (recording.fr > recording.hat && holdf != 30) {
       holdf++;
     }
-    onpausefr = false;
+    recording.onpausefr = false;
     if (holdf == 0 || holdf == 30) {
-      fr++;
-      if (fr == 430) {
-        fr = 0;
+      recording.fr++;
+      if (recording.fr == 430) {
+        recording.fr = 0;
         holdf = 0;
         hrewindhreplay();
         cntreps++;
       }
     } else {
-      onpausefr = true;
+      recording.onpausefr = true;
     }
   }
-  if (htyp == 4) {
+  if (recording.htyp == 4) {
     drawcs(90, "Close Finish!", 0, 32, 64, 1);
     if (holdf == 0) {
       camera.mode = 1;
-      camera.target = hcim;
+      camera.target = recording.hcim;
     }
     if (holdf > 0 && holdf < 30) {
       camera.mode = 3;
-      camera.target = hcim;
-      camera.nextTarget = hscar;
+      camera.target = recording.hcim;
+      camera.nextTarget = recording.hscar;
       camera.transition = holdf;
     }
     if (holdf == 30) {
       camera.mode = 1;
-      camera.target = hscar;
+      camera.target = recording.hscar;
     }
     if (holdf > 30 && holdf < 60) {
       camera.mode = 3;
-      camera.target = hscar;
+      camera.target = recording.hscar;
       camera.nextTarget = 0;
       camera.transition = holdf - 30;
     }
     if (holdf == 60) {
       camera.mode = 1;
-      camera.target = hcim;
+      camera.target = recording.hcim;
     }
     if (holdf > 60 && holdf < 90) {
       camera.mode = 3;
-      camera.target = hcim;
-      camera.nextTarget = hscar;
+      camera.target = recording.hcim;
+      camera.nextTarget = recording.hscar;
       camera.transition = holdf - 60;
     }
     if (holdf == 90) {
       camera.mode = 1;
-      camera.target = hscar;
+      camera.target = recording.hscar;
     }
-    if (fr > 228 && holdf < 30) {
+    if (recording.fr > 228 && holdf < 30) {
       holdf++;
     }
-    if (fr > 328 && holdf < 60) {
+    if (recording.fr > 328 && holdf < 60) {
       holdf++;
     }
-    if (fr > 400 && holdf < 90) {
+    if (recording.fr > 400 && holdf < 90) {
       holdf++;
     }
-    onpausefr = false;
+    recording.onpausefr = false;
     if (holdf == 0 || holdf == 30 || holdf == 60 || holdf == 90) {
-      fr++;
-      if (fr == 430) {
-        fr = 0;
+      recording.fr++;
+      if (recording.fr == 430) {
+        recording.fr = 0;
         holdf = 0;
         hrewindhreplay();
         cntreps++;
       }
     } else {
-      onpausefr = true;
+      recording.onpausefr = true;
     }
   }
-  if (htyp == 5) {
+  if (recording.htyp == 5) {
     drawcs(90, "Close Finish!  Almost got it!", 0, 32, 64, 1);
     if (holdf == 0) {
       camera.mode = 1;
-      camera.target = hcim;
+      camera.target = recording.hcim;
     }
     if (holdf > 0 && holdf < 30) {
       camera.mode = 3;
-      camera.target = hcim;
-      camera.nextTarget = hscar;
+      camera.target = recording.hcim;
+      camera.nextTarget = recording.hscar;
       camera.transition = holdf;
     }
     if (holdf == 30) {
       camera.mode = 1;
-      camera.target = hscar;
+      camera.target = recording.hscar;
     }
     if (holdf > 30 && holdf < 60) {
       camera.mode = 3;
-      camera.target = hscar;
+      camera.target = recording.hscar;
       camera.nextTarget = 0;
       camera.transition = holdf - 30;
     }
     if (holdf == 60) {
       camera.mode = 1;
-      camera.target = hcim;
+      camera.target = recording.hcim;
     }
     if (holdf > 60 && holdf < 90) {
       camera.mode = 3;
-      camera.target = hcim;
-      camera.nextTarget = hscar;
+      camera.target = recording.hcim;
+      camera.nextTarget = recording.hscar;
       camera.transition = holdf - 60;
     }
     if (holdf == 90) {
       camera.mode = 1;
-      camera.target = hscar;
+      camera.target = recording.hscar;
     }
     if (holdf > 90 && holdf < 120) {
       camera.mode = 3;
-      camera.target = hscar;
+      camera.target = recording.hscar;
       camera.nextTarget = 0;
       camera.transition = holdf - 90;
     }
     if (holdf == 120) {
       camera.mode = 1;
-      camera.target = hcim;
+      camera.target = recording.hcim;
     }
-    if (fr > 128 && holdf < 30) {
+    if (recording.fr > 128 && holdf < 30) {
       holdf++;
     }
-    if (fr > 228 && holdf < 60) {
+    if (recording.fr > 228 && holdf < 60) {
       holdf++;
     }
-    if (fr > 328 && holdf < 90) {
+    if (recording.fr > 328 && holdf < 90) {
       holdf++;
     }
-    if (fr > 400 && holdf < 120) {
+    if (recording.fr > 400 && holdf < 120) {
       holdf++;
     }
-    onpausefr = false;
+    recording.onpausefr = false;
     if (
       holdf == 0 ||
       holdf == 30 ||
@@ -12322,18 +12323,18 @@ function drawhreplay() {
       holdf == 90 ||
       holdf == 120
     ) {
-      fr++;
-      if (fr == 430) {
-        fr = 0;
+      recording.fr++;
+      if (recording.fr == 430) {
+        recording.fr = 0;
         holdf = 0;
         hrewindhreplay();
         cntreps++;
       }
     } else {
-      onpausefr = true;
+      recording.onpausefr = true;
     }
   }
-  if (cntreps == 2 && fr == 427) {
+  if (cntreps == 2 && recording.fr == 427) {
     iniend();
     game.phase = PHASE.raceEnd;
   }
@@ -12366,7 +12367,7 @@ function drawhreplay() {
     iniend();
     game.phase = PHASE.raceEnd;
   }
-  if (fr >= 428) {
+  if (recording.fr >= 428) {
     rd.globalAlpha = 0.7;
     rd.fillStyle = "#000000";
     rd.fillRect(0, 0, view.width, view.height);
@@ -14700,298 +14701,284 @@ function newrepsprks() {
     cap: [],
   };
 }
-var repcar = null;
-var hrepcar = null;
-var repsprks = null;
-var hrepsprks = null;
-var reponcheckpoint = [];
-var reponlastcheck = [];
-var hreponcheckpoint = [];
-var hreponlastcheck = [];
-var nrec = 0;
-var htyp = 0;
-var hat = 0;
-var hscar = 0;
-var hcim = 0;
-var hpowerup = 0;
-var rpdcatch = 0;
-var catchfin = 0;
+
 function inishrecord() {
-  if (repcar != null) {
-    repcar = null;
+  if (recording.repcar != null) {
+    recording.repcar = null;
   }
-  if (hrepcar != null) {
-    hrepcar = null;
+  if (recording.hrepcar != null) {
+    recording.hrepcar = null;
   }
-  repcar = [];
-  hrepcar = [];
+  recording.repcar = [];
+  recording.hrepcar = [];
   for (var c = 0; c < game.carCount; c++) {
-    repcar[c] = newrepcar();
+    recording.repcar[c] = newrepcar();
     for (var i = 0; i < 430; i++) {
-      repcar[c].x[i] = 0;
-      repcar[c].y[i] = 0;
-      repcar[c].z[i] = 0;
-      repcar[c].xy[i] = 0;
-      repcar[c].xz[i] = 0;
-      repcar[c].zy[i] = 0;
-      repcar[c].wzy[i] = 0;
-      repcar[c].wxz[i] = 0;
-      repcar[c].avnx[i] = 0;
-      repcar[c].avny[i] = 0;
-      repcar[c].avnz[i] = 0;
-      repcar[c].cxz[i] = 0;
-      repcar[c].hitmag[i] = 0;
-      repcar[c].clear[i] = 0;
-      repcar[c].pcleared[i] = 0;
-      repcar[c].nlaps[i] = 0;
+      recording.repcar[c].x[i] = 0;
+      recording.repcar[c].y[i] = 0;
+      recording.repcar[c].z[i] = 0;
+      recording.repcar[c].xy[i] = 0;
+      recording.repcar[c].xz[i] = 0;
+      recording.repcar[c].zy[i] = 0;
+      recording.repcar[c].wzy[i] = 0;
+      recording.repcar[c].wxz[i] = 0;
+      recording.repcar[c].avnx[i] = 0;
+      recording.repcar[c].avny[i] = 0;
+      recording.repcar[c].avnz[i] = 0;
+      recording.repcar[c].cxz[i] = 0;
+      recording.repcar[c].hitmag[i] = 0;
+      recording.repcar[c].clear[i] = 0;
+      recording.repcar[c].pcleared[i] = 0;
+      recording.repcar[c].nlaps[i] = 0;
     }
-    hrepcar[c] = newrepcar();
+    recording.hrepcar[c] = newrepcar();
     for (var i = 0; i < 430; i++) {
-      hrepcar[c].x[i] = 0;
-      hrepcar[c].y[i] = 0;
-      hrepcar[c].z[i] = 0;
-      hrepcar[c].xy[i] = 0;
-      hrepcar[c].xz[i] = 0;
-      hrepcar[c].zy[i] = 0;
-      hrepcar[c].wzy[i] = 0;
-      hrepcar[c].wxz[i] = 0;
-      hrepcar[c].avnx[i] = 0;
-      hrepcar[c].avny[i] = 0;
-      hrepcar[c].avnz[i] = 0;
+      recording.hrepcar[c].x[i] = 0;
+      recording.hrepcar[c].y[i] = 0;
+      recording.hrepcar[c].z[i] = 0;
+      recording.hrepcar[c].xy[i] = 0;
+      recording.hrepcar[c].xz[i] = 0;
+      recording.hrepcar[c].zy[i] = 0;
+      recording.hrepcar[c].wzy[i] = 0;
+      recording.hrepcar[c].wxz[i] = 0;
+      recording.hrepcar[c].avnx[i] = 0;
+      recording.hrepcar[c].avny[i] = 0;
+      recording.hrepcar[c].avnz[i] = 0;
     }
   }
-  if (repsprks != null) {
-    repsprks = null;
+  if (recording.repsprks != null) {
+    recording.repsprks = null;
   }
-  if (hrepsprks != null) {
-    hrepsprks = null;
+  if (recording.hrepsprks != null) {
+    recording.hrepsprks = null;
   }
-  repsprks = newrepsprks();
-  hrepsprks = newrepsprks();
+  recording.repsprks = newrepsprks();
+  recording.hrepsprks = newrepsprks();
   for (var i = 0; i < 430; i++) {
-    reponcheckpoint[i] = 0;
-    reponlastcheck[i] = 0;
+    recording.reponcheckpoint[i] = 0;
+    recording.reponlastcheck[i] = 0;
   }
-  nrec = 0;
-  htyp = 0;
-  hpowerup = 0;
-  hat = 0;
-  hscar = 0;
-  hcim = 0;
-  catchfin = 0;
+  recording.nrec = 0;
+  recording.htyp = 0;
+  recording.hpowerup = 0;
+  recording.hat = 0;
+  recording.hscar = 0;
+  recording.hcim = 0;
+  recording.catchfin = 0;
 }
 function record() {
   if (holdcnt < 100) {
     for (var c = 0; c < game.carCount; c++) {
       for (var i = 0; i < 429; i++) {
-        repcar[c].x[i] = repcar[c].x[i + 1];
-        repcar[c].y[i] = repcar[c].y[i + 1];
-        repcar[c].z[i] = repcar[c].z[i + 1];
-        repcar[c].xy[i] = repcar[c].xy[i + 1];
-        repcar[c].xz[i] = repcar[c].xz[i + 1];
-        repcar[c].zy[i] = repcar[c].zy[i + 1];
-        repcar[c].wzy[i] = repcar[c].wzy[i + 1];
-        repcar[c].wxz[i] = repcar[c].wxz[i + 1];
-        repcar[c].avnx[i] = repcar[c].avnx[i + 1];
-        repcar[c].avny[i] = repcar[c].avny[i + 1];
-        repcar[c].avnz[i] = repcar[c].avnz[i + 1];
-        repcar[c].cxz[i] = repcar[c].cxz[i + 1];
-        repcar[c].hitmag[i] = repcar[c].hitmag[i + 1];
-        repcar[c].clear[i] = repcar[c].clear[i + 1];
-        repcar[c].pcleared[i] = repcar[c].pcleared[i + 1];
-        repcar[c].nlaps[i] = repcar[c].nlaps[i + 1];
+        recording.repcar[c].x[i] = recording.repcar[c].x[i + 1];
+        recording.repcar[c].y[i] = recording.repcar[c].y[i + 1];
+        recording.repcar[c].z[i] = recording.repcar[c].z[i + 1];
+        recording.repcar[c].xy[i] = recording.repcar[c].xy[i + 1];
+        recording.repcar[c].xz[i] = recording.repcar[c].xz[i + 1];
+        recording.repcar[c].zy[i] = recording.repcar[c].zy[i + 1];
+        recording.repcar[c].wzy[i] = recording.repcar[c].wzy[i + 1];
+        recording.repcar[c].wxz[i] = recording.repcar[c].wxz[i + 1];
+        recording.repcar[c].avnx[i] = recording.repcar[c].avnx[i + 1];
+        recording.repcar[c].avny[i] = recording.repcar[c].avny[i + 1];
+        recording.repcar[c].avnz[i] = recording.repcar[c].avnz[i + 1];
+        recording.repcar[c].cxz[i] = recording.repcar[c].cxz[i + 1];
+        recording.repcar[c].hitmag[i] = recording.repcar[c].hitmag[i + 1];
+        recording.repcar[c].clear[i] = recording.repcar[c].clear[i + 1];
+        recording.repcar[c].pcleared[i] = recording.repcar[c].pcleared[i + 1];
+        recording.repcar[c].nlaps[i] = recording.repcar[c].nlaps[i + 1];
       }
-      repcar[c].x[429] = car[c].x;
-      repcar[c].y[429] = car[c].y;
-      repcar[c].z[429] = car[c].z;
-      repcar[c].xy[429] = car[c].xy;
-      repcar[c].xz[429] = car[c].xz;
-      repcar[c].zy[429] = car[c].zy;
-      repcar[c].wzy[429] = car[c].wzy;
-      repcar[c].wxz[429] = car[c].wxz;
-      repcar[c].avnx[429] =
+      recording.repcar[c].x[429] = car[c].x;
+      recording.repcar[c].y[429] = car[c].y;
+      recording.repcar[c].z[429] = car[c].z;
+      recording.repcar[c].xy[429] = car[c].xy;
+      recording.repcar[c].xz[429] = car[c].xz;
+      recording.repcar[c].zy[429] = car[c].zy;
+      recording.repcar[c].wzy[429] = car[c].wzy;
+      recording.repcar[c].wxz[429] = car[c].wxz;
+      recording.repcar[c].avnx[429] =
         (racers[c].scx[0] +
           racers[c].scx[1] +
           racers[c].scx[2] +
           racers[c].scx[3]) /
         4;
-      repcar[c].avny[429] =
+      recording.repcar[c].avny[429] =
         (racers[c].scy[0] +
           racers[c].scy[1] +
           racers[c].scy[2] +
           racers[c].scy[3]) /
         4;
-      repcar[c].avnz[429] =
+      recording.repcar[c].avnz[429] =
         (racers[c].scz[0] +
           racers[c].scz[1] +
           racers[c].scz[2] +
           racers[c].scz[3]) /
         4;
-      repcar[c].cxz[429] = racers[c].cxz;
-      repcar[c].hitmag[429] = racers[c].hitmag;
-      repcar[c].clear[429] = racers[c].clear;
-      repcar[c].pcleared[429] = racers[c].pcleared;
-      repcar[c].nlaps[429] = racers[c].nlaps;
-      for (var i = 0; i < repcar[c].nreg; i++) {
-        repcar[c].regat[i]--;
+      recording.repcar[c].cxz[429] = racers[c].cxz;
+      recording.repcar[c].hitmag[429] = racers[c].hitmag;
+      recording.repcar[c].clear[429] = racers[c].clear;
+      recording.repcar[c].pcleared[429] = racers[c].pcleared;
+      recording.repcar[c].nlaps[429] = racers[c].nlaps;
+      for (var i = 0; i < recording.repcar[c].nreg; i++) {
+        recording.repcar[c].regat[i]--;
       }
-      for (var i = 0; i < repcar[c].nfix; i++) {
-        repcar[c].fixat[i]--;
+      for (var i = 0; i < recording.repcar[c].nfix; i++) {
+        recording.repcar[c].fixat[i]--;
       }
-      for (var i = 0; i < repcar[c].ndst; i++) {
-        repcar[c].dstat[i]--;
+      for (var i = 0; i < recording.repcar[c].ndst; i++) {
+        recording.repcar[c].dstat[i]--;
       }
-      if (repcar[c].destat != 700) {
-        repcar[c].destat--;
-        if (repcar[c].destat == 328) {
+      if (recording.repcar[c].destat != 700) {
+        recording.repcar[c].destat--;
+        if (recording.repcar[c].destat == 328) {
           if (c == game.player) {
             catchnow(2);
-            if (htyp == 2) {
-              hat = 327;
+            if (recording.htyp == 2) {
+              recording.hat = 327;
             }
           } else {
-            if (repcar[c].destedbyzero) {
+            if (recording.repcar[c].destedbyzero) {
               catchnow(3);
-              if (htyp == 3) {
-                hat = Math.floor((160 + repcar[c].destedbyzero) * 1.42);
-                hscar = c;
+              if (recording.htyp == 3) {
+                recording.hat = Math.floor(
+                  (160 + recording.repcar[c].destedbyzero) * 1.42,
+                );
+                recording.hscar = c;
               }
             }
           }
         }
       }
     }
-    for (var i = 0; i < repsprks.n; i++) {
-      repsprks.sprkat[i]--;
+    for (var i = 0; i < recording.repsprks.n; i++) {
+      recording.repsprks.sprkat[i]--;
     }
     for (var i = 0; i < 430; i++) {
-      reponcheckpoint[i] = reponcheckpoint[i + 1];
-      reponlastcheck[i] = reponlastcheck[i + 1];
+      recording.reponcheckpoint[i] = recording.reponcheckpoint[i + 1];
+      recording.reponlastcheck[i] = recording.reponlastcheck[i + 1];
     }
-    reponcheckpoint[429] = oncheckpoint;
-    reponlastcheck[429] = onlastcheck;
-    if (nrec < 430) {
-      nrec++;
+    recording.reponcheckpoint[429] = oncheckpoint;
+    recording.reponlastcheck[429] = onlastcheck;
+    if (recording.nrec < 430) {
+      recording.nrec++;
     }
   }
 }
 function recordust(tskd, c, mst, x, y, z, sx, sz, smag, tlt, capsz) {
   var ui = -1;
-  for (var i = 0; i < repcar[c].ndst; i++) {
-    if (repcar[c].dstat[i] < 0) {
+  for (var i = 0; i < recording.repcar[c].ndst; i++) {
+    if (recording.repcar[c].dstat[i] < 0) {
       ui = i;
       break;
     }
   }
   if (ui == -1) {
-    ui = repcar[c].ndst;
-    repcar[c].ndst++;
+    ui = recording.repcar[c].ndst;
+    recording.repcar[c].ndst++;
   }
-  repcar[c].dstat[ui] = 430;
-  repcar[c].tskd[ui] = tskd;
-  repcar[c].mst[ui] = mst;
-  repcar[c].dx[ui] = x;
-  repcar[c].dy[ui] = y;
-  repcar[c].dz[ui] = z;
-  repcar[c].sx[ui] = sx;
-  repcar[c].sz[ui] = sz;
-  repcar[c].smag[ui] = smag;
-  repcar[c].tlt[ui] = tlt;
-  repcar[c].capsz[ui] = capsz;
+  recording.repcar[c].dstat[ui] = 430;
+  recording.repcar[c].tskd[ui] = tskd;
+  recording.repcar[c].mst[ui] = mst;
+  recording.repcar[c].dx[ui] = x;
+  recording.repcar[c].dy[ui] = y;
+  recording.repcar[c].dz[ui] = z;
+  recording.repcar[c].sx[ui] = sx;
+  recording.repcar[c].sz[ui] = sz;
+  recording.repcar[c].smag[ui] = smag;
+  recording.repcar[c].tlt[ui] = tlt;
+  recording.repcar[c].capsz[ui] = capsz;
 }
 function recordsprks(cn, x, y, z, sx, sy, sz, cap) {
   var ui = -1;
-  for (var i = 0; i < repsprks.n; i++) {
-    if (repsprks.sprkat[i] < 0) {
+  for (var i = 0; i < recording.repsprks.n; i++) {
+    if (recording.repsprks.sprkat[i] < 0) {
       ui = i;
       break;
     }
   }
   if (ui == -1) {
-    ui = repsprks.n;
-    repsprks.n++;
+    ui = recording.repsprks.n;
+    recording.repsprks.n++;
   }
-  repsprks.sprkat[ui] = 430;
-  repsprks.cn[ui] = cn;
-  repsprks.x[ui] = x;
-  repsprks.y[ui] = y;
-  repsprks.z[ui] = z;
-  repsprks.sx[ui] = sx;
-  repsprks.sy[ui] = sy;
-  repsprks.sz[ui] = sz;
-  repsprks.cap[ui] = cap;
+  recording.repsprks.sprkat[ui] = 430;
+  recording.repsprks.cn[ui] = cn;
+  recording.repsprks.x[ui] = x;
+  recording.repsprks.y[ui] = y;
+  recording.repsprks.z[ui] = z;
+  recording.repsprks.sx[ui] = sx;
+  recording.repsprks.sy[ui] = sy;
+  recording.repsprks.sz[ui] = sz;
+  recording.repsprks.cap[ui] = cap;
 }
 function catchnow(hty) {
-  if (nrec >= 430) {
+  if (recording.nrec >= 430) {
     for (var c = 0; c < game.carCount; c++) {
       for (var i = 0; i < 430; i++) {
-        hrepcar[c].x[i] = repcar[c].x[i];
-        hrepcar[c].y[i] = repcar[c].y[i];
-        hrepcar[c].z[i] = repcar[c].z[i];
-        hrepcar[c].xy[i] = repcar[c].xy[i];
-        hrepcar[c].xz[i] = repcar[c].xz[i];
-        hrepcar[c].zy[i] = repcar[c].zy[i];
-        hrepcar[c].wzy[i] = repcar[c].wzy[i];
-        hrepcar[c].wxz[i] = repcar[c].wxz[i];
-        hrepcar[c].avnx[i] = repcar[c].avnx[i];
-        hrepcar[c].avny[i] = repcar[c].avny[i];
-        hrepcar[c].avnz[i] = repcar[c].avnz[i];
-        hrepcar[c].nreg = repcar[c].nreg;
-        hrepcar[c].nfix = repcar[c].nfix;
-        hrepcar[c].ndst = repcar[c].ndst;
-        hrepcar[c].destat = repcar[c].destat;
+        recording.hrepcar[c].x[i] = recording.repcar[c].x[i];
+        recording.hrepcar[c].y[i] = recording.repcar[c].y[i];
+        recording.hrepcar[c].z[i] = recording.repcar[c].z[i];
+        recording.hrepcar[c].xy[i] = recording.repcar[c].xy[i];
+        recording.hrepcar[c].xz[i] = recording.repcar[c].xz[i];
+        recording.hrepcar[c].zy[i] = recording.repcar[c].zy[i];
+        recording.hrepcar[c].wzy[i] = recording.repcar[c].wzy[i];
+        recording.hrepcar[c].wxz[i] = recording.repcar[c].wxz[i];
+        recording.hrepcar[c].avnx[i] = recording.repcar[c].avnx[i];
+        recording.hrepcar[c].avny[i] = recording.repcar[c].avny[i];
+        recording.hrepcar[c].avnz[i] = recording.repcar[c].avnz[i];
+        recording.hrepcar[c].nreg = recording.repcar[c].nreg;
+        recording.hrepcar[c].nfix = recording.repcar[c].nfix;
+        recording.hrepcar[c].ndst = recording.repcar[c].ndst;
+        recording.hrepcar[c].destat = recording.repcar[c].destat;
       }
-      for (var i = 0; i < hrepcar[c].nreg; i++) {
-        hrepcar[c].regat[i] = repcar[c].regat[i];
-        hrepcar[c].regmtch[i] = repcar[c].regmtch[i];
-        hrepcar[c].regnr[i] = repcar[c].regnr[i];
-        hrepcar[c].regk[i] = repcar[c].regk[i];
-        hrepcar[c].regmag[i] = repcar[c].regmag[i];
+      for (var i = 0; i < recording.hrepcar[c].nreg; i++) {
+        recording.hrepcar[c].regat[i] = recording.repcar[c].regat[i];
+        recording.hrepcar[c].regmtch[i] = recording.repcar[c].regmtch[i];
+        recording.hrepcar[c].regnr[i] = recording.repcar[c].regnr[i];
+        recording.hrepcar[c].regk[i] = recording.repcar[c].regk[i];
+        recording.hrepcar[c].regmag[i] = recording.repcar[c].regmag[i];
       }
-      for (var i = 0; i < hrepcar[c].nfix; i++) {
-        hrepcar[c].fixat[i] = repcar[c].fixat[i];
+      for (var i = 0; i < recording.hrepcar[c].nfix; i++) {
+        recording.hrepcar[c].fixat[i] = recording.repcar[c].fixat[i];
       }
-      for (var i = 0; i < hrepcar[c].ndst; i++) {
-        hrepcar[c].dstat[i] = repcar[c].dstat[i];
-        hrepcar[c].tskd[i] = repcar[c].tskd[i];
-        hrepcar[c].mst[i] = repcar[c].mst[i];
-        hrepcar[c].dx[i] = repcar[c].dx[i];
-        hrepcar[c].dy[i] = repcar[c].dy[i];
-        hrepcar[c].dz[i] = repcar[c].dz[i];
-        hrepcar[c].sx[i] = repcar[c].sx[i];
-        hrepcar[c].sz[i] = repcar[c].sz[i];
-        hrepcar[c].smag[i] = repcar[c].smag[i];
-        hrepcar[c].tlt[i] = repcar[c].tlt[i];
-        hrepcar[c].capsz[i] = repcar[c].capsz[i];
+      for (var i = 0; i < recording.hrepcar[c].ndst; i++) {
+        recording.hrepcar[c].dstat[i] = recording.repcar[c].dstat[i];
+        recording.hrepcar[c].tskd[i] = recording.repcar[c].tskd[i];
+        recording.hrepcar[c].mst[i] = recording.repcar[c].mst[i];
+        recording.hrepcar[c].dx[i] = recording.repcar[c].dx[i];
+        recording.hrepcar[c].dy[i] = recording.repcar[c].dy[i];
+        recording.hrepcar[c].dz[i] = recording.repcar[c].dz[i];
+        recording.hrepcar[c].sx[i] = recording.repcar[c].sx[i];
+        recording.hrepcar[c].sz[i] = recording.repcar[c].sz[i];
+        recording.hrepcar[c].smag[i] = recording.repcar[c].smag[i];
+        recording.hrepcar[c].tlt[i] = recording.repcar[c].tlt[i];
+        recording.hrepcar[c].capsz[i] = recording.repcar[c].capsz[i];
       }
     }
-    hrepsprks.n = repsprks.n;
-    for (var i = 0; i < hrepsprks.n; i++) {
-      hrepsprks.sprkat[i] = repsprks.sprkat[i];
-      hrepsprks.cn[i] = repsprks.cn[i];
-      hrepsprks.x[i] = repsprks.x[i];
-      hrepsprks.y[i] = repsprks.y[i];
-      hrepsprks.z[i] = repsprks.z[i];
-      hrepsprks.sx[i] = repsprks.sx[i];
-      hrepsprks.sy[i] = repsprks.sy[i];
-      hrepsprks.sz[i] = repsprks.sz[i];
-      hrepsprks.cap[i] = repsprks.cap[i];
+    recording.hrepsprks.n = recording.repsprks.n;
+    for (var i = 0; i < recording.hrepsprks.n; i++) {
+      recording.hrepsprks.sprkat[i] = recording.repsprks.sprkat[i];
+      recording.hrepsprks.cn[i] = recording.repsprks.cn[i];
+      recording.hrepsprks.x[i] = recording.repsprks.x[i];
+      recording.hrepsprks.y[i] = recording.repsprks.y[i];
+      recording.hrepsprks.z[i] = recording.repsprks.z[i];
+      recording.hrepsprks.sx[i] = recording.repsprks.sx[i];
+      recording.hrepsprks.sy[i] = recording.repsprks.sy[i];
+      recording.hrepsprks.sz[i] = recording.repsprks.sz[i];
+      recording.hrepsprks.cap[i] = recording.repsprks.cap[i];
     }
     for (var i = 0; i < 430; i++) {
-      hreponcheckpoint[i] = reponcheckpoint[i];
-      hreponlastcheck[i] = reponlastcheck[i];
+      recording.hreponcheckpoint[i] = recording.reponcheckpoint[i];
+      recording.hreponlastcheck[i] = recording.reponlastcheck[i];
     }
-    htyp = hty;
-    hcim = game.player;
+    recording.htyp = hty;
+    recording.hcim = game.player;
   } else {
-    hpowerup = 0;
+    recording.hpowerup = 0;
   }
 }
-var fr = 0;
 
 function rewindreplay() {
   game.phase = PHASE.replayRewind;
-  fr = 0;
+  recording.fr = 0;
   camera.mode = 1;
   camera.target = game.player;
   for (var c = 0; c < game.carCount; c++) {
@@ -15004,28 +14991,33 @@ function rewindreplay() {
     car[c].fcnt = 0;
     fixcar(c);
     carobj[car[c].typ].alpha = 1;
-    if (repcar[c].destat < 0) {
+    if (recording.repcar[c].destat < 0) {
       racers[c].destnow = true;
       racers[c].cntdest = 7;
     }
     var foundnegfix = 0;
-    for (var i = repcar[c].nfix - 1; i >= 0; i--) {
-      if (repcar[c].fixat[i] < 0 && foundnegfix == 0) {
-        foundnegfix = repcar[c].fixat[i];
+    for (var i = recording.repcar[c].nfix - 1; i >= 0; i--) {
+      if (recording.repcar[c].fixat[i] < 0 && foundnegfix == 0) {
+        foundnegfix = recording.repcar[c].fixat[i];
         break;
       }
     }
-    for (var i = 0; i < repcar[c].nreg; i++) {
-      if (repcar[c].regat[i] < 0) {
+    for (var i = 0; i < recording.repcar[c].nreg; i++) {
+      if (recording.repcar[c].regat[i] < 0) {
         var frget = false;
         if (foundnegfix) {
-          if (repcar[c].regat[i] < foundnegfix) {
+          if (recording.repcar[c].regat[i] < foundnegfix) {
             frget = true;
           }
         }
         if (!frget) {
-          racers[c].mtouch = repcar[c].regmtch[i];
-          regn(repcar[c].regnr[i], repcar[c].regk[i], repcar[c].regmag[i], c);
+          racers[c].mtouch = recording.repcar[c].regmtch[i];
+          regn(
+            recording.repcar[c].regnr[i],
+            recording.repcar[c].regk[i],
+            recording.repcar[c].regmag[i],
+            c,
+          );
         }
       }
     }
@@ -15034,7 +15026,7 @@ function rewindreplay() {
 }
 function replay() {
   for (var c = 0; c < game.carCount; c++) {
-    if (repcar[c].destat == fr) {
+    if (recording.repcar[c].destat == recording.fr) {
       racers[c].destnow = true;
     }
     if (racers[c].destnow) {
@@ -15063,7 +15055,12 @@ function replay() {
           racers[c].embos = 0;
           racers[c].cntdest = 7;
         }
-        firexp(c, repcar[c].avnx[fr], repcar[c].avny[fr], repcar[c].avnz[fr]);
+        firexp(
+          c,
+          recording.repcar[c].avnx[recording.fr],
+          recording.repcar[c].avny[recording.fr],
+          recording.repcar[c].avnz[recording.fr],
+        );
         if (racers[c].cntdest < 24) {
           racers[c].embos++;
           if (racers[c].embos == 5) {
@@ -15075,8 +15072,8 @@ function replay() {
       }
     }
     if (!car[c].fcnt) {
-      for (var i = 0; i < repcar[c].nfix; i++) {
-        if (repcar[c].fixat[i] == fr) {
+      for (var i = 0; i < recording.repcar[c].nfix; i++) {
+        if (recording.repcar[c].fixat[i] == recording.fr) {
           car[c].fcnt = 20;
         }
       }
@@ -15103,37 +15100,42 @@ function replay() {
         car[c].fcnt--;
       }
     }
-    for (var i = 0; i < repcar[c].nreg; i++) {
-      if (repcar[c].regat[i] == fr) {
-        racers[c].mtouch = repcar[c].regmtch[i];
-        regn(repcar[c].regnr[i], repcar[c].regk[i], repcar[c].regmag[i], c);
-      }
-    }
-    for (var i = 0; i < repcar[c].ndst; i++) {
-      if (repcar[c].dstat[i] == fr) {
-        dustup(
-          repcar[c].tskd[i],
+    for (var i = 0; i < recording.repcar[c].nreg; i++) {
+      if (recording.repcar[c].regat[i] == recording.fr) {
+        racers[c].mtouch = recording.repcar[c].regmtch[i];
+        regn(
+          recording.repcar[c].regnr[i],
+          recording.repcar[c].regk[i],
+          recording.repcar[c].regmag[i],
           c,
-          repcar[c].mst[i],
-          repcar[c].dx[i],
-          repcar[c].dy[i],
-          repcar[c].dz[i],
-          repcar[c].sx[i],
-          repcar[c].sz[i],
-          repcar[c].smag[i],
-          repcar[c].tlt[i],
-          repcar[c].capsz[i],
         );
       }
     }
-    car[c].x = repcar[c].x[fr];
-    car[c].y = repcar[c].y[fr];
-    car[c].z = repcar[c].z[fr];
-    car[c].xy = repcar[c].xy[fr];
-    car[c].xz = repcar[c].xz[fr];
-    car[c].zy = repcar[c].zy[fr];
-    car[c].wzy = repcar[c].wzy[fr];
-    car[c].wxz = repcar[c].wxz[fr];
+    for (var i = 0; i < recording.repcar[c].ndst; i++) {
+      if (recording.repcar[c].dstat[i] == recording.fr) {
+        dustup(
+          recording.repcar[c].tskd[i],
+          c,
+          recording.repcar[c].mst[i],
+          recording.repcar[c].dx[i],
+          recording.repcar[c].dy[i],
+          recording.repcar[c].dz[i],
+          recording.repcar[c].sx[i],
+          recording.repcar[c].sz[i],
+          recording.repcar[c].smag[i],
+          recording.repcar[c].tlt[i],
+          recording.repcar[c].capsz[i],
+        );
+      }
+    }
+    car[c].x = recording.repcar[c].x[recording.fr];
+    car[c].y = recording.repcar[c].y[recording.fr];
+    car[c].z = recording.repcar[c].z[recording.fr];
+    car[c].xy = recording.repcar[c].xy[recording.fr];
+    car[c].xz = recording.repcar[c].xz[recording.fr];
+    car[c].zy = recording.repcar[c].zy[recording.fr];
+    car[c].wzy = recording.repcar[c].wzy[recording.fr];
+    car[c].wxz = recording.repcar[c].wxz[recording.fr];
     var xmt = [1, 0, 0];
     var ymt = [0, 1, 0];
     var zmt = [0, 0, 1];
@@ -15155,42 +15157,45 @@ function replay() {
       car[c].mat[racers[c].embodir * 4 + 2] *= racers[c].embomag;
     }
   }
-  for (var i = 0; i < repsprks.n; i++) {
-    if (repsprks.sprkat[i] == fr) {
+  for (var i = 0; i < recording.repsprks.n; i++) {
+    if (recording.repsprks.sprkat[i] == recording.fr) {
       sprks(
-        repsprks.cn[i],
-        repsprks.x[i],
-        repsprks.y[i],
-        repsprks.z[i],
-        repsprks.sx[i],
-        repsprks.sy[i],
-        repsprks.sz[i],
-        repsprks.cap[i],
+        recording.repsprks.cn[i],
+        recording.repsprks.x[i],
+        recording.repsprks.y[i],
+        recording.repsprks.z[i],
+        recording.repsprks.sx[i],
+        recording.repsprks.sy[i],
+        recording.repsprks.sz[i],
+        recording.repsprks.cap[i],
       );
     }
   }
-  oncheckpoint = reponcheckpoint[fr];
-  onlastcheck = reponlastcheck[fr];
-  if (fr == 429) {
+  oncheckpoint = recording.reponcheckpoint[recording.fr];
+  onlastcheck = recording.reponlastcheck[recording.fr];
+  if (recording.fr == 429) {
     game.phase = PHASE.paused;
     camera.mode = 0;
     camera.target = game.player;
-    fr = 0;
+    recording.fr = 0;
   } else {
-    fr++;
+    recording.fr++;
   }
 }
 function fastforwardexit() {
   game.phase = PHASE.replayRewind;
   for (var c = 0; c < game.carCount; c++) {
-    if (repcar[c].destat != 700 && repcar[c].destat >= fr) {
+    if (
+      recording.repcar[c].destat != 700 &&
+      recording.repcar[c].destat >= recording.fr
+    ) {
       racers[c].embos = 0;
       racers[c].cntdest = 7;
     }
     var foundnegfix = 0;
-    for (var i = repcar[c].nfix - 1; i >= 0; i--) {
-      if (repcar[c].fixat[i] >= fr && foundnegfix == 0) {
-        foundnegfix = repcar[c].fixat[i];
+    for (var i = recording.repcar[c].nfix - 1; i >= 0; i--) {
+      if (recording.repcar[c].fixat[i] >= recording.fr && foundnegfix == 0) {
+        foundnegfix = recording.repcar[c].fixat[i];
         break;
       }
     }
@@ -15200,28 +15205,33 @@ function fastforwardexit() {
       car[c].fcnt = 0;
       fixcar(c);
     }
-    for (var i = 0; i < repcar[c].nreg; i++) {
-      if (repcar[c].regat[i] >= fr) {
+    for (var i = 0; i < recording.repcar[c].nreg; i++) {
+      if (recording.repcar[c].regat[i] >= recording.fr) {
         var frget = false;
         if (foundnegfix) {
-          if (repcar[c].regat[i] < foundnegfix) {
+          if (recording.repcar[c].regat[i] < foundnegfix) {
             frget = true;
           }
         }
         if (!frget) {
-          racers[c].mtouch = repcar[c].regmtch[i];
-          regn(repcar[c].regnr[i], repcar[c].regk[i], repcar[c].regmag[i], c);
+          racers[c].mtouch = recording.repcar[c].regmtch[i];
+          regn(
+            recording.repcar[c].regnr[i],
+            recording.repcar[c].regk[i],
+            recording.repcar[c].regmag[i],
+            c,
+          );
         }
       }
     }
-    car[c].x = repcar[c].x[429];
-    car[c].y = repcar[c].y[429];
-    car[c].z = repcar[c].z[429];
-    car[c].xy = repcar[c].xy[429];
-    car[c].xz = repcar[c].xz[429];
-    car[c].zy = repcar[c].zy[429];
-    car[c].wzy = repcar[c].wzy[429];
-    car[c].wxz = repcar[c].wxz[429];
+    car[c].x = recording.repcar[c].x[429];
+    car[c].y = recording.repcar[c].y[429];
+    car[c].z = recording.repcar[c].z[429];
+    car[c].xy = recording.repcar[c].xy[429];
+    car[c].xz = recording.repcar[c].xz[429];
+    car[c].zy = recording.repcar[c].zy[429];
+    car[c].wzy = recording.repcar[c].wzy[429];
+    car[c].wxz = recording.repcar[c].wxz[429];
   }
   camera.mode = 0;
   camera.target = game.player;
@@ -15229,7 +15239,7 @@ function fastforwardexit() {
 }
 function hrewindhreplay() {
   game.phase = PHASE.replayRewind;
-  fr = 0;
+  recording.fr = 0;
   for (var c = 0; c < game.carCount; c++) {
     racers[c].destnow = false;
     racers[c].cntdest = 0;
@@ -15240,31 +15250,31 @@ function hrewindhreplay() {
     car[c].fcnt = 0;
     fixcar(c);
     carobj[car[c].typ].alpha = 1;
-    if (hrepcar[c].destat < 0) {
+    if (recording.hrepcar[c].destat < 0) {
       racers[c].destnow = true;
       racers[c].cntdest = 7;
     }
     var foundnegfix = 0;
-    for (var i = hrepcar[c].nfix - 1; i >= 0; i--) {
-      if (hrepcar[c].fixat[i] < 0 && foundnegfix == 0) {
-        foundnegfix = hrepcar[c].fixat[i];
+    for (var i = recording.hrepcar[c].nfix - 1; i >= 0; i--) {
+      if (recording.hrepcar[c].fixat[i] < 0 && foundnegfix == 0) {
+        foundnegfix = recording.hrepcar[c].fixat[i];
         break;
       }
     }
-    for (var i = 0; i < hrepcar[c].nreg; i++) {
-      if (hrepcar[c].regat[i] < 0) {
+    for (var i = 0; i < recording.hrepcar[c].nreg; i++) {
+      if (recording.hrepcar[c].regat[i] < 0) {
         var frget = false;
         if (foundnegfix) {
-          if (hrepcar[c].regat[i] < foundnegfix) {
+          if (recording.hrepcar[c].regat[i] < foundnegfix) {
             frget = true;
           }
         }
         if (!frget) {
-          racers[c].mtouch = hrepcar[c].regmtch[i];
+          racers[c].mtouch = recording.hrepcar[c].regmtch[i];
           regn(
-            hrepcar[c].regnr[i],
-            hrepcar[c].regk[i],
-            hrepcar[c].regmag[i],
+            recording.hrepcar[c].regnr[i],
+            recording.hrepcar[c].regk[i],
+            recording.hrepcar[c].regmag[i],
             c,
           );
         }
@@ -15273,14 +15283,14 @@ function hrewindhreplay() {
   }
   holdf = 0;
   rmode = 0;
-  if (htyp == 1) {
+  if (recording.htyp == 1) {
     if (random.fx() > random.fx()) {
       rmode = 98;
     } else {
       rmode = 43;
     }
   }
-  if (htyp == 2) {
+  if (recording.htyp == 2) {
     rmode = 95;
     camera.orbitAngle += 90;
   }
@@ -15288,7 +15298,7 @@ function hrewindhreplay() {
 }
 function hreplay() {
   for (var c = 0; c < game.carCount; c++) {
-    if (hrepcar[c].destat == fr) {
+    if (recording.hrepcar[c].destat == recording.fr) {
       racers[c].destnow = true;
     }
     if (racers[c].destnow) {
@@ -15307,7 +15317,7 @@ function hreplay() {
         racers[c].embos++;
         if (racers[c].embos == 2) {
           racers[c].embos = 0;
-          if (!onpausefr) {
+          if (!recording.onpausefr) {
             racers[c].cntdest++;
           }
         }
@@ -15321,9 +15331,9 @@ function hreplay() {
         }
         firexp(
           c,
-          hrepcar[c].avnx[fr],
-          hrepcar[c].avny[fr],
-          hrepcar[c].avnz[fr],
+          recording.hrepcar[c].avnx[recording.fr],
+          recording.hrepcar[c].avny[recording.fr],
+          recording.hrepcar[c].avnz[recording.fr],
         );
         if (racers[c].cntdest < 24) {
           racers[c].embos++;
@@ -15336,8 +15346,8 @@ function hreplay() {
       }
     }
     if (!car[c].fcnt) {
-      for (var i = 0; i < hrepcar[c].nfix; i++) {
-        if (hrepcar[c].fixat[i] == fr) {
+      for (var i = 0; i < recording.hrepcar[c].nfix; i++) {
+        if (recording.hrepcar[c].fixat[i] == recording.fr) {
           car[c].fcnt = 20;
         }
       }
@@ -15364,44 +15374,44 @@ function hreplay() {
         car[c].fcnt--;
       }
     }
-    if (!onpausefr) {
-      for (var i = 0; i < hrepcar[c].nreg; i++) {
-        if (hrepcar[c].regat[i] == fr) {
-          racers[c].mtouch = hrepcar[c].regmtch[i];
+    if (!recording.onpausefr) {
+      for (var i = 0; i < recording.hrepcar[c].nreg; i++) {
+        if (recording.hrepcar[c].regat[i] == recording.fr) {
+          racers[c].mtouch = recording.hrepcar[c].regmtch[i];
           regn(
-            hrepcar[c].regnr[i],
-            hrepcar[c].regk[i],
-            hrepcar[c].regmag[i],
+            recording.hrepcar[c].regnr[i],
+            recording.hrepcar[c].regk[i],
+            recording.hrepcar[c].regmag[i],
             c,
           );
         }
       }
     }
-    for (var i = 0; i < hrepcar[c].ndst; i++) {
-      if (hrepcar[c].dstat[i] == fr) {
+    for (var i = 0; i < recording.hrepcar[c].ndst; i++) {
+      if (recording.hrepcar[c].dstat[i] == recording.fr) {
         dustup(
-          hrepcar[c].tskd[i],
+          recording.hrepcar[c].tskd[i],
           c,
-          hrepcar[c].mst[i],
-          hrepcar[c].dx[i],
-          hrepcar[c].dy[i],
-          hrepcar[c].dz[i],
-          hrepcar[c].sx[i],
-          hrepcar[c].sz[i],
-          hrepcar[c].smag[i],
-          hrepcar[c].tlt[i],
-          hrepcar[c].capsz[i],
+          recording.hrepcar[c].mst[i],
+          recording.hrepcar[c].dx[i],
+          recording.hrepcar[c].dy[i],
+          recording.hrepcar[c].dz[i],
+          recording.hrepcar[c].sx[i],
+          recording.hrepcar[c].sz[i],
+          recording.hrepcar[c].smag[i],
+          recording.hrepcar[c].tlt[i],
+          recording.hrepcar[c].capsz[i],
         );
       }
     }
-    car[c].x = hrepcar[c].x[fr];
-    car[c].y = hrepcar[c].y[fr];
-    car[c].z = hrepcar[c].z[fr];
-    car[c].xy = hrepcar[c].xy[fr];
-    car[c].xz = hrepcar[c].xz[fr];
-    car[c].zy = hrepcar[c].zy[fr];
-    car[c].wzy = hrepcar[c].wzy[fr];
-    car[c].wxz = hrepcar[c].wxz[fr];
+    car[c].x = recording.hrepcar[c].x[recording.fr];
+    car[c].y = recording.hrepcar[c].y[recording.fr];
+    car[c].z = recording.hrepcar[c].z[recording.fr];
+    car[c].xy = recording.hrepcar[c].xy[recording.fr];
+    car[c].xz = recording.hrepcar[c].xz[recording.fr];
+    car[c].zy = recording.hrepcar[c].zy[recording.fr];
+    car[c].wzy = recording.hrepcar[c].wzy[recording.fr];
+    car[c].wxz = recording.hrepcar[c].wxz[recording.fr];
     var xmt = [1, 0, 0];
     var ymt = [0, 1, 0];
     var zmt = [0, 0, 1];
@@ -15423,25 +15433,25 @@ function hreplay() {
       car[c].mat[racers[c].embodir * 4 + 2] *= racers[c].embomag;
     }
   }
-  for (var i = 0; i < hrepsprks.n; i++) {
-    if (hrepsprks.sprkat[i] == fr) {
+  for (var i = 0; i < recording.hrepsprks.n; i++) {
+    if (recording.hrepsprks.sprkat[i] == recording.fr) {
       sprks(
-        hrepsprks.cn[i],
-        hrepsprks.x[i],
-        hrepsprks.y[i],
-        hrepsprks.z[i],
-        hrepsprks.sx[i],
-        hrepsprks.sy[i],
-        hrepsprks.sz[i],
-        hrepsprks.cap[i],
+        recording.hrepsprks.cn[i],
+        recording.hrepsprks.x[i],
+        recording.hrepsprks.y[i],
+        recording.hrepsprks.z[i],
+        recording.hrepsprks.sx[i],
+        recording.hrepsprks.sy[i],
+        recording.hrepsprks.sz[i],
+        recording.hrepsprks.cap[i],
       );
     }
   }
-  oncheckpoint = hreponcheckpoint[fr];
-  onlastcheck = hreponlastcheck[fr];
+  oncheckpoint = recording.hreponcheckpoint[recording.fr];
+  onlastcheck = recording.hreponlastcheck[recording.fr];
 }
 function preprevtime() {
-  fr = 429;
+  recording.fr = 429;
   camera.mode = 0;
   camera.target = game.player;
   game.phase = PHASE.replayRewind;
@@ -15455,29 +15465,34 @@ function preprevtime() {
     car[c].fcnt = 0;
     fixcar(c);
     carobj[car[c].typ].alpha = 1;
-    if (repcar[c].destat < 0) {
+    if (recording.repcar[c].destat < 0) {
       for (var i = 0; i < 16; i++) {
         burn(c);
       }
     }
     var foundnegfix = 0;
-    for (var i = repcar[c].nfix - 1; i >= 0; i--) {
-      if (repcar[c].fixat[i] < 0 && foundnegfix == 0) {
-        foundnegfix = repcar[c].fixat[i];
+    for (var i = recording.repcar[c].nfix - 1; i >= 0; i--) {
+      if (recording.repcar[c].fixat[i] < 0 && foundnegfix == 0) {
+        foundnegfix = recording.repcar[c].fixat[i];
         break;
       }
     }
-    for (var i = 0; i < repcar[c].nreg; i++) {
-      if (repcar[c].regat[i] < 0) {
+    for (var i = 0; i < recording.repcar[c].nreg; i++) {
+      if (recording.repcar[c].regat[i] < 0) {
         var frget = false;
         if (foundnegfix) {
-          if (repcar[c].regat[i] < foundnegfix) {
+          if (recording.repcar[c].regat[i] < foundnegfix) {
             frget = true;
           }
         }
         if (!frget) {
-          racers[c].mtouch = repcar[c].regmtch[i];
-          regn(repcar[c].regnr[i], repcar[c].regk[i], repcar[c].regmag[i], c);
+          racers[c].mtouch = recording.repcar[c].regmtch[i];
+          regn(
+            recording.repcar[c].regnr[i],
+            recording.repcar[c].regk[i],
+            recording.repcar[c].regmag[i],
+            c,
+          );
         }
       }
     }
@@ -15488,12 +15503,20 @@ function preprevtime() {
 }
 function revtime() {
   for (var c = 0; c < game.carCount; c++) {
-    if (fr > repcar[c].destat) {
-      firexp(c, repcar[c].avnx[fr], repcar[c].avny[fr], repcar[c].avnz[fr]);
+    if (recording.fr > recording.repcar[c].destat) {
+      firexp(
+        c,
+        recording.repcar[c].avnx[recording.fr],
+        recording.repcar[c].avny[recording.fr],
+        recording.repcar[c].avnz[recording.fr],
+      );
     }
     if (!car[c].fcnt) {
-      for (var i = 0; i < repcar[c].nfix; i++) {
-        if (fr == repcar[c].fixat[i] + 28 || fr == repcar[c].fixat[i] + 27) {
+      for (var i = 0; i < recording.repcar[c].nfix; i++) {
+        if (
+          recording.fr == recording.repcar[c].fixat[i] + 28 ||
+          recording.fr == recording.repcar[c].fixat[i] + 27
+        ) {
           car[c].fcnt = 20;
         }
       }
@@ -15509,7 +15532,10 @@ function revtime() {
           }
         }
       }
-      if (Math.abs(fr - (429 - nrec)) > 100 && car[c].fcnt != 2) {
+      if (
+        Math.abs(recording.fr - (429 - recording.nrec)) > 100 &&
+        car[c].fcnt != 2
+      ) {
         if (tick.fraction >= tick.scale) {
           car[c].fcnt -= 2;
         }
@@ -15522,26 +15548,26 @@ function revtime() {
         car[c].fcnt = 0;
       }
     }
-    car[c].x = repcar[c].x[fr];
-    car[c].y = repcar[c].y[fr];
-    car[c].z = repcar[c].z[fr];
-    car[c].xy = repcar[c].xy[fr];
-    car[c].xz = repcar[c].xz[fr];
-    car[c].zy = repcar[c].zy[fr];
-    car[c].wzy = repcar[c].wzy[fr];
-    car[c].wxz = repcar[c].wxz[fr];
+    car[c].x = recording.repcar[c].x[recording.fr];
+    car[c].y = recording.repcar[c].y[recording.fr];
+    car[c].z = recording.repcar[c].z[recording.fr];
+    car[c].xy = recording.repcar[c].xy[recording.fr];
+    car[c].xz = recording.repcar[c].xz[recording.fr];
+    car[c].zy = recording.repcar[c].zy[recording.fr];
+    car[c].wzy = recording.repcar[c].wzy[recording.fr];
+    car[c].wxz = recording.repcar[c].wxz[recording.fr];
     racers[c].pxy = car[c].xy;
     racers[c].pzy = car[c].zy;
     for (var k = 0; k < 4; k++) {
-      racers[c].scx[k] = repcar[c].avnx[fr];
-      racers[c].scy[k] = repcar[c].avny[fr];
-      racers[c].scz[k] = repcar[c].avnz[fr];
+      racers[c].scx[k] = recording.repcar[c].avnx[recording.fr];
+      racers[c].scy[k] = recording.repcar[c].avny[recording.fr];
+      racers[c].scz[k] = recording.repcar[c].avnz[recording.fr];
     }
-    racers[c].hitmag = repcar[c].hitmag[fr];
-    racers[c].clear = repcar[c].clear[fr];
-    racers[c].pcleared = repcar[c].pcleared[fr];
-    racers[c].nlaps = repcar[c].nlaps[fr];
-    racers[c].cxz = repcar[c].cxz[fr];
+    racers[c].hitmag = recording.repcar[c].hitmag[recording.fr];
+    racers[c].clear = recording.repcar[c].clear[recording.fr];
+    racers[c].pcleared = recording.repcar[c].pcleared[recording.fr];
+    racers[c].nlaps = recording.repcar[c].nlaps[recording.fr];
+    racers[c].cxz = recording.repcar[c].cxz[recording.fr];
     var xmt = [1, 0, 0];
     var ymt = [0, 1, 0];
     var zmt = [0, 0, 1];
@@ -15558,23 +15584,23 @@ function revtime() {
     car[c].mat[9] = ymt[2];
     car[c].mat[10] = zmt[2];
   }
-  oncheckpoint = reponcheckpoint[fr];
-  onlastcheck = reponlastcheck[fr];
-  if (Math.abs(fr - (429 - nrec)) > 100) {
-    fr -= 2;
+  oncheckpoint = recording.reponcheckpoint[recording.fr];
+  onlastcheck = recording.reponlastcheck[recording.fr];
+  if (Math.abs(recording.fr - (429 - recording.nrec)) > 100) {
+    recording.fr -= 2;
   } else {
-    fr--;
+    recording.fr--;
   }
-  if (fr <= 429 - nrec) {
+  if (recording.fr <= 429 - recording.nrec) {
     for (var c = 0; c < game.carCount; c++) {
       resetPursuit(c);
       racers[c].focus = -1;
       racers[c].missedcp = 0;
       racers[c].nofocus = false;
       carobj[car[c].typ].alpha = 1;
-      if (repcar[c].destat > 0) {
+      if (recording.repcar[c].destat > 0) {
         racers[c].dest = false;
-        repcar[c].destat = 700;
+        recording.repcar[c].destat = 700;
       }
     }
     cntwis = 0;
@@ -15583,8 +15609,8 @@ function revtime() {
     auscnt = 45;
     track.haltall = false;
     game.phase = PHASE.race;
-    nrec = 0;
-    fr = 0;
+    recording.nrec = 0;
+    recording.fr = 0;
   }
 }
 
