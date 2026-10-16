@@ -1,4 +1,3 @@
-import { distance as pyd } from "./core/math.js";
 import { isPhone } from "./core/platform.js";
 import { random } from "./core/random.js";
 import {
@@ -31,16 +30,8 @@ import {
   setWorld,
 } from "./render/renderer.js";
 import { canvas2D, rd, view } from "./ui/view.js";
-import {
-  CAMERA,
-  camera,
-  faceCamera,
-  startProjection,
-  turnView,
-} from "./render/camera.js";
+import { CAMERA, camera, startProjection, turnView } from "./render/camera.js";
 import { moveCamera } from "./render/cameraMoves.js";
-import { isLeftWheel, placeWheel } from "./render/wheels.js";
-import { layShadow } from "./render/shadows.js";
 import { lookForGamepads, pollGamepads } from "./input/gamepad.js";
 import {
   carModels,
@@ -84,7 +75,7 @@ import { gameinstructions } from "./screens/instructions.js";
 import { PHASE, game } from "./core/state.js";
 import { tick } from "./core/tick.js";
 import { car, racers } from "./race/racers.js";
-import { pieceModels, pieces, spinFixHoops, track } from "./race/track.js";
+import { pieceModels, pieces, track } from "./race/track.js";
 import {
   hreplay,
   preprevtime,
@@ -114,215 +105,7 @@ import { drawmain, resetgame } from "./screens/mainMenu.js";
 import { loaddata } from "./loading/assets.js";
 import { checkstat } from "./race/standings.js";
 import { nextRaceSize } from "./race/field.js";
-
-function setwheelspos() {
-  for (var c = 0; c < game.carCount; c++) {
-    var cn = car[c].typ;
-    for (var w = 0; w < 4; w++) {
-      var wheel = racers[c].wheels[w];
-      // the front wheels steer
-      placeWheel(wheel, car[c], cn, w, w < 2 ? car[c].wxz : 0);
-      mat4.rotate(
-        wheel.mat,
-        wheel.mat,
-        car[c].wzy * (Math.PI / 180),
-        isLeftWheel(w) ? [0, 0, -1] : [0, 0, 1],
-      );
-    }
-    for (var j = 0; j < 4; j++) {
-      racers[c].wheels[j].dist = pyd(
-        racers[c].wheels[j].x,
-        camera.x,
-        racers[c].wheels[j].y,
-        camera.y,
-        racers[c].wheels[j].z,
-        camera.z,
-      );
-    }
-  }
-}
-
-function shadoworks() {
-  for (var c = 0; c < game.carCount; c++) {
-    layShadow(racers[c].shadow, car[c], car[c].typ);
-    racers[c].shadow.intershad = false;
-    racers[c].shadow.y = 0.4;
-    for (var i = 0; i < pieces.count; i++) {
-      if (pieceModels[pieces.list[i].typ].intershad) {
-        pieceModels[pieces.list[i].typ].x = pieces.list[i].x;
-        pieceModels[pieces.list[i].typ].y = pieces.list[i].y;
-        pieceModels[pieces.list[i].typ].z = pieces.list[i].z;
-        pieceModels[pieces.list[i].typ].mat = pieces.list[i].mat;
-        shadowmap(car[c], racers[c].shadow, pieceModels[pieces.list[i].typ]);
-      }
-    }
-  }
-}
-function shadowmap(crft, shd, rad) {
-  if (
-    Math.abs(crft.x - rad.x) < carModels[crft.typ].colrad + rad.colrad &&
-    Math.abs(crft.z - rad.z) < carModels[crft.typ].colrad + rad.colrad
-  ) {
-    var snormx = 0;
-    var snormy = 0;
-    var snormz = 0;
-    for (var i = 0; i < rad.ni / 3; i++) {
-      var vertx = [];
-      var verty = [];
-      var vertz = [];
-      for (var v = 0; v < 3; v++) {
-        var vp = rad.tri[i * 9 + v * 3];
-        vertx[v] =
-          -(rad.vrt[vp * 3] * rad.mat[0]) + rad.vrt[vp * 3 + 2] * rad.mat[8];
-        verty[v] = rad.vrt[vp * 3 + 1];
-        vertz[v] =
-          rad.vrt[vp * 3 + 2] * rad.mat[10] - rad.vrt[vp * 3] * rad.mat[2];
-      }
-      var areaOrig = Math.abs(
-        (vertx[1] - vertx[0]) * (vertz[2] - vertz[0]) -
-          (vertx[2] - vertx[0]) * (vertz[1] - vertz[0]),
-      );
-      var px = shd.x - rad.x;
-      var pz = shd.z - rad.z;
-      var area1 = Math.abs(
-        (vertx[0] - px) * (vertz[1] - pz) - (vertx[1] - px) * (vertz[0] - pz),
-      );
-      var area2 = Math.abs(
-        (vertx[1] - px) * (vertz[2] - pz) - (vertx[2] - px) * (vertz[1] - pz),
-      );
-      var area3 = Math.abs(
-        (vertx[2] - px) * (vertz[0] - pz) - (vertx[0] - px) * (vertz[2] - pz),
-      );
-      if (area1 + area2 + area3 <= areaOrig + 10) {
-        var vp = rad.tri[i * 9 + 1];
-        if (rad.nrm[vp * 3 + 1] > 0.06) {
-          var fct = 0;
-          if (vertz[0] - vertz[1] != 0) {
-            fct = (shd.z - (vertz[1] + rad.z)) / (vertz[0] - vertz[1]);
-          } else {
-            fct = 0;
-          }
-          var lx = vertx[1] + (vertx[0] - vertx[1]) * fct;
-          var ly = verty[1] + (verty[0] - verty[1]) * fct;
-          if (vertz[0] - vertz[2] != 0) {
-            fct = (shd.z - (vertz[2] + rad.z)) / (vertz[0] - vertz[2]);
-          } else {
-            fct = 0;
-          }
-          var tx = vertx[2] + (vertx[0] - vertx[2]) * fct;
-          var ty = verty[2] + (verty[0] - verty[2]) * fct;
-          if (tx - lx != 0) {
-            fct = (shd.x - (lx + rad.x)) / (tx - lx);
-          } else {
-            fct = 0;
-          }
-          var shdy = ly + (ty - ly) * fct;
-          if (shdy < crft.y && shdy > shd.y - 0.5) {
-            snormx =
-              -(rad.nrm[vp * 3] * rad.mat[0]) +
-              rad.nrm[vp * 3 + 2] * rad.mat[8];
-            snormy = rad.nrm[vp * 3 + 1];
-            snormz =
-              rad.nrm[vp * 3 + 2] * rad.mat[10] - rad.nrm[vp * 3] * rad.mat[2];
-            if (Math.abs(snormy) > 0.1) {
-              var diz = -1;
-              if (shd.ont == 0) {
-                if (crft.mat[5] < 0) {
-                  diz = 1;
-                }
-              }
-              if (shd.ont == 1) {
-                if (crft.mat[1] < 0) {
-                  diz = 1;
-                }
-              }
-              if (shd.ont == 2) {
-                if (crft.mat[9] > 0) {
-                  diz = 1;
-                }
-              }
-              shd.mat[1] = -(snormx * shd.mat[0]) + diz * snormz * shd.mat[8];
-              shd.mat[5] = snormy;
-              shd.mat[9] = -(snormz * shd.mat[10]) + diz * snormx * shd.mat[2];
-              shd.y = shdy;
-              shd.intershad = true;
-            }
-          }
-        }
-      }
-    }
-  }
-}
-
-function cpanimate() {
-  spinFixHoops();
-  if (raceEvents.onelec) {
-    faceCamera(electricity);
-    electricity.ont++;
-    if (electricity.ont == 5) {
-      electricity.ont = 0;
-    }
-  }
-  if (track.stage == 1) {
-    raceEvents.checkpointFlash++;
-  } else {
-    raceEvents.checkpointFlash += 0.2;
-  }
-  if (raceEvents.checkpointFlash >= 5) {
-    raceEvents.checkpointFlash = 0;
-  }
-  if (raceEvents.oncheckpoint != -1) {
-    checkpointText.x = pieces.list[track.obn[raceEvents.oncheckpoint]].x;
-    checkpointText.y = pieces.list[track.obn[raceEvents.oncheckpoint]].y + 80;
-    checkpointText.z = pieces.list[track.obn[raceEvents.oncheckpoint]].z;
-    for (var i = 0; i < 16; i++) {
-      checkpointText.mat[i] =
-        pieces.list[track.obn[raceEvents.oncheckpoint]].mat[i];
-    }
-    var flipit = false;
-    if (Math.abs(checkpointText.mat[8]) > Math.abs(checkpointText.mat[10])) {
-      if (camera.x < checkpointText.x) {
-        checkpointText.x -= 6.7;
-      } else {
-        checkpointText.x += 6.7;
-      }
-      if (checkpointText.mat[8] > 0 && camera.x < checkpointText.x) {
-        flipit = true;
-      }
-      if (checkpointText.mat[8] < 0 && camera.x > checkpointText.x) {
-        flipit = true;
-      }
-    } else {
-      if (camera.z < checkpointText.z) {
-        checkpointText.z -= 6.7;
-      } else {
-        checkpointText.z += 6.7;
-      }
-      if (checkpointText.mat[10] > 0 && camera.z < checkpointText.z) {
-        flipit = true;
-      }
-      if (checkpointText.mat[10] < 0 && camera.z > checkpointText.z) {
-        flipit = true;
-      }
-    }
-    if (flipit) {
-      mat4.rotate(
-        checkpointText.mat,
-        checkpointText.mat,
-        180 * (Math.PI / 180),
-        [0, 1, 0],
-      );
-    }
-    if (raceEvents.onlastcheck) {
-      for (var i = 0; i < 16; i++) {
-        finishText.mat[i] = checkpointText.mat[i];
-      }
-      finishText.x = pieces.list[track.obn[raceEvents.oncheckpoint]].x;
-      finishText.y = pieces.list[track.obn[raceEvents.oncheckpoint]].y + 52;
-      finishText.z = pieces.list[track.obn[raceEvents.oncheckpoint]].z;
-    }
-  }
-}
+import { animateTrack, castShadows, placeWheels } from "./render/raceScene.js";
 
 // Fase whose 3D scene has been drawn from a finished logic tick and may be redrawn every frame.
 var framefase = -1;
@@ -333,13 +116,13 @@ function gameworks() {
   if (game.phase == PHASE.race) {
     if (raceEvents.countdown == 0) {
       drive();
-      setwheelspos();
-      shadoworks();
+      placeWheels();
+      castShadows();
       chipsfly();
       sprksfly();
       dustfly();
       expburn();
-      cpanimate();
+      animateTrack();
       record();
       checkstat();
       control();
@@ -358,9 +141,9 @@ function gameworks() {
       if (raceEvents.countdown != 0) {
         raceEvents.countdown--;
       }
-      setwheelspos();
-      shadoworks();
-      cpanimate();
+      placeWheels();
+      castShadows();
+      animateTrack();
       drawinter();
       if (
         game.mode == 1 &&
@@ -458,26 +241,26 @@ function gameworks() {
   }
   if (game.phase == PHASE.replay) {
     replay();
-    setwheelspos();
-    shadoworks();
+    placeWheels();
+    castShadows();
     chipsfly();
     sprksfly();
     dustfly();
     expburn();
-    cpanimate();
+    animateTrack();
     drawReplayOverlay();
   }
   if (game.phase == PHASE.highlights) {
     hreplay();
-    setwheelspos();
-    shadoworks();
+    placeWheels();
+    castShadows();
     if (!recording.onpausefr) {
       chipsfly();
       sprksfly();
     }
     dustfly();
     expburn();
-    cpanimate();
+    animateTrack();
     drawHighlightOverlay();
   }
   if (game.phase == PHASE.switchScreen) {
@@ -485,13 +268,13 @@ function gameworks() {
   }
   if (game.phase == PHASE.timeRewind) {
     revtime();
-    setwheelspos();
-    shadoworks();
+    placeWheels();
+    castShadows();
     chipsfly();
     sprksfly();
     dustfly();
     expburn();
-    cpanimate();
+    animateTrack();
     drawRewindOverlay();
   }
   moveCamera();

@@ -13,7 +13,9 @@ const walk = require("acorn-walk");
 const fs = require("fs");
 const path = require("path");
 
-const [srcFile, targetFile, header, list, ...extra] = process.argv.slice(2);
+const [srcFile, targetFile, rawHeader, list, ...extra] = process.argv.slice(2);
+// a written \n in the header starts a new comment line
+const header = rawHeader.replace(/\\n(\/\/ )?/g, "\n");
 const names = list.split(",");
 const autoVars = process.env.AUTO_VARS === "1";
 let src = fs.readFileSync(srcFile, "utf8");
