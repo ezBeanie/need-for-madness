@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { autopilot, startRace } from "./harness/race.js";
+import { autopilot, raceState, startRace } from "./harness/race.js";
 import { PHASE } from "../src/core/state.js";
 
 // Opponents wreck each other on stage 5. Dents, scratches and burns must reach the GPU,
@@ -29,4 +29,33 @@ test("car damage is shown without reading textures back from the GPU", async () 
     expect(model.damagedPixels).toBe(false);
     expect(model.texture[1].pixels).toEqual(model.damagePixels);
   }
+});
+
+// The scratches are only seen: painting them with other randomness, or later, must not
+// change the race.
+test("scratching car damage does not change the race", async () => {
+  const race = async (scratchSeed) => {
+    const { ctx, step } = await startRace({ stage: 5, car: 15 });
+    let a = scratchSeed;
+    ctx.random.scratch = () => {
+      a = (a * 16807) % 2147483647;
+      return a / 2147483647;
+    };
+    const states = [];
+    for (
+      let frame = 0;
+      frame < 2000 && ctx.game.phase === PHASE.race;
+      frame++
+    ) {
+      Object.assign(ctx.racers[0].u, autopilot(ctx));
+      step();
+      states.push(JSON.stringify(raceState(ctx)));
+    }
+    const texture = ctx.carModels[ctx.car[1].typ].damagePixels;
+    return { states, texture };
+  };
+  const first = await race(7);
+  const second = await race(4242);
+  expect(second.texture).not.toEqual(first.texture);
+  expect(second.states).toEqual(first.states);
 });

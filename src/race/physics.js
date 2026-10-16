@@ -2973,34 +2973,6 @@ export function drive() {
 }
 function colide(c, xc) {
   var pyclos;
-  var kx = [],
-    ky = [],
-    kz = [];
-  var xkx = [],
-    xky = [],
-    xkz = [];
-  for (var i = 0; i < 4; i++) {
-    kx[i] = car[c].x + car[c].keyx[i];
-    if (racers[c].capsized) {
-      ky[i] = car[c].y + carStats.flipy[car[c].typ] + racers[c].squash;
-    } else {
-      ky[i] = car[c].y + car[c].grat;
-    }
-    kz[i] = car[c].z + car[c].keyz[i];
-    xkx[i] = car[xc].x + car[xc].keyx[i];
-    if (racers[xc].capsized) {
-      xky[i] = car[xc].y + carStats.flipy[car[xc].typ] + racers[xc].squash;
-    } else {
-      xky[i] = car[xc].y + car[xc].grat;
-    }
-    xkz[i] = car[xc].z + car[xc].keyz[i];
-  }
-  rotatePoints(kx, ky, car[c].x, car[c].y, car[c].xy, 4);
-  rotatePoints(ky, kz, car[c].y, car[c].z, car[c].zy, 4);
-  rotatePoints(kx, kz, car[c].x, car[c].z, car[c].xz, 4);
-  rotatePoints(xkx, xky, car[xc].x, car[xc].y, car[xc].xy, 4);
-  rotatePoints(xky, xkz, car[xc].y, car[xc].z, car[xc].zy, 4);
-  rotatePoints(xkx, xkz, car[xc].x, car[xc].z, car[xc].xz, 4);
   if (
     distanceSquared(
       car[c].x,
@@ -3054,6 +3026,35 @@ function colide(c, xc) {
     }
   }
   if (racers[c].dominate[xc]) {
+    // the corners of both cars, only needed when c pushes xc
+    var kx = [],
+      ky = [],
+      kz = [];
+    var xkx = [],
+      xky = [],
+      xkz = [];
+    for (var i = 0; i < 4; i++) {
+      kx[i] = car[c].x + car[c].keyx[i];
+      if (racers[c].capsized) {
+        ky[i] = car[c].y + carStats.flipy[car[c].typ] + racers[c].squash;
+      } else {
+        ky[i] = car[c].y + car[c].grat;
+      }
+      kz[i] = car[c].z + car[c].keyz[i];
+      xkx[i] = car[xc].x + car[xc].keyx[i];
+      if (racers[xc].capsized) {
+        xky[i] = car[xc].y + carStats.flipy[car[xc].typ] + racers[xc].squash;
+      } else {
+        xky[i] = car[xc].y + car[xc].grat;
+      }
+      xkz[i] = car[xc].z + car[xc].keyz[i];
+    }
+    rotatePoints(kx, ky, car[c].x, car[c].y, car[c].xy, 4);
+    rotatePoints(ky, kz, car[c].y, car[c].z, car[c].zy, 4);
+    rotatePoints(kx, kz, car[c].x, car[c].z, car[c].xz, 4);
+    rotatePoints(xkx, xky, car[xc].x, car[xc].y, car[xc].xy, 4);
+    rotatePoints(xky, xkz, car[xc].y, car[xc].z, car[xc].zy, 4);
+    rotatePoints(xkx, xkz, car[xc].x, car[xc].z, car[xc].xz, 4);
     var crad =
       ((racers[c].scz[0] -
         racers[xc].scz[0] +
@@ -3381,14 +3382,20 @@ function colide(c, xc) {
     }
   }
 }
-// Scratches a dent into the damage texture: npt strokes walk from the dented spot,
-// greying, darkening and breaking windows on their way. It returns modpix, which a
-// broken window changes for the following strokes. Kept apart from regn so it runs
-// fast; step by step it is the original loop, effect randomness included, which the
-// physics depends on through exploding cars (embomag scales the matrix the walls use).
-function scratchDent(pixels, c, pxc, pyc, npt, modpix) {
+// Dents regn made, waiting to be scratched into their car's texture. In a pile-up that
+// takes millions of steps in one tick, and it is only seen, so the drawing scratches as
+// many as fit into a frame (see paintDents).
+const dents = [];
+let nextDent = 0;
+
+// Scratches a dent into the damage texture: strokes walk from the dented spot (pxc, pyc),
+// greying, darkening and breaking windows on their way; a broken window (modpix 3) ends
+// the glass breaking for the following strokes. Returns the steps it took.
+function scratchDent({ pixels, c, pxc, pyc, cmag, modpix }) {
   var glassColor = scene.glassColor;
-  var fx = random.fx;
+  var fx = random.scratch;
+  var steps = 0;
+  var npt = Math.round(cmag + fx() * cmag);
   for (var p = 0; p < npt; p++) {
     var pxv = Math.round(6 * fx() - 3);
     var pyv = Math.round(6 * fx() - 3);
@@ -3412,6 +3419,7 @@ function scratchDent(pixels, c, pxc, pyc, npt, modpix) {
       glass = true;
     }
     while (rnp > 0 || glass) {
+      steps++;
       var pp = px * 4 + py * 256 * 4;
       if (pp < 0 || pp >= pixels.length) {
         // Off the texture: the original read undefined there, which counts as grey, and
@@ -3496,7 +3504,26 @@ function scratchDent(pixels, c, pxc, pyc, npt, modpix) {
       rnp--;
     }
   }
-  return modpix;
+  return steps;
+}
+
+// Scratches waiting dents until maxSteps are taken; the rest waits for the next frame.
+// Dents of a texture that was repaired or replaced since are dropped.
+export function paintDents(maxSteps) {
+  var steps = 0;
+  while (nextDent < dents.length && steps < maxSteps) {
+    var dent = dents[nextDent++];
+    if (dent.pixels == dent.model.damagePixels) {
+      steps += scratchDent(dent);
+      dent.model.damagedPixels = true;
+    }
+  }
+  // a pile-up queues tens of thousands of dents; shifting each one off would copy them all
+  if (nextDent == dents.length) {
+    dents.length = 0;
+    nextDent = 0;
+  }
+  return steps;
 }
 export function regn(nr, k, mag, c) {
   if (game.phase == PHASE.race) {
@@ -3670,15 +3697,11 @@ export function regn(nr, k, mag, c) {
             11 *
             carStats.dammult[car[c].typ] *
             carStats.colrdammult[car[c].typ];
-          var npt = Math.round(cmag + random.fx() * cmag);
-          modpix = scratchDent(pixels, c, pxc, pyc, npt, modpix);
+          dents.push({ model: rad, pixels, c, pxc, pyc, cmag, modpix });
         }
       }
       if (nr == 3 && nsq > 0) {
         racers[c].squash += tsq / nsq;
-      }
-      if (pixelread) {
-        rad.damagedPixels = true;
       }
       rad.damagedVertices = true;
       rad.loaded = 2;

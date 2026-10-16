@@ -95,7 +95,7 @@ import {
   sprksfly,
   effects,
 } from "./race/effects.js";
-import { drive, fixcar, inishmad } from "./race/physics.js";
+import { drive, fixcar, inishmad, paintDents } from "./race/physics.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 var onycl;
@@ -3350,8 +3350,11 @@ function unlockedcar() {
     updateframe = true;
   }
 }
+// About 2 ms per frame for scratching car damage into textures (see paintDents).
+var SCRATCH_STEPS_PER_FRAME = 100000;
 function render(now) {
   interpolation.frame++;
+  paintDents(SCRATCH_STEPS_PER_FRAME);
   if (game.phase != renderedfase) {
     framefase = -1;
     renderedfase = game.phase;

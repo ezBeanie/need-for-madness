@@ -23,7 +23,7 @@ export default [
           object: "Math",
           property: "random",
           message:
-            "Use random.sim() for the simulation or random.fx() for effects, so tests can seed them.",
+            "Use random.sim() for the simulation or random.fx() and random.scratch() for effects, so tests can seed them.",
         },
       ],
     },
