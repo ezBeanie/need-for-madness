@@ -101,8 +101,8 @@ import {
   drawhreplay,
   drawinter,
   drawreplay,
-  drawrevtime,
-  drawswitch,
+  drawRewindOverlay,
+  drawSwitchScreen,
   hud,
   inishinter,
 } from "./ui/hud.js";
@@ -2407,7 +2407,7 @@ function gameworks() {
     drawhreplay();
   }
   if (game.phase == PHASE.switchScreen) {
-    drawswitch();
+    drawSwitchScreen();
   }
   if (game.phase == PHASE.timeRewind) {
     revtime();
@@ -2418,7 +2418,7 @@ function gameworks() {
     dustfly();
     expburn();
     cpanimate();
-    drawrevtime();
+    drawRewindOverlay();
   }
   if (camera.mode == 0) {
     camera.pitch = 10;
@@ -3481,7 +3481,7 @@ function render(now) {
       }
       if (game.phase == PHASE.switchScreen) {
         for (var c = 0; c < game.carCount; c++) {
-          drawParticle(racers[c].switchp);
+          drawParticle(racers[c].switchLine);
         }
       }
       for (var i = 0; i < effects.nexp; i++) {

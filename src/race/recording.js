@@ -845,7 +845,7 @@ export function preprevtime() {
     }
   }
   resumeStageMusic();
-  raceEvents.switcnt = 0;
+  raceEvents.screenTicks = 0;
   game.phase = PHASE.timeRewind;
 }
 export function revtime() {

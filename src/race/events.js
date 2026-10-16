@@ -15,7 +15,8 @@ export const raceEvents = {
   messageTicks: 30,
   // the checkpoints the HUD has announced
   checkpointsAnnounced: 0,
-  switcnt: 0,
+  // ticks of the screen shown over the race: switching cars, winding back time, the race end
+  screenTicks: 0,
   // ticks until the race starts (the countdown), 0 while racing
   countdown: 0,
   // the player won the race

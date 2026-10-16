@@ -87,7 +87,7 @@ export const startRaceEnd = () => {
   }
   tilt = random.fx();
   unlockedCar = -1;
-  raceEvents.switcnt = 0;
+  raceEvents.screenTicks = 0;
   if (unlocksStage()) {
     // every second stage unlocks the next car
     if (track.stage % 2 == 0) {
@@ -268,8 +268,8 @@ const continueOrWait = () => {
       leaveRaceEnd();
     }
   } else {
-    raceEvents.switcnt++;
-    if (raceEvents.switcnt == 30) {
+    raceEvents.screenTicks++;
+    if (raceEvents.screenTicks == 30) {
       stopStageMusic();
       leaveRaceEnd();
     }

@@ -63,222 +63,302 @@ export const hud = {
   keyHintTicks: 0,
 };
 
-function getonscreen(m, rad) {
-  var x = rad.mat[12];
-  var y = rad.mat[13];
-  var z = rad.mat[14];
-  var w = x * m[0 * 4 + 3] + y * m[1 * 4 + 3] + z * m[2 * 4 + 3] + m[3 * 4 + 3];
-  var propoint = [
+// Where a model's position appears on the screen (in pixels), given the camera matrix.
+const screenPosition = (camera, model) => {
+  const x = model.mat[12];
+  const y = model.mat[13];
+  const z = model.mat[14];
+  const m = camera;
+  const w =
+    x * m[0 * 4 + 3] + y * m[1 * 4 + 3] + z * m[2 * 4 + 3] + m[3 * 4 + 3];
+  const projected = [
     (x * m[0 * 4 + 0] + y * m[1 * 4 + 0] + z * m[2 * 4 + 0] + m[3 * 4 + 0]) / w,
     (x * m[0 * 4 + 1] + y * m[1 * 4 + 1] + z * m[2 * 4 + 1] + m[3 * 4 + 1]) / w,
-    (x * m[0 * 4 + 2] + y * m[1 * 4 + 2] + z * m[2 * 4 + 2] + m[3 * 4 + 2]) / w,
   ];
   return [
-    (propoint[0] * 0.5 + 0.5) * view.width,
-    (propoint[1] * -0.5 + 0.5) * view.height,
+    (projected[0] * 0.5 + 0.5) * view.width,
+    (projected[1] * -0.5 + 0.5) * view.height,
   ];
-}
-function createswitches() {
-  var cgr1 = [200, 200, 200, 192];
-  var cgr2 = [200, 200, 200, 64];
-  for (var i = 0; i < 3; i++) {
-    cgr1[i] += cgr1[i] * scene.tint[i];
-    if (cgr1[i] > 255) {
-      cgr1[i] = 255;
+};
+
+// The stage's tint applied to a grey, kept within 0..255.
+const tinted = (grey) => {
+  const color = [...grey];
+  for (let i = 0; i < 3; i++) {
+    color[i] += color[i] * scene.tint[i];
+    if (color[i] > 255) {
+      color[i] = 255;
     }
-    if (cgr1[i] < 0) {
-      cgr1[i] = 0;
-    }
-    cgr2[i] += cgr2[i] * scene.tint[i];
-    if (cgr2[i] > 255) {
-      cgr2[i] = 255;
-    }
-    if (cgr2[i] < 0) {
-      cgr2[i] = 0;
+    if (color[i] < 0) {
+      color[i] = 0;
     }
   }
-  for (var c = 0; c < game.carCount; c++) {
-    if (racers[c].switchp == null) {
-      racers[c].switchp = newParticleModel();
+  return color;
+};
+
+// Switch mode: a band from every car still racing to the next one, the order the switch
+// goes round in. With only the player and one opponent left there is just the player's.
+function createSwitchLines() {
+  const outer = tinted([200, 200, 200, 192]);
+  const inner = tinted([200, 200, 200, 64]);
+  for (let c = 0; c < game.carCount; c++) {
+    if (racers[c].switchLine == null) {
+      racers[c].switchLine = newParticleModel();
     }
-    if (racers[c].switchp.loaded == 1) {
-      gl.deleteBuffer(racers[c].switchp.vbuf);
-      racers[c].switchp.vbuf = null;
-      gl.deleteBuffer(racers[c].switchp.cbuf);
-      racers[c].switchp.cbuf = null;
-      gl.deleteBuffer(racers[c].switchp.ibuf);
-      racers[c].switchp.ibuf = null;
+    const line = racers[c].switchLine;
+    if (line.loaded == 1) {
+      gl.deleteBuffer(line.vbuf);
+      line.vbuf = null;
+      gl.deleteBuffer(line.cbuf);
+      line.cbuf = null;
+      gl.deleteBuffer(line.ibuf);
+      line.ibuf = null;
     }
-    racers[c].switchp.on = false;
-    var nodo = false;
-    if (track.wasted == game.carCount - 2 && c != game.player) {
-      nodo = true;
+    line.on = false;
+    const lastTwo = track.wasted == game.carCount - 2 && c != game.player;
+    if (racers[c].dest || lastTwo) {
+      continue;
     }
-    if (!racers[c].dest && !nodo) {
-      var cpp = c;
-      cpp++;
-      if (cpp == game.carCount) {
-        cpp = 0;
+    let next = c;
+    next++;
+    if (next == game.carCount) {
+      next = 0;
+    }
+    while (racers[next].dest) {
+      next++;
+      if (next == game.carCount) {
+        next = 0;
       }
-      while (racers[cpp].dest) {
-        cpp++;
-        if (cpp == game.carCount) {
-          cpp = 0;
-        }
-      }
-      var vert = [
-        car[c].x,
-        car[c].y - 4,
-        car[c].z,
-        car[c].x,
-        car[c].y + 4,
-        car[c].z,
-        car[cpp].x,
-        car[cpp].y - 4,
-        car[cpp].z,
-        car[cpp].x,
-        car[cpp].y + 4,
-        car[cpp].z,
-      ];
-      var indice = [0, 1, 2, 2, 3, 1];
-      racers[c].switchp.ni = 6;
-      racers[c].switchp.vbuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, racers[c].switchp.vbuf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vert), gl.STATIC_DRAW);
-      var col = [];
-      for (var i = 0; i < 4; i++) {
-        if (i == 0 || i == 2) {
-          for (var k = 0; k < 4; k++) {
-            col[i * 4 + k] = cgr1[k] / 255;
-          }
-        } else {
-          for (var k = 0; k < 4; k++) {
-            col[i * 4 + k] = cgr2[k] / 255;
-          }
-        }
-      }
-      racers[c].switchp.cbuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, racers[c].switchp.cbuf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
-      racers[c].switchp.ibuf = gl.createBuffer();
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, racers[c].switchp.ibuf);
-      gl.bufferData(
-        gl.ELEMENT_ARRAY_BUFFER,
-        new Uint16Array(indice),
-        gl.STATIC_DRAW,
-      );
-      racers[c].switchp.alpha = true;
-      racers[c].switchp.mat = mat4.create();
-      racers[c].switchp.loaded = 1;
-      racers[c].switchp.on = true;
     }
+    const vertices = [
+      car[c].x,
+      car[c].y - 4,
+      car[c].z,
+      car[c].x,
+      car[c].y + 4,
+      car[c].z,
+      car[next].x,
+      car[next].y - 4,
+      car[next].z,
+      car[next].x,
+      car[next].y + 4,
+      car[next].z,
+    ];
+    line.ni = 6;
+    line.vbuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, line.vbuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    const colors = [];
+    for (let i = 0; i < 4; i++) {
+      for (let k = 0; k < 4; k++) {
+        colors[i * 4 + k] = (i == 0 || i == 2 ? outer : inner)[k] / 255;
+      }
+    }
+    line.cbuf = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, line.cbuf);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+    line.ibuf = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, line.ibuf);
+    gl.bufferData(
+      gl.ELEMENT_ARRAY_BUFFER,
+      new Uint16Array([0, 1, 2, 2, 3, 1]),
+      gl.STATIC_DRAW,
+    );
+    line.alpha = true;
+    line.mat = mat4.create();
+    line.loaded = 1;
+    line.on = true;
   }
 }
-var slide = 80;
-var slideto = 0;
-var slidedir = false;
-var swing = 0;
-var swingto = 45;
-var swingdir = false;
-export function drawswitch() {
-  rd.clearRect(0, 0, view.width, view.height);
-  if (raceEvents.switcnt == 0) {
-    camera.mode = -1;
-    slide = 80;
-    slideto = 180;
-    slidedir = false;
-    swing = 0;
-    if (random.fx() > random.fx()) {
-      swingto = 45;
-      swingdir = false;
-    } else {
-      swingto = -45;
-      swingdir = true;
-    }
-    camera.nextTarget = game.player;
-    camera.nextTarget++;
-    if (camera.nextTarget == game.carCount) {
-      camera.nextTarget = 0;
-    }
-    while (racers[camera.nextTarget].dest) {
-      camera.nextTarget++;
-      if (camera.nextTarget == game.carCount) {
-        camera.nextTarget = 0;
-      }
-    }
-    stopEngine();
+
+// The camera while switching cars: how far behind the car (it breathes between 60 and
+// 180) and how far it swings to the side (between -45 and 45 degrees). Winding back time
+// spins the time tube with the swing too, and the key hint blinks with the distance.
+let slide = 80;
+let slideTo = 0;
+let slideShrinking = false;
+let swing = 0;
+let swingTo = 45;
+let swingBack = false;
+
+// Insano's face while a screen over the race opens: from 5 back to 0.
+const insanoFace = (ticks) => {
+  if (ticks >= 40) {
+    return 0;
   }
-  if (raceEvents.switcnt < 20) {
-    camera.pitch = 10;
-    var kcxz = racers[camera.target].cxz - 180 + swing;
-    camera.yaw = kcxz;
-    camera.x = car[camera.target].x - slide * msin(kcxz);
-    camera.z = car[camera.target].z + slide * mcos(kcxz);
-    camera.y = car[camera.target].y + 25;
+  if (ticks >= 30) {
+    return 1;
   }
-  if (raceEvents.switcnt >= 20 && raceEvents.switcnt < 100) {
-    var fcs1 = 100 - raceEvents.switcnt;
-    var fcs2 = raceEvents.switcnt - 20;
-    camera.pitch = 10;
-    var kcxz =
-      (racers[camera.target].cxz * fcs1 +
-        racers[camera.nextTarget].cxz * fcs2) /
-        80 -
+  if (ticks >= 25) {
+    return 2;
+  }
+  if (ticks >= 20) {
+    return 3;
+  }
+  if (ticks >= 15) {
+    return 4;
+  }
+  return ticks >= 10 ? 5 : 0;
+};
+
+const drawInsanoAside = (face) => {
+  rd.globalAlpha = 0.6;
+  rd.drawImage(
+    images.insano[face],
+    490 * view.scaleX - 230 * view.scale,
+    10 * view.scaleY,
+    274 * view.scale * 0.7,
+    341 * view.scale * 0.7,
+  );
+  rd.globalAlpha = 1;
+};
+
+// The next car still racing after the player's.
+const nextLivingCar = () => {
+  let next = game.player;
+  next++;
+  if (next == game.carCount) {
+    next = 0;
+  }
+  while (racers[next].dest) {
+    next++;
+    if (next == game.carCount) {
+      next = 0;
+    }
+  }
+  return next;
+};
+
+// Behind car c, swung to the side, at the switch camera's distance.
+const lookAt = (yaw, x, y, z) => {
+  camera.pitch = 10;
+  camera.yaw = yaw;
+  camera.x = x - slide * msin(yaw);
+  camera.z = z + slide * mcos(yaw);
+  camera.y = y + 25;
+};
+
+// The camera flies from the player's car to the next one (ticks 20 to 100).
+const placeSwitchCamera = (ticks) => {
+  const from = camera.target;
+  const to = camera.nextTarget;
+  if (ticks < 20) {
+    lookAt(
+      racers[from].cxz - 180 + swing,
+      car[from].x,
+      car[from].y,
+      car[from].z,
+    );
+  }
+  if (ticks >= 20 && ticks < 100) {
+    const fromShare = 100 - ticks;
+    const toShare = ticks - 20;
+    const yaw =
+      (racers[from].cxz * fromShare + racers[to].cxz * toShare) / 80 -
       180 +
       swing;
-    camera.yaw = kcxz;
-    camera.x =
-      (car[camera.target].x * fcs1 + car[camera.nextTarget].x * fcs2) / 80 -
-      slide * msin(kcxz);
-    camera.z =
-      (car[camera.target].z * fcs1 + car[camera.nextTarget].z * fcs2) / 80 +
-      slide * mcos(kcxz);
-    camera.y =
-      (car[camera.target].y * fcs1 + car[camera.nextTarget].y * fcs2) / 80 + 25;
-  }
-  if (raceEvents.switcnt >= 100) {
     camera.pitch = 10;
-    var kcxz = racers[camera.nextTarget].cxz - 180 + swing;
-    camera.yaw = kcxz;
-    camera.x = car[camera.nextTarget].x - slide * msin(kcxz);
-    camera.z = car[camera.nextTarget].z + slide * mcos(kcxz);
-    camera.y = car[camera.nextTarget].y + 25;
+    camera.yaw = yaw;
+    camera.x =
+      (car[from].x * fromShare + car[to].x * toShare) / 80 - slide * msin(yaw);
+    camera.z =
+      (car[from].z * fromShare + car[to].z * toShare) / 80 + slide * mcos(yaw);
+    camera.y = (car[from].y * fromShare + car[to].y * toShare) / 80 + 25;
   }
-  if (raceEvents.switcnt >= 100) {
+  if (ticks >= 100) {
+    lookAt(racers[to].cxz - 180 + swing, car[to].x, car[to].y, car[to].z);
+  }
+};
+
+const breatheSwitchCamera = (ticks) => {
+  if (ticks >= 100) {
     slide += (80 - slide) / 17;
     swing += -swing / 17;
-  } else {
-    if (!slidedir) {
-      slide += 1;
-      if (slide > slideto) {
-        slideto = 60;
-        slidedir = true;
-      }
-    } else {
-      slide -= 1;
-      if (slide < slideto) {
-        slideto = 180;
-        slidedir = false;
-      }
+    return;
+  }
+  if (!slideShrinking) {
+    slide += 1;
+    if (slide > slideTo) {
+      slideTo = 60;
+      slideShrinking = true;
     }
-    if (!swingdir) {
-      swing += 1;
-      if (swing > swingto) {
-        swingto = -45;
-        swingdir = true;
-      }
-    } else {
-      swing -= 1;
-      if (swing < swingto) {
-        swingto = 45;
-        swingdir = false;
-      }
+  } else {
+    slide -= 1;
+    if (slide < slideTo) {
+      slideTo = 180;
+      slideShrinking = false;
     }
   }
-  if (raceEvents.switcnt == 10) {
+  if (!swingBack) {
+    swing += 1;
+    if (swing > swingTo) {
+      swingTo = -45;
+      swingBack = true;
+    }
+  } else {
+    swing -= 1;
+    if (swing < swingTo) {
+      swingTo = 45;
+      swingBack = false;
+    }
+  }
+};
+
+// The player takes over the next car: laps start over, the controls carry over, and the
+// time until the next switch is longer.
+const takeOverNextCar = () => {
+  raceEvents.onlastcheck = false;
+  for (let i = 0; i < game.carCount; i++) {
+    racers[i].pcleared = track.pcs;
+    racers[i].clear = 0;
+    racers[i].nlaps = 0;
+    racers[i].missedcp = 0;
+    racers[i].focus = -1;
+  }
+  const from = racers[game.player].u;
+  const to = racers[camera.nextTarget].u;
+  to.left = from.left;
+  to.right = from.right;
+  to.up = from.up;
+  to.down = from.down;
+  to.handb = from.handb;
+  to.arrace = from.arrace;
+  raceEvents.checkpointsAnnounced = 0;
+  game.player = camera.nextTarget;
+  camera.target = game.player;
+  track.switchtime += 134;
+  switchTimer = track.switchtime;
+  game.phase = PHASE.race;
+  camera.mode = 0;
+};
+
+// Switch mode: "SWITCHING CARS" while the camera flies to the next car, which the player
+// drives from then on.
+export function drawSwitchScreen() {
+  rd.clearRect(0, 0, view.width, view.height);
+  const ticks = raceEvents.screenTicks;
+  if (ticks == 0) {
+    camera.mode = -1;
+    slide = 80;
+    slideTo = 180;
+    slideShrinking = false;
+    swing = 0;
+    if (random.fx() > random.fx()) {
+      swingTo = 45;
+      swingBack = false;
+    } else {
+      swingTo = -45;
+      swingBack = true;
+    }
+    camera.nextTarget = nextLivingCar();
+    stopEngine();
+  }
+  placeSwitchCamera(ticks);
+  breatheSwitchCamera(ticks);
+  if (ticks == 10) {
     playSound(38, 1);
   }
-  if (raceEvents.switcnt >= 10 && raceEvents.switcnt < 90) {
+  if (ticks >= 10 && ticks < 90) {
     if (messageBlink) {
       drawCenteredText(132, "SWITCHING CARS", 0, 0, 0, TEXT.title);
       messageBlink = false;
@@ -291,66 +371,23 @@ export function drawswitch() {
     } else {
       drawCenteredText(192, "Laps Reset, Time +10", 0, 128, 255, TEXT.label);
     }
-    var duds = 0;
-    if (raceEvents.switcnt >= 10 && raceEvents.switcnt < 15) {
-      duds = 5;
-    }
-    if (raceEvents.switcnt >= 15 && raceEvents.switcnt < 20) {
-      duds = 4;
-    }
-    if (raceEvents.switcnt >= 20 && raceEvents.switcnt < 25) {
-      duds = 3;
-    }
-    if (raceEvents.switcnt >= 25 && raceEvents.switcnt < 30) {
-      duds = 2;
-    }
-    if (raceEvents.switcnt >= 30 && raceEvents.switcnt < 40) {
-      duds = 1;
-    }
-    if (raceEvents.switcnt >= 40) {
-      duds = 0;
-    }
-    rd.globalAlpha = 0.6;
-    rd.drawImage(
-      images.insano[duds],
-      490 * view.scaleX - 230 * view.scale,
-      10 * view.scaleY,
-      274 * view.scale * 0.7,
-      341 * view.scale * 0.7,
-    );
-    rd.globalAlpha = 1;
+    drawInsanoAside(insanoFace(ticks));
   }
-  raceEvents.switcnt++;
-  if (raceEvents.switcnt == 125) {
-    raceEvents.onlastcheck = false;
-    for (var i = 0; i < game.carCount; i++) {
-      racers[i].pcleared = track.pcs;
-      racers[i].clear = 0;
-      racers[i].nlaps = 0;
-      racers[i].missedcp = 0;
-      racers[i].focus = -1;
-    }
-    racers[camera.nextTarget].u.left = racers[game.player].u.left;
-    racers[camera.nextTarget].u.right = racers[game.player].u.right;
-    racers[camera.nextTarget].u.up = racers[game.player].u.up;
-    racers[camera.nextTarget].u.down = racers[game.player].u.down;
-    racers[camera.nextTarget].u.handb = racers[game.player].u.handb;
-    racers[camera.nextTarget].u.arrace = racers[game.player].u.arrace;
-    raceEvents.checkpointsAnnounced = 0;
-    game.player = camera.nextTarget;
-    camera.target = game.player;
-    track.switchtime += 134;
-    switchTimer = track.switchtime;
-    game.phase = PHASE.race;
-    camera.mode = 0;
+  raceEvents.screenTicks++;
+  if (raceEvents.screenTicks == 125) {
+    takeOverNextCar();
   }
 }
-export function drawrevtime() {
+
+// Winding back time: "Reversing Time", a ticking clock, and the time tube spinning around
+// the camera, faster the further back it goes.
+export function drawRewindOverlay() {
   rd.clearRect(0, 0, view.width, view.height);
-  if (raceEvents.switcnt == 5) {
+  const ticks = raceEvents.screenTicks;
+  if (ticks == 5) {
     playSound(41, 1);
   }
-  if (raceEvents.switcnt >= 10 && raceEvents.switcnt < 90) {
+  if (ticks >= 10 && ticks < 90) {
     if (messageBlink) {
       drawCenteredText(132, "Reversing Time", 0, 0, 0, TEXT.title);
       messageBlink = false;
@@ -358,47 +395,19 @@ export function drawrevtime() {
       drawCenteredText(132, "Reversing Time", 0, 64, 128, TEXT.title);
       messageBlink = true;
     }
-    var duds = 0;
-    if (raceEvents.switcnt >= 10 && raceEvents.switcnt < 15) {
-      duds = 5;
-    }
-    if (raceEvents.switcnt >= 15 && raceEvents.switcnt < 20) {
-      duds = 4;
-    }
-    if (raceEvents.switcnt >= 20 && raceEvents.switcnt < 25) {
-      duds = 3;
-    }
-    if (raceEvents.switcnt >= 25 && raceEvents.switcnt < 30) {
-      duds = 2;
-    }
-    if (raceEvents.switcnt >= 30 && raceEvents.switcnt < 40) {
-      duds = 1;
-    }
-    if (raceEvents.switcnt >= 40) {
-      duds = 0;
-    }
-    rd.globalAlpha = 0.6;
-    rd.drawImage(
-      images.insano[duds],
-      490 * view.scaleX - 230 * view.scale,
-      10 * view.scaleY,
-      274 * view.scale * 0.7,
-      341 * view.scale * 0.7,
-    );
-    rd.globalAlpha = 1;
+    drawInsanoAside(insanoFace(ticks));
   }
-  if (Math.abs(recording.fr - (429 - recording.nrec)) > 30) {
-    if (Math.abs(recording.fr - (429 - recording.nrec)) > 100) {
-      if (raceEvents.switcnt % 30 == 0) {
+  const ticksToGo = Math.abs(recording.fr - (429 - recording.nrec));
+  if (ticksToGo > 30) {
+    if (ticksToGo > 100) {
+      if (ticks % 30 == 0) {
         playSound(42, 1);
       }
-    } else {
-      if (raceEvents.switcnt % 50 == 0) {
-        playSound(42, 1);
-      }
+    } else if (ticks % 50 == 0) {
+      playSound(42, 1);
     }
   }
-  raceEvents.switcnt++;
+  raceEvents.screenTicks++;
   timeTube.mat = resetMatrix(timeTube.mat);
   mat4.rotate(
     timeTube.mat,
@@ -413,11 +422,7 @@ export function drawrevtime() {
     [-1, 0, 0],
   );
   mat4.rotate(timeTube.mat, timeTube.mat, swing * (Math.PI / 180), [0, 0, 1]);
-  if (Math.abs(recording.fr - (429 - recording.nrec)) > 100) {
-    swing += 20;
-  } else {
-    swing += 10;
-  }
+  swing += ticksToGo > 100 ? 20 : 10;
   if (swing > 360) {
     swing -= 360;
   }
@@ -817,8 +822,8 @@ const drawSwitchTimer = () => {
   }
   if (switchTimer == 0) {
     playSound(40, 1);
-    createswitches();
-    raceEvents.switcnt = 0;
+    createSwitchLines();
+    raceEvents.screenTicks = 0;
     game.phase = PHASE.switchScreen;
   }
 };
@@ -2154,7 +2159,7 @@ function findonscreen() {
         }
       }
       if (isinfront) {
-        var onscpos = getonscreen(camera.matrix, car[i]);
+        var onscpos = screenPosition(camera.matrix, car[i]);
         if (
           onscpos[0] > -(15 * view.scaleX) &&
           onscpos[0] < view.width + 15 * view.scaleX
