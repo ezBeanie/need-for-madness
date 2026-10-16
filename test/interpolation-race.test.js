@@ -82,7 +82,7 @@ describe("interpolated drawing in a real race", () => {
     let before = null;
     await raceFrames(wrecks, (ctx) => {
       const now = {
-        persistent: [ctx.skydom.mat, ctx.ground.mat].concat(
+        persistent: [ctx.sky.mat, ctx.ground.mat].concat(
           ctx.car
             .slice(0, ctx.game.carCount)
             .flatMap((car, c) => [

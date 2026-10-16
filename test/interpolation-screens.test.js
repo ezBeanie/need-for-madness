@@ -70,7 +70,7 @@ describe("interpolated drawing in the menus", () => {
           ctx.camera.z,
           ctx.camera.matrix,
         );
-        const drawn = drawnMatrix(ctx, ctx.bgst, ctx.bgst);
+        const drawn = drawnMatrix(ctx, ctx.stageBackdrop, ctx.stageBackdrop);
         worst = Math.max(
           worst,
           Math.abs(Math.hypot(drawn[12], drawn[13], drawn[14]) - 106),

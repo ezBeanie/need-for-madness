@@ -84,9 +84,21 @@ import {
   carModels,
   carShadows,
   carTextures,
+  checkpointText,
+  dustSprite,
+  electricity,
+  finishText,
+  fixHoop,
+  ground,
+  menuBackdrop,
   scene,
+  sky,
   sparkModels,
+  stageBackdrop,
   timeTube,
+  wheelDisk,
+  wheelTread,
+  wheelTreadLow,
 } from "./render/scene.js";
 import { pauseMenu } from "./screens/pauseMenu.js";
 import { menu, showcase } from "./screens/menuState.js";
@@ -431,9 +443,9 @@ function groundtexture(n, r, g, b, huef, satf) {
   ground.loaded = 4;
 }
 function skytexture(skyc, fogc, cloudsc, cloudtyp) {
-  if (skydom.loaded == 4) {
-    gl.deleteTexture(skydom.texture);
-    skydom.texture = null;
+  if (sky.loaded == 4) {
+    gl.deleteTexture(sky.texture);
+    sky.texture = null;
   }
   var tempt = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, tempt);
@@ -453,8 +465,8 @@ function skytexture(skyc, fogc, cloudsc, cloudtyp) {
   }
   gl.deleteFramebuffer(framebuffer);
   gl.deleteTexture(tempt);
-  skydom.texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, skydom.texture);
+  sky.texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, sky.texture);
   gl.texImage2D(
     gl.TEXTURE_2D,
     0,
@@ -470,7 +482,7 @@ function skytexture(skyc, fogc, cloudsc, cloudtyp) {
     gl.FRAMEBUFFER,
     gl.COLOR_ATTACHMENT0,
     gl.TEXTURE_2D,
-    skydom.texture,
+    sky.texture,
     0,
   );
   if (gl.checkFramebufferStatus(gl.FRAMEBUFFER) == gl.FRAMEBUFFER_COMPLETE) {
@@ -495,7 +507,7 @@ function skytexture(skyc, fogc, cloudsc, cloudtyp) {
         (skyc[2] * (1 - fact) + cloudsc[2] * fact) * (1 - hfact) +
         fogc[2] * hfact;
     }
-    gl.bindTexture(gl.TEXTURE_2D, skydom.texture);
+    gl.bindTexture(gl.TEXTURE_2D, sky.texture);
     gl.texImage2D(
       gl.TEXTURE_2D,
       0,
@@ -510,7 +522,7 @@ function skytexture(skyc, fogc, cloudsc, cloudtyp) {
     gl.generateMipmap(gl.TEXTURE_2D);
   }
   gl.deleteFramebuffer(framebuffer);
-  skydom.loaded = 4;
+  sky.loaded = 4;
 }
 var dtexture = [];
 var stexture = [];
@@ -717,7 +729,7 @@ function createwheels() {
     }
     if (loadthis) {
       for (var k = 0; k < 2; k++) {
-        tired[c][k].ni = tiredisk.tri.length / 3;
+        tired[c][k].ni = wheelDisk.tri.length / 3;
         var indice = [];
         var vert = [];
         var norm = [];
@@ -725,14 +737,14 @@ function createwheels() {
         for (var i = 0; i < tired[c][k].ni; i++) {
           indice[i] = i;
           vert[i * 3] =
-            tiredisk.vrt[tiredisk.tri[i * 3] * 3] * carStats.wlh[c][k] * 1.05;
+            wheelDisk.vrt[wheelDisk.tri[i * 3] * 3] * carStats.wlh[c][k] * 1.05;
           vert[i * 3 + 1] =
-            tiredisk.vrt[tiredisk.tri[i * 3] * 3 + 1] *
+            wheelDisk.vrt[wheelDisk.tri[i * 3] * 3 + 1] *
             carStats.wlh[c][k] *
             1.05;
           vert[i * 3 + 2] =
-            tiredisk.vrt[tiredisk.tri[i * 3] * 3 + 2] * wlw[c][k] * 1.1;
-          if (tiredisk.tri[i * 3] == 12) {
+            wheelDisk.vrt[wheelDisk.tri[i * 3] * 3 + 2] * wlw[c][k] * 1.1;
+          if (wheelDisk.tri[i * 3] == 12) {
             vert[i * 3 + 2] += rmd[c][k];
           }
           var tcrad = Math.sqrt(
@@ -743,11 +755,11 @@ function createwheels() {
           if (tcrad > tired[c][k].colrad) {
             tired[c][k].colrad = tcrad;
           }
-          norm[i * 3] = tiredisk.nrm[tiredisk.tri[i * 3 + 1] * 3];
-          norm[i * 3 + 1] = tiredisk.nrm[tiredisk.tri[i * 3 + 1] * 3 + 1];
-          norm[i * 3 + 2] = tiredisk.nrm[tiredisk.tri[i * 3 + 1] * 3 + 2];
-          texu[i * 2] = tiredisk.tex[tiredisk.tri[i * 3 + 2] * 2];
-          texu[i * 2 + 1] = 1 - tiredisk.tex[tiredisk.tri[i * 3 + 2] * 2 + 1];
+          norm[i * 3] = wheelDisk.nrm[wheelDisk.tri[i * 3 + 1] * 3];
+          norm[i * 3 + 1] = wheelDisk.nrm[wheelDisk.tri[i * 3 + 1] * 3 + 1];
+          norm[i * 3 + 2] = wheelDisk.nrm[wheelDisk.tri[i * 3 + 1] * 3 + 2];
+          texu[i * 2] = wheelDisk.tex[wheelDisk.tri[i * 3 + 2] * 2];
+          texu[i * 2 + 1] = 1 - wheelDisk.tex[wheelDisk.tri[i * 3 + 2] * 2 + 1];
         }
         tired[c][k].vbuf = gl.createBuffer();
         gl.bindBuffer(gl.ARRAY_BUFFER, tired[c][k].vbuf);
@@ -786,14 +798,15 @@ function createwheels() {
           gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         }
         tired[c][k].loaded = 1;
-        tiren[c][k].ni = tire.indice.length;
+        tiren[c][k].ni = wheelTread.indice.length;
         var vert = [];
         var norm = [];
         var col = [];
-        for (var i = 0; i < tire.vert.length / 3; i++) {
-          vert[i * 3] = tire.vert[i * 3] * 1.1 * carStats.wlh[c][k];
-          vert[i * 3 + 1] = tire.vert[i * 3 + 1] * 1.1 * carStats.wlh[c][k];
-          vert[i * 3 + 2] = tire.vert[i * 3 + 2] * 1.1 * wlw[c][k];
+        for (var i = 0; i < wheelTread.vert.length / 3; i++) {
+          vert[i * 3] = wheelTread.vert[i * 3] * 1.1 * carStats.wlh[c][k];
+          vert[i * 3 + 1] =
+            wheelTread.vert[i * 3 + 1] * 1.1 * carStats.wlh[c][k];
+          vert[i * 3 + 2] = wheelTread.vert[i * 3 + 2] * 1.1 * wlw[c][k];
           norm[i * 3] = -1;
           norm[i * 3 + 1] = 0;
           norm[i * 3 + 2] = 0;
@@ -815,18 +828,19 @@ function createwheels() {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tiren[c][k].ibuf);
         gl.bufferData(
           gl.ELEMENT_ARRAY_BUFFER,
-          new Uint16Array(tire.indice),
+          new Uint16Array(wheelTread.indice),
           gl.STATIC_DRAW,
         );
         tiren[c][k].mat = mat4.create();
         tiren[c][k].loaded = 1;
-        tirel[c][k].ni = tirelow.indice.length;
+        tirel[c][k].ni = wheelTreadLow.indice.length;
         var vert = [];
         var col = [];
-        for (var i = 0; i < tirelow.vert.length / 3; i++) {
-          vert[i * 3] = tirelow.vert[i * 3] * 1.1 * carStats.wlh[c][k];
-          vert[i * 3 + 1] = tirelow.vert[i * 3 + 1] * 1.1 * carStats.wlh[c][k];
-          vert[i * 3 + 2] = tirelow.vert[i * 3 + 2] * 1.1 * wlw[c][k];
+        for (var i = 0; i < wheelTreadLow.vert.length / 3; i++) {
+          vert[i * 3] = wheelTreadLow.vert[i * 3] * 1.1 * carStats.wlh[c][k];
+          vert[i * 3 + 1] =
+            wheelTreadLow.vert[i * 3 + 1] * 1.1 * carStats.wlh[c][k];
+          vert[i * 3 + 2] = wheelTreadLow.vert[i * 3 + 2] * 1.1 * wlw[c][k];
           col[i * 4] = 0.02;
           col[i * 4 + 1] = 0.02;
           col[i * 4 + 2] = 0.02;
@@ -842,7 +856,7 @@ function createwheels() {
         gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, tirel[c][k].ibuf);
         gl.bufferData(
           gl.ELEMENT_ARRAY_BUFFER,
-          new Uint16Array(tirelow.indice),
+          new Uint16Array(wheelTreadLow.indice),
           gl.STATIC_DRAW,
         );
         tirel[c][k].mat = mat4.create();
@@ -1215,8 +1229,8 @@ function createsparks() {
   }
 }
 function colorcptext() {
-  gl.deleteBuffer(cptext.cbuf);
-  cptext.cbuf = null;
+  gl.deleteBuffer(checkpointText.cbuf);
+  checkpointText.cbuf = null;
   var cupr = [62, 160, 252, 192];
   var cdnr = [211, 234, 255, 192];
   for (var k = 0; k < 3; k++) {
@@ -1236,8 +1250,8 @@ function colorcptext() {
     }
   }
   var col = [];
-  for (var i = 0; i < cptext.vert.length / 3; i++) {
-    if (cptext.vert[i * 3 + 1] < 0) {
+  for (var i = 0; i < checkpointText.vert.length / 3; i++) {
+    if (checkpointText.vert[i * 3 + 1] < 0) {
       for (var k = 0; k < 4; k++) {
         col[i * 4 + k] = cupr[k] / 255;
       }
@@ -1247,13 +1261,13 @@ function colorcptext() {
       }
     }
   }
-  cptext.cbuf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, cptext.cbuf);
+  checkpointText.cbuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, checkpointText.cbuf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
 }
 function colorbgst() {
-  gl.deleteBuffer(bgst.cbuf);
-  bgst.cbuf = null;
+  gl.deleteBuffer(stageBackdrop.cbuf);
+  stageBackdrop.cbuf = null;
   var r = Math.floor(128 - 128 * scene.tint[0]);
   if (r > 255) {
     r = 255;
@@ -1281,7 +1295,7 @@ function colorbgst() {
   var rgb2 = hslToRgb(hsl[0], 1, 0.7);
   rgb2[3] = 255;
   var col = [];
-  for (var i = 0; i < cptext.vert.length / 3; i++) {
+  for (var i = 0; i < checkpointText.vert.length / 3; i++) {
     if (i == 0) {
       for (var k = 0; k < 4; k++) {
         col[i * 4 + k] = rgb1[k] / 255;
@@ -1292,13 +1306,13 @@ function colorbgst() {
       }
     }
   }
-  bgst.cbuf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, bgst.cbuf);
+  stageBackdrop.cbuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, stageBackdrop.cbuf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
 }
 function colorbgstforend() {
-  gl.deleteBuffer(bgst.cbuf);
-  bgst.cbuf = null;
+  gl.deleteBuffer(stageBackdrop.cbuf);
+  stageBackdrop.cbuf = null;
   var r = Math.floor(128 - 128 * scene.tint[0]);
   if (r > 255) {
     r = 255;
@@ -1326,7 +1340,7 @@ function colorbgstforend() {
   var rgb2 = hslToRgb(hsl[0], 0.4, 0.1);
   rgb2[3] = 255;
   var col = [];
-  for (var i = 0; i < cptext.vert.length / 3; i++) {
+  for (var i = 0; i < checkpointText.vert.length / 3; i++) {
     if (i == 0) {
       for (var k = 0; k < 4; k++) {
         col[i * 4 + k] = rgb1[k] / 255;
@@ -1337,8 +1351,8 @@ function colorbgstforend() {
       }
     }
   }
-  bgst.cbuf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, bgst.cbuf);
+  stageBackdrop.cbuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, stageBackdrop.cbuf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
 }
 function getonscreen(m, rad) {
@@ -1358,28 +1372,19 @@ function getonscreen(m, rad) {
 }
 var impimg = new Image();
 impimg.src = "data/interface" + interfaceResolution + "/loading.png";
-var ground = newModel();
+
 var grndimg = [];
-var skydom = newModel();
+
 var skyimg = [];
 var haloimg = null;
 
 var tireimg = [];
-var tiredisk = newModel();
-var tire = newParticleModel();
-var tirelow = newParticleModel();
-var cptext = newParticleModel();
-var fntext = newParticleModel();
-var bgst = newParticleModel();
-var fixdisk = newModel();
-var elec = newModel();
-var sprite = newModel();
+
 var spritexture = [];
 var explode = [];
 for (var i = 0; i < 3; i++) {
   explode[i] = newModel();
 }
-var bg3D = newModel();
 
 var confeloaded = false;
 
@@ -1442,7 +1447,7 @@ function loaddata() {
         };
         grndimg[i].src = "data/3D/textures/ground" + (i + 1) + ".png";
       }
-      loadModel("data/3D/skydom.r3d", skydom);
+      loadModel("data/3D/skydom.r3d", sky);
       for (var i = frm; i < tro; i++) {
         skyimg[i] = new Image();
         skyimg[i].onload = function () {
@@ -1458,15 +1463,15 @@ function loaddata() {
     }
     if (loading.step == 2) {
       if (loading.stanza != 2) {
-        loadModel("data/3D/tiredisk.r3d", tiredisk);
-        loadParticleModel("data/3D/tire.prt", tire);
-        loadParticleModel("data/3D/tirelow.prt", tirelow);
-        loadParticleModel("data/3D/cptext.prt", cptext);
-        loadParticleModel("data/3D/fntext.prt", fntext);
+        loadModel("data/3D/tiredisk.r3d", wheelDisk);
+        loadParticleModel("data/3D/tire.prt", wheelTread);
+        loadParticleModel("data/3D/tirelow.prt", wheelTreadLow);
+        loadParticleModel("data/3D/cptext.prt", checkpointText);
+        loadParticleModel("data/3D/fntext.prt", finishText);
         loadParticleModel("data/3D/timetube.prt", timeTube);
       }
       if (loading.stanza != 1) {
-        loadParticleModel("data/3D/bg.prt", bgst);
+        loadParticleModel("data/3D/bg.prt", stageBackdrop);
       }
     }
     if (loading.step == 3) {
@@ -1608,7 +1613,7 @@ function loaddata() {
     }
     if (loading.step == 5) {
       if (loading.stanza != 2) {
-        loadModel("data/3D/sprite.r3d", sprite);
+        loadModel("data/3D/sprite.r3d", dustSprite);
         for (var i = 0; i < 3; i++) {
           spritexture[i] = new Image();
           spritexture[i].onload = function () {
@@ -1616,8 +1621,8 @@ function loaddata() {
           };
           spritexture[i].src = "data/3D/textures/sp" + i + ".png";
         }
-        loadModel("data/3D/fixdisk.r3d", fixdisk);
-        loadModel("data/3D/elec.r3d", elec);
+        loadModel("data/3D/fixdisk.r3d", fixHoop);
+        loadModel("data/3D/elec.r3d", electricity);
         for (var i = 0; i < 3; i++) {
           loadModel("data/3D/exp" + i + ".r3d", explode[i]);
         }
@@ -1652,7 +1657,7 @@ function loaddata() {
     }
     if (loading.step == 7) {
       if (loading.stanza != 1) {
-        loadModel("data/3D/bg.r3d", bg3D);
+        loadModel("data/3D/bg.r3d", menuBackdrop);
       }
       if (loading.stanza != 2) {
         if (isPhone) {
@@ -1745,41 +1750,41 @@ function loaddata() {
     if (loading.step != 9) {
       loading.step++;
     }
-    if (tiredisk.loaded == 1) {
+    if (wheelDisk.loaded == 1) {
       loading.loaded++;
-      tiredisk.loaded++;
+      wheelDisk.loaded++;
     }
-    if (tire.loaded == 1) {
+    if (wheelTread.loaded == 1) {
       loading.loaded++;
-      tire.loaded++;
+      wheelTread.loaded++;
     }
-    if (tirelow.loaded == 1) {
+    if (wheelTreadLow.loaded == 1) {
       loading.loaded++;
-      tirelow.loaded++;
+      wheelTreadLow.loaded++;
     }
-    if (cptext.loaded == 1) {
+    if (checkpointText.loaded == 1) {
       loading.loaded += 4;
-      cptext.loaded++;
+      checkpointText.loaded++;
     }
-    if (fntext.loaded == 1) {
+    if (finishText.loaded == 1) {
       loading.loaded += 4;
-      fntext.loaded++;
+      finishText.loaded++;
     }
     if (timeTube.loaded == 1) {
       loading.loaded++;
       timeTube.loaded++;
     }
-    if (bgst.loaded == 1) {
+    if (stageBackdrop.loaded == 1) {
       loading.loaded++;
-      bgst.loaded++;
+      stageBackdrop.loaded++;
     }
     if (ground.loaded && ground.loaded == ground.nt + 1) {
       loading.loaded++;
       ground.loaded++;
     }
-    if (skydom.loaded && skydom.loaded == skydom.nt + 1) {
+    if (sky.loaded && sky.loaded == sky.nt + 1) {
       loading.loaded++;
-      skydom.loaded++;
+      sky.loaded++;
     }
     for (var i = 0; i < 19; i++) {
       if (carModels[i].loaded && carModels[i].loaded == carModels[i].nt + 1) {
@@ -1803,17 +1808,17 @@ function loaddata() {
         textureGroups[i].loaded++;
       }
     }
-    if (sprite.loaded && sprite.loaded == sprite.nt + 1) {
+    if (dustSprite.loaded && dustSprite.loaded == dustSprite.nt + 1) {
       loading.loaded++;
-      sprite.loaded++;
+      dustSprite.loaded++;
     }
-    if (fixdisk.loaded && fixdisk.loaded == fixdisk.nt + 1) {
+    if (fixHoop.loaded && fixHoop.loaded == fixHoop.nt + 1) {
       loading.loaded++;
-      fixdisk.loaded++;
+      fixHoop.loaded++;
     }
-    if (elec.loaded && elec.loaded == elec.nt + 1) {
+    if (electricity.loaded && electricity.loaded == electricity.nt + 1) {
       loading.loaded++;
-      elec.loaded++;
+      electricity.loaded++;
     }
     for (var i = 0; i < 3; i++) {
       if (explode[i].loaded && explode[i].loaded == explode[i].nt + 1) {
@@ -1821,9 +1826,9 @@ function loaddata() {
         explode[i].loaded++;
       }
     }
-    if (bg3D.loaded && bg3D.loaded == bg3D.nt + 1) {
+    if (menuBackdrop.loaded && menuBackdrop.loaded == menuBackdrop.nt + 1) {
       loading.loaded += 309;
-      bg3D.loaded++;
+      menuBackdrop.loaded++;
     }
     if (loading.loaded == loading.total) {
       cartextures();
@@ -2220,17 +2225,27 @@ function cpanimate() {
       [0, 0, 1],
     );
   }
-  fixdisk.ont++;
-  if (fixdisk.ont == 5) {
-    fixdisk.ont = 0;
+  fixHoop.ont++;
+  if (fixHoop.ont == 5) {
+    fixHoop.ont = 0;
   }
   if (raceEvents.onelec) {
-    elec.mat = resetMatrix(elec.mat);
-    mat4.rotate(elec.mat, elec.mat, camera.yaw * (Math.PI / 180), [0, -1, 0]);
-    mat4.rotate(elec.mat, elec.mat, camera.pitch * (Math.PI / 180), [-1, 0, 0]);
-    elec.ont++;
-    if (elec.ont == 5) {
-      elec.ont = 0;
+    electricity.mat = resetMatrix(electricity.mat);
+    mat4.rotate(
+      electricity.mat,
+      electricity.mat,
+      camera.yaw * (Math.PI / 180),
+      [0, -1, 0],
+    );
+    mat4.rotate(
+      electricity.mat,
+      electricity.mat,
+      camera.pitch * (Math.PI / 180),
+      [-1, 0, 0],
+    );
+    electricity.ont++;
+    if (electricity.ont == 5) {
+      electricity.ont = 0;
     }
   }
   if (track.stage == 1) {
@@ -2242,48 +2257,54 @@ function cpanimate() {
     raceEvents.checkpointFlash = 0;
   }
   if (raceEvents.oncheckpoint != -1) {
-    cptext.x = pieces.list[track.obn[raceEvents.oncheckpoint]].x;
-    cptext.y = pieces.list[track.obn[raceEvents.oncheckpoint]].y + 80;
-    cptext.z = pieces.list[track.obn[raceEvents.oncheckpoint]].z;
+    checkpointText.x = pieces.list[track.obn[raceEvents.oncheckpoint]].x;
+    checkpointText.y = pieces.list[track.obn[raceEvents.oncheckpoint]].y + 80;
+    checkpointText.z = pieces.list[track.obn[raceEvents.oncheckpoint]].z;
     for (var i = 0; i < 16; i++) {
-      cptext.mat[i] = pieces.list[track.obn[raceEvents.oncheckpoint]].mat[i];
+      checkpointText.mat[i] =
+        pieces.list[track.obn[raceEvents.oncheckpoint]].mat[i];
     }
     var flipit = false;
-    if (Math.abs(cptext.mat[8]) > Math.abs(cptext.mat[10])) {
-      if (camera.x < cptext.x) {
-        cptext.x -= 6.7;
+    if (Math.abs(checkpointText.mat[8]) > Math.abs(checkpointText.mat[10])) {
+      if (camera.x < checkpointText.x) {
+        checkpointText.x -= 6.7;
       } else {
-        cptext.x += 6.7;
+        checkpointText.x += 6.7;
       }
-      if (cptext.mat[8] > 0 && camera.x < cptext.x) {
+      if (checkpointText.mat[8] > 0 && camera.x < checkpointText.x) {
         flipit = true;
       }
-      if (cptext.mat[8] < 0 && camera.x > cptext.x) {
+      if (checkpointText.mat[8] < 0 && camera.x > checkpointText.x) {
         flipit = true;
       }
     } else {
-      if (camera.z < cptext.z) {
-        cptext.z -= 6.7;
+      if (camera.z < checkpointText.z) {
+        checkpointText.z -= 6.7;
       } else {
-        cptext.z += 6.7;
+        checkpointText.z += 6.7;
       }
-      if (cptext.mat[10] > 0 && camera.z < cptext.z) {
+      if (checkpointText.mat[10] > 0 && camera.z < checkpointText.z) {
         flipit = true;
       }
-      if (cptext.mat[10] < 0 && camera.z > cptext.z) {
+      if (checkpointText.mat[10] < 0 && camera.z > checkpointText.z) {
         flipit = true;
       }
     }
     if (flipit) {
-      mat4.rotate(cptext.mat, cptext.mat, 180 * (Math.PI / 180), [0, 1, 0]);
+      mat4.rotate(
+        checkpointText.mat,
+        checkpointText.mat,
+        180 * (Math.PI / 180),
+        [0, 1, 0],
+      );
     }
     if (raceEvents.onlastcheck) {
       for (var i = 0; i < 16; i++) {
-        fntext.mat[i] = cptext.mat[i];
+        finishText.mat[i] = checkpointText.mat[i];
       }
-      fntext.x = pieces.list[track.obn[raceEvents.oncheckpoint]].x;
-      fntext.y = pieces.list[track.obn[raceEvents.oncheckpoint]].y + 52;
-      fntext.z = pieces.list[track.obn[raceEvents.oncheckpoint]].z;
+      finishText.x = pieces.list[track.obn[raceEvents.oncheckpoint]].x;
+      finishText.y = pieces.list[track.obn[raceEvents.oncheckpoint]].y + 52;
+      finishText.z = pieces.list[track.obn[raceEvents.oncheckpoint]].z;
     }
   }
 }
@@ -2684,13 +2705,13 @@ function gameworks() {
     camera.yaw = -(-camera.orbitAngle + 90);
     camera.pitch += (rzy - camera.pitch) / 10;
   }
-  skydom.x = camera.x;
-  skydom.z = camera.z;
+  sky.x = camera.x;
+  sky.z = camera.z;
   var skf = 0.6 + camera.y / 4000;
-  skydom.mat = resetMatrix(skydom.mat);
-  skydom.mat[4] *= skf;
-  skydom.mat[5] *= skf;
-  skydom.mat[6] *= skf;
+  sky.mat = resetMatrix(sky.mat);
+  sky.mat[4] *= skf;
+  sky.mat[5] *= skf;
+  sky.mat[6] *= skf;
   mat4.rotate(
     camera.matrix,
     camera.matrix,
@@ -2743,11 +2764,16 @@ function carselect() {
   camera.z = 0;
   camera.yaw = 0;
   camera.pitch = -8;
-  bg3D.x = 0;
-  bg3D.y = 14;
-  bg3D.z = -99;
-  bg3D.mat = resetMatrix(bg3D.mat);
-  mat4.rotate(bg3D.mat, bg3D.mat, camera.pitch * (Math.PI / 180), [-1, 0, 0]);
+  menuBackdrop.x = 0;
+  menuBackdrop.y = 14;
+  menuBackdrop.z = -99;
+  menuBackdrop.mat = resetMatrix(menuBackdrop.mat);
+  mat4.rotate(
+    menuBackdrop.mat,
+    menuBackdrop.mat,
+    camera.pitch * (Math.PI / 180),
+    [-1, 0, 0],
+  );
   for (var i = 0; i < 9; i++) {
     smoke[i].mat = resetMatrix(smoke[i].mat);
     smoke[i].x += smoke[i].sx;
@@ -2782,9 +2808,9 @@ function carselect() {
     }
     smoke[i].z = -99;
     for (var k = 0; k < 3; k++) {
-      smoke[i].mat[k] = bg3D.mat[k] * 4;
-      smoke[i].mat[k + 4] = bg3D.mat[k + 4] * 4;
-      smoke[i].mat[k + 8] = bg3D.mat[k + 8] * 4;
+      smoke[i].mat[k] = menuBackdrop.mat[k] * 4;
+      smoke[i].mat[k + 4] = menuBackdrop.mat[k + 4] * 4;
+      smoke[i].mat[k + 8] = menuBackdrop.mat[k + 8] * 4;
     }
     mat4.rotate(
       smoke[i].mat,
@@ -3129,23 +3155,33 @@ function stageselect() {
       [0, 0, 1],
     );
   }
-  fixdisk.ont++;
-  if (fixdisk.ont == 5) {
-    fixdisk.ont = 0;
+  fixHoop.ont++;
+  if (fixHoop.ont == 5) {
+    fixHoop.ont = 0;
   }
   raceEvents.checkpointFlash++;
   if (raceEvents.checkpointFlash >= 5) {
     raceEvents.checkpointFlash = 0;
   }
-  bgst.mat = resetMatrix(bgst.mat);
-  mat4.rotate(bgst.mat, bgst.mat, camera.yaw * (Math.PI / 180), [0, -1, 0]);
-  mat4.rotate(bgst.mat, bgst.mat, camera.pitch * (Math.PI / 180), [-1, 0, 0]);
-  bgst.mat[0] *= view.aspect * 0.5625;
-  bgst.mat[1] *= view.aspect * 0.5625;
-  bgst.mat[2] *= view.aspect * 0.5625;
-  bgst.x = camera.x - 106 * bgst.mat[8];
-  bgst.y = camera.y - 106 * bgst.mat[9];
-  bgst.z = camera.z - 106 * bgst.mat[10];
+  stageBackdrop.mat = resetMatrix(stageBackdrop.mat);
+  mat4.rotate(
+    stageBackdrop.mat,
+    stageBackdrop.mat,
+    camera.yaw * (Math.PI / 180),
+    [0, -1, 0],
+  );
+  mat4.rotate(
+    stageBackdrop.mat,
+    stageBackdrop.mat,
+    camera.pitch * (Math.PI / 180),
+    [-1, 0, 0],
+  );
+  stageBackdrop.mat[0] *= view.aspect * 0.5625;
+  stageBackdrop.mat[1] *= view.aspect * 0.5625;
+  stageBackdrop.mat[2] *= view.aspect * 0.5625;
+  stageBackdrop.x = camera.x - 106 * stageBackdrop.mat[8];
+  stageBackdrop.y = camera.y - 106 * stageBackdrop.mat[9];
+  stageBackdrop.z = camera.z - 106 * stageBackdrop.mat[10];
   mat4.rotate(
     camera.matrix,
     camera.matrix,
@@ -3319,15 +3355,25 @@ function unlockedcar() {
       -90 * (Math.PI / 180),
       [0, 1, 0],
     );
-    bgst.mat = resetMatrix(bgst.mat);
-    mat4.rotate(bgst.mat, bgst.mat, camera.yaw * (Math.PI / 180), [0, -1, 0]);
-    mat4.rotate(bgst.mat, bgst.mat, camera.pitch * (Math.PI / 180), [-1, 0, 0]);
-    bgst.mat[0] *= view.aspect * 0.5625;
-    bgst.mat[1] *= view.aspect * 0.5625;
-    bgst.mat[2] *= view.aspect * 0.5625;
-    bgst.x = 0;
-    bgst.y = 0;
-    bgst.z = -90;
+    stageBackdrop.mat = resetMatrix(stageBackdrop.mat);
+    mat4.rotate(
+      stageBackdrop.mat,
+      stageBackdrop.mat,
+      camera.yaw * (Math.PI / 180),
+      [0, -1, 0],
+    );
+    mat4.rotate(
+      stageBackdrop.mat,
+      stageBackdrop.mat,
+      camera.pitch * (Math.PI / 180),
+      [-1, 0, 0],
+    );
+    stageBackdrop.mat[0] *= view.aspect * 0.5625;
+    stageBackdrop.mat[1] *= view.aspect * 0.5625;
+    stageBackdrop.mat[2] *= view.aspect * 0.5625;
+    stageBackdrop.x = 0;
+    stageBackdrop.y = 0;
+    stageBackdrop.z = -90;
     mat4.rotate(
       camera.matrix,
       camera.matrix,
@@ -3368,7 +3414,7 @@ function render(now) {
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.disable(gl.DEPTH_TEST);
       drawModel(ground);
-      drawModel(skydom);
+      drawModel(sky);
       if (game.phase == PHASE.timeRewind) {
         drawParticle(timeTube);
       }
@@ -3427,9 +3473,9 @@ function render(now) {
         drawModel(effects.chip[i]);
       }
       if (raceEvents.oncheckpoint != -1) {
-        drawParticle(cptext);
+        drawParticle(checkpointText);
         if (raceEvents.onlastcheck) {
-          drawParticle(fntext);
+          drawParticle(finishText);
         }
       }
       for (var c = 0; c < game.carCount; c++) {
@@ -3475,26 +3521,26 @@ function render(now) {
       if (raceEvents.onelec) {
         for (var c = 0; c < game.carCount; c++) {
           if (car[c].fcnt) {
-            elec.x = car[c].x;
-            elec.y = car[c].y;
-            elec.z = car[c].z;
+            electricity.x = car[c].x;
+            electricity.y = car[c].y;
+            electricity.z = car[c].z;
             mat4.rotate(
-              elec.mat,
-              elec.mat,
+              electricity.mat,
+              electricity.mat,
               random.fx() * 360 * (Math.PI / 180),
               [0, 0, 1],
             );
-            drawModel(elec);
+            drawModel(electricity);
           }
         }
       }
       if (game.mode != 1) {
         for (var i = 0; i < pieces.fixCount; i++) {
-          fixdisk.x = pieces.list[pieces.fixes[i]].x;
-          fixdisk.y = pieces.list[pieces.fixes[i]].y;
-          fixdisk.z = pieces.list[pieces.fixes[i]].z;
-          fixdisk.mat = pieces.list[pieces.fixes[i]].mat;
-          drawModel(fixdisk);
+          fixHoop.x = pieces.list[pieces.fixes[i]].x;
+          fixHoop.y = pieces.list[pieces.fixes[i]].y;
+          fixHoop.z = pieces.list[pieces.fixes[i]].z;
+          fixHoop.mat = pieces.list[pieces.fixes[i]].mat;
+          drawModel(fixHoop);
         }
       }
       if (game.phase == PHASE.switchScreen) {
@@ -3521,13 +3567,13 @@ function render(now) {
       for (var k = 0; k < effects.ndst; k++) {
         var i = effects.dwer[k];
         if (effects.dust[i].stg != 0) {
-          sprite.x = effects.dust[i].x;
-          sprite.y = effects.dust[i].y;
-          sprite.z = effects.dust[i].z;
-          sprite.mat = effects.dust[i].mat;
-          sprite.texture =
+          dustSprite.x = effects.dust[i].x;
+          dustSprite.y = effects.dust[i].y;
+          dustSprite.z = effects.dust[i].z;
+          dustSprite.mat = effects.dust[i].mat;
+          dustSprite.texture =
             dtexture[effects.dust[i].tx][Math.floor(effects.dust[i].ta)];
-          drawModel(sprite);
+          drawModel(dustSprite);
         }
       }
       menu.redraw = false;
@@ -3540,18 +3586,18 @@ function render(now) {
       gl.clearDepth(1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.disable(gl.DEPTH_TEST);
-      drawModel(bg3D);
+      drawModel(menuBackdrop);
       for (var i = 0; i < 9; i++) {
-        sprite.x = smoke[i].x;
-        sprite.y = smoke[i].y;
-        sprite.z = smoke[i].z;
-        sprite.mat = smoke[i].mat;
+        dustSprite.x = smoke[i].x;
+        dustSprite.y = smoke[i].y;
+        dustSprite.z = smoke[i].z;
+        dustSprite.mat = smoke[i].mat;
         var ui = i;
         while (ui >= 3) {
           ui -= 3;
         }
-        sprite.texture = stexture[ui];
-        drawModel(sprite);
+        dustSprite.texture = stexture[ui];
+        drawModel(dustSprite);
       }
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
@@ -3592,7 +3638,7 @@ function render(now) {
       gl.clearDepth(1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.disable(gl.DEPTH_TEST);
-      drawParticle(bgst);
+      drawParticle(stageBackdrop);
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
       if (!flkun) {
@@ -3619,11 +3665,11 @@ function render(now) {
           drawModel(pieceModels[pieces.list[i].typ]);
         }
         for (var i = 0; i < pieces.fixCount; i++) {
-          fixdisk.x = pieces.list[pieces.fixes[i]].x;
-          fixdisk.y = pieces.list[pieces.fixes[i]].y;
-          fixdisk.z = pieces.list[pieces.fixes[i]].z;
-          fixdisk.mat = pieces.list[pieces.fixes[i]].mat;
-          drawModel(fixdisk);
+          fixHoop.x = pieces.list[pieces.fixes[i]].x;
+          fixHoop.y = pieces.list[pieces.fixes[i]].y;
+          fixHoop.z = pieces.list[pieces.fixes[i]].z;
+          fixHoop.mat = pieces.list[pieces.fixes[i]].mat;
+          drawModel(fixHoop);
         }
       }
       menu.redraw = false;
@@ -3636,7 +3682,7 @@ function render(now) {
       gl.clearDepth(1.0);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.disable(gl.DEPTH_TEST);
-      drawParticle(bgst);
+      drawParticle(stageBackdrop);
       gl.enable(gl.DEPTH_TEST);
       gl.depthFunc(gl.LEQUAL);
       for (var w = 0; w < 4; w++) {

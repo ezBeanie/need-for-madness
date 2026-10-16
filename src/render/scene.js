@@ -16,3 +16,21 @@ export const timeTube = newParticleModel();
 
 // The textures of every car type (see cartextures).
 export const carTextures = [];
+
+// The models of the world and the menus, loaded with the game data (see loaddata).
+export const ground = newModel();
+export const sky = newModel();
+// a wheel's disc, and the tread close up and far away, shaped per car type (createwheels)
+export const wheelDisk = newModel();
+export const wheelTread = newParticleModel();
+export const wheelTreadLow = newParticleModel();
+export const checkpointText = newParticleModel();
+export const finishText = newParticleModel();
+// the backdrop of the stage select and the race end, coloured like the stage
+export const stageBackdrop = newParticleModel();
+// the backdrop of the other menus
+export const menuBackdrop = newModel();
+export const fixHoop = newModel();
+// the sparks of a car being fixed in a fix hoop
+export const electricity = newModel();
+export const dustSprite = newModel();
