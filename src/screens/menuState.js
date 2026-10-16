@@ -2,8 +2,7 @@
 export const menu = {
   // draw the menu's 3D scene this frame (menus redraw it only when something changed)
   redraw: false,
-  // ticks of a screen's opening animation; on the race end screen 76 means an unlocked
-  // car is presented
+  // ticks of a screen's opening animation (see raceEnd.js for that screen's values)
   animation: 0,
   // the picture of Insano next to tips and messages (0..5)
   insanoPicture: 0,

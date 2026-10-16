@@ -1,0 +1,346 @@
+// The race end: the result, what got unlocked (a stage, maybe a car, confetti after the
+// last stage), and back to the menus.
+
+import { stopStageMusic } from "../audio/audio.js";
+import { interfaceResolution } from "../core/platform.js";
+import { random } from "../core/random.js";
+import { PHASE, game } from "../core/state.js";
+import { carStats } from "../data/carStats.js";
+import { CONFIRM, confirm } from "../input/confirm.js";
+import { loading } from "../loading/progress.js";
+import { raceEvents } from "../race/events.js";
+import { fixcar } from "../race/physics.js";
+import { track } from "../race/track.js";
+import { gl } from "../render/renderer.js";
+import { checkpointText, scene, stageBackdrop } from "../render/scene.js";
+import { hslToRgb, rgbToHsl } from "../ui/color.js";
+import { images } from "../ui/images.js";
+import { rd, view } from "../ui/view.js";
+import { BUTTON, blink, drawButton } from "../ui/widgets.js";
+import { menu, showcase } from "./menuState.js";
+
+// menu.animation on this screen: it fades in until FADED_IN; an unlocked car is then
+// presented (see unlockedcar) while it is UNLOCKED_CAR_SHOWN.
+const FADED_IN = 50;
+export const UNLOCKED_CAR_SHOWN = 76;
+
+// The tilt of Insano and the slogan (0..1), drawn when the screen opens.
+let tilt = 0;
+// The car the won stage unlocks, -1 for none.
+let unlockedCar = -1;
+// Confetti after the last stage: 20 bursts of 29 frames, alternately from the left (-1)
+// and the right (1), with a pause between them.
+const confetti = { frame: 0, side: -1, pause: 0, bursts: 0 };
+let confettiLoaded = false;
+
+const unlocksStage = () =>
+  raceEvents.winner && game.unlocked == track.stage && game.carCount != 1;
+
+// The hue of the stage's tint turned around, for the backgrounds of this screen.
+const backdropHue = () => {
+  const channel = (tint) =>
+    Math.min(Math.max(Math.floor(128 - 128 * tint), 0), 255);
+  return rgbToHsl(
+    channel(scene.tint[0]),
+    channel(scene.tint[1]),
+    channel(scene.tint[2]),
+  )[0];
+};
+
+// Colours the stage backdrop dark in the stage's hue, behind the unlocked car.
+const colorBackdropForUnlockedCar = () => {
+  gl.deleteBuffer(stageBackdrop.cbuf);
+  stageBackdrop.cbuf = null;
+  const hue = backdropHue();
+  const first = hslToRgb(hue, 0.4, 0.15);
+  first[3] = 255;
+  const others = hslToRgb(hue, 0.4, 0.1);
+  others[3] = 255;
+  const colors = [];
+  // as in the original, as many colours as the checkpoint text has vertices
+  for (let i = 0; i < checkpointText.vert.length / 3; i++) {
+    for (let k = 0; k < 4; k++) {
+      colors[i * 4 + k] = (i == 0 ? first : others)[k] / 255;
+    }
+  }
+  stageBackdrop.cbuf = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, stageBackdrop.cbuf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(colors), gl.STATIC_DRAW);
+};
+
+export const loadConfetti = () => {
+  if (!confettiLoaded) {
+    for (let i = 0; i < 29; i++) {
+      images.confetti[i] = new Image();
+      images.confetti[i].src =
+        "data/interface" + interfaceResolution + "/conf/" + i + ".png";
+    }
+    confettiLoaded = true;
+  }
+};
+
+export const startRaceEnd = () => {
+  menu.animation = 0;
+  menu.insanoPicture = Math.floor(random.fx() * 6);
+  if (menu.insanoPicture == 6) {
+    menu.insanoPicture = 5;
+  }
+  tilt = random.fx();
+  unlockedCar = -1;
+  raceEvents.switcnt = 0;
+  if (unlocksStage()) {
+    // every second stage unlocks the next car
+    if (track.stage % 2 == 0) {
+      unlockedCar = 10 + track.stage / 2;
+    }
+    if (track.stage == 17) {
+      confetti.bursts = 0;
+      confetti.pause = 0;
+      confetti.frame = 0;
+    }
+    if (unlockedCar != -1) {
+      tilt = 0.4 * random.fx();
+    }
+  }
+};
+
+const drawInsanoAndSlogan = () => {
+  rd.save();
+  rd.rotate((-15 + tilt * 25) * (Math.PI / 180));
+  rd.drawImage(
+    images.insano[menu.insanoPicture],
+    110 * tilt - 60,
+    200 * view.scaleY,
+    274 * view.scale,
+    341 * view.scale,
+  );
+  rd.letterSpacing = "1px";
+  rd.font = "" + 40 * (view.scaleY + view.scaleX) + "px junk";
+  rd.textAlign = "left";
+  rd.textBaseline = "middle";
+  rd.strokeStyle = "#0A3C00";
+  rd.lineWidth = 10 * view.scale;
+  const sloganX = 110 * tilt - 60 + 274 * view.scale;
+  const sloganY = 200 * view.scaleY + 170 * view.scale;
+  rd.strokeText("THIS. IS. MADNESS !", sloganX, sloganY);
+  rd.fillStyle = "#FEA700";
+  rd.fillText("THIS. IS. MADNESS !", sloganX, sloganY);
+  rd.restore();
+};
+
+const darkenBackground = () => {
+  const rgb = hslToRgb(backdropHue(), 0.4, 0.1);
+  rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
+  rd.globalAlpha = Math.min(menu.animation / FADED_IN, 0.9);
+  rd.fillRect(0, 0, view.width, view.height);
+  rd.globalAlpha = 1;
+};
+
+const drawResult = () => {
+  const headline = raceEvents.winner ? "Congradulations!" : "Game Over";
+  rd.letterSpacing = "1px";
+  rd.font = "" + 30 * (view.scaleY + view.scaleX) + "px junk";
+  rd.textAlign = "center";
+  rd.textBaseline = "middle";
+  rd.strokeStyle = "#783800";
+  rd.lineWidth = 10 * view.scale;
+  rd.strokeText(headline, 640 * view.scaleX, 100 * view.scaleY);
+  const gradient = rd.createLinearGradient(
+    640 * view.scaleX,
+    70 * view.scaleY,
+    640 * view.scaleX,
+    130 * view.scaleY,
+  );
+  gradient.addColorStop(0, "#FF5B01");
+  gradient.addColorStop(1, "#FF9601");
+  rd.fillStyle = gradient;
+  rd.fillText(headline, 640 * view.scaleX, 100 * view.scaleY);
+  rd.globalAlpha = 0.7;
+  rd.letterSpacing = "1px";
+  rd.font = "" + 18 * (view.scaleY + view.scaleX) + "px junk";
+  rd.fillStyle = "#FFA627";
+  rd.fillText(
+    (raceEvents.winner ? "You won at stage " : "You lost at stage ") +
+      track.stage +
+      "",
+    640 * view.scaleX,
+    190 * view.scaleY,
+  );
+  rd.fillStyle = "#FF5B01";
+  rd.fillText(track.name, 640 * view.scaleX, 240 * view.scaleY);
+  rd.globalAlpha = 1;
+};
+
+const drawConfetti = () => {
+  if (confetti.bursts >= 20) {
+    return;
+  }
+  if (confetti.pause != 0) {
+    confetti.pause--;
+    return;
+  }
+  if (Math.floor(confetti.frame) <= 28) {
+    rd.drawImage(
+      images.confetti[Math.floor(confetti.frame)],
+      confetti.side * 170 * view.scaleX,
+      0,
+      1280 * view.scaleX,
+      720 * view.scaleY,
+    );
+    confetti.frame += 0.5;
+  } else {
+    confetti.pause = 30;
+    confetti.frame = 0;
+    confetti.side = confetti.side == 1 ? -1 : 1;
+    confetti.bursts++;
+  }
+};
+
+const drawUnlocked = () => {
+  rd.letterSpacing = "1px";
+  rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
+  rd.fillStyle = "#94CA00";
+  if (blink.on) {
+    rd.fillStyle = "#BCFA00";
+    blink.on = false;
+  } else {
+    blink.on = true;
+  }
+  if (track.stage != 17) {
+    const andCar =
+      unlockedCar != -1 ? " and " + carStats.names[unlockedCar] + "" : "";
+    rd.fillText(
+      "Stage " + (track.stage + 1) + "" + andCar + " is now unlocked!",
+      640 * view.scaleX,
+      340 * view.scaleY,
+    );
+  } else {
+    rd.fillText(
+      "Wooohooo you finished the game!",
+      640 * view.scaleX,
+      340 * view.scaleY,
+    );
+    rd.fillText(
+      "You're Awesome! You're truly a MAD DRIVER!",
+      640 * view.scaleX,
+      410 * view.scaleY,
+    );
+    drawConfetti();
+  }
+};
+
+const drawPracticeFinished = () => {
+  rd.letterSpacing = "1px";
+  rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
+  rd.fillStyle = "#94CA00";
+  rd.fillText("Practice game finished", 640 * view.scaleX, 340 * view.scaleY);
+};
+
+// Unlocking waits for the player to continue; otherwise the menus follow by themselves.
+const continueOrWait = () => {
+  if (unlocksStage()) {
+    if (confirm.state == CONFIRM.pressed) {
+      stopStageMusic();
+      leaveRaceEnd();
+      confirm.state = CONFIRM.used;
+    }
+    if (
+      drawButton({
+        id: 7,
+        x: 640 * view.scaleX,
+        y: view.height - 60 * view.scale - 40 * view.scaleY,
+        width: 250,
+        height: 60,
+        faceTop: "#FF1301",
+        faceBottom: "#FF8A01",
+        shadowTop: "#780800",
+        shadowBottom: "#784100",
+        layout: BUTTON.textThenImage,
+        text: "Continue ",
+        fontSize: 20,
+        textOpacity: 0.8,
+        image: images.buttons[1],
+        imageOpacity: 0.8,
+        pulsing: false,
+      })
+    ) {
+      stopStageMusic();
+      leaveRaceEnd();
+    }
+  } else {
+    raceEvents.switcnt++;
+    if (raceEvents.switcnt == 30) {
+      stopStageMusic();
+      leaveRaceEnd();
+    }
+  }
+};
+
+// Fades in, repairs the cars, then presents the unlocked car if there is one.
+const fadeIn = () => {
+  menu.animation++;
+  if (menu.animation == FADED_IN) {
+    for (let c = 0; c < game.carCount; c++) {
+      fixcar(c);
+    }
+    if (unlockedCar != -1) {
+      menu.animation = UNLOCKED_CAR_SHOWN;
+      colorBackdropForUnlockedCar();
+      menu.redraw = true;
+      showcase.height = -20;
+      showcase.bob = 0;
+      showcase.dropSpeed = 100;
+      game.carTypes[0] = unlockedCar;
+    }
+  }
+};
+
+// Every tick of the race end screen.
+export const raceEndScreen = () => {
+  rd.clearRect(0, 0, view.width, view.height);
+  if (menu.animation == UNLOCKED_CAR_SHOWN) {
+    rd.globalAlpha = 0.1;
+  }
+  drawInsanoAndSlogan();
+  rd.globalAlpha = 1;
+  if (menu.animation != UNLOCKED_CAR_SHOWN) {
+    darkenBackground();
+  }
+  if (menu.animation >= FADED_IN) {
+    drawResult();
+    if (unlocksStage()) {
+      drawUnlocked();
+    }
+    if (game.carCount == 1) {
+      drawPracticeFinished();
+    }
+    continueOrWait();
+  } else {
+    fadeIn();
+  }
+};
+
+// Unlocks the next stage (after the last one a random stage comes up) and goes back to
+// the main menu.
+const leaveRaceEnd = () => {
+  if (unlocksStage()) {
+    if (track.stage != 17) {
+      game.unlocked++;
+      track.stage = game.unlocked;
+    } else {
+      track.stage = Math.floor(3 + random.sim() * 13);
+    }
+  }
+  if (loading.stanza == 1) {
+    loading.step = 0;
+    loading.loaded = 500;
+    loading.total = 2458;
+    loading.stanza = 2;
+    menu.skipIntro = true;
+    game.phase = PHASE.loading;
+  } else {
+    menu.animation = 0;
+    menu.skipIntro = true;
+    game.phase = PHASE.mainMenu;
+  }
+};

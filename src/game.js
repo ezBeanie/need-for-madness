@@ -132,6 +132,12 @@ import {
 } from "./race/effects.js";
 import { drive, fixcar, inishmad, paintDents } from "./race/physics.js";
 import { hslToRgb, rgbToHsl } from "./ui/color.js";
+import {
+  UNLOCKED_CAR_SHOWN,
+  loadConfetti,
+  raceEndScreen,
+  startRaceEnd,
+} from "./screens/raceEnd.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 function cartextures() {
@@ -1310,51 +1316,6 @@ function colorbgst() {
   gl.bindBuffer(gl.ARRAY_BUFFER, stageBackdrop.cbuf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
 }
-function colorbgstforend() {
-  gl.deleteBuffer(stageBackdrop.cbuf);
-  stageBackdrop.cbuf = null;
-  var r = Math.floor(128 - 128 * scene.tint[0]);
-  if (r > 255) {
-    r = 255;
-  }
-  if (r < 0) {
-    r = 0;
-  }
-  var g = Math.floor(128 - 128 * scene.tint[1]);
-  if (g > 255) {
-    g = 255;
-  }
-  if (g < 0) {
-    g = 0;
-  }
-  var b = Math.floor(128 - 128 * scene.tint[2]);
-  if (b > 255) {
-    b = 255;
-  }
-  if (b < 0) {
-    b = 0;
-  }
-  var hsl = rgbToHsl(r, g, b);
-  var rgb1 = hslToRgb(hsl[0], 0.4, 0.15);
-  rgb1[3] = 255;
-  var rgb2 = hslToRgb(hsl[0], 0.4, 0.1);
-  rgb2[3] = 255;
-  var col = [];
-  for (var i = 0; i < checkpointText.vert.length / 3; i++) {
-    if (i == 0) {
-      for (var k = 0; k < 4; k++) {
-        col[i * 4 + k] = rgb1[k] / 255;
-      }
-    } else {
-      for (var k = 0; k < 4; k++) {
-        col[i * 4 + k] = rgb2[k] / 255;
-      }
-    }
-  }
-  stageBackdrop.cbuf = gl.createBuffer();
-  gl.bindBuffer(gl.ARRAY_BUFFER, stageBackdrop.cbuf);
-  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
-}
 function getonscreen(m, rad) {
   var x = rad.mat[12];
   var y = rad.mat[13];
@@ -1386,18 +1347,6 @@ for (var i = 0; i < 3; i++) {
   explode[i] = newModel();
 }
 
-var confeloaded = false;
-
-function loadconfe() {
-  if (!confeloaded) {
-    for (var i = 0; i < 29; i++) {
-      images.confetti[i] = new Image();
-      images.confetti[i].src =
-        "data/interface" + interfaceResolution + "/conf/" + i + ".png";
-    }
-    confeloaded = true;
-  }
-}
 function loaddata() {
   if (gl) {
     drawloading();
@@ -3198,7 +3147,7 @@ function stageselect() {
   menu.redraw = true;
 }
 function unlockedcar() {
-  if (menu.animation == 76) {
+  if (menu.animation == UNLOCKED_CAR_SHOWN) {
     var fieldOfView = (55 * Math.PI) / 180;
     var zNear = 0.1;
     var zFar = 7000;
@@ -3675,7 +3624,7 @@ function render(now) {
       menu.redraw = false;
     }
   }
-  if (game.phase == PHASE.raceEnd && menu.animation == 76) {
+  if (game.phase == PHASE.raceEnd && menu.animation == UNLOCKED_CAR_SHOWN) {
     if (menu.redraw || framefase == game.phase) {
       framefase = game.phase;
       gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -4323,7 +4272,7 @@ function gameloop() {
     pausedgame();
   }
   if (game.phase == PHASE.raceEnd) {
-    endgame();
+    raceEndScreen();
     unlockedcar();
   }
   if (game.phase == PHASE.resetQuestion) {
@@ -6859,7 +6808,7 @@ function drawinter() {
       if (recording.htyp) {
         onbreplay = 2;
       } else {
-        iniend();
+        startRaceEnd();
         game.phase = PHASE.raceEnd;
       }
       stopEngine();
@@ -8138,12 +8087,12 @@ function drawhreplay() {
     }
   }
   if (cntreps == 2 && recording.fr == 427) {
-    iniend();
+    startRaceEnd();
     game.phase = PHASE.raceEnd;
   }
   if (confirm.state == CONFIRM.pressed) {
     confirm.state = CONFIRM.used;
-    iniend();
+    startRaceEnd();
     game.phase = PHASE.raceEnd;
   }
   if (
@@ -8167,7 +8116,7 @@ function drawhreplay() {
     }) ||
     (pointer.down && track.stage == 1 && game.unlocked == 1)
   ) {
-    iniend();
+    startRaceEnd();
     game.phase = PHASE.raceEnd;
   }
   if (recording.fr >= 428) {
@@ -8177,316 +8126,9 @@ function drawhreplay() {
     rd.globalAlpha = 1;
   }
 }
-var confr = 0;
-var confl = -1;
-var confg = 0;
-var confc = 0;
-var morgn = random.fx();
-var unlcar = -1;
-function iniend() {
-  menu.animation = 0;
-  menu.insanoPicture = Math.floor(random.fx() * 6);
-  if (menu.insanoPicture == 6) {
-    menu.insanoPicture = 5;
-  }
-  morgn = random.fx();
-  unlcar = -1;
-  raceEvents.switcnt = 0;
-  if (raceEvents.winner && game.unlocked == track.stage && game.carCount != 1) {
-    if (track.stage == 2) {
-      unlcar = 11;
-    }
-    if (track.stage == 4) {
-      unlcar = 12;
-    }
-    if (track.stage == 6) {
-      unlcar = 13;
-    }
-    if (track.stage == 8) {
-      unlcar = 14;
-    }
-    if (track.stage == 10) {
-      unlcar = 15;
-    }
-    if (track.stage == 12) {
-      unlcar = 16;
-    }
-    if (track.stage == 14) {
-      unlcar = 17;
-    }
-    if (track.stage == 16) {
-      unlcar = 18;
-    }
-    if (track.stage == 17) {
-      confc = 0;
-      confg = 0;
-      confr = 0;
-    }
-    if (unlcar != -1) {
-      morgn = 0.4 * random.fx();
-    }
-  }
-}
-function endgame() {
-  rd.clearRect(0, 0, view.width, view.height);
-  if (menu.animation == 76) {
-    rd.globalAlpha = 0.1;
-  }
-  rd.save();
-  rd.rotate((-15 + morgn * 25) * (Math.PI / 180));
-  rd.drawImage(
-    images.insano[menu.insanoPicture],
-    110 * morgn - 60,
-    200 * view.scaleY,
-    274 * view.scale,
-    341 * view.scale,
-  );
-  rd.letterSpacing = "1px";
-  rd.font = "" + 40 * (view.scaleY + view.scaleX) + "px junk";
-  rd.textAlign = "left";
-  rd.textBaseline = "middle";
-  rd.strokeStyle = "#0A3C00";
-  rd.lineWidth = 10 * view.scale;
-  rd.strokeText(
-    "THIS. IS. MADNESS !",
-    110 * morgn - 60 + 274 * view.scale,
-    200 * view.scaleY + 170 * view.scale,
-  );
-  rd.fillStyle = "#FEA700";
-  rd.fillText(
-    "THIS. IS. MADNESS !",
-    110 * morgn - 60 + 274 * view.scale,
-    200 * view.scaleY + 170 * view.scale,
-  );
-  rd.restore();
-  rd.globalAlpha = 1;
-  if (menu.animation != 76) {
-    var r = Math.floor(128 - 128 * scene.tint[0]);
-    if (r > 255) {
-      r = 255;
-    }
-    if (r < 0) {
-      r = 0;
-    }
-    var g = Math.floor(128 - 128 * scene.tint[1]);
-    if (g > 255) {
-      g = 255;
-    }
-    if (g < 0) {
-      g = 0;
-    }
-    var b = Math.floor(128 - 128 * scene.tint[2]);
-    if (b > 255) {
-      b = 255;
-    }
-    if (b < 0) {
-      b = 0;
-    }
-    var hsl = rgbToHsl(r, g, b);
-    var rgb = hslToRgb(hsl[0], 0.4, 0.1);
-    rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
-    var alpb = menu.animation / 50;
-    if (alpb > 0.9) {
-      alpb = 0.9;
-    }
-    rd.globalAlpha = alpb;
-    rd.fillRect(0, 0, view.width, view.height);
-    rd.globalAlpha = 1;
-  }
-  if (menu.animation >= 50) {
-    var contxt = "Congradulations!";
-    if (!raceEvents.winner) {
-      contxt = "Game Over";
-    }
-    rd.letterSpacing = "1px";
-    rd.font = "" + 30 * (view.scaleY + view.scaleX) + "px junk";
-    rd.textAlign = "center";
-    rd.textBaseline = "middle";
-    rd.strokeStyle = "#783800";
-    rd.lineWidth = 10 * view.scale;
-    rd.strokeText(contxt, 640 * view.scaleX, 100 * view.scaleY);
-    var grd = rd.createLinearGradient(
-      640 * view.scaleX,
-      70 * view.scaleY,
-      640 * view.scaleX,
-      130 * view.scaleY,
-    );
-    grd.addColorStop(0, "#FF5B01");
-    grd.addColorStop(1, "#FF9601");
-    rd.fillStyle = grd;
-    rd.fillText(contxt, 640 * view.scaleX, 100 * view.scaleY);
-    rd.globalAlpha = 0.7;
-    rd.letterSpacing = "1px";
-    rd.font = "" + 18 * (view.scaleY + view.scaleX) + "px junk";
-    rd.fillStyle = "#FFA627";
-    if (raceEvents.winner) {
-      rd.fillText(
-        "You won at stage " + track.stage + "",
-        640 * view.scaleX,
-        190 * view.scaleY,
-      );
-    } else {
-      rd.fillText(
-        "You lost at stage " + track.stage + "",
-        640 * view.scaleX,
-        190 * view.scaleY,
-      );
-    }
-    rd.fillStyle = "#FF5B01";
-    rd.fillText(track.name, 640 * view.scaleX, 240 * view.scaleY);
-    rd.globalAlpha = 1;
-    if (
-      raceEvents.winner &&
-      game.unlocked == track.stage &&
-      game.carCount != 1
-    ) {
-      rd.letterSpacing = "1px";
-      rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
-      rd.fillStyle = "#94CA00";
-      if (blink.on) {
-        rd.fillStyle = "#BCFA00";
-        blink.on = false;
-      } else {
-        blink.on = true;
-      }
-      if (track.stage != 17) {
-        var andcar = "";
-        if (unlcar != -1) {
-          andcar = " and " + carStats.names[unlcar] + "";
-        }
-        rd.fillText(
-          "Stage " + (track.stage + 1) + "" + andcar + " is now unlocked!",
-          640 * view.scaleX,
-          340 * view.scaleY,
-        );
-      } else {
-        rd.fillText(
-          "Wooohooo you finished the game!",
-          640 * view.scaleX,
-          340 * view.scaleY,
-        );
-        rd.fillText(
-          "You're Awesome! You're truly a MAD DRIVER!",
-          640 * view.scaleX,
-          410 * view.scaleY,
-        );
-        if (confc < 20) {
-          if (confg == 0) {
-            if (Math.floor(confr) <= 28) {
-              rd.drawImage(
-                images.confetti[Math.floor(confr)],
-                confl * 170 * view.scaleX,
-                0,
-                1280 * view.scaleX,
-                720 * view.scaleY,
-              );
-              confr += 0.5;
-            } else {
-              confg = 30;
-              confr = 0;
-              if (confl == 1) {
-                confl = -1;
-              } else {
-                confl = 1;
-              }
-              confc++;
-            }
-          } else {
-            confg--;
-          }
-        }
-      }
-    }
-    if (game.carCount == 1) {
-      rd.letterSpacing = "1px";
-      rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
-      rd.fillStyle = "#94CA00";
-      rd.fillText(
-        "Practice game finished",
-        640 * view.scaleX,
-        340 * view.scaleY,
-      );
-    }
-    if (
-      raceEvents.winner &&
-      game.unlocked == track.stage &&
-      game.carCount != 1
-    ) {
-      if (confirm.state == CONFIRM.pressed) {
-        stopStageMusic();
-        afterend();
-        confirm.state = CONFIRM.used;
-      }
-      if (
-        drawButton({
-          id: 7,
-          x: 640 * view.scaleX,
-          y: view.height - 60 * view.scale - 40 * view.scaleY,
-          width: 250,
-          height: 60,
-          faceTop: "#FF1301",
-          faceBottom: "#FF8A01",
-          shadowTop: "#780800",
-          shadowBottom: "#784100",
-          layout: BUTTON.textThenImage,
-          text: "Continue ",
-          fontSize: 20,
-          textOpacity: 0.8,
-          image: images.buttons[1],
-          imageOpacity: 0.8,
-          pulsing: false,
-        })
-      ) {
-        stopStageMusic();
-        afterend();
-      }
-    } else {
-      raceEvents.switcnt++;
-      if (raceEvents.switcnt == 30) {
-        stopStageMusic();
-        afterend();
-      }
-    }
-  } else {
-    menu.animation++;
-    if (menu.animation == 50) {
-      for (var c = 0; c < game.carCount; c++) {
-        fixcar(c);
-      }
-      if (unlcar != -1) {
-        menu.animation = 76;
-        colorbgstforend();
-        menu.redraw = true;
-        showcase.height = -20;
-        showcase.bob = 0;
-        showcase.dropSpeed = 100;
-        game.carTypes[0] = unlcar;
-      }
-    }
-  }
-}
-function afterend() {
-  if (raceEvents.winner && game.unlocked == track.stage && game.carCount != 1) {
-    if (track.stage != 17) {
-      game.unlocked++;
-      track.stage = game.unlocked;
-    } else {
-      track.stage = Math.floor(3 + random.sim() * 13);
-    }
-  }
-  if (loading.stanza == 1) {
-    loading.step = 0;
-    loading.loaded = 500;
-    loading.total = 2458;
-    loading.stanza = 2;
-    menu.skipIntro = true;
-    game.phase = PHASE.loading;
-  } else {
-    menu.animation = 0;
-    menu.skipIntro = true;
-    game.phase = PHASE.mainMenu;
-  }
-}
+// The original drew the tilt of the race end screen here, while loading; it is drawn again
+// before it shows. The draw stays so the randomness after it is as it was.
+random.fx();
 var lastsel = 0;
 var handson = 0;
 function drawcarselect() {
@@ -9269,7 +8911,7 @@ function drawstageselect() {
       rd.fillText("Stage " + track.stage, 640 * view.scaleX, 120 * view.scaleY);
     } else {
       rd.fillText("Final Stage", 640 * view.scaleX, 120 * view.scaleY);
-      loadconfe();
+      loadConfetti();
     }
     if (!ontip) {
       rgb = hslToRgb(hsl[0] - 0.05, 1, 0.5);
