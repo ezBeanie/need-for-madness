@@ -1,4 +1,16 @@
-import { game } from "../core/state.js";
+import { resumeStageMusic } from "../audio/audio.js";
+import { rotateAxes } from "../core/math.js";
+import { random } from "../core/random.js";
+import { PHASE, game } from "../core/state.js";
+import { tick } from "../core/tick.js";
+import { camera } from "../render/camera.js";
+import { carModels } from "../render/scene.js";
+import { resetPursuit } from "./ai.js";
+import { burn, chipburn, dustup, firexp, sprks } from "./effects.js";
+import { raceEvents } from "./events.js";
+import { fixcar, regn } from "./physics.js";
+import { car, racers } from "./racers.js";
+import { track } from "./track.js";
 
 // What is recorded of a race for the instant replay, the highlight replay and winding
 // back time: the last ticks of every car, the sparks, and which highlight to show.
@@ -92,5 +104,860 @@ export function catchnow(hty) {
     recording.hcim = game.player;
   } else {
     recording.hpowerup = 0;
+  }
+}
+
+function newrepcar() {
+  return {
+    x: [],
+    y: [],
+    z: [],
+    xy: [],
+    xz: [],
+    zy: [],
+    wzy: [],
+    wxz: [],
+    avnx: [],
+    avny: [],
+    avnz: [],
+    cxz: [],
+    hitmag: [],
+    clear: [],
+    pcleared: [],
+    nlaps: [],
+    nreg: 0,
+    regat: [],
+    regnr: [],
+    regk: [],
+    regmag: [],
+    regmtch: [],
+    nfix: 0,
+    fixat: [],
+    destat: 700,
+    destedbyzero: 0,
+    ndst: 0,
+    dstat: [],
+    tskd: [],
+    mst: [],
+    dx: [],
+    dy: [],
+    dz: [],
+    sx: [],
+    sz: [],
+    smag: [],
+    tlt: [],
+    capsz: [],
+  };
+}
+function newrepsprks() {
+  return {
+    n: 0,
+    sprkat: [],
+    cn: [],
+    x: [],
+    y: [],
+    z: [],
+    sx: [],
+    sy: [],
+    sz: [],
+    cap: [],
+  };
+}
+export function inishrecord() {
+  if (recording.repcar != null) {
+    recording.repcar = null;
+  }
+  if (recording.hrepcar != null) {
+    recording.hrepcar = null;
+  }
+  recording.repcar = [];
+  recording.hrepcar = [];
+  for (var c = 0; c < game.carCount; c++) {
+    recording.repcar[c] = newrepcar();
+    for (var i = 0; i < 430; i++) {
+      recording.repcar[c].x[i] = 0;
+      recording.repcar[c].y[i] = 0;
+      recording.repcar[c].z[i] = 0;
+      recording.repcar[c].xy[i] = 0;
+      recording.repcar[c].xz[i] = 0;
+      recording.repcar[c].zy[i] = 0;
+      recording.repcar[c].wzy[i] = 0;
+      recording.repcar[c].wxz[i] = 0;
+      recording.repcar[c].avnx[i] = 0;
+      recording.repcar[c].avny[i] = 0;
+      recording.repcar[c].avnz[i] = 0;
+      recording.repcar[c].cxz[i] = 0;
+      recording.repcar[c].hitmag[i] = 0;
+      recording.repcar[c].clear[i] = 0;
+      recording.repcar[c].pcleared[i] = 0;
+      recording.repcar[c].nlaps[i] = 0;
+    }
+    recording.hrepcar[c] = newrepcar();
+    for (var i = 0; i < 430; i++) {
+      recording.hrepcar[c].x[i] = 0;
+      recording.hrepcar[c].y[i] = 0;
+      recording.hrepcar[c].z[i] = 0;
+      recording.hrepcar[c].xy[i] = 0;
+      recording.hrepcar[c].xz[i] = 0;
+      recording.hrepcar[c].zy[i] = 0;
+      recording.hrepcar[c].wzy[i] = 0;
+      recording.hrepcar[c].wxz[i] = 0;
+      recording.hrepcar[c].avnx[i] = 0;
+      recording.hrepcar[c].avny[i] = 0;
+      recording.hrepcar[c].avnz[i] = 0;
+    }
+  }
+  if (recording.repsprks != null) {
+    recording.repsprks = null;
+  }
+  if (recording.hrepsprks != null) {
+    recording.hrepsprks = null;
+  }
+  recording.repsprks = newrepsprks();
+  recording.hrepsprks = newrepsprks();
+  for (var i = 0; i < 430; i++) {
+    recording.reponcheckpoint[i] = 0;
+    recording.reponlastcheck[i] = 0;
+  }
+  recording.nrec = 0;
+  recording.htyp = 0;
+  recording.hpowerup = 0;
+  recording.hat = 0;
+  recording.hscar = 0;
+  recording.hcim = 0;
+  recording.catchfin = 0;
+}
+export function record() {
+  if (raceEvents.holdcnt < 100) {
+    for (var c = 0; c < game.carCount; c++) {
+      for (var i = 0; i < 429; i++) {
+        recording.repcar[c].x[i] = recording.repcar[c].x[i + 1];
+        recording.repcar[c].y[i] = recording.repcar[c].y[i + 1];
+        recording.repcar[c].z[i] = recording.repcar[c].z[i + 1];
+        recording.repcar[c].xy[i] = recording.repcar[c].xy[i + 1];
+        recording.repcar[c].xz[i] = recording.repcar[c].xz[i + 1];
+        recording.repcar[c].zy[i] = recording.repcar[c].zy[i + 1];
+        recording.repcar[c].wzy[i] = recording.repcar[c].wzy[i + 1];
+        recording.repcar[c].wxz[i] = recording.repcar[c].wxz[i + 1];
+        recording.repcar[c].avnx[i] = recording.repcar[c].avnx[i + 1];
+        recording.repcar[c].avny[i] = recording.repcar[c].avny[i + 1];
+        recording.repcar[c].avnz[i] = recording.repcar[c].avnz[i + 1];
+        recording.repcar[c].cxz[i] = recording.repcar[c].cxz[i + 1];
+        recording.repcar[c].hitmag[i] = recording.repcar[c].hitmag[i + 1];
+        recording.repcar[c].clear[i] = recording.repcar[c].clear[i + 1];
+        recording.repcar[c].pcleared[i] = recording.repcar[c].pcleared[i + 1];
+        recording.repcar[c].nlaps[i] = recording.repcar[c].nlaps[i + 1];
+      }
+      recording.repcar[c].x[429] = car[c].x;
+      recording.repcar[c].y[429] = car[c].y;
+      recording.repcar[c].z[429] = car[c].z;
+      recording.repcar[c].xy[429] = car[c].xy;
+      recording.repcar[c].xz[429] = car[c].xz;
+      recording.repcar[c].zy[429] = car[c].zy;
+      recording.repcar[c].wzy[429] = car[c].wzy;
+      recording.repcar[c].wxz[429] = car[c].wxz;
+      recording.repcar[c].avnx[429] =
+        (racers[c].scx[0] +
+          racers[c].scx[1] +
+          racers[c].scx[2] +
+          racers[c].scx[3]) /
+        4;
+      recording.repcar[c].avny[429] =
+        (racers[c].scy[0] +
+          racers[c].scy[1] +
+          racers[c].scy[2] +
+          racers[c].scy[3]) /
+        4;
+      recording.repcar[c].avnz[429] =
+        (racers[c].scz[0] +
+          racers[c].scz[1] +
+          racers[c].scz[2] +
+          racers[c].scz[3]) /
+        4;
+      recording.repcar[c].cxz[429] = racers[c].cxz;
+      recording.repcar[c].hitmag[429] = racers[c].hitmag;
+      recording.repcar[c].clear[429] = racers[c].clear;
+      recording.repcar[c].pcleared[429] = racers[c].pcleared;
+      recording.repcar[c].nlaps[429] = racers[c].nlaps;
+      for (var i = 0; i < recording.repcar[c].nreg; i++) {
+        recording.repcar[c].regat[i]--;
+      }
+      for (var i = 0; i < recording.repcar[c].nfix; i++) {
+        recording.repcar[c].fixat[i]--;
+      }
+      for (var i = 0; i < recording.repcar[c].ndst; i++) {
+        recording.repcar[c].dstat[i]--;
+      }
+      if (recording.repcar[c].destat != 700) {
+        recording.repcar[c].destat--;
+        if (recording.repcar[c].destat == 328) {
+          if (c == game.player) {
+            catchnow(2);
+            if (recording.htyp == 2) {
+              recording.hat = 327;
+            }
+          } else {
+            if (recording.repcar[c].destedbyzero) {
+              catchnow(3);
+              if (recording.htyp == 3) {
+                recording.hat = Math.floor(
+                  (160 + recording.repcar[c].destedbyzero) * 1.42,
+                );
+                recording.hscar = c;
+              }
+            }
+          }
+        }
+      }
+    }
+    for (var i = 0; i < recording.repsprks.n; i++) {
+      recording.repsprks.sprkat[i]--;
+    }
+    for (var i = 0; i < 430; i++) {
+      recording.reponcheckpoint[i] = recording.reponcheckpoint[i + 1];
+      recording.reponlastcheck[i] = recording.reponlastcheck[i + 1];
+    }
+    recording.reponcheckpoint[429] = raceEvents.oncheckpoint;
+    recording.reponlastcheck[429] = raceEvents.onlastcheck;
+    if (recording.nrec < 430) {
+      recording.nrec++;
+    }
+  }
+}
+export function rewindreplay() {
+  game.phase = PHASE.replayRewind;
+  recording.fr = 0;
+  camera.mode = 1;
+  camera.target = game.player;
+  for (var c = 0; c < game.carCount; c++) {
+    racers[c].destnow = false;
+    racers[c].cntdest = 0;
+    racers[c].embos = 0;
+    racers[c].embodir = 0;
+    racers[c].squash = 0;
+    racers[c].nbsq = 0;
+    car[c].fcnt = 0;
+    fixcar(c);
+    carModels[car[c].typ].alpha = 1;
+    if (recording.repcar[c].destat < 0) {
+      racers[c].destnow = true;
+      racers[c].cntdest = 7;
+    }
+    var foundnegfix = 0;
+    for (var i = recording.repcar[c].nfix - 1; i >= 0; i--) {
+      if (recording.repcar[c].fixat[i] < 0 && foundnegfix == 0) {
+        foundnegfix = recording.repcar[c].fixat[i];
+        break;
+      }
+    }
+    for (var i = 0; i < recording.repcar[c].nreg; i++) {
+      if (recording.repcar[c].regat[i] < 0) {
+        var frget = false;
+        if (foundnegfix) {
+          if (recording.repcar[c].regat[i] < foundnegfix) {
+            frget = true;
+          }
+        }
+        if (!frget) {
+          racers[c].mtouch = recording.repcar[c].regmtch[i];
+          regn(
+            recording.repcar[c].regnr[i],
+            recording.repcar[c].regk[i],
+            recording.repcar[c].regmag[i],
+            c,
+          );
+        }
+      }
+    }
+  }
+  game.phase = PHASE.replay;
+}
+export function replay() {
+  for (var c = 0; c < game.carCount; c++) {
+    if (recording.repcar[c].destat == recording.fr) {
+      racers[c].destnow = true;
+    }
+    if (racers[c].destnow) {
+      if (racers[c].cntdest < 6) {
+        if (racers[c].embos == 0) {
+          carModels[car[c].typ].alpha = 1;
+          racers[c].embodir = Math.floor(random.fx() * 3);
+          if (racers[c].embodir == 3) {
+            racers[c].embodir = 0;
+          }
+          racers[c].embomag = 1.2 + random.fx() * 0.2;
+        }
+        if (racers[c].embos == 1) {
+          carModels[car[c].typ].alpha = 2;
+        }
+        racers[c].embos++;
+        if (racers[c].embos == 2) {
+          racers[c].embos = 0;
+          racers[c].cntdest++;
+        }
+      } else {
+        if (racers[c].cntdest == 6) {
+          carModels[car[c].typ].alpha = 1;
+          racers[c].embodir = 0;
+          chipburn(c);
+          racers[c].embos = 0;
+          racers[c].cntdest = 7;
+        }
+        firexp(
+          c,
+          recording.repcar[c].avnx[recording.fr],
+          recording.repcar[c].avny[recording.fr],
+          recording.repcar[c].avnz[recording.fr],
+        );
+        if (racers[c].cntdest < 24) {
+          racers[c].embos++;
+          if (racers[c].embos == 5) {
+            burn(c);
+            racers[c].embos = 0;
+            racers[c].cntdest++;
+          }
+        }
+      }
+    }
+    if (!car[c].fcnt) {
+      for (var i = 0; i < recording.repcar[c].nfix; i++) {
+        if (recording.repcar[c].fixat[i] == recording.fr) {
+          car[c].fcnt = 20;
+        }
+      }
+    } else {
+      raceEvents.onelec = true;
+      carModels[car[c].typ].alpha = 1;
+      if (car[c].fcnt % 2 == 0) {
+        if (random.fx() > 0.333) {
+          if (random.fx() > random.fx()) {
+            carModels[car[c].typ].alpha = 3;
+          } else {
+            carModels[car[c].typ].alpha = 2;
+          }
+        }
+      }
+      if (tick.fraction >= tick.scale) {
+        if (car[c].fcnt == 20) {
+          racers[c].squash = 0;
+          racers[c].nbsq = 0;
+        }
+        if (car[c].fcnt == 5) {
+          fixcar(c);
+        }
+        car[c].fcnt--;
+      }
+    }
+    for (var i = 0; i < recording.repcar[c].nreg; i++) {
+      if (recording.repcar[c].regat[i] == recording.fr) {
+        racers[c].mtouch = recording.repcar[c].regmtch[i];
+        regn(
+          recording.repcar[c].regnr[i],
+          recording.repcar[c].regk[i],
+          recording.repcar[c].regmag[i],
+          c,
+        );
+      }
+    }
+    for (var i = 0; i < recording.repcar[c].ndst; i++) {
+      if (recording.repcar[c].dstat[i] == recording.fr) {
+        dustup(
+          recording.repcar[c].tskd[i],
+          c,
+          recording.repcar[c].mst[i],
+          recording.repcar[c].dx[i],
+          recording.repcar[c].dy[i],
+          recording.repcar[c].dz[i],
+          recording.repcar[c].sx[i],
+          recording.repcar[c].sz[i],
+          recording.repcar[c].smag[i],
+          recording.repcar[c].tlt[i],
+          recording.repcar[c].capsz[i],
+        );
+      }
+    }
+    car[c].x = recording.repcar[c].x[recording.fr];
+    car[c].y = recording.repcar[c].y[recording.fr];
+    car[c].z = recording.repcar[c].z[recording.fr];
+    car[c].xy = recording.repcar[c].xy[recording.fr];
+    car[c].xz = recording.repcar[c].xz[recording.fr];
+    car[c].zy = recording.repcar[c].zy[recording.fr];
+    car[c].wzy = recording.repcar[c].wzy[recording.fr];
+    car[c].wxz = recording.repcar[c].wxz[recording.fr];
+    var xmt = [1, 0, 0];
+    var ymt = [0, 1, 0];
+    var zmt = [0, 0, 1];
+    rotateAxes(xmt, ymt, car[c].xy);
+    rotateAxes(ymt, zmt, car[c].zy);
+    rotateAxes(xmt, zmt, car[c].xz);
+    car[c].mat[0] = xmt[0];
+    car[c].mat[1] = ymt[0];
+    car[c].mat[2] = zmt[0];
+    car[c].mat[4] = xmt[1];
+    car[c].mat[5] = ymt[1];
+    car[c].mat[6] = zmt[1];
+    car[c].mat[8] = xmt[2];
+    car[c].mat[9] = ymt[2];
+    car[c].mat[10] = zmt[2];
+    if (racers[c].embodir) {
+      car[c].mat[racers[c].embodir * 4] *= racers[c].embomag;
+      car[c].mat[racers[c].embodir * 4 + 1] *= racers[c].embomag;
+      car[c].mat[racers[c].embodir * 4 + 2] *= racers[c].embomag;
+    }
+  }
+  for (var i = 0; i < recording.repsprks.n; i++) {
+    if (recording.repsprks.sprkat[i] == recording.fr) {
+      sprks(
+        recording.repsprks.cn[i],
+        recording.repsprks.x[i],
+        recording.repsprks.y[i],
+        recording.repsprks.z[i],
+        recording.repsprks.sx[i],
+        recording.repsprks.sy[i],
+        recording.repsprks.sz[i],
+        recording.repsprks.cap[i],
+      );
+    }
+  }
+  raceEvents.oncheckpoint = recording.reponcheckpoint[recording.fr];
+  raceEvents.onlastcheck = recording.reponlastcheck[recording.fr];
+  if (recording.fr == 429) {
+    game.phase = PHASE.paused;
+    camera.mode = 0;
+    camera.target = game.player;
+    recording.fr = 0;
+  } else {
+    recording.fr++;
+  }
+}
+export function fastforwardexit() {
+  game.phase = PHASE.replayRewind;
+  for (var c = 0; c < game.carCount; c++) {
+    if (
+      recording.repcar[c].destat != 700 &&
+      recording.repcar[c].destat >= recording.fr
+    ) {
+      racers[c].embos = 0;
+      racers[c].cntdest = 7;
+    }
+    var foundnegfix = 0;
+    for (var i = recording.repcar[c].nfix - 1; i >= 0; i--) {
+      if (recording.repcar[c].fixat[i] >= recording.fr && foundnegfix == 0) {
+        foundnegfix = recording.repcar[c].fixat[i];
+        break;
+      }
+    }
+    if (foundnegfix) {
+      racers[c].squash = 0;
+      racers[c].nbsq = 0;
+      car[c].fcnt = 0;
+      fixcar(c);
+    }
+    for (var i = 0; i < recording.repcar[c].nreg; i++) {
+      if (recording.repcar[c].regat[i] >= recording.fr) {
+        var frget = false;
+        if (foundnegfix) {
+          if (recording.repcar[c].regat[i] < foundnegfix) {
+            frget = true;
+          }
+        }
+        if (!frget) {
+          racers[c].mtouch = recording.repcar[c].regmtch[i];
+          regn(
+            recording.repcar[c].regnr[i],
+            recording.repcar[c].regk[i],
+            recording.repcar[c].regmag[i],
+            c,
+          );
+        }
+      }
+    }
+    car[c].x = recording.repcar[c].x[429];
+    car[c].y = recording.repcar[c].y[429];
+    car[c].z = recording.repcar[c].z[429];
+    car[c].xy = recording.repcar[c].xy[429];
+    car[c].xz = recording.repcar[c].xz[429];
+    car[c].zy = recording.repcar[c].zy[429];
+    car[c].wzy = recording.repcar[c].wzy[429];
+    car[c].wxz = recording.repcar[c].wxz[429];
+  }
+  camera.mode = 0;
+  camera.target = game.player;
+  game.phase = PHASE.paused;
+}
+export function hrewindhreplay() {
+  game.phase = PHASE.replayRewind;
+  recording.fr = 0;
+  for (var c = 0; c < game.carCount; c++) {
+    racers[c].destnow = false;
+    racers[c].cntdest = 0;
+    racers[c].embos = 0;
+    racers[c].embodir = 0;
+    racers[c].squash = 0;
+    racers[c].nbsq = 0;
+    car[c].fcnt = 0;
+    fixcar(c);
+    carModels[car[c].typ].alpha = 1;
+    if (recording.hrepcar[c].destat < 0) {
+      racers[c].destnow = true;
+      racers[c].cntdest = 7;
+    }
+    var foundnegfix = 0;
+    for (var i = recording.hrepcar[c].nfix - 1; i >= 0; i--) {
+      if (recording.hrepcar[c].fixat[i] < 0 && foundnegfix == 0) {
+        foundnegfix = recording.hrepcar[c].fixat[i];
+        break;
+      }
+    }
+    for (var i = 0; i < recording.hrepcar[c].nreg; i++) {
+      if (recording.hrepcar[c].regat[i] < 0) {
+        var frget = false;
+        if (foundnegfix) {
+          if (recording.hrepcar[c].regat[i] < foundnegfix) {
+            frget = true;
+          }
+        }
+        if (!frget) {
+          racers[c].mtouch = recording.hrepcar[c].regmtch[i];
+          regn(
+            recording.hrepcar[c].regnr[i],
+            recording.hrepcar[c].regk[i],
+            recording.hrepcar[c].regmag[i],
+            c,
+          );
+        }
+      }
+    }
+  }
+  recording.holdf = 0;
+  recording.rmode = 0;
+  if (recording.htyp == 1) {
+    if (random.fx() > random.fx()) {
+      recording.rmode = 98;
+    } else {
+      recording.rmode = 43;
+    }
+  }
+  if (recording.htyp == 2) {
+    recording.rmode = 95;
+    camera.orbitAngle += 90;
+  }
+  game.phase = PHASE.highlights;
+}
+export function hreplay() {
+  for (var c = 0; c < game.carCount; c++) {
+    if (recording.hrepcar[c].destat == recording.fr) {
+      racers[c].destnow = true;
+    }
+    if (racers[c].destnow) {
+      if (racers[c].cntdest < 6) {
+        if (racers[c].embos == 0) {
+          carModels[car[c].typ].alpha = 1;
+          racers[c].embodir = Math.floor(random.fx() * 3);
+          if (racers[c].embodir == 3) {
+            racers[c].embodir = 0;
+          }
+          racers[c].embomag = 1.2 + random.fx() * 0.2;
+        }
+        if (racers[c].embos == 1) {
+          carModels[car[c].typ].alpha = 2;
+        }
+        racers[c].embos++;
+        if (racers[c].embos == 2) {
+          racers[c].embos = 0;
+          if (!recording.onpausefr) {
+            racers[c].cntdest++;
+          }
+        }
+      } else {
+        if (racers[c].cntdest == 6) {
+          carModels[car[c].typ].alpha = 1;
+          racers[c].embodir = 0;
+          chipburn(c);
+          racers[c].embos = 0;
+          racers[c].cntdest = 7;
+        }
+        firexp(
+          c,
+          recording.hrepcar[c].avnx[recording.fr],
+          recording.hrepcar[c].avny[recording.fr],
+          recording.hrepcar[c].avnz[recording.fr],
+        );
+        if (racers[c].cntdest < 24) {
+          racers[c].embos++;
+          if (racers[c].embos == 5) {
+            burn(c);
+            racers[c].embos = 0;
+            racers[c].cntdest++;
+          }
+        }
+      }
+    }
+    if (!car[c].fcnt) {
+      for (var i = 0; i < recording.hrepcar[c].nfix; i++) {
+        if (recording.hrepcar[c].fixat[i] == recording.fr) {
+          car[c].fcnt = 20;
+        }
+      }
+    } else {
+      raceEvents.onelec = true;
+      carModels[car[c].typ].alpha = 1;
+      if (car[c].fcnt % 2 == 0) {
+        if (random.fx() > 0.333) {
+          if (random.fx() > random.fx()) {
+            carModels[car[c].typ].alpha = 3;
+          } else {
+            carModels[car[c].typ].alpha = 2;
+          }
+        }
+      }
+      if (tick.fraction >= tick.scale) {
+        if (car[c].fcnt == 20) {
+          racers[c].squash = 0;
+          racers[c].nbsq = 0;
+        }
+        if (car[c].fcnt == 5) {
+          fixcar(c);
+        }
+        car[c].fcnt--;
+      }
+    }
+    if (!recording.onpausefr) {
+      for (var i = 0; i < recording.hrepcar[c].nreg; i++) {
+        if (recording.hrepcar[c].regat[i] == recording.fr) {
+          racers[c].mtouch = recording.hrepcar[c].regmtch[i];
+          regn(
+            recording.hrepcar[c].regnr[i],
+            recording.hrepcar[c].regk[i],
+            recording.hrepcar[c].regmag[i],
+            c,
+          );
+        }
+      }
+    }
+    for (var i = 0; i < recording.hrepcar[c].ndst; i++) {
+      if (recording.hrepcar[c].dstat[i] == recording.fr) {
+        dustup(
+          recording.hrepcar[c].tskd[i],
+          c,
+          recording.hrepcar[c].mst[i],
+          recording.hrepcar[c].dx[i],
+          recording.hrepcar[c].dy[i],
+          recording.hrepcar[c].dz[i],
+          recording.hrepcar[c].sx[i],
+          recording.hrepcar[c].sz[i],
+          recording.hrepcar[c].smag[i],
+          recording.hrepcar[c].tlt[i],
+          recording.hrepcar[c].capsz[i],
+        );
+      }
+    }
+    car[c].x = recording.hrepcar[c].x[recording.fr];
+    car[c].y = recording.hrepcar[c].y[recording.fr];
+    car[c].z = recording.hrepcar[c].z[recording.fr];
+    car[c].xy = recording.hrepcar[c].xy[recording.fr];
+    car[c].xz = recording.hrepcar[c].xz[recording.fr];
+    car[c].zy = recording.hrepcar[c].zy[recording.fr];
+    car[c].wzy = recording.hrepcar[c].wzy[recording.fr];
+    car[c].wxz = recording.hrepcar[c].wxz[recording.fr];
+    var xmt = [1, 0, 0];
+    var ymt = [0, 1, 0];
+    var zmt = [0, 0, 1];
+    rotateAxes(xmt, ymt, car[c].xy);
+    rotateAxes(ymt, zmt, car[c].zy);
+    rotateAxes(xmt, zmt, car[c].xz);
+    car[c].mat[0] = xmt[0];
+    car[c].mat[1] = ymt[0];
+    car[c].mat[2] = zmt[0];
+    car[c].mat[4] = xmt[1];
+    car[c].mat[5] = ymt[1];
+    car[c].mat[6] = zmt[1];
+    car[c].mat[8] = xmt[2];
+    car[c].mat[9] = ymt[2];
+    car[c].mat[10] = zmt[2];
+    if (racers[c].embodir) {
+      car[c].mat[racers[c].embodir * 4] *= racers[c].embomag;
+      car[c].mat[racers[c].embodir * 4 + 1] *= racers[c].embomag;
+      car[c].mat[racers[c].embodir * 4 + 2] *= racers[c].embomag;
+    }
+  }
+  for (var i = 0; i < recording.hrepsprks.n; i++) {
+    if (recording.hrepsprks.sprkat[i] == recording.fr) {
+      sprks(
+        recording.hrepsprks.cn[i],
+        recording.hrepsprks.x[i],
+        recording.hrepsprks.y[i],
+        recording.hrepsprks.z[i],
+        recording.hrepsprks.sx[i],
+        recording.hrepsprks.sy[i],
+        recording.hrepsprks.sz[i],
+        recording.hrepsprks.cap[i],
+      );
+    }
+  }
+  raceEvents.oncheckpoint = recording.hreponcheckpoint[recording.fr];
+  raceEvents.onlastcheck = recording.hreponlastcheck[recording.fr];
+}
+export function preprevtime() {
+  recording.fr = 429;
+  camera.mode = 0;
+  camera.target = game.player;
+  game.phase = PHASE.replayRewind;
+  for (var c = 0; c < game.carCount; c++) {
+    racers[c].destnow = false;
+    racers[c].cntdest = 0;
+    racers[c].embos = 0;
+    racers[c].embodir = 0;
+    racers[c].squash = 0;
+    racers[c].nbsq = 0;
+    car[c].fcnt = 0;
+    fixcar(c);
+    carModels[car[c].typ].alpha = 1;
+    if (recording.repcar[c].destat < 0) {
+      for (var i = 0; i < 16; i++) {
+        burn(c);
+      }
+    }
+    var foundnegfix = 0;
+    for (var i = recording.repcar[c].nfix - 1; i >= 0; i--) {
+      if (recording.repcar[c].fixat[i] < 0 && foundnegfix == 0) {
+        foundnegfix = recording.repcar[c].fixat[i];
+        break;
+      }
+    }
+    for (var i = 0; i < recording.repcar[c].nreg; i++) {
+      if (recording.repcar[c].regat[i] < 0) {
+        var frget = false;
+        if (foundnegfix) {
+          if (recording.repcar[c].regat[i] < foundnegfix) {
+            frget = true;
+          }
+        }
+        if (!frget) {
+          racers[c].mtouch = recording.repcar[c].regmtch[i];
+          regn(
+            recording.repcar[c].regnr[i],
+            recording.repcar[c].regk[i],
+            recording.repcar[c].regmag[i],
+            c,
+          );
+        }
+      }
+    }
+  }
+  resumeStageMusic();
+  raceEvents.switcnt = 0;
+  game.phase = PHASE.timeRewind;
+}
+export function revtime() {
+  for (var c = 0; c < game.carCount; c++) {
+    if (recording.fr > recording.repcar[c].destat) {
+      firexp(
+        c,
+        recording.repcar[c].avnx[recording.fr],
+        recording.repcar[c].avny[recording.fr],
+        recording.repcar[c].avnz[recording.fr],
+      );
+    }
+    if (!car[c].fcnt) {
+      for (var i = 0; i < recording.repcar[c].nfix; i++) {
+        if (
+          recording.fr == recording.repcar[c].fixat[i] + 28 ||
+          recording.fr == recording.repcar[c].fixat[i] + 27
+        ) {
+          car[c].fcnt = 20;
+        }
+      }
+    } else {
+      raceEvents.onelec = true;
+      carModels[car[c].typ].alpha = 1;
+      if (car[c].fcnt % 2 == 0) {
+        if (random.fx() > 0.333) {
+          if (random.fx() > random.fx()) {
+            carModels[car[c].typ].alpha = 3;
+          } else {
+            carModels[car[c].typ].alpha = 2;
+          }
+        }
+      }
+      if (
+        Math.abs(recording.fr - (429 - recording.nrec)) > 100 &&
+        car[c].fcnt != 2
+      ) {
+        if (tick.fraction >= tick.scale) {
+          car[c].fcnt -= 2;
+        }
+      } else {
+        if (tick.fraction >= tick.scale) {
+          car[c].fcnt--;
+        }
+      }
+      if (car[c].fcnt < 0) {
+        car[c].fcnt = 0;
+      }
+    }
+    car[c].x = recording.repcar[c].x[recording.fr];
+    car[c].y = recording.repcar[c].y[recording.fr];
+    car[c].z = recording.repcar[c].z[recording.fr];
+    car[c].xy = recording.repcar[c].xy[recording.fr];
+    car[c].xz = recording.repcar[c].xz[recording.fr];
+    car[c].zy = recording.repcar[c].zy[recording.fr];
+    car[c].wzy = recording.repcar[c].wzy[recording.fr];
+    car[c].wxz = recording.repcar[c].wxz[recording.fr];
+    racers[c].pxy = car[c].xy;
+    racers[c].pzy = car[c].zy;
+    for (var k = 0; k < 4; k++) {
+      racers[c].scx[k] = recording.repcar[c].avnx[recording.fr];
+      racers[c].scy[k] = recording.repcar[c].avny[recording.fr];
+      racers[c].scz[k] = recording.repcar[c].avnz[recording.fr];
+    }
+    racers[c].hitmag = recording.repcar[c].hitmag[recording.fr];
+    racers[c].clear = recording.repcar[c].clear[recording.fr];
+    racers[c].pcleared = recording.repcar[c].pcleared[recording.fr];
+    racers[c].nlaps = recording.repcar[c].nlaps[recording.fr];
+    racers[c].cxz = recording.repcar[c].cxz[recording.fr];
+    var xmt = [1, 0, 0];
+    var ymt = [0, 1, 0];
+    var zmt = [0, 0, 1];
+    rotateAxes(xmt, ymt, car[c].xy);
+    rotateAxes(ymt, zmt, car[c].zy);
+    rotateAxes(xmt, zmt, car[c].xz);
+    car[c].mat[0] = xmt[0];
+    car[c].mat[1] = ymt[0];
+    car[c].mat[2] = zmt[0];
+    car[c].mat[4] = xmt[1];
+    car[c].mat[5] = ymt[1];
+    car[c].mat[6] = zmt[1];
+    car[c].mat[8] = xmt[2];
+    car[c].mat[9] = ymt[2];
+    car[c].mat[10] = zmt[2];
+  }
+  raceEvents.oncheckpoint = recording.reponcheckpoint[recording.fr];
+  raceEvents.onlastcheck = recording.reponlastcheck[recording.fr];
+  if (Math.abs(recording.fr - (429 - recording.nrec)) > 100) {
+    recording.fr -= 2;
+  } else {
+    recording.fr--;
+  }
+  if (recording.fr <= 429 - recording.nrec) {
+    for (var c = 0; c < game.carCount; c++) {
+      resetPursuit(c);
+      racers[c].focus = -1;
+      racers[c].missedcp = 0;
+      racers[c].nofocus = false;
+      carModels[car[c].typ].alpha = 1;
+      if (recording.repcar[c].destat > 0) {
+        racers[c].dest = false;
+        recording.repcar[c].destat = 700;
+      }
+    }
+    raceEvents.cntwis = 0;
+    raceEvents.iclear = racers[game.player].clear;
+    raceEvents.tcnt = 30;
+    raceEvents.auscnt = 45;
+    track.haltall = false;
+    game.phase = PHASE.race;
+    recording.nrec = 0;
+    recording.fr = 0;
   }
 }
