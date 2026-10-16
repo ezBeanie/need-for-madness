@@ -12,6 +12,9 @@ const DOWN = 40;
 const LEFT = 37;
 const RIGHT = 39;
 const RACE_CARS = 67;
+const NEXT_CAMERA = 86;
+const LOOK_BACK_LEFT = 90;
+const LOOK_BACK_RIGHT = 88;
 const REWIND = 82;
 
 // Presses a key for one frame: down now, up on the next frame.
@@ -285,6 +288,30 @@ const stageSelectTour = () => {
   };
 };
 
+// Every camera while driving: V orbits the car, then watches from the track side, then
+// goes back behind the car; Z and X look back to either side.
+const cameraViews = () => {
+  const drive = racingAutopilot();
+  const keys = keyTapper();
+  return (ctx, frame, game) => {
+    keys.releaseAfterFrame(game);
+    Object.assign(ctx.racers[0].u, drive(ctx));
+    if (frame === 300 || frame === 600 || frame === 900) {
+      keys.tap(game, NEXT_CAMERA);
+    }
+    if (frame === 1000) {
+      game.key(LOOK_BACK_LEFT, true);
+    }
+    if (frame === 1060) {
+      game.key(LOOK_BACK_LEFT, false);
+      game.key(LOOK_BACK_RIGHT, true);
+    }
+    if (frame === 1120) {
+      game.key(LOOK_BACK_RIGHT, false);
+    }
+  };
+};
+
 // The touch controls of phones, where they are at 1280x720.
 const TOUCH = {
   left: [130, 558],
@@ -435,6 +462,12 @@ const flows = [
     unlocked: stage,
     userAgent,
   })),
+  {
+    name: "camera-views-stage-03",
+    stage: 3,
+    frames: 1250,
+    script: cameraViews,
+  },
   {
     name: "rewind-time-stage-02",
     stage: 2,
