@@ -14,7 +14,7 @@ const wrecks = { stage: 5, car: 15, input: autopilot, frames: 3000 };
 
 const raceFrames = async ({ stage, car, input, frames }, onFrame) => {
   const { ctx, step } = await startRace({ stage, car });
-  for (let frame = 0; frame < frames && ctx.fase === 7; frame++) {
+  for (let frame = 0; frame < frames && ctx.game.phase === 7; frame++) {
     Object.assign(ctx.u[0], input(ctx));
     step();
     onFrame(ctx, frame);
@@ -26,7 +26,7 @@ describe("interpolated drawing in a real race", () => {
     let checked = 0;
     let worst = 0;
     await raceFrames(fullThrottle, (ctx) => {
-      for (let c = 0; c < ctx.ncars; c++) {
+      for (let c = 0; c < ctx.game.carCount; c++) {
         worst = Math.max(worst, wheelSlip(ctx, ctx.car[c].typ, ctx.car[c]));
         checked++;
       }
@@ -49,7 +49,7 @@ describe("interpolated drawing in a real race", () => {
     let checked = 0;
     let off = 0;
     await raceFrames(fullThrottle, (ctx) => {
-      for (let c = 0; c < ctx.ncars; c++) {
+      for (let c = 0; c < ctx.game.carCount; c++) {
         const atTick = offset(ctx, c, 1);
         const between = offset(ctx, c, 0.5);
         if (Math.hypot(between[0] - atTick[0], between[1] - atTick[1]) > 0.5) {
@@ -72,7 +72,7 @@ describe("interpolated drawing in a real race", () => {
       const now = {
         persistent: [ctx.skydom.mat, ctx.ground.mat].concat(
           ctx.car
-            .slice(0, ctx.ncars)
+            .slice(0, ctx.game.carCount)
             .flatMap((car) => [car.mat, ...ctx.whl[car.typ].map((w) => w.mat)]),
         ),
         dust: ctx.dust.map((d) => (d.stg != 0 ? d.mat : null)),

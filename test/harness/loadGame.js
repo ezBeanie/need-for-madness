@@ -106,7 +106,7 @@ export const loadGame = async ({ seed = 1, fxSeed = seed + 1000 } = {}) => {
       step();
     }
     throw new Error(
-      `"${what}" not reached within ${maxFrames} frames (fase=${ctx.fase})`,
+      `"${what}" not reached within ${maxFrames} frames (phase=${ctx.game.phase})`,
     );
   };
 

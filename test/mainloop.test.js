@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { loadGame } from "./harness/loadGame.js";
 
-// While loading (fase 0) every logic tick advances reqload by one, up to 9.
+// While loading (phase 0) every logic tick advances reqload by one, up to 9.
 const ticksAfter = async (frameTimes) => {
   const { ctx } = await loadGame();
   frameTimes.forEach((now) => ctx.mainloop(now));

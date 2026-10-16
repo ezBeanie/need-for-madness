@@ -14,9 +14,9 @@ const DEG = 0.017453292519943295;
 export const openCarSelect = async ({ seed = 1, fxSeed } = {}) => {
   const game = await loadGame({ seed, fxSeed });
   const { ctx, stepUntil, key } = game;
-  stepUntil(() => ctx.fase === 1, 400, "main menu");
+  stepUntil(() => ctx.game.phase === 1, 400, "main menu");
   key(13, true);
-  stepUntil(() => ctx.fase === 2, 300, "car select");
+  stepUntil(() => ctx.game.phase === 2, 300, "car select");
   key(13, false);
   return game;
 };
@@ -30,17 +30,17 @@ export const openStageSelect = async ({
 }) => {
   const game = await loadGame({ seed, fxSeed });
   const { ctx, stepUntil } = game;
-  stepUntil(() => ctx.fase === 1, 400, "main menu");
+  stepUntil(() => ctx.game.phase === 1, 400, "main menu");
 
   // Same state the car select screen leaves behind before "PLAY".
-  ctx.sel[0] = car;
-  ctx.unlocked = unlocked;
+  ctx.game.carTypes[0] = car;
+  ctx.game.unlocked = unlocked;
   ctx.cp.stage = stage;
   ctx.stageloadtyp = 0;
   ctx.stageload = 0;
   ctx.updateframe = true;
-  ctx.fase = 3;
-  stepUntil(() => ctx.fase === 4, 100, "stage select");
+  ctx.game.phase = 3;
+  stepUntil(() => ctx.game.phase === 4, 100, "stage select");
   return game;
 };
 
@@ -53,9 +53,9 @@ export const startRace = async ({
 }) => {
   const game = await openStageSelect({ stage, car, seed, fxSeed, unlocked });
   const { ctx, stepUntil } = game;
-  ctx.gamemode = 0;
+  ctx.game.mode = 0;
   ctx.startflash();
-  stepUntil(() => ctx.fase === 7, 10, "race");
+  stepUntil(() => ctx.game.phase === 7, 10, "race");
   return game;
 };
 
@@ -83,10 +83,10 @@ export const autopilot = (ctx) => {
 const round = (n) => (typeof n === "boolean" ? Number(n) : n);
 
 export const raceState = (ctx) => ({
-  fase: ctx.fase,
+  fase: ctx.game.phase,
   starcnt: ctx.starcnt,
   wasted: ctx.cp.wasted,
-  cars: Array.from({ length: ctx.ncars }, (_, i) => {
+  cars: Array.from({ length: ctx.game.carCount }, (_, i) => {
     const car = ctx.car[i];
     return [
       car.x,
@@ -161,7 +161,7 @@ export const recordRace = async ({
   const { ctx, step, key } = await startRace({ stage, car, seed, fxSeed });
   const states = [];
   let held = { ...NO_INPUT };
-  for (let frame = 0; frame < frames && ctx.fase === 7; frame++) {
+  for (let frame = 0; frame < frames && ctx.game.phase === 7; frame++) {
     const wanted = input(ctx, frame);
     for (const name of Object.keys(KEY)) {
       if (wanted[name] !== held[name]) {
@@ -179,7 +179,7 @@ export const recordRace = async ({
 const flowState = (ctx) => ({
   ...raceState(ctx),
   stage: ctx.cp.stage,
-  unlocked: ctx.unlocked,
+  unlocked: ctx.game.unlocked,
   winner: ctx.winner,
   holdcnt: ctx.holdcnt,
 });

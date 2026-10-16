@@ -48,20 +48,20 @@ export const openGame = async (page, { storage = {} } = {}) => {
     ]);
   });
   const game = {
-    fase: () => page.evaluate(() => window.gameState.fase),
+    phase: () => page.evaluate(() => window.gameState.game.phase),
     advance: (frames = 1, ms = TICK_MS) =>
       page.evaluate(([n, step]) => window.advanceFrames(n, step), [frames, ms]),
-    // Advances frame by frame (giving loading requests time) until the game is in fase.
-    advanceUntil: async (fase, maxFrames = 2000) => {
+    // Advances frame by frame (giving loading requests time) until the game is in phase.
+    advanceUntil: async (phase, maxFrames = 2000) => {
       for (let i = 0; i < maxFrames; i++) {
-        if ((await game.fase()) === fase) {
+        if ((await game.phase()) === phase) {
           return;
         }
         await game.advance();
         await page.waitForTimeout(5);
       }
       throw new Error(
-        `fase ${fase} not reached, still in ${await game.fase()}`,
+        `phase ${phase} not reached, still in ${await game.phase()}`,
       );
     },
     // How many ticks loading takes depends on the network. Once everything is loaded, this

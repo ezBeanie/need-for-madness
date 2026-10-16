@@ -43,7 +43,7 @@ describe("interpolated drawing in the menus", () => {
 
   test("wheels stay on the turning car in the car select", async () => {
     const { ctx, step } = await openCarSelect();
-    const typ = ctx.sel[0];
+    const typ = ctx.game.carTypes[0];
     let worst = 0;
     for (let i = 0; i < 100; i++) {
       step();
