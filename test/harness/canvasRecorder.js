@@ -97,8 +97,8 @@ const GL_RECORDED = new Set([
 
 // Feeds a WebGL call into the hash: numbers and typed arrays (matrices) as their bytes,
 // uniform locations by name, textures by what they show.
-const hashGlCall = (hash, name, args) => {
-  if (!name.startsWith("uniform") && !GL_RECORDED.has(name)) {
+const hashGlCall = (hash, name, args, everything) => {
+  if (!everything && !name.startsWith("uniform") && !GL_RECORDED.has(name)) {
     return false;
   }
   hash.update(name);
@@ -116,12 +116,13 @@ const hashGlCall = (hash, name, args) => {
 };
 
 // Records the WebGL calls that decide what the 3D scene shows: every uniform (matrices,
-// colours, fog), bound texture and draw call. take() and stop() as in recordCanvas.
-export const recordWebGL = () => {
+// colours, fog), bound texture and draw call; with everything, every call with all it
+// uploads (for loading). take() and stop() as in recordCanvas.
+export const recordWebGL = ({ everything = false } = {}) => {
   let hash = createHash("sha1");
   let empty = true;
   glCalls.listener = (name, args) => {
-    if (hashGlCall(hash, name, args)) {
+    if (hashGlCall(hash, name, args, everything)) {
       empty = false;
     }
   };
