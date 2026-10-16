@@ -1,4 +1,5 @@
 import { describe, test } from "vitest";
+import { PHASE } from "../../src/core/state.js";
 import {
   expectDrawingMatchesGolden,
   expectMatchesGolden,
@@ -6,6 +7,8 @@ import {
 import { NO_INPUT, racingAutopilot, recordFlow } from "../harness/race.js";
 
 const ENTER = 13;
+const UP = 38;
+const DOWN = 40;
 const REWIND = 82;
 
 // Presses a key for one frame: down now, up on the next frame.
@@ -60,6 +63,49 @@ const driveThen = (afterFrames, action) => {
     } else if (frame === afterFrames) {
       Object.assign(ctx.racers[0].u, NO_INPUT);
       action(ctx, game, keys);
+    }
+  };
+};
+
+// Every entry of the pause menu: pauses and resumes, asks for an instant replay too early,
+// pages through the instructions and back, then quits to the main menu.
+const pauseMenuTour = () => {
+  const drive = racingAutopilot();
+  const keys = keyTapper();
+  const taps = {
+    200: ENTER,
+    230: ENTER,
+    400: ENTER,
+    420: DOWN,
+    440: ENTER,
+    460: UP,
+    470: UP,
+    480: DOWN,
+    490: DOWN,
+    500: DOWN,
+    520: ENTER,
+  };
+  let quitting = false;
+  return (ctx, frame, game) => {
+    keys.releaseAfterFrame(game);
+    // no gas while pausing: up and down also move the menu selection
+    const driving = frame < 180 || (frame >= 240 && frame < 380);
+    if (ctx.game.phase === PHASE.race && driving) {
+      Object.assign(ctx.racers[0].u, drive(ctx));
+    } else {
+      Object.assign(ctx.racers[0].u, NO_INPUT);
+    }
+    if (taps[frame]) {
+      keys.tap(game, taps[frame]);
+    } else if (frame > 520 && frame % 40 === 0) {
+      if (ctx.game.phase === PHASE.instructions) {
+        keys.tap(game, ENTER);
+      } else if (ctx.game.phase === PHASE.paused && !quitting) {
+        quitting = true;
+        keys.tap(game, DOWN);
+      } else if (ctx.game.phase === PHASE.paused) {
+        keys.tap(game, ENTER);
+      }
     }
   };
 };
@@ -162,6 +208,12 @@ const flows = [
     frames: 1400,
     script: fingers,
     userAgent: "iPhone",
+  },
+  {
+    name: "pause-menu-stage-02",
+    stage: 2,
+    frames: 1600,
+    script: pauseMenuTour,
   },
   {
     name: "rewind-time-stage-02",

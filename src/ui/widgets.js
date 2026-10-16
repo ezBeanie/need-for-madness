@@ -364,3 +364,78 @@ export const strokePolygon = (xs, ys, count) => {
   rd.closePath();
   rd.stroke();
 };
+
+// A bar with slanted, chipped ends: filled from the left up to `filled` (0..1) with a diagonal
+// gradient, outlined over its full width. x is its centre, y its top edge.
+export const drawSlantedBar = ({
+  x,
+  y,
+  width,
+  height,
+  fillFrom,
+  fillTo,
+  outline,
+  filled,
+}) => {
+  width = width * view.scale;
+  height = height * view.scale;
+  const left = x - width * 0.5;
+  const gradient = rd.createLinearGradient(
+    left,
+    y - height * 0.5,
+    left + width,
+    y + height * 0.5,
+  );
+  gradient.addColorStop(0, fillFrom);
+  gradient.addColorStop(1, fillTo);
+  rd.fillStyle = gradient;
+  traceSlantedBar(left, y, width * filled, height);
+  rd.fill();
+  rd.lineWidth = 3 * view.scale;
+  rd.strokeStyle = outline;
+  traceSlantedBar(left, y, width, height);
+  rd.stroke();
+};
+
+const traceSlantedBar = (left, top, width, height) => {
+  rd.beginPath();
+  rd.moveTo(left, top);
+  rd.lineTo(left - height * 0.3, top + height * 0.3334);
+  rd.lineTo(left - height * 0.05, top + height * 0.9);
+  rd.lineTo(left + height * 0.1, top + height);
+  rd.lineTo(left + width, top + height);
+  rd.lineTo(left + width + height * 0.3, top + height * 0.6667);
+  rd.lineTo(left + width + height * 0.05, top + height * 0.1);
+  rd.lineTo(left + width - height * 0.1, top);
+  rd.closePath();
+};
+
+// One step of the pulsing of highlighted buttons: their gradient stretches and squeezes.
+export const pulseButtons = () => {
+  if (!buttons.pulseWidthGrowing) {
+    buttons.pulseWidth -= 0.03;
+    if (buttons.pulseWidth < 0.5) {
+      buttons.pulseWidth = 0.5;
+      buttons.pulseWidthGrowing = true;
+    }
+  } else {
+    buttons.pulseWidth += 0.03;
+    if (buttons.pulseWidth > 2) {
+      buttons.pulseWidth = 2;
+      buttons.pulseWidthGrowing = false;
+    }
+  }
+  if (!buttons.pulseHeightGrowing) {
+    buttons.pulseHeight -= 0.5;
+    if (buttons.pulseHeight < 0.1) {
+      buttons.pulseHeight = 0.1;
+      buttons.pulseHeightGrowing = true;
+    }
+  } else {
+    buttons.pulseHeight += 0.5;
+    if (buttons.pulseHeight > 2) {
+      buttons.pulseHeight = 2;
+      buttons.pulseHeightGrowing = false;
+    }
+  }
+};

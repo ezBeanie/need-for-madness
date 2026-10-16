@@ -1,5 +1,7 @@
 // Colour conversions for the interface's gradients.
 
+import { scene } from "../render/scene.js";
+
 export function hslToRgb(h, s, l) {
   var r, g, b;
   if (s == 0) {
@@ -48,3 +50,17 @@ export function rgbToHsl(r, g, b) {
   }
   return [h, s, l];
 }
+
+export const cssRgb = (rgb) =>
+  "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
+
+// The hue of the stage's tint turned around, for menus and backgrounds drawn over a stage.
+export const backdropHue = () => {
+  const channel = (tint) =>
+    Math.min(Math.max(Math.floor(128 - 128 * tint), 0), 255);
+  return rgbToHsl(
+    channel(scene.tint[0]),
+    channel(scene.tint[1]),
+    channel(scene.tint[2]),
+  )[0];
+};

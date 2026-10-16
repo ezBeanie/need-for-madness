@@ -99,6 +99,11 @@ export const loadGame = async ({
     "../../src/render/interpolation.js"
   );
   Object.assign(ctx, { drawMatrix, placeModel });
+  // what the pause menu's "Instant Replay" calls, for the flows
+  const { rewindreplay } = await import("../../src/race/recording.js");
+  if (!("rewindreplay" in ctx)) {
+    Object.assign(ctx, { rewindreplay });
+  }
 
   let frame = 0;
   const step = () => {

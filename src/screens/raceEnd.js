@@ -12,8 +12,8 @@ import { raceEvents } from "../race/events.js";
 import { fixcar } from "../race/physics.js";
 import { track } from "../race/track.js";
 import { gl } from "../render/renderer.js";
-import { checkpointText, scene, stageBackdrop } from "../render/scene.js";
-import { hslToRgb, rgbToHsl } from "../ui/color.js";
+import { checkpointText, stageBackdrop } from "../render/scene.js";
+import { backdropHue, cssRgb, hslToRgb } from "../ui/color.js";
 import { images } from "../ui/images.js";
 import { rd, view } from "../ui/view.js";
 import { BUTTON, blink, drawButton } from "../ui/widgets.js";
@@ -35,17 +35,6 @@ let confettiLoaded = false;
 
 const unlocksStage = () =>
   raceEvents.winner && game.unlocked == track.stage && game.carCount != 1;
-
-// The hue of the stage's tint turned around, for the backgrounds of this screen.
-const backdropHue = () => {
-  const channel = (tint) =>
-    Math.min(Math.max(Math.floor(128 - 128 * tint), 0), 255);
-  return rgbToHsl(
-    channel(scene.tint[0]),
-    channel(scene.tint[1]),
-    channel(scene.tint[2]),
-  )[0];
-};
 
 // Colours the stage backdrop dark in the stage's hue, behind the unlocked car.
 const colorBackdropForUnlockedCar = () => {
@@ -130,7 +119,7 @@ const drawInsanoAndSlogan = () => {
 
 const darkenBackground = () => {
   const rgb = hslToRgb(backdropHue(), 0.4, 0.1);
-  rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
+  rd.fillStyle = cssRgb(rgb);
   rd.globalAlpha = Math.min(menu.animation / FADED_IN, 0.9);
   rd.fillRect(0, 0, view.width, view.height);
   rd.globalAlpha = 1;

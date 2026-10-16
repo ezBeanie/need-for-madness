@@ -24,7 +24,6 @@ import {
   playMenuMusic,
   playStageMusic,
   resumeMusic,
-  resumeStageMusic,
   startEngine,
   stopEngine,
   stopStageMusic,
@@ -45,8 +44,10 @@ import {
   drawCenteredText,
   drawMeter,
   drawMusicToggle,
+  drawSlantedBar,
   fillPolygon,
   fillScaledShape,
+  pulseButtons,
   strokePolygon,
   strokeScaledPolygon,
 } from "./ui/widgets.js";
@@ -96,7 +97,6 @@ import {
   wheelTread,
   wheelTreadLow,
 } from "./render/scene.js";
-import { pauseMenu } from "./screens/pauseMenu.js";
 import {
   drawHighlightOverlay,
   drawinter,
@@ -106,7 +106,7 @@ import {
   hud,
   inishinter,
 } from "./ui/hud.js";
-import { menu, showcase } from "./screens/menuState.js";
+import { instructions, menu, showcase } from "./screens/menuState.js";
 import { loading } from "./loading/progress.js";
 import { game, MAX_CARS, PHASE } from "./core/state.js";
 import { tick } from "./core/tick.js";
@@ -123,7 +123,6 @@ import {
   recording,
   replay,
   revtime,
-  rewindreplay,
 } from "./race/recording.js";
 import { raceEvents } from "./race/events.js";
 import { control, inishcontrol } from "./race/ai.js";
@@ -135,12 +134,13 @@ import {
   effects,
 } from "./race/effects.js";
 import { drive, fixcar, inishmad, paintDents } from "./race/physics.js";
-import { hslToRgb, rgbToHsl } from "./ui/color.js";
+import { cssRgb, hslToRgb, rgbToHsl } from "./ui/color.js";
 import {
   UNLOCKED_CAR_SHOWN,
   loadConfetti,
   raceEndScreen,
 } from "./screens/raceEnd.js";
+import { pausedgame } from "./screens/pauseMenu.js";
 
 // Formerly undeclared, so implicitly global: declared here to keep their behaviour in strict mode.
 function cartextures() {
@@ -4555,314 +4555,6 @@ function supportsGamepads() {
   return !!navigator.getGamepads;
 }
 
-var noten = 0;
-var playedforeplay = false;
-function pausedgame() {
-  stopEngine();
-  rd.clearRect(0, 0, view.width, view.height);
-  var r = Math.floor(128 - 128 * scene.tint[0]);
-  if (r > 255) {
-    r = 255;
-  }
-  if (r < 0) {
-    r = 0;
-  }
-  var g = Math.floor(128 - 128 * scene.tint[1]);
-  if (g > 255) {
-    g = 255;
-  }
-  if (g < 0) {
-    g = 0;
-  }
-  var b = Math.floor(128 - 128 * scene.tint[2]);
-  if (b > 255) {
-    b = 255;
-  }
-  if (b < 0) {
-    b = 0;
-  }
-  var hsl = rgbToHsl(r, g, b);
-  var rgb = hslToRgb(hsl[0], 0.3, 0.2);
-  rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
-  rd.globalAlpha = 0.7;
-  rd.fillRect(0, 0, view.width, view.height);
-  rgb = hslToRgb(hsl[0], 1, 0.5);
-  rd.globalAlpha = 0.5;
-  drawcoolrect(
-    640 * view.scaleX,
-    95 * view.scaleY,
-    400,
-    400,
-    "#0093F0",
-    "#00F088",
-    "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-    1,
-  );
-  rd.globalAlpha = 1;
-  if (hud.replayStartsIn == 1) {
-    rewindreplay();
-  }
-  var bton = [];
-  bton[0] = ["#019DFF", "#01EAFF", "#004A78", "#016D77"];
-  bton[1] = ["#01DEFF", "#49FFE3", "#016877", "#017765"];
-  var on = 0;
-  if (pauseMenu.selected == 0) {
-    on = 1;
-  }
-  if (
-    drawButton({
-      id: 1,
-      x: 640 * view.scaleX,
-      y: 95 * view.scaleY + 35 * view.scale,
-      width: 350,
-      height: 60,
-      faceTop: bton[on][0],
-      faceBottom: bton[on][1],
-      shadowTop: bton[on][2],
-      shadowBottom: bton[on][3],
-      layout: BUTTON.textThenImage,
-      text: "Resume Game ",
-      fontSize: 20,
-      textOpacity: 0.8,
-      image: images.buttons[1],
-      imageOpacity: 0.8,
-      pulsing: on,
-    })
-  ) {
-    noten = 0;
-    if (!playedforeplay) {
-      resumeStageMusic();
-    } else {
-      playedforeplay = false;
-    }
-    game.phase = PHASE.race;
-  }
-  on = 0;
-  if (pauseMenu.selected == 1) {
-    on = 1;
-  }
-  if (
-    drawButton({
-      id: 2,
-      x: 640 * view.scaleX,
-      y: 95 * view.scaleY + 125 * view.scale,
-      width: 350,
-      height: 60,
-      faceTop: bton[on][0],
-      faceBottom: bton[on][1],
-      shadowTop: bton[on][2],
-      shadowBottom: bton[on][3],
-      layout: BUTTON.textOnly,
-      text: "Instant Replay",
-      fontSize: 20,
-      textOpacity: 0.8,
-      image: null,
-      imageOpacity: 0,
-      pulsing: on,
-    })
-  ) {
-    if (recording.recordedTicks >= 430) {
-      hud.replayStartsIn = 2;
-      resumeStageMusic();
-      playedforeplay = true;
-      noten = 0;
-    } else {
-      noten = 30;
-    }
-  }
-  on = 0;
-  if (pauseMenu.selected == 2) {
-    on = 1;
-  }
-  if (
-    drawButton({
-      id: 3,
-      x: 640 * view.scaleX,
-      y: 95 * view.scaleY + 215 * view.scale,
-      width: 380,
-      height: 60,
-      faceTop: bton[on][0],
-      faceBottom: bton[on][1],
-      shadowTop: bton[on][2],
-      shadowBottom: bton[on][3],
-      layout: BUTTON.textOnly,
-      text: "Game Instructions",
-      fontSize: 20,
-      textOpacity: 0.8,
-      image: null,
-      imageOpacity: 0,
-      pulsing: on,
-    })
-  ) {
-    noten = 0;
-    if (playedforeplay) {
-      stopStageMusic();
-      playedforeplay = false;
-    }
-    instmain = false;
-    ifase = 0;
-    dudo = 250;
-    game.phase = PHASE.instructions;
-  }
-  on = 0;
-  if (pauseMenu.selected == 3) {
-    on = 1;
-  }
-  if (
-    drawButton({
-      id: 4,
-      x: 640 * view.scaleX,
-      y: 95 * view.scaleY + 305 * view.scale,
-      width: 250,
-      height: 60,
-      faceTop: bton[on][0],
-      faceBottom: bton[on][1],
-      shadowTop: bton[on][2],
-      shadowBottom: bton[on][3],
-      layout: BUTTON.textOnly,
-      text: "x Quit Game",
-      fontSize: 20,
-      textOpacity: 0.8,
-      image: null,
-      imageOpacity: 0,
-      pulsing: on,
-    })
-  ) {
-    for (var c = 0; c < game.carCount; c++) {
-      fixcar(c);
-    }
-    noten = 0;
-    if (playedforeplay) {
-      stopStageMusic();
-      playedforeplay = false;
-    }
-    afterquitgame();
-  }
-  if (racers[game.player].u.up) {
-    pauseMenu.selected--;
-    if (pauseMenu.selected == -1) {
-      pauseMenu.selected = 3;
-    }
-    racers[game.player].u.up = false;
-  }
-  if (racers[game.player].u.down) {
-    pauseMenu.selected++;
-    if (pauseMenu.selected == 4) {
-      pauseMenu.selected = 0;
-    }
-    racers[game.player].u.down = false;
-  }
-  if (noten) {
-    if (blink.on) {
-      rgb = hslToRgb(hsl[0], 1, 0.7);
-      blink.on = false;
-    } else {
-      rgb = hslToRgb(hsl[0], 1, 0.6);
-      blink.on = true;
-    }
-    drawCenteredText(
-      600,
-      "Not enough gameplay was recorded yet!",
-      rgb[0],
-      rgb[1],
-      rgb[2],
-      TEXT.small,
-    );
-    noten--;
-  }
-  if (hud.replayStartsIn) {
-    rd.globalAlpha = 0.6;
-    rd.fillStyle = "#000000";
-    rd.fillRect(0, 0, view.width, view.height);
-    rd.globalAlpha = 1;
-    hud.replayStartsIn--;
-  }
-  if (confirm.state == CONFIRM.pressed) {
-    if (pauseMenu.selected == 0) {
-      if (!playedforeplay) {
-        resumeStageMusic();
-      } else {
-        playedforeplay = false;
-      }
-      game.phase = PHASE.race;
-      noten = 0;
-    }
-    if (pauseMenu.selected == 1) {
-      if (recording.recordedTicks >= 430) {
-        hud.replayStartsIn = 2;
-        resumeStageMusic();
-        playedforeplay = true;
-        noten = 0;
-      } else {
-        noten = 30;
-      }
-    }
-    if (pauseMenu.selected == 2) {
-      noten = 0;
-      if (playedforeplay) {
-        stopStageMusic();
-        playedforeplay = false;
-      }
-      instmain = false;
-      ifase = 0;
-      dudo = 250;
-      game.phase = PHASE.instructions;
-    }
-    if (pauseMenu.selected == 3) {
-      for (var c = 0; c < game.carCount; c++) {
-        fixcar(c);
-      }
-      noten = 0;
-      if (playedforeplay) {
-        stopStageMusic();
-        playedforeplay = false;
-      }
-      afterquitgame();
-    }
-    confirm.state = CONFIRM.used;
-  }
-  if (!buttons.pulseWidthGrowing) {
-    buttons.pulseWidth -= 0.03;
-    if (buttons.pulseWidth < 0.5) {
-      buttons.pulseWidth = 0.5;
-      buttons.pulseWidthGrowing = true;
-    }
-  } else {
-    buttons.pulseWidth += 0.03;
-    if (buttons.pulseWidth > 2) {
-      buttons.pulseWidth = 2;
-      buttons.pulseWidthGrowing = false;
-    }
-  }
-  if (!buttons.pulseHeightGrowing) {
-    buttons.pulseHeight -= 0.5;
-    if (buttons.pulseHeight < 0.1) {
-      buttons.pulseHeight = 0.1;
-      buttons.pulseHeightGrowing = true;
-    }
-  } else {
-    buttons.pulseHeight += 0.5;
-    if (buttons.pulseHeight > 2) {
-      buttons.pulseHeight = 2;
-      buttons.pulseHeightGrowing = false;
-    }
-  }
-}
-function afterquitgame() {
-  if (loading.stanza == 1) {
-    loading.step = 0;
-    loading.loaded = 500;
-    loading.total = 2458;
-    loading.stanza = 2;
-    menu.skipIntro = false;
-    game.phase = PHASE.loading;
-  } else {
-    menu.animation = 0;
-    menu.skipIntro = false;
-    game.phase = PHASE.mainMenu;
-  }
-}
-
 var canreset = false;
 var cnf = 0;
 var cnl = 0;
@@ -4996,9 +4688,9 @@ function drawmain() {
       })
     ) {
       pauseMenuMusic();
-      instmain = true;
-      ifase = 0;
-      dudo = 250;
+      instructions.fromMainMenu = true;
+      instructions.page = 0;
+      menu.insanoTalkTicks = 250;
       game.phase = PHASE.instructions;
     }
     if (
@@ -5051,7 +4743,7 @@ function drawmain() {
           pulsing: 0,
         })
       ) {
-        dudo = 250;
+        menu.insanoTalkTicks = 250;
         game.phase = PHASE.resetQuestion;
       }
     }
@@ -5099,41 +4791,13 @@ function drawmain() {
       game.phase = PHASE.carSelect;
     }
   }
-  if (!buttons.pulseWidthGrowing) {
-    buttons.pulseWidth -= 0.03;
-    if (buttons.pulseWidth < 0.5) {
-      buttons.pulseWidth = 0.5;
-      buttons.pulseWidthGrowing = true;
-    }
-  } else {
-    buttons.pulseWidth += 0.03;
-    if (buttons.pulseWidth > 2) {
-      buttons.pulseWidth = 2;
-      buttons.pulseWidthGrowing = false;
-    }
-  }
-  if (!buttons.pulseHeightGrowing) {
-    buttons.pulseHeight -= 0.5;
-    if (buttons.pulseHeight < 0.1) {
-      buttons.pulseHeight = 0.1;
-      buttons.pulseHeightGrowing = true;
-    }
-  } else {
-    buttons.pulseHeight += 0.5;
-    if (buttons.pulseHeight > 2) {
-      buttons.pulseHeight = 2;
-      buttons.pulseHeightGrowing = false;
-    }
-  }
+  pulseButtons();
 }
-var instmain = false;
-var ifase = 0;
 
-var dudo = 0;
 function gameinstructions() {
   rd.fillStyle = "#000000";
   rd.fillRect(0, 0, view.width, view.height);
-  if (instmain) {
+  if (instructions.fromMainMenu) {
     var lefy = (view.width - 1280 * view.scaleY) / 2;
     rd.drawImage(
       images.menuBackground,
@@ -5167,7 +4831,7 @@ function gameinstructions() {
     }
     var hsl = rgbToHsl(r, g, b);
     var rgb = hslToRgb(hsl[0], 0.3, 0.2);
-    rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
+    rd.fillStyle = cssRgb(rgb);
     rd.globalAlpha = 0.7;
     rd.fillRect(0, 0, view.width, view.height);
     rd.globalAlpha = 1;
@@ -5181,14 +4845,14 @@ function gameinstructions() {
   } else {
     blink.on = true;
   }
-  if (dudo > 0) {
+  if (menu.insanoTalkTicks > 0) {
     if (blink.on) {
       menu.insanoPicture = Math.floor(random.fx() * 6);
       if (menu.insanoPicture == 6) {
         menu.insanoPicture = 5;
       }
     }
-    dudo--;
+    menu.insanoTalkTicks--;
   } else {
     menu.insanoPicture = 2;
   }
@@ -5204,7 +4868,7 @@ function gameinstructions() {
   rd.globalAlpha = 0.7;
   floatytalk(200 * fm, topo, 1060 * fm, 570 * fm, 20 * fm);
   rd.globalAlpha = 1;
-  if (ifase == 0) {
+  if (instructions.page == 0) {
     rd.letterSpacing = "1px";
     rd.font = "" + 30 * fm + "px junk";
     rd.textBaseline = "middle";
@@ -5253,7 +4917,7 @@ function gameinstructions() {
       206 * fm,
     );
   }
-  if (ifase == 1) {
+  if (instructions.page == 1) {
     rd.letterSpacing = "0px";
     rd.font = "" + 30 * fm + "px verd";
     rd.textBaseline = "middle";
@@ -5311,7 +4975,7 @@ function gameinstructions() {
       70 / 98,
     );
   }
-  if (ifase == 2) {
+  if (instructions.page == 2) {
     rd.letterSpacing = "0px";
     rd.font = "" + 30 * fm + "px verd";
     rd.textBaseline = "middle";
@@ -5357,7 +5021,7 @@ function gameinstructions() {
       284 * fm,
     );
   }
-  if (ifase == 3) {
+  if (instructions.page == 3) {
     rd.letterSpacing = "0px";
     rd.font = "" + 30 * fm + "px verd";
     rd.textBaseline = "middle";
@@ -5460,7 +5124,7 @@ function gameinstructions() {
       );
     }
   }
-  if (ifase == 4) {
+  if (instructions.page == 4) {
     rd.letterSpacing = "0px";
     rd.font = "" + 30 * fm + "px verd";
     rd.textBaseline = "middle";
@@ -5508,8 +5172,8 @@ function gameinstructions() {
           pulsing: false,
         })
       ) {
-        dudo = 250;
-        ifase++;
+        menu.insanoTalkTicks = 250;
+        instructions.page++;
       }
       if (
         drawButton({
@@ -5531,8 +5195,8 @@ function gameinstructions() {
           pulsing: false,
         })
       ) {
-        dudo = 250;
-        ifase += 2;
+        menu.insanoTalkTicks = 250;
+        instructions.page += 2;
       }
     } else {
       if (
@@ -5555,12 +5219,12 @@ function gameinstructions() {
           pulsing: false,
         })
       ) {
-        dudo = 250;
-        ifase += 2;
+        menu.insanoTalkTicks = 250;
+        instructions.page += 2;
       }
     }
   }
-  if (ifase == 5) {
+  if (instructions.page == 5) {
     rd.letterSpacing = "0px";
     rd.font = "" + 30 * fm + "px verd";
     rd.textBaseline = "middle";
@@ -5608,12 +5272,12 @@ function gameinstructions() {
       topo + 396 * fm,
     );
     if (confirm.state == CONFIRM.pressed) {
-      ifase = 4;
-      dudo = 250;
+      instructions.page = 4;
+      menu.insanoTalkTicks = 250;
       confirm.state = CONFIRM.used;
     }
   }
-  if (ifase == 6) {
+  if (instructions.page == 6) {
     rd.letterSpacing = "0px";
     rd.font = "" + 30 * fm + "px verd";
     rd.textBaseline = "middle";
@@ -5685,16 +5349,16 @@ function gameinstructions() {
         pulsing: true,
       })
     ) {
-      dudo = 250;
-      ifase++;
+      menu.insanoTalkTicks = 250;
+      instructions.page++;
     }
     if (confirm.state == CONFIRM.pressed) {
-      ifase++;
-      dudo = 250;
+      instructions.page++;
+      menu.insanoTalkTicks = 250;
       confirm.state = CONFIRM.used;
     }
   }
-  if (ifase == 7) {
+  if (instructions.page == 7) {
     rd.letterSpacing = "0px";
     rd.font = "" + 30 * fm + "px verd";
     rd.textBaseline = "middle";
@@ -5747,12 +5411,12 @@ function gameinstructions() {
       topo + 396 * fm,
     );
     if (confirm.state == CONFIRM.pressed) {
-      ifase = 4;
-      dudo = 250;
+      instructions.page = 4;
+      menu.insanoTalkTicks = 250;
       confirm.state = CONFIRM.used;
     }
   }
-  if (ifase > 0) {
+  if (instructions.page > 0) {
     if (
       drawButton({
         id: 4,
@@ -5773,17 +5437,17 @@ function gameinstructions() {
         pulsing: false,
       })
     ) {
-      if (ifase == 7) {
-        ifase--;
+      if (instructions.page == 7) {
+        instructions.page--;
       }
-      if (ifase == 6) {
-        ifase--;
+      if (instructions.page == 6) {
+        instructions.page--;
       }
-      ifase--;
-      dudo = 250;
+      instructions.page--;
+      menu.insanoTalkTicks = 250;
     }
   }
-  if (ifase < 4) {
+  if (instructions.page < 4) {
     if (
       drawButton({
         id: 3,
@@ -5804,16 +5468,16 @@ function gameinstructions() {
         pulsing: true,
       })
     ) {
-      ifase++;
-      dudo = 250;
+      instructions.page++;
+      menu.insanoTalkTicks = 250;
     }
     if (confirm.state == CONFIRM.pressed) {
-      ifase++;
-      dudo = 250;
+      instructions.page++;
+      menu.insanoTalkTicks = 250;
       confirm.state = CONFIRM.used;
     }
   }
-  if (ifase == 4) {
+  if (instructions.page == 4) {
     if (
       drawButton({
         id: 3,
@@ -5834,7 +5498,7 @@ function gameinstructions() {
         pulsing: true,
       })
     ) {
-      if (instmain) {
+      if (instructions.fromMainMenu) {
         game.phase = PHASE.mainMenu;
         playMenuMusic();
       } else {
@@ -5842,7 +5506,7 @@ function gameinstructions() {
       }
     }
     if (confirm.state == CONFIRM.pressed) {
-      if (instmain) {
+      if (instructions.fromMainMenu) {
         game.phase = PHASE.mainMenu;
         playMenuMusic();
       } else {
@@ -5852,7 +5516,7 @@ function gameinstructions() {
     }
   }
   if (!anyButtonHeld() && pointer.down) {
-    if (instmain) {
+    if (instructions.fromMainMenu) {
       game.phase = PHASE.mainMenu;
       playMenuMusic();
     } else {
@@ -5875,14 +5539,14 @@ function resetgame() {
   } else {
     blink.on = true;
   }
-  if (dudo > 0) {
+  if (menu.insanoTalkTicks > 0) {
     if (blink.on) {
       menu.insanoPicture = Math.floor(random.fx() * 6);
       if (menu.insanoPicture == 6) {
         menu.insanoPicture = 5;
       }
     }
-    dudo--;
+    menu.insanoTalkTicks--;
   } else {
     menu.insanoPicture = 2;
   }
@@ -5996,16 +5660,16 @@ function drawloading() {
     248 * view.scale,
   );
   rd.lineWidth = 4 * view.scale;
-  drawcoolrect(
-    640 * view.scaleX,
-    100 * view.scaleY + 248 * view.scale + 20 * view.scaleY,
-    300,
-    25,
-    "#FF3D01",
-    "#EAFF01",
-    "#7BAE00",
-    perc,
-  );
+  drawSlantedBar({
+    x: 640 * view.scaleX,
+    y: 100 * view.scaleY + 248 * view.scale + 20 * view.scaleY,
+    width: 300,
+    height: 25,
+    fillFrom: "#FF3D01",
+    fillTo: "#EAFF01",
+    outline: "#7BAE00",
+    filled: perc,
+  });
   rd.font = "18px junk";
   rd.letterSpacing = "1px";
   if (rd.measureText("crazy game").width > 102) {
@@ -6301,16 +5965,16 @@ function drawcarselect() {
       if (perci < 0.2) {
         perci = 0.2;
       }
-      drawcoolrect(
-        lefy + 300 * view.scale,
-        200 * view.scaleY - 7 * view.scale,
-        200,
-        20,
-        "#FF1301",
-        "#FFBA01",
-        "#29C2F0",
-        perci,
-      );
+      drawSlantedBar({
+        x: lefy + 300 * view.scale,
+        y: 200 * view.scaleY - 7 * view.scale,
+        width: 200,
+        height: 20,
+        fillFrom: "#FF1301",
+        fillTo: "#FFBA01",
+        outline: "#29C2F0",
+        filled: perci,
+      });
       rd.strokeStyle = "#00284A";
       rd.lineWidth = 6 * view.scale;
       rd.strokeText(
@@ -6333,16 +5997,16 @@ function drawcarselect() {
       if (perci > 1) {
         perci = 1;
       }
-      drawcoolrect(
-        lefy + 300 * view.scale,
-        200 * view.scaleY - 7 * view.scale + 40 * view.scale,
-        200,
-        20,
-        "#FF1301",
-        "#FFBA01",
-        "#29C2F0",
-        perci,
-      );
+      drawSlantedBar({
+        x: lefy + 300 * view.scale,
+        y: 200 * view.scaleY - 7 * view.scale + 40 * view.scale,
+        width: 200,
+        height: 20,
+        fillFrom: "#FF1301",
+        fillTo: "#FFBA01",
+        outline: "#29C2F0",
+        filled: perci,
+      });
       rd.strokeStyle = "#00284A";
       rd.lineWidth = 6 * view.scale;
       rd.strokeText(
@@ -6357,16 +6021,16 @@ function drawcarselect() {
         200 * view.scaleY + 80 * view.scale,
       );
       perci = carStats.dishandle[game.carTypes[0]];
-      drawcoolrect(
-        lefy + 300 * view.scale,
-        200 * view.scaleY - 7 * view.scale + 80 * view.scale,
-        200,
-        20,
-        "#FF1301",
-        "#FFBA01",
-        "#29C2F0",
-        perci,
-      );
+      drawSlantedBar({
+        x: lefy + 300 * view.scale,
+        y: 200 * view.scaleY - 7 * view.scale + 80 * view.scale,
+        width: 200,
+        height: 20,
+        fillFrom: "#FF1301",
+        fillTo: "#FFBA01",
+        outline: "#29C2F0",
+        filled: perci,
+      });
       rd.strokeStyle = "#00284A";
       rd.lineWidth = 6 * view.scale;
       rd.strokeText("Stunts", rigy - 290 * view.scale, 200 * view.scaleY);
@@ -6382,16 +6046,16 @@ function drawcarselect() {
       if (perci > 1) {
         perci = 1;
       }
-      drawcoolrect(
-        rigy - 170 * view.scale,
-        200 * view.scaleY - 7 * view.scale,
-        200,
-        20,
-        "#FF1301",
-        "#FFBA01",
-        "#29C2F0",
-        perci,
-      );
+      drawSlantedBar({
+        x: rigy - 170 * view.scale,
+        y: 200 * view.scaleY - 7 * view.scale,
+        width: 200,
+        height: 20,
+        fillFrom: "#FF1301",
+        fillTo: "#FFBA01",
+        outline: "#29C2F0",
+        filled: perci,
+      });
       rd.strokeStyle = "#00284A";
       rd.lineWidth = 6 * view.scale;
       rd.strokeText(
@@ -6409,16 +6073,16 @@ function drawcarselect() {
       if (perci > 1) {
         perci = 1;
       }
-      drawcoolrect(
-        rigy - 170 * view.scale,
-        200 * view.scaleY - 7 * view.scale + 40 * view.scale,
-        200,
-        20,
-        "#FF1301",
-        "#FFBA01",
-        "#29C2F0",
-        perci,
-      );
+      drawSlantedBar({
+        x: rigy - 170 * view.scale,
+        y: 200 * view.scaleY - 7 * view.scale + 40 * view.scale,
+        width: 200,
+        height: 20,
+        fillFrom: "#FF1301",
+        fillTo: "#FFBA01",
+        outline: "#29C2F0",
+        filled: perci,
+      });
       rd.strokeStyle = "#00284A";
       rd.lineWidth = 6 * view.scale;
       rd.strokeText(
@@ -6433,16 +6097,16 @@ function drawcarselect() {
         200 * view.scaleY + 80 * view.scale,
       );
       perci = carStats.outdam[game.carTypes[0]];
-      drawcoolrect(
-        rigy - 170 * view.scale,
-        200 * view.scaleY - 7 * view.scale + 80 * view.scale,
-        200,
-        20,
-        "#FF1301",
-        "#FFBA01",
-        "#29C2F0",
-        perci,
-      );
+      drawSlantedBar({
+        x: rigy - 170 * view.scale,
+        y: 200 * view.scaleY - 7 * view.scale + 80 * view.scale,
+        width: 200,
+        height: 20,
+        fillFrom: "#FF1301",
+        fillTo: "#FFBA01",
+        outline: "#29C2F0",
+        filled: perci,
+      });
     } else {
       rd.letterSpacing = "1px";
       rd.font = "" + 17 * (view.scaleY + view.scaleX) + "px junk";
@@ -6662,32 +6326,7 @@ function drawcarselect() {
       }
     }
   }
-  if (!buttons.pulseWidthGrowing) {
-    buttons.pulseWidth -= 0.03;
-    if (buttons.pulseWidth < 0.5) {
-      buttons.pulseWidth = 0.5;
-      buttons.pulseWidthGrowing = true;
-    }
-  } else {
-    buttons.pulseWidth += 0.03;
-    if (buttons.pulseWidth > 2) {
-      buttons.pulseWidth = 2;
-      buttons.pulseWidthGrowing = false;
-    }
-  }
-  if (!buttons.pulseHeightGrowing) {
-    buttons.pulseHeight -= 0.5;
-    if (buttons.pulseHeight < 0.1) {
-      buttons.pulseHeight = 0.1;
-      buttons.pulseHeightGrowing = true;
-    }
-  } else {
-    buttons.pulseHeight += 0.5;
-    if (buttons.pulseHeight > 2) {
-      buttons.pulseHeight = 2;
-      buttons.pulseHeightGrowing = false;
-    }
-  }
+  pulseButtons();
   drawMusicToggle();
 }
 var alipha = 0;
@@ -6753,7 +6392,7 @@ function stageloading() {
       createbordo();
       ontip = false;
       if (hastip) {
-        dudo = 0;
+        menu.insanoTalkTicks = 0;
         menu.insanoPicture = 0;
       }
       game.phase = PHASE.stageSelect;
@@ -6823,7 +6462,7 @@ function drawstageselect() {
       } else {
         blink.on = true;
       }
-      if (dudo > 50) {
+      if (menu.insanoTalkTicks > 50) {
         if (blink.on) {
           menu.insanoPicture = Math.floor(random.fx() * 6);
           if (menu.insanoPicture == 6) {
@@ -6831,9 +6470,9 @@ function drawstageselect() {
           }
         }
       }
-      dudo++;
-      if (dudo >= 67) {
-        dudo = 0;
+      menu.insanoTalkTicks++;
+      if (menu.insanoTalkTicks >= 67) {
+        menu.insanoTalkTicks = 0;
       }
       rd.globalAlpha = 0.6;
       rd.drawImage(
@@ -6886,11 +6525,11 @@ function drawstageselect() {
   }
   var hsl = rgbToHsl(r, g, b);
   var rgb = hslToRgb(hsl[0], 1, 0.3);
-  rd.strokeStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
+  rd.strokeStyle = cssRgb(rgb);
   rd.lineWidth = 10 * view.scale;
   strokeScaledPolygon(xsp, ysp, 50);
   rgb = hslToRgb(hsl[0], 1, 0.4);
-  rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
+  rd.fillStyle = cssRgb(rgb);
   fillScaledShape(0, 0, xsp, ysp, 0, 17, 1280, 0);
   fillScaledShape(1280, 0, xsp, ysp, 16, 26, 1280, 720);
   fillScaledShape(1280, 720, xsp, ysp, 25, 42, 0, 720);
@@ -6901,11 +6540,11 @@ function drawstageselect() {
     rd.textAlign = "center";
     rd.textBaseline = "middle";
     rgb = hslToRgb(hsl[0], 1, 0.3);
-    rd.strokeStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
+    rd.strokeStyle = cssRgb(rgb);
     rd.lineWidth = 10 * view.scale;
     rd.strokeText(track.name, 640 * view.scaleX, 200 * view.scaleY);
     rgb = hslToRgb(hsl[0] + 0.05, 1, 0.9);
-    rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
+    rd.fillStyle = cssRgb(rgb);
     rd.fillText(track.name, 640 * view.scaleX, 200 * view.scaleY);
     if (track.stage == 16 && !ontip) {
       rd.letterSpacing = "0px";
@@ -6913,7 +6552,7 @@ function drawstageselect() {
       rd.textBaseline = "middle";
       rd.textAlign = "center";
       rgb = hslToRgb(hsl[0], 1, 0.3);
-      rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
+      rd.fillStyle = cssRgb(rgb);
       rd.fillText(
         "( Guidance arrow is disabled in this stage... )",
         640 * view.scaleX,
@@ -6935,7 +6574,7 @@ function drawstageselect() {
       rd.strokeText("Final Stage", 640 * view.scaleX, 120 * view.scaleY);
     }
     rgb = hslToRgb(hsl[0] - 0.05, 1, 0.6);
-    rd.fillStyle = "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")";
+    rd.fillStyle = cssRgb(rgb);
     if (track.stage != 17) {
       rd.fillText("Stage " + track.stage, 640 * view.scaleX, 120 * view.scaleY);
     } else {
@@ -6974,10 +6613,10 @@ function drawstageselect() {
           y: 130 * view.scaleY,
           width: 150,
           height: 56,
-          faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-          faceBottom: "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-          shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-          shadowBottom: "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+          faceTop: cssRgb(rgb),
+          faceBottom: cssRgb(rgb2),
+          shadowTop: cssRgb(rgb3),
+          shadowBottom: cssRgb(rgb4),
           layout: BUTTON.imageThenText,
           text: " Back",
           fontSize: 20,
@@ -7005,10 +6644,10 @@ function drawstageselect() {
           y: 130 * view.scaleY,
           width: 190,
           height: 56,
-          faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-          faceBottom: "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-          shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-          shadowBottom: "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+          faceTop: cssRgb(rgb),
+          faceBottom: cssRgb(rgb2),
+          shadowTop: cssRgb(rgb3),
+          shadowBottom: cssRgb(rgb4),
           layout: BUTTON.textOnly,
           text: `${game.raceCars} Cars  [C]`,
           fontSize: 20,
@@ -7028,11 +6667,10 @@ function drawstageselect() {
             y: 360 * view.scaleY,
             width: 140,
             height: 47,
-            faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-            faceBottom: "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-            shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-            shadowBottom:
-              "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+            faceTop: cssRgb(rgb),
+            faceBottom: cssRgb(rgb2),
+            shadowTop: cssRgb(rgb3),
+            shadowBottom: cssRgb(rgb4),
             layout: BUTTON.imageThenText,
             text: " Prev",
             fontSize: 15,
@@ -7055,11 +6693,10 @@ function drawstageselect() {
             y: 360 * view.scaleY,
             width: 140,
             height: 47,
-            faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-            faceBottom: "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-            shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-            shadowBottom:
-              "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+            faceTop: cssRgb(rgb),
+            faceBottom: cssRgb(rgb2),
+            shadowTop: cssRgb(rgb3),
+            shadowBottom: cssRgb(rgb4),
             layout: BUTTON.textThenImage,
             text: "Next ",
             fontSize: 15,
@@ -7087,12 +6724,10 @@ function drawstageselect() {
               y: 720 * view.scaleY - 157 * view.scale,
               width: 120,
               height: 60,
-              faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-              faceBottom:
-                "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-              shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-              shadowBottom:
-                "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+              faceTop: cssRgb(rgb),
+              faceBottom: cssRgb(rgb2),
+              shadowTop: cssRgb(rgb3),
+              shadowBottom: cssRgb(rgb4),
               layout: BUTTON.textOnly,
               text: "TIP ",
               fontSize: 22,
@@ -7103,7 +6738,7 @@ function drawstageselect() {
             })
           ) {
             ontip = true;
-            dudo = 0;
+            menu.insanoTalkTicks = 0;
           }
         } else {
           if (track.stage == 1 || track.stage == 2) {
@@ -7114,13 +6749,10 @@ function drawstageselect() {
                 y: 720 * view.scaleY - 180 * view.scale,
                 width: 220,
                 height: 60,
-                faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-                faceBottom:
-                  "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-                shadowTop:
-                  "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-                shadowBottom:
-                  "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+                faceTop: cssRgb(rgb),
+                faceBottom: cssRgb(rgb2),
+                shadowTop: cssRgb(rgb3),
+                shadowBottom: cssRgb(rgb4),
                 layout: BUTTON.textOnly,
                 text: "Practice ",
                 fontSize: 22,
@@ -7145,11 +6777,10 @@ function drawstageselect() {
             y: 720 * view.scaleY - 190 * view.scale,
             width: 300,
             height: 70,
-            faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-            faceBottom: "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-            shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-            shadowBottom:
-              "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+            faceTop: cssRgb(rgb),
+            faceBottom: cssRgb(rgb2),
+            shadowTop: cssRgb(rgb3),
+            shadowBottom: cssRgb(rgb4),
             layout: BUTTON.textThenImage,
             text: "PLAY SWITCH ",
             fontSize: 20,
@@ -7204,10 +6835,10 @@ function drawstageselect() {
           y: 720 * view.scaleY - 190 * view.scale,
           width: 200,
           height: 70,
-          faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-          faceBottom: "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-          shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-          shadowBottom: "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+          faceTop: cssRgb(rgb),
+          faceBottom: cssRgb(rgb2),
+          shadowTop: cssRgb(rgb3),
+          shadowBottom: cssRgb(rgb4),
           layout: BUTTON.textThenImage,
           text: "PLAY ",
           fontSize: 25,
@@ -7229,32 +6860,7 @@ function drawstageselect() {
         startflash();
         confirm.state = CONFIRM.used;
       }
-      if (!buttons.pulseWidthGrowing) {
-        buttons.pulseWidth -= 0.03;
-        if (buttons.pulseWidth < 0.5) {
-          buttons.pulseWidth = 0.5;
-          buttons.pulseWidthGrowing = true;
-        }
-      } else {
-        buttons.pulseWidth += 0.03;
-        if (buttons.pulseWidth > 2) {
-          buttons.pulseWidth = 2;
-          buttons.pulseWidthGrowing = false;
-        }
-      }
-      if (!buttons.pulseHeightGrowing) {
-        buttons.pulseHeight -= 0.5;
-        if (buttons.pulseHeight < 0.1) {
-          buttons.pulseHeight = 0.1;
-          buttons.pulseHeightGrowing = true;
-        }
-      } else {
-        buttons.pulseHeight += 0.5;
-        if (buttons.pulseHeight > 2) {
-          buttons.pulseHeight = 2;
-          buttons.pulseHeightGrowing = false;
-        }
-      }
+      pulseButtons();
     } else {
       var fm = view.scaleX;
       if (view.scaleX / view.scaleY > 1.2) {
@@ -7266,14 +6872,14 @@ function drawstageselect() {
       } else {
         blink.on = true;
       }
-      if (dudo < 200) {
+      if (menu.insanoTalkTicks < 200) {
         if (blink.on) {
           menu.insanoPicture = Math.floor(random.fx() * 6);
           if (menu.insanoPicture == 6) {
             menu.insanoPicture = 5;
           }
         }
-        dudo++;
+        menu.insanoTalkTicks++;
       } else {
         menu.insanoPicture = 2;
       }
@@ -7307,10 +6913,10 @@ function drawstageselect() {
           y: topo + 210 * fm,
           width: 160,
           height: 60,
-          faceTop: "rgb(" + rgb[0] + "," + rgb[1] + "," + rgb[2] + ")",
-          faceBottom: "rgb(" + rgb2[0] + "," + rgb2[1] + "," + rgb2[2] + ")",
-          shadowTop: "rgb(" + rgb3[0] + "," + rgb3[1] + "," + rgb3[2] + ")",
-          shadowBottom: "rgb(" + rgb4[0] + "," + rgb4[1] + "," + rgb4[2] + ")",
+          faceTop: cssRgb(rgb),
+          faceBottom: cssRgb(rgb2),
+          shadowTop: cssRgb(rgb3),
+          shadowBottom: cssRgb(rgb4),
           layout: BUTTON.textThenImage,
           text: "Okay ",
           fontSize: 21,
@@ -7321,7 +6927,7 @@ function drawstageselect() {
         })
       ) {
         ontip = false;
-        dudo = 0;
+        menu.insanoTalkTicks = 0;
       }
     }
   } else {
@@ -7351,45 +6957,6 @@ function aftersparkstart() {
   }
   menu.redraw = false;
   game.phase = PHASE.race;
-}
-function drawcoolrect(xb, yb, wb, hb, cb1, cb2, cbs, per) {
-  wb = wb * view.scale;
-  hb = hb * view.scale;
-  var xbd = xb - wb * 0.5;
-  var ybd = yb;
-  var grd = rd.createLinearGradient(
-    xbd,
-    ybd - hb * 0.5,
-    xbd + wb,
-    ybd + hb * 0.5,
-  );
-  grd.addColorStop(0, cb1);
-  grd.addColorStop(1, cb2);
-  rd.fillStyle = grd;
-  rd.beginPath();
-  rd.moveTo(xbd, ybd);
-  rd.lineTo(xbd - hb * 0.3, ybd + hb * 0.3334);
-  rd.lineTo(xbd - hb * 0.05, ybd + hb * 0.9);
-  rd.lineTo(xbd + hb * 0.1, ybd + hb);
-  rd.lineTo(xbd + wb * per, ybd + hb);
-  rd.lineTo(xbd + wb * per + hb * 0.3, ybd + hb * 0.6667);
-  rd.lineTo(xbd + wb * per + hb * 0.05, ybd + hb * 0.1);
-  rd.lineTo(xbd + wb * per - hb * 0.1, ybd);
-  rd.closePath();
-  rd.fill();
-  rd.lineWidth = 3 * view.scale;
-  rd.strokeStyle = cbs;
-  rd.beginPath();
-  rd.moveTo(xbd, ybd);
-  rd.lineTo(xbd - hb * 0.3, ybd + hb * 0.3334);
-  rd.lineTo(xbd - hb * 0.05, ybd + hb * 0.9);
-  rd.lineTo(xbd + hb * 0.1, ybd + hb);
-  rd.lineTo(xbd + wb, ybd + hb);
-  rd.lineTo(xbd + wb + hb * 0.3, ybd + hb * 0.6667);
-  rd.lineTo(xbd + wb + hb * 0.05, ybd + hb * 0.1);
-  rd.lineTo(xbd + wb - hb * 0.1, ybd);
-  rd.closePath();
-  rd.stroke();
 }
 function createbordo() {
   for (var i = 0; i < 16; i++) {
