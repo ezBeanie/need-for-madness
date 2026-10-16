@@ -9,6 +9,8 @@ import { NO_INPUT, racingAutopilot, recordFlow } from "../harness/race.js";
 const ENTER = 13;
 const UP = 38;
 const DOWN = 40;
+const LEFT = 37;
+const RIGHT = 39;
 const REWIND = 82;
 
 // Presses a key for one frame: down now, up on the next frame.
@@ -191,6 +193,50 @@ const mainMenuTour = () => {
   };
 };
 
+// The car select of a player who has won two stages: cars change with the arrow keys and
+// with Prev and Next, locked cars show which stage unlocks them. Then the select of a new
+// player: a hand points at the buttons, and Practice starts the first race.
+const carSelectTour = () => {
+  const keys = keyTapper();
+  const taps = {
+    200: ENTER,
+    210: UP,
+    220: ENTER,
+    240: ENTER,
+    300: RIGHT,
+    480: LEFT,
+    530: LEFT,
+    580: LEFT,
+    630: LEFT,
+    680: LEFT,
+    730: LEFT,
+  };
+  const clicks = {
+    360: [120, 455], // Prev
+    420: [1160, 455], // Next
+    900: [640, 664], // Practice
+  };
+  let clickedAt = null;
+  return (ctx, frame, game) => {
+    keys.releaseAfterFrame(game);
+    Object.assign(ctx.racers[0].u, NO_INPUT);
+    if (frame === 225) {
+      ctx.game.unlocked = 3;
+    }
+    if (frame === 780) {
+      ctx.game.unlocked = 1;
+    }
+    if (taps[frame]) {
+      keys.tap(game, taps[frame]);
+    }
+    if (clicks[frame]) {
+      clickedAt = frame;
+      [ctx.pointer.x[0], ctx.pointer.y[0]] = clicks[frame];
+    }
+    ctx.pointer.down = clickedAt !== null && frame - clickedAt < CLICK_FRAMES;
+  };
+};
+
 // The touch controls of phones, where they are at 1280x720.
 const TOUCH = {
   left: [130, 558],
@@ -315,6 +361,12 @@ const flows = [
     stage: 1,
     frames: 560,
     script: mainMenuTour,
+  },
+  {
+    name: "car-select-stage-01",
+    stage: 1,
+    frames: 1000,
+    script: carSelectTour,
   },
   {
     name: "rewind-time-stage-02",
