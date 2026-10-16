@@ -3381,6 +3381,123 @@ function colide(c, xc) {
     }
   }
 }
+// Scratches a dent into the damage texture: npt strokes walk from the dented spot,
+// greying, darkening and breaking windows on their way. It returns modpix, which a
+// broken window changes for the following strokes. Kept apart from regn so it runs
+// fast; step by step it is the original loop, effect randomness included, which the
+// physics depends on through exploding cars (embomag scales the matrix the walls use).
+function scratchDent(pixels, c, pxc, pyc, npt, modpix) {
+  var glassColor = scene.glassColor;
+  var fx = random.fx;
+  for (var p = 0; p < npt; p++) {
+    var pxv = Math.round(6 * fx() - 3);
+    var pyv = Math.round(6 * fx() - 3);
+    if (pxv == 0 && pyv == 0) {
+      var ein = 1;
+      if (fx() > fx()) {
+        ein = -1;
+      }
+      if (fx() > fx()) {
+        pxv += ein;
+      } else {
+        pyv += ein;
+      }
+    }
+    var px = pxc + pxv;
+    var py = pyc + pyv;
+    var rnp = Math.round(20 + fx() * 100);
+    var glass = false;
+    var ongrey = false;
+    if (modpix == 2) {
+      glass = true;
+    }
+    while (rnp > 0 || glass) {
+      var pp = px * 4 + py * 256 * 4;
+      if (pp < 0 || pp >= pixels.length) {
+        // Off the texture: the original read undefined there, which counts as grey, and
+        // drew the random amount it then could not write.
+        fx();
+        ongrey = true;
+        if (glass) {
+          glass = false;
+          rnp = 0;
+        }
+      } else if (
+        pixels[pp] == pixels[pp + 1] &&
+        pixels[pp + 1] == pixels[pp + 2]
+      ) {
+        pixels[pp] += Math.round(fx() * 10 - 5);
+        if (pixels[pp] < 0) {
+          pixels[pp] = 0;
+        }
+        if (pixels[pp] > 192) {
+          pixels[pp] = 192;
+        }
+        pixels[pp + 1] = pixels[pp];
+        pixels[pp + 2] = pixels[pp];
+        if (!ongrey) {
+          ongrey = true;
+        }
+        if (glass) {
+          glass = false;
+          rnp = 0;
+        }
+      } else {
+        if (
+          pixels[pp] == glassColor[0] &&
+          pixels[pp + 1] == glassColor[1] &&
+          pixels[pp + 2] == glassColor[2]
+        ) {
+          if (!glass) {
+            if (fx() > 0.95) {
+              glass = true;
+            }
+            rnp = 0;
+          }
+          if (modpix == 2) {
+            if (fx() < 0.5) {
+              glass = false;
+            }
+            rnp = 0;
+            modpix = 3;
+          }
+          if (glass) {
+            pixels[pp + 3] -= 150;
+            if (pixels[pp + 3] < 0) {
+              pixels[pp + 3] = 0;
+            }
+          }
+        } else {
+          if (!glass && !ongrey) {
+            var av = (Math.abs(pxv) + Math.abs(pyv)) / 2 + 1;
+            if (av < 2) {
+              av = 2;
+            }
+            pixels[pp] = (65 + pixels[pp] * av) / (1 + av);
+            pixels[pp + 1] = (57 + pixels[pp + 1] * av) / (1 + av);
+            pixels[pp + 2] = (55 + pixels[pp + 2] * av) / (1 + av);
+            car[c].ctxl[0] = px / 256;
+            car[c].ctxl[1] = py / 256;
+            if (fx() > 0.8) {
+              if (Math.abs(pxv) < Math.abs(pyv)) {
+                pxv += Math.round(fx() * 2 - 1);
+              } else {
+                pyv += Math.round(fx() * 2 - 1);
+              }
+            }
+          } else {
+            glass = false;
+            rnp = 0;
+          }
+        }
+      }
+      px += pxv;
+      py += pyv;
+      rnp--;
+    }
+  }
+  return modpix;
+}
 export function regn(nr, k, mag, c) {
   if (game.phase == PHASE.race) {
     mag *= carStats.dammult[car[c].typ];
@@ -3554,104 +3671,7 @@ export function regn(nr, k, mag, c) {
             carStats.dammult[car[c].typ] *
             carStats.colrdammult[car[c].typ];
           var npt = Math.round(cmag + random.fx() * cmag);
-          for (var p = 0; p < npt; p++) {
-            var pxv = Math.round(6 * random.fx() - 3);
-            var pyv = Math.round(6 * random.fx() - 3);
-            if (pxv == 0 && pyv == 0) {
-              var ein = 1;
-              if (random.fx() > random.fx()) {
-                ein = -1;
-              }
-              if (random.fx() > random.fx()) {
-                pxv += ein;
-              } else {
-                pyv += ein;
-              }
-            }
-            var px = pxc + pxv;
-            var py = pyc + pyv;
-            var rnp = Math.round(20 + random.fx() * 100);
-            var glass = false;
-            var ongrey = false;
-            if (modpix == 2) {
-              glass = true;
-            }
-            while (rnp > 0 || glass) {
-              var pp = px * 4 + py * 256 * 4;
-              if (
-                pixels[pp] == pixels[pp + 1] &&
-                pixels[pp + 1] == pixels[pp + 2]
-              ) {
-                pixels[pp] += Math.round(random.fx() * 10 - 5);
-                if (pixels[pp] < 0) {
-                  pixels[pp] = 0;
-                }
-                if (pixels[pp] > 192) {
-                  pixels[pp] = 192;
-                }
-                pixels[pp + 1] = pixels[pp];
-                pixels[pp + 2] = pixels[pp];
-                if (!ongrey) {
-                  ongrey = true;
-                }
-                if (glass) {
-                  glass = false;
-                  rnp = 0;
-                }
-              } else {
-                if (
-                  pixels[pp] == scene.glassColor[0] &&
-                  pixels[pp + 1] == scene.glassColor[1] &&
-                  pixels[pp + 2] == scene.glassColor[2]
-                ) {
-                  if (!glass) {
-                    if (random.fx() > 0.95) {
-                      glass = true;
-                    }
-                    rnp = 0;
-                  }
-                  if (modpix == 2) {
-                    if (random.fx() < 0.5) {
-                      glass = false;
-                    }
-                    rnp = 0;
-                    modpix = 3;
-                  }
-                  if (glass) {
-                    pixels[pp + 3] -= 150;
-                    if (pixels[pp + 3] < 0) {
-                      pixels[pp + 3] = 0;
-                    }
-                  }
-                } else {
-                  if (!glass && !ongrey) {
-                    var av = (Math.abs(pxv) + Math.abs(pyv)) / 2 + 1;
-                    if (av < 2) {
-                      av = 2;
-                    }
-                    pixels[pp] = (65 + pixels[pp] * av) / (1 + av);
-                    pixels[pp + 1] = (57 + pixels[pp + 1] * av) / (1 + av);
-                    pixels[pp + 2] = (55 + pixels[pp + 2] * av) / (1 + av);
-                    car[c].ctxl[0] = px / 256;
-                    car[c].ctxl[1] = py / 256;
-                    if (random.fx() > 0.8) {
-                      if (Math.abs(pxv) < Math.abs(pyv)) {
-                        pxv += Math.round(random.fx() * 2 - 1);
-                      } else {
-                        pyv += Math.round(random.fx() * 2 - 1);
-                      }
-                    }
-                  } else {
-                    glass = false;
-                    rnp = 0;
-                  }
-                }
-              }
-              px += pxv;
-              py += pyv;
-              rnp--;
-            }
-          }
+          modpix = scratchDent(pixels, c, pxc, pyc, npt, modpix);
         }
       }
       if (nr == 3 && nsq > 0) {
