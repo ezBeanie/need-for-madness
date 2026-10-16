@@ -22,7 +22,12 @@ import { CONFIRM, confirm } from "../input/confirm.js";
 import { raceEvents } from "../race/events.js";
 import { racers } from "../race/racers.js";
 import { spinFixHoops, track } from "../race/track.js";
-import { camera, faceCamera, startProjection } from "../render/camera.js";
+import {
+  camera,
+  faceCamera,
+  startProjection,
+  turnView,
+} from "../render/camera.js";
 import { setWorld } from "../render/renderer.js";
 import { colorStageBackdrop, scene, stageBackdrop } from "../render/scene.js";
 import { backdropHue, cssRgb, hslToRgb, rgbToHsl } from "../ui/color.js";
@@ -116,18 +121,7 @@ export function stageselect() {
   stageBackdrop.x = camera.x - 106 * stageBackdrop.mat[8];
   stageBackdrop.y = camera.y - 106 * stageBackdrop.mat[9];
   stageBackdrop.z = camera.z - 106 * stageBackdrop.mat[10];
-  mat4.rotate(
-    camera.matrix,
-    camera.matrix,
-    camera.pitch * (Math.PI / 180),
-    [1, 0, 0],
-  );
-  mat4.rotate(
-    camera.matrix,
-    camera.matrix,
-    camera.yaw * (Math.PI / 180),
-    [0, 1, 0],
-  );
+  turnView();
   drawstageselect();
   menu.redraw = true;
 }

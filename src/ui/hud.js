@@ -31,7 +31,7 @@ import {
   recording,
 } from "../race/recording.js";
 import { track } from "../race/track.js";
-import { camera, faceCamera } from "../render/camera.js";
+import { CAMERA, camera, faceCamera } from "../render/camera.js";
 import { newParticleModel } from "../render/models.js";
 import { gl } from "../render/renderer.js";
 import { scene, timeTube } from "../render/scene.js";
@@ -329,7 +329,7 @@ const takeOverNextCar = () => {
   track.switchtime += 134;
   switchTimer = track.switchtime;
   game.phase = PHASE.race;
-  camera.mode = 0;
+  camera.mode = CAMERA.behind;
 };
 
 // Switch mode: "SWITCHING CARS" while the camera flies to the next car, which the player
@@ -338,7 +338,7 @@ export function drawSwitchScreen() {
   rd.clearRect(0, 0, view.width, view.height);
   const ticks = raceEvents.screenTicks;
   if (ticks == 0) {
-    camera.mode = -1;
+    camera.mode = CAMERA.free;
     slide = 80;
     slideTo = 180;
     slideShrinking = false;
@@ -489,7 +489,7 @@ export function inishinter() {
     knownWrecks[i] = 0;
   }
   raceEvents.raceOverTicks = 0;
-  camera.mode = 0;
+  camera.mode = CAMERA.behind;
   camera.target = 0;
   recording.onpausefr = false;
   raceEvents.playerWreckTicks = 0;
@@ -1471,7 +1471,7 @@ export function drawinter() {
     if (
       !raceOver &&
       raceEvents.countdown == 0 &&
-      camera.mode == 0 &&
+      camera.mode == CAMERA.behind &&
       track.stage != 16
     ) {
       arrow(
@@ -1609,7 +1609,7 @@ const holdAtPeak = (flashes) => {
   ) {
     recording.held++;
   }
-  camera.mode = 1;
+  camera.mode = CAMERA.orbit;
   camera.target = recording.highlightCar;
   playOrHold(recording.held == 0 || recording.held == recording.holdTicks);
 };
@@ -1646,10 +1646,10 @@ const tourCars = ({ rests, flights, holdFrom }) => {
   const stop = Math.floor(recording.held / 30);
   const between = recording.held % 30;
   if (between == 0) {
-    camera.mode = 1;
+    camera.mode = CAMERA.orbit;
     camera.target = rests[stop];
   } else {
-    camera.mode = 3;
+    camera.mode = CAMERA.flyTo;
     camera.target = flights[stop][0];
     camera.nextTarget = flights[stop][1];
     camera.transition = between;

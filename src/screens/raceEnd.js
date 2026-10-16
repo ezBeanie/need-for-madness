@@ -22,7 +22,12 @@ import { BUTTON, blink, drawButton } from "../ui/widgets.js";
 import { menu } from "./menuState.js";
 import { poseShowcaseCar, showcase } from "./showcase.js";
 import { insano, pickTalkingPicture } from "../ui/insano.js";
-import { camera, faceCamera, startProjection } from "../render/camera.js";
+import {
+  camera,
+  faceCamera,
+  startProjection,
+  turnView,
+} from "../render/camera.js";
 
 // menu.animation on this screen: it fades in until FADED_IN; an unlocked car is then
 // presented (see unlockedcar) while it is UNLOCKED_CAR_SHOWN.
@@ -361,18 +366,7 @@ export function unlockedcar() {
     stageBackdrop.x = 0;
     stageBackdrop.y = 0;
     stageBackdrop.z = -90;
-    mat4.rotate(
-      camera.matrix,
-      camera.matrix,
-      camera.pitch * (Math.PI / 180),
-      [1, 0, 0],
-    );
-    mat4.rotate(
-      camera.matrix,
-      camera.matrix,
-      camera.yaw * (Math.PI / 180),
-      [0, 1, 0],
-    );
+    turnView();
     menu.redraw = true;
   }
 }

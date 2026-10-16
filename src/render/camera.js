@@ -1,6 +1,10 @@
 import { view } from "../ui/view.js";
 import { resetMatrix } from "./interpolation.js";
 
+// The camera's modes: behind the car, orbiting it, watching from the track side, moving
+// from one car to another (replays), and free (moved by the switch screen itself).
+export const CAMERA = { free: -1, behind: 0, orbit: 1, trackside: 2, flyTo: 3 };
+
 // The camera, as the game logic moves it every tick (drawing interpolates it, see
 // interpolation.js).
 export const camera = {
@@ -12,10 +16,9 @@ export const camera = {
   pitch: 30,
   // projection and view in one matrix
   matrix: null,
-  // 0 behind the car, 1 orbiting the car, 2 at the track side,
-  // 3 moving from one car to another (replays)
+  // see CAMERA
   mode: 0,
-  // index of the car the camera follows, and the car mode 3 moves to
+  // index of the car the camera follows, and the car flyTo moves to
   target: 0,
   nextTarget: 0,
   // -1/1 while Z/X swing the camera behind the car, and how far it swung
@@ -30,7 +33,7 @@ export const camera = {
   orbitTilt: 0,
   // track side: find a new spot ahead of the car
   relocate: false,
-  // mode 3: progress from target to nextTarget, 0..30
+  // flyTo: progress from target to nextTarget, 0..30
   transition: 0,
 };
 
@@ -45,4 +48,20 @@ export const faceCamera = (model) => {
   model.mat = resetMatrix(model.mat);
   mat4.rotate(model.mat, model.mat, camera.yaw * (Math.PI / 180), [0, -1, 0]);
   mat4.rotate(model.mat, model.mat, camera.pitch * (Math.PI / 180), [-1, 0, 0]);
+};
+
+// Turns the view after the camera's pitch and yaw.
+export const turnView = () => {
+  mat4.rotate(
+    camera.matrix,
+    camera.matrix,
+    camera.pitch * (Math.PI / 180),
+    [1, 0, 0],
+  );
+  mat4.rotate(
+    camera.matrix,
+    camera.matrix,
+    camera.yaw * (Math.PI / 180),
+    [0, 1, 0],
+  );
 };

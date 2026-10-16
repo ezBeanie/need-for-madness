@@ -1,8 +1,4 @@
-import {
-  cosDeg as mcos,
-  distance as pyd,
-  sinDeg as msin,
-} from "./core/math.js";
+import { distance as pyd } from "./core/math.js";
 import { isPhone } from "./core/platform.js";
 import { random } from "./core/random.js";
 import {
@@ -26,7 +22,6 @@ import {
   attachTo,
   interpolation,
   placeCamera,
-  resetMatrix,
 } from "./render/interpolation.js";
 import {
   canvas3D,
@@ -36,7 +31,14 @@ import {
   setWorld,
 } from "./render/renderer.js";
 import { canvas2D, rd, view } from "./ui/view.js";
-import { camera, faceCamera, startProjection } from "./render/camera.js";
+import {
+  CAMERA,
+  camera,
+  faceCamera,
+  startProjection,
+  turnView,
+} from "./render/camera.js";
+import { moveCamera } from "./render/cameraMoves.js";
 import { isLeftWheel, placeWheel } from "./render/wheels.js";
 import { layShadow } from "./render/shadows.js";
 import { lookForGamepads, pollGamepads } from "./input/gamepad.js";
@@ -351,7 +353,7 @@ function gameworks() {
         camera.target = 3;
         camera.orbitHigh = true;
         camera.orbitTilt = 0;
-        camera.mode = 1;
+        camera.mode = CAMERA.orbit;
       }
       if (raceEvents.countdown != 0) {
         raceEvents.countdown--;
@@ -439,7 +441,7 @@ function gameworks() {
         camera.target = 0;
         camera.orbitHigh = false;
         camera.orbitTilt = 0;
-        camera.mode = 0;
+        camera.mode = CAMERA.behind;
         resetEngineSound();
         rd.fillStyle = "#FFFFFF";
         rd.fillRect(0, 0, view.width, view.height);
@@ -492,246 +494,8 @@ function gameworks() {
     cpanimate();
     drawRewindOverlay();
   }
-  if (camera.mode == 0) {
-    camera.pitch = 10;
-    var bado = 2 + Math.abs(camera.lookBackYaw) / 4;
-    if (bado > 20) {
-      bado = 20;
-    }
-    bado *= tick.scale;
-    if (camera.lookBack != 0) {
-      if (camera.lookBack == 1) {
-        if (camera.lookBackYaw < 180) {
-          camera.lookBackYaw += bado;
-        }
-        if (camera.lookBackYaw > 180) {
-          camera.lookBackYaw = 180;
-        }
-      }
-      if (camera.lookBack == -1) {
-        if (camera.lookBackYaw > -180) {
-          camera.lookBackYaw -= bado;
-        }
-        if (camera.lookBackYaw < -180) {
-          camera.lookBackYaw = -180;
-        }
-      }
-    } else {
-      if (Math.abs(camera.lookBackYaw) > bado) {
-        if (camera.lookBackYaw > 0) {
-          camera.lookBackYaw -= bado;
-        } else {
-          camera.lookBackYaw += bado;
-        }
-      } else {
-        if (camera.lookBackYaw != 0) {
-          camera.lookBackYaw = 0;
-        }
-      }
-    }
-    var kcxz = racers[camera.target].cxz - 180 + camera.lookBackYaw;
-    camera.yaw = kcxz;
-    camera.x = car[camera.target].x - 80 * msin(kcxz);
-    camera.z = car[camera.target].z + 80 * mcos(kcxz);
-    camera.y = car[camera.target].y + 25;
-  }
-  if (camera.mode == 1) {
-    if (!camera.orbitHigh) {
-      if (!camera.orbitDescending) {
-        camera.orbitHeight += 0.2 * tick.scale;
-      } else {
-        camera.orbitHeight -= 0.2 * tick.scale;
-      }
-      if (camera.orbitHeight > 90) {
-        camera.orbitDescending = true;
-      }
-      if (camera.orbitHeight < -50) {
-        camera.orbitDescending = false;
-      }
-    } else {
-      camera.orbitHeight -= 1.4 * tick.scale;
-      if (camera.orbitHeight < 61.7) {
-        camera.orbitHeight = 61.7;
-      }
-    }
-    var amp = 50 + camera.orbitHeight;
-    if (camera.orbitHigh) {
-      if (amp < 130) {
-        amp = 130;
-      }
-    }
-    if (amp < 100) {
-      amp = 100;
-    }
-    camera.y = car[camera.target].y + camera.orbitHeight;
-    if (camera.y < 5) {
-      camera.orbitDescending = false;
-    }
-    camera.x = car[camera.target].x + amp * mcos(camera.orbitAngle);
-    camera.z = car[camera.target].z + amp * msin(camera.orbitAngle);
-    if (!camera.orbitHigh) {
-      camera.orbitAngle -= 2 * tick.scale;
-    } else {
-      camera.orbitAngle -= 4 * tick.scale;
-    }
-    var ad = 0;
-    var ty = camera.y;
-    if (ty < 0) {
-      ty = 0;
-    }
-    if (car[camera.target].y - ty < 0) {
-      ad = -180;
-    }
-    var max = Math.sqrt(
-      (car[camera.target].z - camera.z) * (car[camera.target].z - camera.z) +
-        (car[camera.target].x - camera.x) * (car[camera.target].x - camera.x),
-    );
-    var rzy = -(
-      90 +
-      ad -
-      Math.atan(max / (car[camera.target].y - ty)) / 0.017453292519943295
-    );
-    camera.yaw = -(-camera.orbitAngle + 90);
-    if (camera.orbitHigh) {
-      rzy -= camera.orbitTilt;
-      camera.orbitTilt += 0.2;
-      if (camera.orbitTilt > 15) {
-        camera.orbitTilt = 15;
-      }
-    }
-    camera.pitch += (rzy - camera.pitch) / 10;
-  }
-  if (camera.mode == 2) {
-    if (camera.relocate) {
-      var sidn = 1;
-      if (random.fx() > random.fx()) {
-        sidn = -1;
-      }
-      camera.y = car[camera.target].y + 10 + 160 * random.fx();
-      camera.x =
-        car[camera.target].x +
-        40 * sidn * mcos(racers[camera.target].mxz) -
-        500 * msin(racers[camera.target].mxz);
-      camera.z =
-        car[camera.target].z +
-        40 * sidn * msin(racers[camera.target].mxz) +
-        500 * mcos(racers[camera.target].mxz);
-      camera.relocate = false;
-    }
-    var ad = 0;
-    if (car[camera.target].x - camera.x > 0) {
-      ad = 180;
-    }
-    var rxz = -(
-      90 +
-      ad +
-      Math.atan(
-        (car[camera.target].z - camera.z) / -(car[camera.target].x - camera.x),
-      ) /
-        0.017453292519943295
-    );
-    ad = 0;
-    if (car[camera.target].y - camera.y < 0) {
-      ad = -180;
-    }
-    var max = Math.sqrt(
-      (car[camera.target].z - camera.z) * (car[camera.target].z - camera.z) +
-        (car[camera.target].x - camera.x) * (car[camera.target].x - camera.x),
-    );
-    var rzy = -(
-      90 +
-      ad -
-      Math.atan(max / (car[camera.target].y - camera.y)) / 0.017453292519943295
-    );
-    while (rxz < 0) {
-      rxz += 360;
-    }
-    while (rxz > 360) {
-      rxz -= 360;
-    }
-    camera.yaw = rxz;
-    camera.pitch += (rzy - camera.pitch) / 5;
-    if (
-      Math.sqrt(
-        (car[camera.target].z - camera.z) * (car[camera.target].z - camera.z) +
-          (car[camera.target].x - camera.x) *
-            (car[camera.target].x - camera.x) +
-          (car[camera.target].y - camera.y) * (car[camera.target].y - camera.y),
-      ) > 700
-    ) {
-      camera.relocate = true;
-    }
-  }
-  if (camera.mode == 3) {
-    var trnx =
-      (car[camera.target].x * (30 - camera.transition) +
-        car[camera.nextTarget].x * camera.transition) /
-      30;
-    var trny =
-      (car[camera.target].y * (30 - camera.transition) +
-        car[camera.nextTarget].y * camera.transition) /
-      30;
-    var trnz =
-      (car[camera.target].z * (30 - camera.transition) +
-        car[camera.nextTarget].z * camera.transition) /
-      30;
-    if (!camera.orbitDescending) {
-      camera.orbitHeight += 0.2 * tick.scale;
-    } else {
-      camera.orbitHeight -= 0.2 * tick.scale;
-    }
-    if (camera.orbitHeight > 90) {
-      camera.orbitDescending = true;
-    }
-    if (camera.orbitHeight < -50) {
-      camera.orbitDescending = false;
-    }
-    var amp = 50 + camera.orbitHeight;
-    if (amp < 100) {
-      amp = 100;
-    }
-    camera.y = trny + camera.orbitHeight;
-    if (camera.y < 5) {
-      camera.orbitDescending = false;
-    }
-    camera.x = trnx + amp * mcos(camera.orbitAngle);
-    camera.z = trnz + amp * msin(camera.orbitAngle);
-    camera.orbitAngle -= 2 * tick.scale;
-    var ad = 0;
-    var ty = camera.y;
-    if (ty < 0) {
-      ty = 0;
-    }
-    if (trny - ty < 0) {
-      ad = -180;
-    }
-    var max = Math.sqrt(
-      (trnz - camera.z) * (trnz - camera.z) +
-        (trnx - camera.x) * (trnx - camera.x),
-    );
-    var rzy = -(90 + ad - Math.atan(max / (trny - ty)) / 0.017453292519943295);
-    camera.yaw = -(-camera.orbitAngle + 90);
-    camera.pitch += (rzy - camera.pitch) / 10;
-  }
-  sky.x = camera.x;
-  sky.z = camera.z;
-  var skf = 0.6 + camera.y / 4000;
-  sky.mat = resetMatrix(sky.mat);
-  sky.mat[4] *= skf;
-  sky.mat[5] *= skf;
-  sky.mat[6] *= skf;
-  mat4.rotate(
-    camera.matrix,
-    camera.matrix,
-    camera.pitch * (Math.PI / 180),
-    [1, 0, 0],
-  );
-  mat4.rotate(
-    camera.matrix,
-    camera.matrix,
-    camera.yaw * (Math.PI / 180),
-    [0, 1, 0],
-  );
+  moveCamera();
+  turnView();
   menu.redraw = true;
 }
 
@@ -1291,8 +1055,8 @@ function onKey(action, pressed) {
   }
   if (!pressed && action == "nextCamera" && game.phase == PHASE.race) {
     camera.mode++;
-    if (camera.mode == 3) {
-      camera.mode = 0;
+    if (camera.mode == CAMERA.flyTo) {
+      camera.mode = CAMERA.behind;
     }
   }
   if (!pressed && action == "muteSound") {

@@ -3,7 +3,7 @@ import { rotateAxes } from "../core/math.js";
 import { random } from "../core/random.js";
 import { PHASE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
-import { camera } from "../render/camera.js";
+import { CAMERA, camera } from "../render/camera.js";
 import { resetPursuit } from "./ai.js";
 import { burn, chipburn, dustup, firexp, sprks } from "./effects.js";
 import { raceEvents } from "./events.js";
@@ -342,7 +342,7 @@ export function record() {
 export function rewindreplay() {
   game.phase = PHASE.replayRewind;
   recording.frame = 0;
-  camera.mode = 1;
+  camera.mode = CAMERA.orbit;
   camera.target = game.player;
   for (var c = 0; c < game.carCount; c++) {
     racers[c].destnow = false;
@@ -538,7 +538,7 @@ export function replay() {
   raceEvents.onlastcheck = recording.reponlastcheck[recording.frame];
   if (recording.frame == 429) {
     game.phase = PHASE.paused;
-    camera.mode = 0;
+    camera.mode = CAMERA.behind;
     camera.target = game.player;
     recording.frame = 0;
   } else {
@@ -596,7 +596,7 @@ export function fastforwardexit() {
     car[c].wzy = recording.repcar[c].wzy[429];
     car[c].wxz = recording.repcar[c].wxz[429];
   }
-  camera.mode = 0;
+  camera.mode = CAMERA.behind;
   camera.target = game.player;
   game.phase = PHASE.paused;
 }
@@ -815,7 +815,7 @@ export function hreplay() {
 }
 export function preprevtime() {
   recording.frame = 429;
-  camera.mode = 0;
+  camera.mode = CAMERA.behind;
   camera.target = game.player;
   game.phase = PHASE.replayRewind;
   for (var c = 0; c < game.carCount; c++) {
