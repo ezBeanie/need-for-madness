@@ -120,6 +120,19 @@ const flows = [
     script: () => driveThen(900, (ctx) => ctx.rewindreplay()),
   },
   {
+    // switch mode: when its timer runs out, the switch screen picks the next car to drive
+    name: "switch-mode-stage-04",
+    stage: 4,
+    frames: 1700,
+    script: () => {
+      const drive = racingAutopilot();
+      return (ctx) => {
+        ctx.game.mode = 1;
+        Object.assign(ctx.racers[ctx.game.player].u, drive(ctx));
+      };
+    },
+  },
+  {
     name: "touch-controls-stage-03",
     stage: 3,
     frames: 1400,
