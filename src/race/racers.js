@@ -13,9 +13,24 @@ const newControl = () => ({
   zyinv: false,
 });
 
+const newWheel = () => ({ x: 0, y: 0, z: 0, mat: null, dist: 0 });
+
+// Where the car type's shadow model is drawn for this car (see shadoworks).
+const newShadow = () => ({
+  x: 0,
+  y: 0,
+  z: 0,
+  ont: 0,
+  mat: mat4.create(),
+  intershad: false,
+});
+
 const newRacer = () => ({
   // what the driver (player or AI) presses
   u: newControl(),
+  // placed every tick, so cars of the same type each have their own
+  wheels: Array.from({ length: 4 }, newWheel),
+  shadow: newShadow(),
   carnchp: 0,
   wall: -1,
   colidim: false,

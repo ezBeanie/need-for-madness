@@ -806,137 +806,137 @@ function createwheels() {
 function setwheelspos() {
   for (var c = 0; c < game.carCount; c++) {
     var cn = car[c].typ;
-    whl[cn][0].x =
+    racers[c].wheels[0].x =
       car[c].x -
       carStats.wlx[cn][0] * car[c].mat[0] -
       carStats.wly[cn][0] * car[c].mat[4] +
       carStats.wlz[cn][0] * car[c].mat[8];
-    whl[cn][0].y =
+    racers[c].wheels[0].y =
       car[c].y -
       carStats.wlx[cn][0] * car[c].mat[1] -
       carStats.wly[cn][0] * car[c].mat[5] +
       carStats.wlz[cn][0] * car[c].mat[9];
-    whl[cn][0].z =
+    racers[c].wheels[0].z =
       car[c].z -
       carStats.wlx[cn][0] * car[c].mat[2] -
       carStats.wly[cn][0] * car[c].mat[6] +
       carStats.wlz[cn][0] * car[c].mat[10];
-    whl[cn][0].mat = resetMatrix(whl[cn][0].mat);
+    racers[c].wheels[0].mat = resetMatrix(racers[c].wheels[0].mat);
     for (var k = 0; k < 12; k++) {
-      whl[cn][0].mat[k] = car[c].mat[k];
+      racers[c].wheels[0].mat[k] = car[c].mat[k];
     }
     mat4.rotate(
-      whl[cn][0].mat,
-      whl[cn][0].mat,
+      racers[c].wheels[0].mat,
+      racers[c].wheels[0].mat,
       (90 - car[c].wxz) * (Math.PI / 180),
       [0, 1, 0],
     );
     mat4.rotate(
-      whl[cn][0].mat,
-      whl[cn][0].mat,
+      racers[c].wheels[0].mat,
+      racers[c].wheels[0].mat,
       car[c].wzy * (Math.PI / 180),
       [0, 0, -1],
     );
-    whl[cn][1].x =
+    racers[c].wheels[1].x =
       car[c].x +
       carStats.wlx[cn][0] * car[c].mat[0] -
       carStats.wly[cn][0] * car[c].mat[4] +
       carStats.wlz[cn][0] * car[c].mat[8];
-    whl[cn][1].y =
+    racers[c].wheels[1].y =
       car[c].y +
       carStats.wlx[cn][0] * car[c].mat[1] -
       carStats.wly[cn][0] * car[c].mat[5] +
       carStats.wlz[cn][0] * car[c].mat[9];
-    whl[cn][1].z =
+    racers[c].wheels[1].z =
       car[c].z +
       carStats.wlx[cn][0] * car[c].mat[2] -
       carStats.wly[cn][0] * car[c].mat[6] +
       carStats.wlz[cn][0] * car[c].mat[10];
-    whl[cn][1].mat = resetMatrix(whl[cn][1].mat);
+    racers[c].wheels[1].mat = resetMatrix(racers[c].wheels[1].mat);
     for (var k = 0; k < 12; k++) {
-      whl[cn][1].mat[k] = car[c].mat[k];
+      racers[c].wheels[1].mat[k] = car[c].mat[k];
     }
     mat4.rotate(
-      whl[cn][1].mat,
-      whl[cn][1].mat,
+      racers[c].wheels[1].mat,
+      racers[c].wheels[1].mat,
       (-90 - car[c].wxz) * (Math.PI / 180),
       [0, 1, 0],
     );
     mat4.rotate(
-      whl[cn][1].mat,
-      whl[cn][1].mat,
+      racers[c].wheels[1].mat,
+      racers[c].wheels[1].mat,
       car[c].wzy * (Math.PI / 180),
       [0, 0, 1],
     );
-    whl[cn][2].x =
+    racers[c].wheels[2].x =
       car[c].x -
       carStats.wlx[cn][1] * car[c].mat[0] -
       carStats.wly[cn][1] * car[c].mat[4] +
       carStats.wlz[cn][1] * car[c].mat[8];
-    whl[cn][2].y =
+    racers[c].wheels[2].y =
       car[c].y -
       carStats.wlx[cn][1] * car[c].mat[1] -
       carStats.wly[cn][1] * car[c].mat[5] +
       carStats.wlz[cn][1] * car[c].mat[9];
-    whl[cn][2].z =
+    racers[c].wheels[2].z =
       car[c].z -
       carStats.wlx[cn][1] * car[c].mat[2] -
       carStats.wly[cn][1] * car[c].mat[6] +
       carStats.wlz[cn][1] * car[c].mat[10];
-    whl[cn][2].mat = resetMatrix(whl[cn][2].mat);
+    racers[c].wheels[2].mat = resetMatrix(racers[c].wheels[2].mat);
     for (var k = 0; k < 12; k++) {
-      whl[cn][2].mat[k] = car[c].mat[k];
+      racers[c].wheels[2].mat[k] = car[c].mat[k];
     }
     mat4.rotate(
-      whl[cn][2].mat,
-      whl[cn][2].mat,
+      racers[c].wheels[2].mat,
+      racers[c].wheels[2].mat,
       90 * (Math.PI / 180),
       [0, 1, 0],
     );
     mat4.rotate(
-      whl[cn][2].mat,
-      whl[cn][2].mat,
+      racers[c].wheels[2].mat,
+      racers[c].wheels[2].mat,
       car[c].wzy * (Math.PI / 180),
       [0, 0, -1],
     );
-    whl[cn][3].x =
+    racers[c].wheels[3].x =
       car[c].x +
       carStats.wlx[cn][1] * car[c].mat[0] -
       carStats.wly[cn][1] * car[c].mat[4] +
       carStats.wlz[cn][1] * car[c].mat[8];
-    whl[cn][3].y =
+    racers[c].wheels[3].y =
       car[c].y +
       carStats.wlx[cn][1] * car[c].mat[1] -
       carStats.wly[cn][1] * car[c].mat[5] +
       carStats.wlz[cn][1] * car[c].mat[9];
-    whl[cn][3].z =
+    racers[c].wheels[3].z =
       car[c].z +
       carStats.wlx[cn][1] * car[c].mat[2] -
       carStats.wly[cn][1] * car[c].mat[6] +
       carStats.wlz[cn][1] * car[c].mat[10];
-    whl[cn][3].mat = resetMatrix(whl[cn][3].mat);
+    racers[c].wheels[3].mat = resetMatrix(racers[c].wheels[3].mat);
     for (var k = 0; k < 12; k++) {
-      whl[cn][3].mat[k] = car[c].mat[k];
+      racers[c].wheels[3].mat[k] = car[c].mat[k];
     }
     mat4.rotate(
-      whl[cn][3].mat,
-      whl[cn][3].mat,
+      racers[c].wheels[3].mat,
+      racers[c].wheels[3].mat,
       -90 * (Math.PI / 180),
       [0, 1, 0],
     );
     mat4.rotate(
-      whl[cn][3].mat,
-      whl[cn][3].mat,
+      racers[c].wheels[3].mat,
+      racers[c].wheels[3].mat,
       car[c].wzy * (Math.PI / 180),
       [0, 0, 1],
     );
     for (var j = 0; j < 4; j++) {
-      whl[cn][j].dist = pyd(
-        whl[cn][j].x,
+      racers[c].wheels[j].dist = pyd(
+        racers[c].wheels[j].x,
         camera.x,
-        whl[cn][j].y,
+        racers[c].wheels[j].y,
         camera.y,
-        whl[cn][j].z,
+        racers[c].wheels[j].z,
         camera.z,
       );
     }
@@ -951,57 +951,53 @@ function shadoworks() {
     }
     if (Math.abs(car[c].mat[5]) < cat) {
       if (Math.abs(car[c].mat[9]) > Math.abs(car[c].mat[1])) {
-        carShadows[car[c].typ].x = car[c].x;
-        carShadows[car[c].typ].z = car[c].z;
-        carShadows[car[c].typ].ont = 2;
-        carShadows[car[c].typ].mat[0] = car[c].mat[0];
-        carShadows[car[c].typ].mat[2] = car[c].mat[2];
-        carShadows[car[c].typ].mat[4] = car[c].mat[8];
-        carShadows[car[c].typ].mat[6] = car[c].mat[10];
-        carShadows[car[c].typ].mat[8] = -car[c].mat[4];
-        carShadows[car[c].typ].mat[10] = -car[c].mat[6];
+        racers[c].shadow.x = car[c].x;
+        racers[c].shadow.z = car[c].z;
+        racers[c].shadow.ont = 2;
+        racers[c].shadow.mat[0] = car[c].mat[0];
+        racers[c].shadow.mat[2] = car[c].mat[2];
+        racers[c].shadow.mat[4] = car[c].mat[8];
+        racers[c].shadow.mat[6] = car[c].mat[10];
+        racers[c].shadow.mat[8] = -car[c].mat[4];
+        racers[c].shadow.mat[10] = -car[c].mat[6];
       } else {
-        carShadows[car[c].typ].x =
+        racers[c].shadow.x =
           car[c].x - carStats.shadadj[car[c].typ] * car[c].mat[8];
-        carShadows[car[c].typ].z =
+        racers[c].shadow.z =
           car[c].z - carStats.shadadj[car[c].typ] * car[c].mat[10];
-        carShadows[car[c].typ].ont = 1;
-        carShadows[car[c].typ].mat[0] = car[c].mat[8];
-        carShadows[car[c].typ].mat[2] = car[c].mat[10];
-        carShadows[car[c].typ].mat[4] = car[c].mat[0];
-        carShadows[car[c].typ].mat[6] = car[c].mat[2];
-        carShadows[car[c].typ].mat[8] = -car[c].mat[4];
-        carShadows[car[c].typ].mat[10] = -car[c].mat[6];
+        racers[c].shadow.ont = 1;
+        racers[c].shadow.mat[0] = car[c].mat[8];
+        racers[c].shadow.mat[2] = car[c].mat[10];
+        racers[c].shadow.mat[4] = car[c].mat[0];
+        racers[c].shadow.mat[6] = car[c].mat[2];
+        racers[c].shadow.mat[8] = -car[c].mat[4];
+        racers[c].shadow.mat[10] = -car[c].mat[6];
       }
     } else {
-      carShadows[car[c].typ].x =
+      racers[c].shadow.x =
         car[c].x - carStats.shadadj[car[c].typ] * car[c].mat[8];
-      carShadows[car[c].typ].z =
+      racers[c].shadow.z =
         car[c].z - carStats.shadadj[car[c].typ] * car[c].mat[10];
-      carShadows[car[c].typ].ont = 0;
-      carShadows[car[c].typ].mat[0] = car[c].mat[8];
-      carShadows[car[c].typ].mat[2] = car[c].mat[10];
-      carShadows[car[c].typ].mat[4] = car[c].mat[4];
-      carShadows[car[c].typ].mat[6] = car[c].mat[6];
-      carShadows[car[c].typ].mat[8] = car[c].mat[0];
-      carShadows[car[c].typ].mat[10] = car[c].mat[2];
+      racers[c].shadow.ont = 0;
+      racers[c].shadow.mat[0] = car[c].mat[8];
+      racers[c].shadow.mat[2] = car[c].mat[10];
+      racers[c].shadow.mat[4] = car[c].mat[4];
+      racers[c].shadow.mat[6] = car[c].mat[6];
+      racers[c].shadow.mat[8] = car[c].mat[0];
+      racers[c].shadow.mat[10] = car[c].mat[2];
     }
-    carShadows[car[c].typ].intershad = false;
-    carShadows[car[c].typ].y = 0.4;
-    carShadows[car[c].typ].mat[1] = 0;
-    carShadows[car[c].typ].mat[5] = 1;
-    carShadows[car[c].typ].mat[9] = 0;
+    racers[c].shadow.intershad = false;
+    racers[c].shadow.y = 0.4;
+    racers[c].shadow.mat[1] = 0;
+    racers[c].shadow.mat[5] = 1;
+    racers[c].shadow.mat[9] = 0;
     for (var i = 0; i < pieces.count; i++) {
       if (pieceModels[pieces.list[i].typ].intershad) {
         pieceModels[pieces.list[i].typ].x = pieces.list[i].x;
         pieceModels[pieces.list[i].typ].y = pieces.list[i].y;
         pieceModels[pieces.list[i].typ].z = pieces.list[i].z;
         pieceModels[pieces.list[i].typ].mat = pieces.list[i].mat;
-        shadowmap(
-          car[c],
-          carShadows[car[c].typ],
-          pieceModels[pieces.list[i].typ],
-        );
+        shadowmap(car[c], racers[c].shadow, pieceModels[pieces.list[i].typ]);
       }
     }
   }
@@ -3421,11 +3417,12 @@ function render(now) {
         }
       }
       for (var c = 0; c < game.carCount; c++) {
-        if (carShadows[car[c].typ].intershad) {
+        var shadow = Object.assign(carShadows[car[c].typ], racers[c].shadow);
+        if (shadow.intershad) {
           gl.disable(gl.DEPTH_TEST);
         }
-        drawModel(carShadows[car[c].typ]);
-        if (carShadows[car[c].typ].intershad) {
+        drawModel(shadow);
+        if (shadow.intershad) {
           gl.enable(gl.DEPTH_TEST);
         }
       }
@@ -3440,24 +3437,24 @@ function render(now) {
       }
       for (var c = 0; c < game.carCount; c++) {
         for (var w = 0; w < 4; w++) {
-          attachTo(whl[car[c].typ][w].mat, car[c]);
+          attachTo(racers[c].wheels[w].mat, car[c]);
         }
         for (var w = 0; w < 4; w++) {
           var k = 0;
           if (w >= 2) {
             k = 1;
           }
-          if (whl[car[c].typ][w].dist < 250) {
-            tiren[car[c].typ][k].x = whl[car[c].typ][w].x;
-            tiren[car[c].typ][k].y = whl[car[c].typ][w].y;
-            tiren[car[c].typ][k].z = whl[car[c].typ][w].z;
-            tiren[car[c].typ][k].mat = whl[car[c].typ][w].mat;
+          if (racers[c].wheels[w].dist < 250) {
+            tiren[car[c].typ][k].x = racers[c].wheels[w].x;
+            tiren[car[c].typ][k].y = racers[c].wheels[w].y;
+            tiren[car[c].typ][k].z = racers[c].wheels[w].z;
+            tiren[car[c].typ][k].mat = racers[c].wheels[w].mat;
             drawParticle(tiren[car[c].typ][k]);
           } else {
-            tirel[car[c].typ][k].x = whl[car[c].typ][w].x;
-            tirel[car[c].typ][k].y = whl[car[c].typ][w].y;
-            tirel[car[c].typ][k].z = whl[car[c].typ][w].z;
-            tirel[car[c].typ][k].mat = whl[car[c].typ][w].mat;
+            tirel[car[c].typ][k].x = racers[c].wheels[w].x;
+            tirel[car[c].typ][k].y = racers[c].wheels[w].y;
+            tirel[car[c].typ][k].z = racers[c].wheels[w].z;
+            tirel[car[c].typ][k].mat = racers[c].wheels[w].mat;
             drawParticle(tirel[car[c].typ][k]);
           }
         }
@@ -3471,10 +3468,10 @@ function render(now) {
           if (w >= 2) {
             k = 1;
           }
-          tired[car[c].typ][k].x = whl[car[c].typ][w].x;
-          tired[car[c].typ][k].y = whl[car[c].typ][w].y;
-          tired[car[c].typ][k].z = whl[car[c].typ][w].z;
-          tired[car[c].typ][k].mat = whl[car[c].typ][w].mat;
+          tired[car[c].typ][k].x = racers[c].wheels[w].x;
+          tired[car[c].typ][k].y = racers[c].wheels[w].y;
+          tired[car[c].typ][k].z = racers[c].wheels[w].z;
+          tired[car[c].typ][k].mat = racers[c].wheels[w].mat;
           drawModel(tired[car[c].typ][k]);
         }
       }

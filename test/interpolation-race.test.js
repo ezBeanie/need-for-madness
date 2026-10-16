@@ -32,7 +32,10 @@ describe("interpolated drawing in a real race", () => {
     let worst = 0;
     await raceFrames(fullThrottle, (ctx) => {
       for (let c = 0; c < ctx.game.carCount; c++) {
-        worst = Math.max(worst, wheelSlip(ctx, ctx.car[c].typ, ctx.car[c]));
+        worst = Math.max(
+          worst,
+          wheelSlip(ctx, ctx.car[c].typ, ctx.car[c], ctx.racers[c].wheels),
+        );
         checked++;
       }
       ctx.interpolation.alpha = 1;
@@ -48,7 +51,11 @@ describe("interpolated drawing in a real race", () => {
       ctx.interpolation.alpha = alpha;
       const typ = ctx.car[c].typ;
       const body = drawnMatrix(ctx, ctx.carModels[typ], ctx.car[c]);
-      const shadow = drawnMatrix(ctx, ctx.carShadows[typ], ctx.carShadows[typ]);
+      const shadow = drawnMatrix(
+        ctx,
+        ctx.carShadows[typ],
+        ctx.racers[c].shadow,
+      );
       return [shadow[12] - body[12], shadow[14] - body[14]];
     };
     let checked = 0;
@@ -78,7 +85,10 @@ describe("interpolated drawing in a real race", () => {
         persistent: [ctx.skydom.mat, ctx.ground.mat].concat(
           ctx.car
             .slice(0, ctx.game.carCount)
-            .flatMap((car) => [car.mat, ...ctx.whl[car.typ].map((w) => w.mat)]),
+            .flatMap((car, c) => [
+              car.mat,
+              ...ctx.racers[c].wheels.map((w) => w.mat),
+            ]),
         ),
         dust: ctx.effects.dust.map((d) => (d.stg != 0 ? d.mat : null)),
         explosions: ctx.effects.exp.map((e) => (e.ani != -1 ? e.mat : null)),
