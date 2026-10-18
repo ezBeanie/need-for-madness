@@ -40,185 +40,151 @@ export const placeWheel = (wheel, body, type, index, steering = 0) => {
   );
 };
 
+// per car type, front and rear: how wide the wheels are, and how far their hub (vertex 12
+// of the disk model) stands out
+const WHEEL_WIDTH = [
+  [1.8, 1.8],
+  [2.2, 2.5],
+  [2.2, 2.2],
+  [1.9, 1.9],
+  [2, 2],
+  [1.9, 1.9],
+  [2, 2],
+  [2.9, 4],
+  [1.8, 1.8],
+  [2.1, 2.1],
+  [2.1, 2.1],
+  [2, 2],
+  [2.5, 2.5],
+  [1.8, 1.8],
+  [3.2, 3.2],
+  [2.3, 2.3],
+  [5, 5],
+  [2, 2],
+  [4.4, 4.4],
+];
+const HUB_DEPTH = [
+  [-0.15, -0.15],
+  [0.6, 0.6],
+  [-0.1, -0.1],
+  [0.3, 0.3],
+  [0.1, 0.1],
+  [-0.1, -0.1],
+  [0.7, 0.7],
+  [1.1, 1.1],
+  [0.9, 0.9],
+  [-0.5, -0.5],
+  [0.8, 0.8],
+  [0.6, 0.6],
+  [-3, -3],
+  [0.5, 0.5],
+  [1, 1],
+  [0.8, 0.8],
+  [1.3, 1.3],
+  [0.8, 0.8],
+  [0.4, 0.4],
+];
+const HUB = 12;
+
+const buffer = (target, data) => {
+  const made = gl.createBuffer();
+  gl.bindBuffer(target, made);
+  gl.bufferData(target, data, gl.STATIC_DRAW);
+  return made;
+};
+
+const dark = (vertexCount) =>
+  Array.from({ length: vertexCount }, () => [0.02, 0.02, 0.02, 1]).flat();
+
+// The wheels of every car type, front and rear: the disk (with the type's tire texture)
+// and the tread, both scaled to the type's wheel size.
 export function createwheels() {
-  var wlw = [
-    [1.8, 1.8],
-    [2.2, 2.5],
-    [2.2, 2.2],
-    [1.9, 1.9],
-    [2, 2],
-    [1.9, 1.9],
-    [2, 2],
-    [2.9, 4],
-    [1.8, 1.8],
-    [2.1, 2.1],
-    [2.1, 2.1],
-    [2, 2],
-    [2.5, 2.5],
-    [1.8, 1.8],
-    [3.2, 3.2],
-    [2.3, 2.3],
-    [5, 5],
-    [2, 2],
-    [4.4, 4.4],
-  ];
-  var rmd = [
-    [-0.15, -0.15],
-    [0.6, 0.6],
-    [-0.1, -0.1],
-    [0.3, 0.3],
-    [0.1, 0.1],
-    [-0.1, -0.1],
-    [0.7, 0.7],
-    [1.1, 1.1],
-    [0.9, 0.9],
-    [-0.5, -0.5],
-    [0.8, 0.8],
-    [0.6, 0.6],
-    [-3, -3],
-    [0.5, 0.5],
-    [1, 1],
-    [0.8, 0.8],
-    [1.3, 1.3],
-    [0.8, 0.8],
-    [0.4, 0.4],
-  ];
-  for (var c = 0; c < 19; c++) {
-    for (var k = 0; k < 2; k++) {
-      wheelDisks[c][k].ni = wheelDisk.tri.length / 3;
-      var indice = [];
-      var vert = [];
-      var norm = [];
-      var texu = [];
-      for (var i = 0; i < wheelDisks[c][k].ni; i++) {
-        indice[i] = i;
-        vert[i * 3] =
-          wheelDisk.vrt[wheelDisk.tri[i * 3] * 3] * carStats.wlh[c][k] * 1.05;
-        vert[i * 3 + 1] =
-          wheelDisk.vrt[wheelDisk.tri[i * 3] * 3 + 1] *
-          carStats.wlh[c][k] *
-          1.05;
-        vert[i * 3 + 2] =
-          wheelDisk.vrt[wheelDisk.tri[i * 3] * 3 + 2] * wlw[c][k] * 1.1;
-        if (wheelDisk.tri[i * 3] == 12) {
-          vert[i * 3 + 2] += rmd[c][k];
-        }
-        var tcrad = Math.sqrt(
-          vert[i * 3] * vert[i * 3] +
-            vert[i * 3 + 1] * vert[i * 3 + 1] +
-            vert[i * 3 + 2] * vert[i * 3 + 2],
-        );
-        if (tcrad > wheelDisks[c][k].colrad) {
-          wheelDisks[c][k].colrad = tcrad;
-        }
-        norm[i * 3] = wheelDisk.nrm[wheelDisk.tri[i * 3 + 1] * 3];
-        norm[i * 3 + 1] = wheelDisk.nrm[wheelDisk.tri[i * 3 + 1] * 3 + 1];
-        norm[i * 3 + 2] = wheelDisk.nrm[wheelDisk.tri[i * 3 + 1] * 3 + 2];
-        texu[i * 2] = wheelDisk.tex[wheelDisk.tri[i * 3 + 2] * 2];
-        texu[i * 2 + 1] = 1 - wheelDisk.tex[wheelDisk.tri[i * 3 + 2] * 2 + 1];
-      }
-      wheelDisks[c][k].vbuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, wheelDisks[c][k].vbuf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vert), gl.STATIC_DRAW);
-      wheelDisks[c][k].nbuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, wheelDisks[c][k].nbuf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(norm), gl.STATIC_DRAW);
-      wheelDisks[c][k].tbuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, wheelDisks[c][k].tbuf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texu), gl.STATIC_DRAW);
-      wheelDisks[c][k].ibuf = gl.createBuffer();
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, wheelDisks[c][k].ibuf);
-      gl.bufferData(
-        gl.ELEMENT_ARRAY_BUFFER,
-        new Uint16Array(indice),
-        gl.STATIC_DRAW,
-      );
-      wheelDisks[c][k].nt = 1;
-      wheelDisks[c][k].mat = mat4.create();
-      wheelDisks[c][k].alpha = 1;
-      wheelDisks[c][k].texture = gl.createTexture();
-      gl.bindTexture(gl.TEXTURE_2D, wheelDisks[c][k].texture);
-      gl.texImage2D(
-        gl.TEXTURE_2D,
-        0,
-        gl.RGBA,
-        gl.RGBA,
-        gl.UNSIGNED_BYTE,
-        images.tires[c],
-      );
-      if (
-        isPowerOf2(images.tires[0].width) &&
-        isPowerOf2(images.tires[0].height)
-      ) {
-        gl.generateMipmap(gl.TEXTURE_2D);
-      } else {
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-      }
-      wheelDisks[c][k].loaded = 1;
-      wheelTreads[c][k].ni = wheelTread.indice.length;
-      var vert = [];
-      var norm = [];
-      var col = [];
-      for (var i = 0; i < wheelTread.vert.length / 3; i++) {
-        vert[i * 3] = wheelTread.vert[i * 3] * 1.1 * carStats.wlh[c][k];
-        vert[i * 3 + 1] = wheelTread.vert[i * 3 + 1] * 1.1 * carStats.wlh[c][k];
-        vert[i * 3 + 2] = wheelTread.vert[i * 3 + 2] * 1.1 * wlw[c][k];
-        norm[i * 3] = -1;
-        norm[i * 3 + 1] = 0;
-        norm[i * 3 + 2] = 0;
-        col[i * 4] = 0.02;
-        col[i * 4 + 1] = 0.02;
-        col[i * 4 + 2] = 0.02;
-        col[i * 4 + 3] = 1;
-      }
-      wheelTreads[c][k].vbuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, wheelTreads[c][k].vbuf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vert), gl.STATIC_DRAW);
-      wheelTreads[c][k].nbuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, wheelTreads[c][k].nbuf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(norm), gl.STATIC_DRAW);
-      wheelTreads[c][k].cbuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, wheelTreads[c][k].cbuf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
-      wheelTreads[c][k].ibuf = gl.createBuffer();
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, wheelTreads[c][k].ibuf);
-      gl.bufferData(
-        gl.ELEMENT_ARRAY_BUFFER,
-        new Uint16Array(wheelTread.indice),
-        gl.STATIC_DRAW,
-      );
-      wheelTreads[c][k].mat = mat4.create();
-      wheelTreads[c][k].loaded = 1;
-      wheelTreadsLow[c][k].ni = wheelTreadLow.indice.length;
-      var vert = [];
-      var col = [];
-      for (var i = 0; i < wheelTreadLow.vert.length / 3; i++) {
-        vert[i * 3] = wheelTreadLow.vert[i * 3] * 1.1 * carStats.wlh[c][k];
-        vert[i * 3 + 1] =
-          wheelTreadLow.vert[i * 3 + 1] * 1.1 * carStats.wlh[c][k];
-        vert[i * 3 + 2] = wheelTreadLow.vert[i * 3 + 2] * 1.1 * wlw[c][k];
-        col[i * 4] = 0.02;
-        col[i * 4 + 1] = 0.02;
-        col[i * 4 + 2] = 0.02;
-        col[i * 4 + 3] = 1;
-      }
-      wheelTreadsLow[c][k].vbuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, wheelTreadsLow[c][k].vbuf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vert), gl.STATIC_DRAW);
-      wheelTreadsLow[c][k].cbuf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, wheelTreadsLow[c][k].cbuf);
-      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(col), gl.STATIC_DRAW);
-      wheelTreadsLow[c][k].ibuf = gl.createBuffer();
-      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, wheelTreadsLow[c][k].ibuf);
-      gl.bufferData(
-        gl.ELEMENT_ARRAY_BUFFER,
-        new Uint16Array(wheelTreadLow.indice),
-        gl.STATIC_DRAW,
-      );
-      wheelTreadsLow[c][k].mat = mat4.create();
-      wheelTreadsLow[c][k].loaded = 1;
+  for (let c = 0; c < WHEEL_WIDTH.length; c++) {
+    for (let k = 0; k < 2; k++) {
+      buildDisk(wheelDisks[c][k], c, k);
+      buildTread(wheelTreads[c][k], wheelTread, c, k, true);
+      buildTread(wheelTreadsLow[c][k], wheelTreadLow, c, k, false);
     }
   }
 }
+
+const buildDisk = (disk, c, k) => {
+  disk.ni = wheelDisk.tri.length / 3;
+  const indices = [];
+  const vertices = [];
+  const normals = [];
+  const texture = [];
+  const height = carStats.wlh[c][k];
+  for (let i = 0; i < disk.ni; i++) {
+    const v = wheelDisk.tri[i * 3];
+    const n = wheelDisk.tri[i * 3 + 1];
+    const t = wheelDisk.tri[i * 3 + 2];
+    indices[i] = i;
+    vertices[i * 3] = wheelDisk.vrt[v * 3] * height * 1.05;
+    vertices[i * 3 + 1] = wheelDisk.vrt[v * 3 + 1] * height * 1.05;
+    vertices[i * 3 + 2] = wheelDisk.vrt[v * 3 + 2] * WHEEL_WIDTH[c][k] * 1.1;
+    if (v == HUB) {
+      vertices[i * 3 + 2] += HUB_DEPTH[c][k];
+    }
+    const radius = Math.sqrt(
+      vertices[i * 3] * vertices[i * 3] +
+        vertices[i * 3 + 1] * vertices[i * 3 + 1] +
+        vertices[i * 3 + 2] * vertices[i * 3 + 2],
+    );
+    if (radius > disk.colrad) {
+      disk.colrad = radius;
+    }
+    normals[i * 3] = wheelDisk.nrm[n * 3];
+    normals[i * 3 + 1] = wheelDisk.nrm[n * 3 + 1];
+    normals[i * 3 + 2] = wheelDisk.nrm[n * 3 + 2];
+    texture[i * 2] = wheelDisk.tex[t * 2];
+    texture[i * 2 + 1] = 1 - wheelDisk.tex[t * 2 + 1];
+  }
+  disk.vbuf = buffer(gl.ARRAY_BUFFER, new Float32Array(vertices));
+  disk.nbuf = buffer(gl.ARRAY_BUFFER, new Float32Array(normals));
+  disk.tbuf = buffer(gl.ARRAY_BUFFER, new Float32Array(texture));
+  disk.ibuf = buffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices));
+  disk.nt = 1;
+  disk.mat = mat4.create();
+  disk.alpha = 1;
+  disk.texture = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, disk.texture);
+  gl.texImage2D(
+    gl.TEXTURE_2D,
+    0,
+    gl.RGBA,
+    gl.RGBA,
+    gl.UNSIGNED_BYTE,
+    images.tires[c],
+  );
+  // as in the original, the first tire image decides for all
+  if (isPowerOf2(images.tires[0].width) && isPowerOf2(images.tires[0].height)) {
+    gl.generateMipmap(gl.TEXTURE_2D);
+  } else {
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  }
+  disk.loaded = 1;
+};
+
+// A dark tread of the shape `from`; the detailed one is lit from the side.
+const buildTread = (tread, from, c, k, lit) => {
+  tread.ni = from.indice.length;
+  const vertices = [];
+  for (let i = 0; i < from.vert.length / 3; i++) {
+    vertices[i * 3] = from.vert[i * 3] * 1.1 * carStats.wlh[c][k];
+    vertices[i * 3 + 1] = from.vert[i * 3 + 1] * 1.1 * carStats.wlh[c][k];
+    vertices[i * 3 + 2] = from.vert[i * 3 + 2] * 1.1 * WHEEL_WIDTH[c][k];
+  }
+  const vertexCount = from.vert.length / 3;
+  tread.vbuf = buffer(gl.ARRAY_BUFFER, new Float32Array(vertices));
+  if (lit) {
+    const normals = Array.from({ length: vertexCount }, () => [-1, 0, 0]);
+    tread.nbuf = buffer(gl.ARRAY_BUFFER, new Float32Array(normals.flat()));
+  }
+  tread.cbuf = buffer(gl.ARRAY_BUFFER, new Float32Array(dark(vertexCount)));
+  tread.ibuf = buffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(from.indice));
+  tread.mat = mat4.create();
+  tread.loaded = 1;
+};
