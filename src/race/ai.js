@@ -604,405 +604,425 @@ function bounceOffWalls(c) {
 }
 
 function flyStunts(c) {
-  const type = car[c].typ;
   if (ai[c].stuntPhase == STUNT.takeoff) {
-    let upv =
-      ((racers[c].scy[0] +
-        racers[c].scy[1] +
-        racers[c].scy[2] +
-        racers[c].scy[3]) *
-        (car[c].y + 5)) /
-      40;
-    let divo = 3;
-    if (track.stage == 15 || track.stage == 16) {
-      divo = 10;
+    takeOff(c);
+  }
+  if (ai[c].stuntPhase == STUNT.flipping) {
+    flyAndWaitForLanding(c);
+  }
+  if (ai[c].stuntPhase == STUNT.landing) {
+    land(c);
+  }
+}
+
+function takeOff(c) {
+  const type = car[c].typ;
+  let lift =
+    ((racers[c].scy[0] +
+      racers[c].scy[1] +
+      racers[c].scy[2] +
+      racers[c].scy[3]) *
+      (car[c].y + 5)) /
+    40;
+  let cautionDivisor = 3;
+  if (track.stage == 15 || track.stage == 16) {
+    cautionDivisor = 10;
+  }
+  if (
+    track.stage == 13 &&
+    racers[c].pcleared == 20 &&
+    racers[c].point > 32 &&
+    track.clear[c] - track.clear[game.player] <= 3
+  ) {
+    lift = 0;
+  }
+  if (track.stage == 16 && racers[c].pcleared == 120 && car[c].z < 2200) {
+    lift = 0;
+  }
+  if (
+    lift > 7 &&
+    (random.sim() > ai[c].stuntCaution / cautionDivisor || ai[c].stuntf == 4)
+  ) {
+    ai[c].takeoffXy = racers[c].pxy;
+    ai[c].takeoffZy = racers[c].pzy;
+    ai[c].airTicks = 0;
+    ai[c].flip = 0;
+    ai[c].roll = 0;
+    ai[c].flipReverses = false;
+    ai[c].rollReverses = false;
+    ai[c].stuntPhase = STUNT.flipping;
+    chooseFlipsAndRolls(lift, c);
+    if (track.stage == 16 && type == 16) {
+      ai[c].roll = -1;
+      ai[c].rollAfter = 0;
+      ai[c].flip = -1;
+      ai[c].flipAfter = 0;
     }
-    if (
-      track.stage == 13 &&
-      racers[c].pcleared == 20 &&
-      racers[c].point > 32 &&
-      track.clear[c] - track.clear[game.player] <= 3
-    ) {
-      upv = 0;
-    }
-    if (track.stage == 16 && racers[c].pcleared == 120 && car[c].z < 2200) {
-      upv = 0;
-    }
-    if (
-      upv > 7 &&
-      (random.sim() > ai[c].stuntCaution / divo || ai[c].stuntf == 4)
-    ) {
-      ai[c].takeoffXy = racers[c].pxy;
-      ai[c].takeoffZy = racers[c].pzy;
-      ai[c].airTicks = 0;
-      ai[c].flip = 0;
-      ai[c].roll = 0;
-      ai[c].flipReverses = false;
-      ai[c].rollReverses = false;
-      ai[c].stuntPhase = STUNT.flipping;
-      if (upv < 16) {
-        ai[c].flip = -1;
-        ai[c].flipAfter = 0;
-        ai[c].flipReverses = false;
-      } else {
-        if (
-          (random.sim() > random.sim() && ai[c].stuntf != 3) ||
-          ai[c].stuntf == 1 ||
-          ai[c].stuntf == 2 ||
-          ai[c].stuntf == 4
-        ) {
-          if (
-            ai[c].stuntf == 4 &&
-            racers[c].pcleared == 47 &&
-            ai[c].oupnt == 0
-          ) {
-            ai[c].stuntf = 5;
-          }
-          if (
-            (random.sim() > random.sim() ||
-              ai[c].stuntf == 2 ||
-              ai[c].stuntf == 5) &&
-            ai[c].stuntf != 1 &&
-            ai[c].stuntf != 4
-          ) {
-            ai[c].flip = -1;
-          } else {
-            ai[c].flip = 1;
-          }
-          ai[c].flipAfter = Math.floor(10 * random.sim() * ai[c].stuntCaution);
-          if (ai[c].stuntf == 4 || ai[c].stuntf == 5 || track.stage == 16) {
-            ai[c].flipAfter = 0;
-          }
-          if (
-            random.sim() > 0.85 &&
-            ai[c].stuntf != 1 &&
-            ai[c].stuntf != 4 &&
-            ai[c].stuntf != 5
-          ) {
-            ai[c].flipReverses = true;
-          }
-          if (
-            random.sim() > ai[c].stuntCaution + 0.3 &&
-            ai[c].stuntf != 1 &&
-            ai[c].stuntf != 2 &&
-            ai[c].stuntf != 4 &&
-            ai[c].stuntf != 5
-          ) {
-            if (random.sim() > random.sim()) {
-              ai[c].roll = -1;
-            } else {
-              ai[c].roll = 1;
-            }
-            ai[c].rollAfter = Math.floor(30 * random.sim());
-            if (random.sim() > 0.75) {
-              ai[c].rollReverses = true;
-            }
-          }
-        } else {
-          if (random.sim() > random.sim()) {
-            ai[c].roll = -1;
-          } else {
-            ai[c].roll = 1;
-          }
-          ai[c].rollAfter = Math.floor(10 * random.sim() * ai[c].stuntCaution);
-          if (random.sim() > 0.75) {
-            ai[c].rollReverses = true;
-          }
-          if (random.sim() > ai[c].stuntCaution + 0.3) {
-            if (random.sim() > random.sim() || ai[c].stuntf == 3) {
-              ai[c].flip = -1;
-            } else {
-              ai[c].flip = 1;
-            }
-            ai[c].flipAfter = Math.floor(30 * random.sim());
-            if (random.sim() > 0.85) {
-              ai[c].flipReverses = true;
-            }
-          }
+    if (ai[c].fixing == FIX.close || ai[c].fixing == FIX.jumping) {
+      if (track.stage != 8) {
+        if (ai[c].roll == -1) {
+          ai[c].flip = -1;
         }
+        ai[c].roll = 0;
+        if (racers[c].power < 60) {
+          ai[c].flip = -1;
+        }
+      } else {
+        if (ai[c].flip != 0) {
+          ai[c].flip = -1;
+        }
+        ai[c].roll = 0;
       }
-      if (track.stage == 16 && type == 16) {
-        ai[c].roll = -1;
-        ai[c].rollAfter = 0;
+    }
+  } else {
+    ai[c].stuntPhase = STUNT.none;
+  }
+  if (!ai[c].afta) {
+    ai[c].afta = true;
+  }
+  if (ai[c].fixing == FIX.close) {
+    ai[c].fixing = FIX.jumping;
+    ai[c].rethinkAfter += 30;
+  }
+}
+
+function chooseFlipsAndRolls(lift, c) {
+  if (lift < 16) {
+    ai[c].flip = -1;
+    ai[c].flipAfter = 0;
+    ai[c].flipReverses = false;
+  } else {
+    if (
+      (random.sim() > random.sim() && ai[c].stuntf != 3) ||
+      ai[c].stuntf == 1 ||
+      ai[c].stuntf == 2 ||
+      ai[c].stuntf == 4
+    ) {
+      if (ai[c].stuntf == 4 && racers[c].pcleared == 47 && ai[c].oupnt == 0) {
+        ai[c].stuntf = 5;
+      }
+      if (
+        (random.sim() > random.sim() ||
+          ai[c].stuntf == 2 ||
+          ai[c].stuntf == 5) &&
+        ai[c].stuntf != 1 &&
+        ai[c].stuntf != 4
+      ) {
         ai[c].flip = -1;
+      } else {
+        ai[c].flip = 1;
+      }
+      ai[c].flipAfter = Math.floor(10 * random.sim() * ai[c].stuntCaution);
+      if (ai[c].stuntf == 4 || ai[c].stuntf == 5 || track.stage == 16) {
         ai[c].flipAfter = 0;
       }
-      if (ai[c].fixing == FIX.close || ai[c].fixing == FIX.jumping) {
-        if (track.stage != 8) {
-          if (ai[c].roll == -1) {
-            ai[c].flip = -1;
-          }
-          ai[c].roll = 0;
-          if (racers[c].power < 60) {
-            ai[c].flip = -1;
-          }
+      if (
+        random.sim() > 0.85 &&
+        ai[c].stuntf != 1 &&
+        ai[c].stuntf != 4 &&
+        ai[c].stuntf != 5
+      ) {
+        ai[c].flipReverses = true;
+      }
+      if (
+        random.sim() > ai[c].stuntCaution + 0.3 &&
+        ai[c].stuntf != 1 &&
+        ai[c].stuntf != 2 &&
+        ai[c].stuntf != 4 &&
+        ai[c].stuntf != 5
+      ) {
+        if (random.sim() > random.sim()) {
+          ai[c].roll = -1;
         } else {
-          if (ai[c].flip != 0) {
-            ai[c].flip = -1;
-          }
-          ai[c].roll = 0;
+          ai[c].roll = 1;
+        }
+        ai[c].rollAfter = Math.floor(30 * random.sim());
+        if (random.sim() > 0.75) {
+          ai[c].rollReverses = true;
         }
       }
     } else {
-      ai[c].stuntPhase = STUNT.none;
-    }
-    if (!ai[c].afta) {
-      ai[c].afta = true;
-    }
-    if (ai[c].fixing == FIX.close) {
-      ai[c].fixing = FIX.jumping;
-      ai[c].rethinkAfter += 30;
+      if (random.sim() > random.sim()) {
+        ai[c].roll = -1;
+      } else {
+        ai[c].roll = 1;
+      }
+      ai[c].rollAfter = Math.floor(10 * random.sim() * ai[c].stuntCaution);
+      if (random.sim() > 0.75) {
+        ai[c].rollReverses = true;
+      }
+      if (random.sim() > ai[c].stuntCaution + 0.3) {
+        if (random.sim() > random.sim() || ai[c].stuntf == 3) {
+          ai[c].flip = -1;
+        } else {
+          ai[c].flip = 1;
+        }
+        ai[c].flipAfter = Math.floor(30 * random.sim());
+        if (random.sim() > 0.85) {
+          ai[c].flipReverses = true;
+        }
+      }
     }
   }
-  if (ai[c].stuntPhase == STUNT.flipping) {
-    ai[c].airTicks++;
-    if (ai[c].roll != 0) {
-      if (ai[c].airTicks > ai[c].rollAfter) {
-        if (ai[c].rollReverses) {
-          if (Math.abs(racers[c].pxy - ai[c].takeoffXy) > 180) {
-            if (ai[c].roll == -1) {
-              ai[c].roll = 1;
-            } else {
-              ai[c].roll = -1;
-            }
-            ai[c].rollReverses = false;
+}
+
+function flyAndWaitForLanding(c) {
+  ai[c].airTicks++;
+  if (ai[c].roll != 0) {
+    if (ai[c].airTicks > ai[c].rollAfter) {
+      if (ai[c].rollReverses) {
+        if (Math.abs(racers[c].pxy - ai[c].takeoffXy) > 180) {
+          if (ai[c].roll == -1) {
+            ai[c].roll = 1;
+          } else {
+            ai[c].roll = -1;
+          }
+          ai[c].rollReverses = false;
+        }
+      }
+      if (ai[c].roll == -1) {
+        racers[c].u.handb = true;
+        racers[c].u.left = true;
+      } else {
+        racers[c].u.handb = true;
+        racers[c].u.right = true;
+      }
+    }
+  }
+  if (ai[c].flip != 0) {
+    if (ai[c].airTicks > ai[c].flipAfter) {
+      if (ai[c].flipReverses) {
+        if (Math.abs(racers[c].pzy - ai[c].takeoffZy) > 180) {
+          if (ai[c].flip == -1) {
+            ai[c].flip = 1;
+          } else {
+            ai[c].flip = -1;
+          }
+          ai[c].flipReverses = false;
+        }
+      }
+      if (ai[c].flip == -1) {
+        racers[c].u.handb = true;
+        racers[c].u.down = true;
+      } else {
+        racers[c].u.handb = true;
+        racers[c].u.up = true;
+        if (ai[c].apunch > 0) {
+          racers[c].u.down = true;
+          ai[c].apunch--;
+        }
+      }
+    }
+  }
+  if (
+    ((racers[c].scy[0] +
+      racers[c].scy[1] +
+      racers[c].scy[2] +
+      racers[c].scy[3]) *
+      100) /
+      (car[c].y + 5) <
+    -ai[c].landingMargin
+  ) {
+    ai[c].pressedUp = false;
+    ai[c].pressedDown = false;
+    ai[c].pressedLeft = false;
+    ai[c].pressedRight = false;
+    ai[c].rollSettled = false;
+    ai[c].pitchSettled = false;
+    ai[c].straightenPitch = false;
+    ai[c].straightenRoll = false;
+    ai[c].stuntPhase = STUNT.landing;
+    ai[c].landingStep = 0;
+  }
+}
+
+function land(c) {
+  if (ai[c].landingStep == 0) {
+    if (racers[c].dcomp != 0 || racers[c].ucomp != 0) {
+      ai[c].straightenPitch = true;
+    }
+    if (racers[c].lcomp != 0 || racers[c].rcomp != 0) {
+      ai[c].straightenRoll = true;
+    }
+    ai[c].landingStep = 1;
+  }
+  if (racers[c].wtouch) {
+    if (ai[c].landingStep == 1) {
+      ai[c].landingStep = 2;
+    }
+  } else {
+    if (ai[c].landingStep == 2) {
+      if (racers[c].capsized && random.sim() > ai[c].landingSloppiness) {
+        if (ai[c].straightenPitch) {
+          ai[c].straightenRoll = true;
+          ai[c].straightenPitch = false;
+        } else {
+          if (ai[c].straightenRoll) {
+            ai[c].straightenPitch = true;
+            ai[c].straightenRoll = false;
           }
         }
-        if (ai[c].roll == -1) {
-          racers[c].u.handb = true;
+      }
+      ai[c].landingStep = 3;
+    }
+  }
+  if (ai[c].straightenPitch) {
+    straightenPitch(c);
+  }
+  if (ai[c].straightenRoll) {
+    straightenRoll(c);
+  }
+}
+
+function straightenPitch(c) {
+  let pitch = racers[c].pzy + 90;
+  while (pitch < 0) {
+    pitch += 360;
+  }
+  while (pitch > 180) {
+    pitch -= 360;
+  }
+  pitch = Math.abs(pitch);
+  if (Math.abs(racers[c].lcomp - racers[c].rcomp) < 5) {
+    if (ai[c].pressedDown || ai[c].pressedUp) {
+      ai[c].pitchSettled = true;
+    }
+  }
+  if (racers[c].dcomp > racers[c].ucomp) {
+    if (racers[c].capsized) {
+      if (ai[c].pitchSettled) {
+        if (pitch < 90) {
+          racers[c].u.up = true;
+        } else {
+          racers[c].u.down = true;
+        }
+      } else {
+        if (!ai[c].pressedDown) {
+          racers[c].u.down = true;
+        }
+      }
+    } else {
+      if (ai[c].pitchSettled) {
+        if (ai[c].landsPerfectly && Math.abs(pitch - 90) > 30) {
+          if (pitch < 90) {
+            racers[c].u.up = true;
+          } else {
+            racers[c].u.down = true;
+          }
+        }
+      } else {
+        if (random.sim() > ai[c].landingSloppiness) {
+          racers[c].u.up = true;
+        }
+      }
+      ai[c].pressedDown = true;
+    }
+  } else {
+    if (racers[c].capsized) {
+      if (ai[c].pitchSettled) {
+        if (pitch < 90) {
+          racers[c].u.up = true;
+        } else {
+          racers[c].u.down = true;
+        }
+      } else {
+        if (!ai[c].pressedUp) {
+          racers[c].u.up = true;
+        }
+      }
+    } else {
+      if (ai[c].pitchSettled) {
+        if (ai[c].landsPerfectly && Math.abs(pitch - 90) > 30) {
+          if (pitch < 90) {
+            racers[c].u.up = true;
+          } else {
+            racers[c].u.down = true;
+          }
+        }
+      } else {
+        if (random.sim() > ai[c].landingSloppiness) {
+          racers[c].u.down = true;
+        }
+      }
+      ai[c].pressedUp = true;
+    }
+  }
+}
+
+function straightenRoll(c) {
+  let roll = racers[c].pxy + 90;
+  if (racers[c].u.zyinv) {
+    roll += 180;
+  }
+  while (roll < 0) {
+    roll += 360;
+  }
+  while (roll > 180) {
+    roll -= 360;
+  }
+  roll = Math.abs(roll);
+  if (Math.abs(racers[c].lcomp - racers[c].rcomp) < 10) {
+    if (ai[c].pressedLeft || ai[c].pressedRight) {
+      ai[c].rollSettled = true;
+    }
+  }
+  if (racers[c].lcomp > racers[c].rcomp) {
+    if (racers[c].capsized) {
+      if (ai[c].rollSettled) {
+        if (roll > 90) {
           racers[c].u.left = true;
         } else {
-          racers[c].u.handb = true;
+          racers[c].u.right = true;
+        }
+      } else {
+        if (!ai[c].pressedLeft) {
+          racers[c].u.left = true;
+        }
+      }
+    } else {
+      if (ai[c].rollSettled) {
+        if (ai[c].landsPerfectly && Math.abs(roll - 90) > 30) {
+          if (roll > 90) {
+            racers[c].u.left = true;
+          } else {
+            racers[c].u.right = true;
+          }
+        }
+      } else {
+        if (random.sim() > ai[c].landingSloppiness) {
           racers[c].u.right = true;
         }
       }
+      ai[c].pressedLeft = true;
     }
-    if (ai[c].flip != 0) {
-      if (ai[c].airTicks > ai[c].flipAfter) {
-        if (ai[c].flipReverses) {
-          if (Math.abs(racers[c].pzy - ai[c].takeoffZy) > 180) {
-            if (ai[c].flip == -1) {
-              ai[c].flip = 1;
-            } else {
-              ai[c].flip = -1;
-            }
-            ai[c].flipReverses = false;
-          }
-        }
-        if (ai[c].flip == -1) {
-          racers[c].u.handb = true;
-          racers[c].u.down = true;
+  } else {
+    if (racers[c].capsized) {
+      if (ai[c].rollSettled) {
+        if (roll > 90) {
+          racers[c].u.left = true;
         } else {
-          racers[c].u.handb = true;
-          racers[c].u.up = true;
-          if (ai[c].apunch > 0) {
-            racers[c].u.down = true;
-            ai[c].apunch--;
-          }
+          racers[c].u.right = true;
         }
-      }
-    }
-    if (
-      ((racers[c].scy[0] +
-        racers[c].scy[1] +
-        racers[c].scy[2] +
-        racers[c].scy[3]) *
-        100) /
-        (car[c].y + 5) <
-      -ai[c].landingMargin
-    ) {
-      ai[c].pressedUp = false;
-      ai[c].pressedDown = false;
-      ai[c].pressedLeft = false;
-      ai[c].pressedRight = false;
-      ai[c].rollSettled = false;
-      ai[c].pitchSettled = false;
-      ai[c].straightenPitch = false;
-      ai[c].straightenRoll = false;
-      ai[c].stuntPhase = STUNT.landing;
-      ai[c].landingStep = 0;
-    }
-  }
-  if (ai[c].stuntPhase == STUNT.landing) {
-    if (ai[c].landingStep == 0) {
-      if (racers[c].dcomp != 0 || racers[c].ucomp != 0) {
-        ai[c].straightenPitch = true;
-      }
-      if (racers[c].lcomp != 0 || racers[c].rcomp != 0) {
-        ai[c].straightenRoll = true;
-      }
-      ai[c].landingStep = 1;
-    }
-    if (racers[c].wtouch) {
-      if (ai[c].landingStep == 1) {
-        ai[c].landingStep = 2;
+      } else {
+        if (!ai[c].pressedRight) {
+          racers[c].u.right = true;
+        }
       }
     } else {
-      if (ai[c].landingStep == 2) {
-        if (racers[c].capsized && random.sim() > ai[c].landingSloppiness) {
-          if (ai[c].straightenPitch) {
-            ai[c].straightenRoll = true;
-            ai[c].straightenPitch = false;
+      if (ai[c].rollSettled) {
+        if (ai[c].landsPerfectly && Math.abs(roll - 90) > 30) {
+          if (roll > 90) {
+            racers[c].u.left = true;
           } else {
-            if (ai[c].straightenRoll) {
-              ai[c].straightenPitch = true;
-              ai[c].straightenRoll = false;
-            }
+            racers[c].u.right = true;
           }
-        }
-        ai[c].landingStep = 3;
-      }
-    }
-    if (ai[c].straightenPitch) {
-      let pzyr = racers[c].pzy + 90;
-      while (pzyr < 0) {
-        pzyr += 360;
-      }
-      while (pzyr > 180) {
-        pzyr -= 360;
-      }
-      pzyr = Math.abs(pzyr);
-      if (Math.abs(racers[c].lcomp - racers[c].rcomp) < 5) {
-        if (ai[c].pressedDown || ai[c].pressedUp) {
-          ai[c].pitchSettled = true;
-        }
-      }
-      if (racers[c].dcomp > racers[c].ucomp) {
-        if (racers[c].capsized) {
-          if (ai[c].pitchSettled) {
-            if (pzyr < 90) {
-              racers[c].u.up = true;
-            } else {
-              racers[c].u.down = true;
-            }
-          } else {
-            if (!ai[c].pressedDown) {
-              racers[c].u.down = true;
-            }
-          }
-        } else {
-          if (ai[c].pitchSettled) {
-            if (ai[c].landsPerfectly && Math.abs(pzyr - 90) > 30) {
-              if (pzyr < 90) {
-                racers[c].u.up = true;
-              } else {
-                racers[c].u.down = true;
-              }
-            }
-          } else {
-            if (random.sim() > ai[c].landingSloppiness) {
-              racers[c].u.up = true;
-            }
-          }
-          ai[c].pressedDown = true;
         }
       } else {
-        if (racers[c].capsized) {
-          if (ai[c].pitchSettled) {
-            if (pzyr < 90) {
-              racers[c].u.up = true;
-            } else {
-              racers[c].u.down = true;
-            }
-          } else {
-            if (!ai[c].pressedUp) {
-              racers[c].u.up = true;
-            }
-          }
-        } else {
-          if (ai[c].pitchSettled) {
-            if (ai[c].landsPerfectly && Math.abs(pzyr - 90) > 30) {
-              if (pzyr < 90) {
-                racers[c].u.up = true;
-              } else {
-                racers[c].u.down = true;
-              }
-            }
-          } else {
-            if (random.sim() > ai[c].landingSloppiness) {
-              racers[c].u.down = true;
-            }
-          }
-          ai[c].pressedUp = true;
+        if (random.sim() > ai[c].landingSloppiness) {
+          racers[c].u.left = true;
         }
       }
-    }
-    if (ai[c].straightenRoll) {
-      let pxyr = racers[c].pxy + 90;
-      if (racers[c].u.zyinv) {
-        pxyr += 180;
-      }
-      while (pxyr < 0) {
-        pxyr += 360;
-      }
-      while (pxyr > 180) {
-        pxyr -= 360;
-      }
-      pxyr = Math.abs(pxyr);
-      if (Math.abs(racers[c].lcomp - racers[c].rcomp) < 10) {
-        if (ai[c].pressedLeft || ai[c].pressedRight) {
-          ai[c].rollSettled = true;
-        }
-      }
-      if (racers[c].lcomp > racers[c].rcomp) {
-        if (racers[c].capsized) {
-          if (ai[c].rollSettled) {
-            if (pxyr > 90) {
-              racers[c].u.left = true;
-            } else {
-              racers[c].u.right = true;
-            }
-          } else {
-            if (!ai[c].pressedLeft) {
-              racers[c].u.left = true;
-            }
-          }
-        } else {
-          if (ai[c].rollSettled) {
-            if (ai[c].landsPerfectly && Math.abs(pxyr - 90) > 30) {
-              if (pxyr > 90) {
-                racers[c].u.left = true;
-              } else {
-                racers[c].u.right = true;
-              }
-            }
-          } else {
-            if (random.sim() > ai[c].landingSloppiness) {
-              racers[c].u.right = true;
-            }
-          }
-          ai[c].pressedLeft = true;
-        }
-      } else {
-        if (racers[c].capsized) {
-          if (ai[c].rollSettled) {
-            if (pxyr > 90) {
-              racers[c].u.left = true;
-            } else {
-              racers[c].u.right = true;
-            }
-          } else {
-            if (!ai[c].pressedRight) {
-              racers[c].u.right = true;
-            }
-          }
-        } else {
-          if (ai[c].rollSettled) {
-            if (ai[c].landsPerfectly && Math.abs(pxyr - 90) > 30) {
-              if (pxyr > 90) {
-                racers[c].u.left = true;
-              } else {
-                racers[c].u.right = true;
-              }
-            }
-          } else {
-            if (random.sim() > ai[c].landingSloppiness) {
-              racers[c].u.left = true;
-            }
-          }
-          ai[c].pressedRight = true;
-        }
-      }
+      ai[c].pressedRight = true;
     }
   }
 }
