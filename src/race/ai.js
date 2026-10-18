@@ -141,8 +141,8 @@ const fixApproach = [0, 0, 0, 0, 0];
 
 export function inishcontrol() {
   if (track.stage != 9) {
-    for (var j = 0; j < pieces.fixCount; j++) {
-      var pyclos = -10;
+    for (let j = 0; j < pieces.fixCount; j++) {
+      let pyclos = -10;
       for (var i = 0; i < track.n; i++) {
         if (
           distanceSquaredXZ(
@@ -178,7 +178,7 @@ export function inishcontrol() {
       fixApproach[0] = 42;
     }
   }
-  for (var c = 1; c < game.carCount; c++) {
+  for (let c = 1; c < game.carCount; c++) {
     resetPursuit(c);
     ai[c].steerFreeze = 0;
     if (track.stage == 6) {
@@ -232,9 +232,9 @@ export function inishcontrol() {
   }
 }
 export function control() {
-  for (var c = 0; c < game.carCount; c++) {
+  for (let c = 0; c < game.carCount; c++) {
     if (c != game.player) {
-      var cn = car[c].typ;
+      let cn = car[c].typ;
       racers[c].u.left = false;
       racers[c].u.right = false;
       racers[c].u.up = false;
@@ -250,7 +250,7 @@ export function control() {
             }
           }
         }
-        var ride = false;
+        let ride = false;
         if (ai[c].groundByWheels) {
           ride = racers[c].wtouch;
         } else {
@@ -265,8 +265,8 @@ export function control() {
           }
           if (ai[c].attackTicks == 0) {
             waitAtStart(c);
-            var pnt = racers[c].point;
-            var powbul = 50;
+            let pnt = racers[c].point;
+            let powbul = 50;
             if (track.stage == 8) {
               powbul = 20;
             }
@@ -315,7 +315,7 @@ function waitAtStart(c) {
   }
 }
 
-function headForFix(c, pnt) {
+function headForFix(c, point) {
   if (track.stage != 17 && game.mode != MODE.switchCars) {
     if (
       racers[c].missedcp == 0 ||
@@ -323,53 +323,53 @@ function headForFix(c, pnt) {
       ai[c].fixing == FIX.jumping
     ) {
       if (ai[c].fixing != FIX.none) {
-        var istr = 0;
+        let firstFix = 0;
         if (
           track.stage == 9 &&
           car[game.player].typ == 14 &&
           track.clear[c] - track.clear[game.player] >= 4
         ) {
-          istr = 1;
+          firstFix = 1;
         }
         if (track.stage == 16) {
-          istr = 2;
+          firstFix = 2;
         }
         if (ai[c].fixing == FIX.nearest) {
           if (track.stage == 15) {
-            istr = 2;
+            firstFix = 2;
           }
-          var pyclos = -10;
-          var closi = 0;
-          for (var i = istr; i < pieces.fixCount; i++) {
+          let nearest = -10;
+          let nearestFix = 0;
+          for (var i = firstFix; i < pieces.fixCount; i++) {
             if (
               distanceSquaredXZ(
                 car[c].x / 10,
                 track.x[fixApproach[i]] / 10,
                 car[c].z / 10,
                 track.z[fixApproach[i]] / 10,
-              ) < pyclos ||
-              pyclos == -10
+              ) < nearest ||
+              nearest == -10
             ) {
-              pyclos = distanceSquaredXZ(
+              nearest = distanceSquaredXZ(
                 car[c].x / 10,
                 track.x[fixApproach[i]] / 10,
                 car[c].z / 10,
                 track.z[fixApproach[i]] / 10,
               );
-              closi = i;
+              nearestFix = i;
             }
           }
           if (track.stage == 12) {
-            closi = 1;
+            nearestFix = 1;
           }
-          pnt = fixApproach[closi];
-          if (track.special[closi]) {
+          point = fixApproach[nearestFix];
+          if (track.special[nearestFix]) {
             ai[c].ignoreMissed = true;
           } else {
             ai[c].ignoreMissed = false;
           }
         }
-        for (var i = istr; i < pieces.fixCount; i++) {
+        for (var i = firstFix; i < pieces.fixCount; i++) {
           if (
             distanceSquaredXZ(
               car[c].x / 10,
@@ -394,30 +394,30 @@ function headForFix(c, pnt) {
       }
     }
   }
-  return pnt;
+  return point;
 }
 
-function aimAtPathPoint(c, pnt) {
+function aimAtPathPoint(c, point) {
   if (ai[c].ticksSinceAim > ai[c].ticksToNextAim) {
     if (!ai[c].goingToWait) {
-      var ad = 0;
-      if (track.x[pnt] - car[c].x >= 0) {
-        ad = 180;
+      var behind = 0;
+      if (track.x[point] - car[c].x >= 0) {
+        behind = 180;
       }
       ai[c].aimHeading = Math.floor(
         90 +
-          ad +
-          Math.atan((track.z[pnt] - car[c].z) / (track.x[pnt] - car[c].x)) /
+          behind +
+          Math.atan((track.z[point] - car[c].z) / (track.x[point] - car[c].x)) /
             0.017453292519943295,
       );
     } else {
-      var ad = 0;
+      var behind = 0;
       if (ai[c].waitX - car[c].x >= 0) {
-        ad = 180;
+        behind = 180;
       }
       ai[c].aimHeading = Math.floor(
         90 +
-          ad +
+          behind +
           Math.atan((ai[c].waitZ - car[c].z) / (ai[c].waitX - car[c].x)) /
             0.017453292519943295,
       );
@@ -433,8 +433,8 @@ function aimAtPathPoint(c, pnt) {
 
 function chaseTarget(c) {
   racers[c].u.up = true;
-  var ad = 0;
-  var adsto =
+  let behind = 0;
+  let lead =
     (distanceXZ(
       car[c].x,
       car[ai[c].attackedCar].x,
@@ -443,17 +443,17 @@ function chaseTarget(c) {
     ) /
       2) *
     ai[c].leadAhead;
-  var acx =
-    car[ai[c].attackedCar].x - adsto * sinDeg(racers[ai[c].attackedCar].mxz);
-  var acz =
-    car[ai[c].attackedCar].z + adsto * cosDeg(racers[ai[c].attackedCar].mxz);
-  if (acx - car[c].x >= 0) {
-    ad = 180;
+  let aimX =
+    car[ai[c].attackedCar].x - lead * sinDeg(racers[ai[c].attackedCar].mxz);
+  let aimZ =
+    car[ai[c].attackedCar].z + lead * cosDeg(racers[ai[c].attackedCar].mxz);
+  if (aimX - car[c].x >= 0) {
+    behind = 180;
   }
   ai[c].aimHeading =
     90 +
-    ad +
-    Math.atan((acz - car[c].z) / (acx - car[c].x)) / 0.017453292519943295;
+    behind +
+    Math.atan((aimZ - car[c].z) / (aimX - car[c].x)) / 0.017453292519943295;
   if (tick.fraction >= tick.scale) {
     ai[c].attackTicks--;
   }
@@ -486,15 +486,15 @@ function chaseTarget(c) {
 }
 
 function steerToAim(c, cn) {
-  var crxz = car[c].xz;
+  let heading = car[c].xz;
   if (racers[c].u.zyinv) {
-    crxz += 180;
+    heading += 180;
   }
-  while (crxz < 0) {
-    crxz += 360;
+  while (heading < 0) {
+    heading += 360;
   }
-  while (crxz > 180) {
-    crxz -= 360;
+  while (heading > 180) {
+    heading -= 360;
   }
   while (ai[c].aimHeading < 0) {
     ai[c].aimHeading += 360;
@@ -506,11 +506,11 @@ function steerToAim(c, cn) {
     ai[c].steerTolerance = 0;
   }
   if (ai[c].steerFreeze == 0) {
-    if (Math.abs(crxz - ai[c].aimHeading) < 180) {
+    if (Math.abs(heading - ai[c].aimHeading) < 180) {
       if (
-        Math.floor(Math.abs(crxz - ai[c].aimHeading)) > ai[c].steerTolerance
+        Math.floor(Math.abs(heading - ai[c].aimHeading)) > ai[c].steerTolerance
       ) {
-        if (crxz > ai[c].aimHeading) {
+        if (heading > ai[c].aimHeading) {
           racers[c].u.left = true;
           ai[c].lastTurnedLeft = true;
         } else {
@@ -518,7 +518,7 @@ function steerToAim(c, cn) {
           ai[c].lastTurnedLeft = false;
         }
         if (
-          Math.abs(crxz - ai[c].aimHeading) > 50 &&
+          Math.abs(heading - ai[c].aimHeading) > 50 &&
           racers[c].speed > carStats.swits[cn][0] &&
           ai[c].sharpTurn != SHARP_TURN.steer
         ) {
@@ -535,10 +535,10 @@ function steerToAim(c, cn) {
       }
     } else {
       if (
-        Math.floor(Math.abs(crxz - ai[c].aimHeading)) <
+        Math.floor(Math.abs(heading - ai[c].aimHeading)) <
         360 - ai[c].steerTolerance
       ) {
-        if (crxz > ai[c].aimHeading) {
+        if (heading > ai[c].aimHeading) {
           racers[c].u.right = true;
           ai[c].lastTurnedLeft = false;
         } else {
@@ -546,7 +546,7 @@ function steerToAim(c, cn) {
           ai[c].lastTurnedLeft = true;
         }
         if (
-          Math.abs(crxz - ai[c].aimHeading) < 310 &&
+          Math.abs(heading - ai[c].aimHeading) < 310 &&
           racers[c].speed > carStats.swits[cn][0] &&
           ai[c].sharpTurn != SHARP_TURN.steer
         ) {
@@ -583,13 +583,13 @@ function bounceOffWalls(c) {
       }
     }
     if (pieceModels[pieces.list[racers[c].wall].typ].dam != 0) {
-      var hmlt = 1;
+      let bump = 1;
       if (pieceModels[pieces.list[racers[c].wall].typ].skid == 1) {
-        hmlt = 3;
+        bump = 3;
       }
-      ai[c].steerFreeze += hmlt;
-      if (ai[c].steerFreeze > 10 * hmlt) {
-        ai[c].steerFreeze = 10 * hmlt;
+      ai[c].steerFreeze += bump;
+      if (ai[c].steerFreeze > 10 * bump) {
+        ai[c].steerFreeze = 10 * bump;
       }
     } else {
       ai[c].steerFreeze = 1;
@@ -604,14 +604,14 @@ function bounceOffWalls(c) {
 
 function flyStunts(c, cn) {
   if (ai[c].stuntPhase == STUNT.takeoff) {
-    var upv =
+    let upv =
       ((racers[c].scy[0] +
         racers[c].scy[1] +
         racers[c].scy[2] +
         racers[c].scy[3]) *
         (car[c].y + 5)) /
       40;
-    var divo = 3;
+    let divo = 3;
     if (track.stage == 15 || track.stage == 16) {
       divo = 10;
     }
@@ -852,7 +852,7 @@ function flyStunts(c, cn) {
       }
     }
     if (ai[c].straightenPitch) {
-      var pzyr = racers[c].pzy + 90;
+      let pzyr = racers[c].pzy + 90;
       while (pzyr < 0) {
         pzyr += 360;
       }
@@ -926,7 +926,7 @@ function flyStunts(c, cn) {
       }
     }
     if (ai[c].straightenRoll) {
-      var pxyr = racers[c].pxy + 90;
+      let pxyr = racers[c].pxy + 90;
       if (racers[c].u.zyinv) {
         pxyr += 180;
       }
@@ -1013,7 +1013,7 @@ function choosePathPoint(c, powbul, pnt, cn) {
     ai[c].fixing == FIX.jumping ||
     racers[c].power < powbul
   ) {
-    var tpnt = 0;
+    let tpnt = 0;
     if (ai[c].rampChoice == RAMPS.take && track.typ[pnt] <= 0) {
       tpnt = pnt + 1;
       if (tpnt >= track.n) {
@@ -1034,7 +1034,7 @@ function choosePathPoint(c, powbul, pnt, cn) {
     if (track.stage != 9 || pnt != 0) {
       if (random.sim() > ai[c].cornerCutting) {
         tpnt = pnt;
-        var notimpcp = false;
+        let notimpcp = false;
         if (track.typ[tpnt] > 0) {
           var ic = 0;
           for (var i = 0; i < track.n; i++) {
@@ -1509,7 +1509,7 @@ function choosePathPoint(c, powbul, pnt, cn) {
       if (cn == 14) {
         if (racers[c].power > 60) {
           var i = racers[game.player].pcleared;
-          var found = -1;
+          let found = -1;
           while (found == -1) {
             i++;
             if (i >= track.n) {
@@ -1700,7 +1700,7 @@ function choosePathPoint(c, powbul, pnt, cn) {
 }
 
 function rethink(c, cn) {
-  var tstage = track.stage;
+  let tstage = track.stage;
   ai[c].aimLag = Math.floor(
     (7 - rank(c)) * rank(game.player) * (6 - tstage * 2),
   );
@@ -1719,7 +1719,7 @@ function rethink(c, cn) {
   if (track.stage == 16) {
     ai[c].steerTolerance = 3;
   }
-  var mw = 0;
+  let mw = 0;
   if (track.stage == 1) {
     mw = 2;
   }
@@ -2105,7 +2105,7 @@ function rethink(c, cn) {
 }
 
 function chooseWhetherToFix(cn, c) {
-  var norunfix = false;
+  let norunfix = false;
   if (
     track.stage == 6 ||
     track.stage == 10 ||
@@ -2126,7 +2126,7 @@ function chooseWhetherToFix(cn, c) {
   if (game.mode != MODE.switchCars) {
     if (ai[c].fixing != FIX.close) {
       ai[c].fixing = FIX.none;
-      var trunfix = 50;
+      let trunfix = 50;
       if (track.stage == 16) {
         trunfix = 100;
       }
@@ -2134,7 +2134,7 @@ function chooseWhetherToFix(cn, c) {
         ai[c].fixing = FIX.onTheWay;
       }
       if (!norunfix) {
-        var runfix = 80;
+        let runfix = 80;
         if (track.stage == 9) {
           runfix = 70;
         }
@@ -2199,7 +2199,7 @@ function chooseWhetherToBully(c, cn) {
 
 function chooseWhomToAttack(c, cn) {
   if (ai[c].attackTicks == 0) {
-    var startsway = true;
+    let startsway = true;
     if (
       track.stage == 3 ||
       track.stage == 1 ||
@@ -2218,7 +2218,7 @@ function chooseWhomToAttack(c, cn) {
     ) {
       startsway = false;
     }
-    var onlyou = false;
+    let onlyou = false;
     if (track.stage == 3 && cn == 12) {
       onlyou = true;
     }
@@ -2241,7 +2241,7 @@ function chooseWhomToAttack(c, cn) {
     ) {
       onlyou = true;
     }
-    var powtoattack = 60;
+    let powtoattack = 60;
     if (track.stage == 3 || track.stage == 17) {
       powtoattack = 30;
     }
@@ -2286,9 +2286,9 @@ function chooseWhomToAttack(c, cn) {
         powtoattack = 80;
       }
     }
-    for (var i = 0; i < game.carCount; i++) {
+    for (let i = 0; i < game.carCount; i++) {
       if (i != c && track.clear[i] != -1) {
-        var myxz = car[c].xz;
+        let myxz = car[c].xz;
         if (racers[c].u.zyinv) {
           myxz += 180;
         }
@@ -2298,11 +2298,11 @@ function chooseWhomToAttack(c, cn) {
         while (myxz > 180) {
           myxz -= 360;
         }
-        var ad = 0;
+        let ad = 0;
         if (car[i].x - car[c].x >= 0) {
           ad = 180;
         }
-        var pnxz =
+        let pnxz =
           90 +
           ad +
           Math.atan((car[i].z - car[c].z) / (car[i].x - car[c].x)) /
@@ -2313,11 +2313,11 @@ function chooseWhomToAttack(c, cn) {
         while (pnxz > 180) {
           pnxz -= 360;
         }
-        var vis = Math.abs(myxz - pnxz);
+        let vis = Math.abs(myxz - pnxz);
         if (vis > 180) {
           vis = Math.abs(vis - 360);
         }
-        var attackrad = 2000 * (Math.abs(track.clear[i] - racers[c].clear) + 1);
+        let attackrad = 2000 * (Math.abs(track.clear[i] - racers[c].clear) + 1);
         if (track.stage == 3 && cn == 12) {
           if (attackrad < 12000) {
             attackrad = 12000;
@@ -2379,7 +2379,7 @@ function chooseWhomToAttack(c, cn) {
             attackrad *= Math.abs(track.clear[i] - racers[c].clear) + 1;
           }
         }
-        var visan = 85 + 15 * (Math.abs(track.clear[i] - racers[c].clear) + 1);
+        let visan = 85 + 15 * (Math.abs(track.clear[i] - racers[c].clear) + 1);
         if (track.stage == 9 && !onlyou) {
           if (
             car[game.player].typ != 14 ||
@@ -2407,11 +2407,11 @@ function chooseWhomToAttack(c, cn) {
           ai[c].afta &&
           racers[c].power > powtoattack
         ) {
-          var bim = 35 - Math.abs(track.clear[i] - racers[c].clear) * 10;
+          let bim = 35 - Math.abs(track.clear[i] - racers[c].clear) * 10;
           if (bim < 1) {
             bim = 1;
           }
-          var atp = ((rank(c) + 1) * (7 - rank(i))) / bim;
+          let atp = ((rank(c) + 1) * (7 - rank(i))) / bim;
           if (game.mode != MODE.switchCars) {
             if (track.stage != 17) {
               if (atp > 0.7) {
@@ -2513,7 +2513,7 @@ function chooseWhomToAttack(c, cn) {
               }
             }
           } else {
-            var opxz = car[i].xz;
+            let opxz = car[i].xz;
             if (racers[i].u.zyinv) {
               opxz += 180;
             }

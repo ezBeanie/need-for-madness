@@ -8,7 +8,10 @@ const [file, base, mapJson, factory] = process.argv.slice(2);
 const map = JSON.parse(mapJson);
 let src = fs.readFileSync(file, "utf8");
 const names = Object.keys(map).join("|");
-const access = new RegExp(`(\\b${base}(?:\\[[^\\]]+\\])?\\.)(${names})\\b`, "g");
+const access = new RegExp(
+  `(\\b${base}(?:\\[[^\\]]+\\])?\\.)(${names})\\b`,
+  "g",
+);
 let count = 0;
 src = src.replace(access, (_, prefix, field) => {
   count++;
