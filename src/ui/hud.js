@@ -27,8 +27,8 @@ import { raceEvents } from "../race/events.js";
 import { car, racers } from "../race/racers.js";
 import {
   HIGHLIGHT,
-  fastforwardexit,
-  hrewindhreplay,
+  skipReplay,
+  startHighlight,
   recording,
 } from "../race/recording.js";
 import { track } from "../race/track.js";
@@ -492,7 +492,7 @@ export function resetHud() {
   raceEvents.raceOverTicks = 0;
   camera.mode = CAMERA.behind;
   camera.target = 0;
-  recording.onpausefr = false;
+  recording.frozen = false;
   raceEvents.playerWreckTicks = 0;
   damageBlinkTicks = 0;
   hud.replayStartsIn = 0;
@@ -770,7 +770,7 @@ const afterRaceOver = () => {
     highlightPlays = 0;
     camera.orbitHeight = Math.floor(90 * random.fx());
     camera.orbitAngle = Math.floor(360 * random.fx());
-    hrewindhreplay();
+    startHighlight();
   }
   if (hud.replayStartsIn) {
     rd.globalAlpha = 0.7;
@@ -1571,7 +1571,7 @@ export function drawReplayOverlay() {
     confirm.state = CONFIRM.used;
   }
   if (hud.replayStartsIn == 1) {
-    fastforwardexit();
+    skipReplay();
   }
   if (recording.frame > 425) {
     rd.fillStyle = "#000000";
@@ -1590,17 +1590,17 @@ let flashed = false;
 
 // The replay goes on unless it holds still (onpausefr), and starts over at its end.
 const playOrHold = (playing) => {
-  recording.onpausefr = false;
+  recording.frozen = false;
   if (playing) {
     recording.frame++;
     if (recording.frame == 430) {
       recording.frame = 0;
       recording.held = 0;
-      hrewindhreplay();
+      startHighlight();
       highlightPlays++;
     }
   } else {
-    recording.onpausefr = true;
+    recording.frozen = true;
   }
 };
 

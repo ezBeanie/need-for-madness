@@ -5,7 +5,7 @@ import { distanceSquaredXZ } from "../core/math.js";
 import { game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { car, racers } from "./racers.js";
-import { HIGHLIGHT, catchnow, recording } from "./recording.js";
+import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
 import { track } from "./track.js";
 
 // the car finishing right behind or right ahead of the player
@@ -30,10 +30,10 @@ export function updateStandings() {
       track.wasted++;
     }
   }
-  if (recording.catchfin != 0) {
-    recording.catchfin--;
-    if (recording.catchfin == 0) {
-      catchnow(HIGHLIGHT.closeWin + track.pos[0]);
+  if (recording.finishCatchTicks != 0) {
+    recording.finishCatchTicks--;
+    if (recording.finishCatchTicks == 0) {
+      catchHighlight(HIGHLIGHT.closeWin + track.pos[0]);
       if (recording.highlight == HIGHLIGHT.closeWin + track.pos[0]) {
         recording.otherCar = rival;
         if (recording.highlight > HIGHLIGHT.closeLoss) {
@@ -118,14 +118,14 @@ const watchForCloseFinish = () => {
         distanceTo(car[0], car[rival].x, car[rival].z) < CLOSE &&
         track.clear[0] - racers[rival].clear == 1
       ) {
-        recording.catchfin = CLOSE_FINISH_TICKS;
+        recording.finishCatchTicks = CLOSE_FINISH_TICKS;
       }
     } else if (
       track.pos[0] == 1 &&
       distanceTo(car[0], car[i].x, car[i].z) < CLOSE &&
       racers[i].clear - racers[0].clear == 1
     ) {
-      recording.catchfin = CLOSE_FINISH_TICKS;
+      recording.finishCatchTicks = CLOSE_FINISH_TICKS;
       rival = i;
     }
   }

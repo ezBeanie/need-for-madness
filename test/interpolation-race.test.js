@@ -91,7 +91,9 @@ describe("interpolated drawing in a real race", () => {
             ]),
         ),
         dust: ctx.effects.dustClouds.map((d) => (d.stg != 0 ? d.mat : null)),
-        explosions: ctx.effects.explosions.map((e) => (e.ani != -1 ? e.mat : null)),
+        explosions: ctx.effects.explosions.map((e) =>
+          e.ani != -1 ? e.mat : null,
+        ),
       };
       if (before) {
         for (const kind of Object.keys(now)) {

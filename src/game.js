@@ -33,11 +33,11 @@ import { instructionsTick } from "./screens/instructions.js";
 import { PHASE, RACE_PHASES, game } from "./core/state.js";
 import { tick } from "./core/tick.js";
 import {
-  hreplay,
-  record,
+  highlightTick,
+  recordTick,
   recording,
-  replay,
-  revtime,
+  replayTick,
+  timeRewindTick,
 } from "./race/recording.js";
 import { raceEvents } from "./race/events.js";
 import { control } from "./race/ai.js";
@@ -66,7 +66,7 @@ function raceTick() {
     if (raceEvents.countdown == 0) {
       drive();
       moveScenery(true);
-      record();
+      recordTick();
       updateStandings();
       control();
       drawHud();
@@ -76,21 +76,21 @@ function raceTick() {
     }
   }
   if (game.phase == PHASE.replay) {
-    replay();
+    replayTick();
     moveScenery(true);
     drawReplayOverlay();
   }
   if (game.phase == PHASE.highlights) {
-    hreplay();
+    highlightTick();
     // a highlight held still keeps chips and sparks where they are
-    moveScenery(!recording.onpausefr);
+    moveScenery(!recording.frozen);
     drawHighlightOverlay();
   }
   if (game.phase == PHASE.switchScreen) {
     drawSwitchScreen();
   }
   if (game.phase == PHASE.timeRewind) {
-    revtime();
+    timeRewindTick();
     moveScenery(true);
     drawRewindOverlay();
   }

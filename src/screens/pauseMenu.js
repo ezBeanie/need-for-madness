@@ -9,7 +9,7 @@ import { PHASE, game } from "../core/state.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { fixcar } from "../race/physics.js";
 import { racers } from "../race/racers.js";
-import { recording, rewindreplay } from "../race/recording.js";
+import { recording, startReplay } from "../race/recording.js";
 import { backdropHue, cssRgb, hslToRgb } from "../ui/color.js";
 import { hud } from "../ui/hud.js";
 import { images } from "../ui/images.js";
@@ -67,7 +67,7 @@ export function pauseMenuTick() {
   const hue = backdropHue();
   drawBackdrop(hue);
   if (hud.replayStartsIn == REPLAY_STARTS) {
-    rewindreplay();
+    startReplay();
   }
   ENTRIES.forEach((entry, index) => {
     if (drawEntry(entry, index)) {

@@ -5,7 +5,7 @@ import { PHASE, game } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
 import { nextRaceSize } from "../race/field.js";
 import { racers } from "../race/racers.js";
-import { preprevtime } from "../race/recording.js";
+import { startTimeRewind } from "../race/recording.js";
 import { CAMERA, camera } from "../render/camera.js";
 import { buttons } from "../ui/widgets.js";
 import { pressConfirm } from "./confirm.js";
@@ -57,7 +57,7 @@ export function onKey(action, pressed) {
       } else {
         stopEngine();
         stopStageMusic();
-        preprevtime();
+        startTimeRewind();
       }
     }
     if (!pressed) {

@@ -106,7 +106,7 @@ const chipCorners = (size) => {
 
 // A triangular chip breaks off car c at (x, y, z) on its body, flying off and spinning.
 export function chipaway(c, x, y, z, size) {
-  if (!(racers[c].carnchp < MAX_CHIPS_PER_CAR && !recording.onpausefr)) {
+  if (!(racers[c].carnchp < MAX_CHIPS_PER_CAR && !recording.frozen)) {
     return;
   }
   let slot = freeSlot(
@@ -240,7 +240,7 @@ export function chipsfly() {
 // backwards along it, faster the slower the car scrapes.
 export function sprks(type, x, y, z, sx, sy, sz, kind) {
   const speed = Math.sqrt(sx * sx + sy * sy + sz * sz);
-  if (!(speed > 5 && !recording.onpausefr)) {
+  if (!(speed > 5 && !recording.frozen)) {
     return;
   }
   if (game.phase == PHASE.race) {
@@ -343,7 +343,7 @@ export function dustup(
   if (strength > 1) {
     strength = 1;
   }
-  if (!(strength > 0.2 && !lifted && !recording.onpausefr)) {
+  if (!(strength > 0.2 && !lifted && !recording.frozen)) {
     return;
   }
   if (game.phase == PHASE.race) {
@@ -417,7 +417,7 @@ export function dustfly() {
     if (cloud.stg == 0) {
       continue;
     }
-    if (!recording.onpausefr) {
+    if (!recording.frozen) {
       cloud.x += cloud.sx / (cloud.stg + 1);
       cloud.z += cloud.sz / (cloud.stg + 1);
       cloud.y = cloud.dy + 3 * cloud.mag;
@@ -442,7 +442,7 @@ export function dustfly() {
       cloud.mat[k * 4 + 1] *= cloud.mag * scale;
       cloud.mat[k * 4 + 2] *= cloud.mag * scale;
     }
-    if (recording.onpausefr) {
+    if (recording.frozen) {
       anyFlying = true;
       continue;
     }
@@ -607,7 +607,7 @@ export function chipburn(c) {
   }
 }
 
-// The replays keep the dust and sparks of each car (see recording.js).
+// The replays keep the dust of each car and the sparks (see recording.js).
 const recordDust = (
   ground,
   c,
@@ -621,51 +621,51 @@ const recordDust = (
   tilt,
   capsized,
 ) => {
-  const replay = recording.repcar[c];
+  const tape = recording.tape.cars[c];
   let slot = -1;
-  for (let i = 0; i < replay.ndst; i++) {
-    if (replay.dstat[i] < 0) {
+  for (let i = 0; i < tape.dustCount; i++) {
+    if (tape.dustAt[i] < 0) {
       slot = i;
       break;
     }
   }
   if (slot == -1) {
-    slot = replay.ndst;
-    replay.ndst++;
+    slot = tape.dustCount;
+    tape.dustCount++;
   }
-  replay.dstat[slot] = RECORDED_TICKS;
-  replay.tskd[slot] = ground;
-  replay.mst[slot] = wheel;
-  replay.dx[slot] = x;
-  replay.dy[slot] = y;
-  replay.dz[slot] = z;
-  replay.sx[slot] = sx;
-  replay.sz[slot] = sz;
-  replay.smag[slot] = size;
-  replay.tlt[slot] = tilt;
-  replay.capsz[slot] = capsized;
+  tape.dustAt[slot] = RECORDED_TICKS;
+  tape.dustGround[slot] = ground;
+  tape.dustWheel[slot] = wheel;
+  tape.dustX[slot] = x;
+  tape.dustY[slot] = y;
+  tape.dustZ[slot] = z;
+  tape.dustSpeedX[slot] = sx;
+  tape.dustSpeedZ[slot] = sz;
+  tape.dustSize[slot] = size;
+  tape.dustTilt[slot] = tilt;
+  tape.dustCapsized[slot] = capsized;
 };
 
 const recordSparks = (type, x, y, z, sx, sy, sz, kind) => {
-  const replay = recording.repsprks;
+  const tape = recording.tape.sparks;
   let slot = -1;
-  for (let i = 0; i < replay.n; i++) {
-    if (replay.sprkat[i] < 0) {
+  for (let i = 0; i < tape.count; i++) {
+    if (tape.at[i] < 0) {
       slot = i;
       break;
     }
   }
   if (slot == -1) {
-    slot = replay.n;
-    replay.n++;
+    slot = tape.count;
+    tape.count++;
   }
-  replay.sprkat[slot] = RECORDED_TICKS;
-  replay.cn[slot] = type;
-  replay.x[slot] = x;
-  replay.y[slot] = y;
-  replay.z[slot] = z;
-  replay.sx[slot] = sx;
-  replay.sy[slot] = sy;
-  replay.sz[slot] = sz;
-  replay.cap[slot] = kind;
+  tape.at[slot] = RECORDED_TICKS;
+  tape.carType[slot] = type;
+  tape.x[slot] = x;
+  tape.y[slot] = y;
+  tape.z[slot] = z;
+  tape.sx[slot] = sx;
+  tape.sy[slot] = sy;
+  tape.sz[slot] = sz;
+  tape.kind[slot] = kind;
 };

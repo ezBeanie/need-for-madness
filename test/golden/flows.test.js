@@ -389,7 +389,7 @@ const flows = [
     name: "instant-replay-stage-02",
     stage: 2,
     frames: 1700,
-    script: () => driveThen(900, (ctx) => ctx.rewindreplay()),
+    script: () => driveThen(900, (ctx) => ctx.startReplay()),
   },
   {
     // switch mode: when its timer runs out, the switch screen picks the next car to drive

@@ -26,7 +26,7 @@ import { carModels, carTextures, scene } from "../render/scene.js";
 import { burn, chipaway, chipburn, dustup, firexp, sprks } from "./effects.js";
 import { raceEvents } from "./events.js";
 import { car, racers } from "./racers.js";
-import { HIGHLIGHT, catchnow, recording } from "./recording.js";
+import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
 import { pieceModels, pieces, track } from "./track.js";
 
 const drag = 0.05;
@@ -2394,10 +2394,10 @@ export function drive() {
     }
     if (tick.fraction >= tick.scale) {
       if (racers[c].hitmag >= carStats.maxmag[cn]) {
-        if (recording.repcar[c].destat == 700) {
-          recording.repcar[c].destat = 430;
+        if (recording.tape.cars[c].wastedAt == 700) {
+          recording.tape.cars[c].wastedAt = 430;
           if (racers[c].lastcolido != 0) {
-            recording.repcar[c].destedbyzero = racers[c].lastcolido;
+            recording.tape.cars[c].playerHitTicks = racers[c].lastcolido;
           }
         }
         if (racers[c].cntdest < 6) {
@@ -2671,8 +2671,9 @@ export function drive() {
               ) < 55
             ) {
               car[c].fcnt = 20;
-              recording.repcar[c].fixat[recording.repcar[c].nfix] = 430;
-              recording.repcar[c].nfix++;
+              recording.tape.cars[c].fixAt[recording.tape.cars[c].fixCount] =
+                430;
+              recording.tape.cars[c].fixCount++;
               if (c == game.player) {
                 playSound(29, 1);
               }
@@ -2688,8 +2689,9 @@ export function drive() {
               ) < 55
             ) {
               car[c].fcnt = 20;
-              recording.repcar[c].fixat[recording.repcar[c].nfix] = 430;
-              recording.repcar[c].nfix++;
+              recording.tape.cars[c].fixAt[recording.tape.cars[c].fixCount] =
+                430;
+              recording.tape.cars[c].fixCount++;
               if (c == game.player) {
                 playSound(29, 1);
               }
@@ -2792,14 +2794,14 @@ export function drive() {
                 racers[c].power += racers[c].powerup;
                 if (
                   c == game.player &&
-                  racers[c].powerup > recording.hpowerup &&
+                  racers[c].powerup > recording.bestPowerUp &&
                   recording.highlight <= HIGHLIGHT.stunt &&
                   (racers[c].powerup > 60 ||
                     track.stage == 1 ||
                     track.stage == 2)
                 ) {
-                  recording.rpdcatch = 43;
-                  recording.hpowerup = racers[c].powerup;
+                  recording.stuntCatchTicks = 43;
+                  recording.bestPowerUp = racers[c].powerup;
                 }
                 if (racers[c].power > 98) {
                   racers[c].power = 98;
@@ -2942,12 +2944,12 @@ export function drive() {
     }
     if (
       c == game.player &&
-      recording.rpdcatch != 0 &&
+      recording.stuntCatchTicks != 0 &&
       recording.highlight <= HIGHLIGHT.stunt
     ) {
-      recording.rpdcatch--;
-      if (recording.rpdcatch == 0) {
-        catchnow(1);
+      recording.stuntCatchTicks--;
+      if (recording.stuntCatchTicks == 0) {
+        catchHighlight(1);
         if (recording.highlight == HIGHLIGHT.stunt) {
           recording.highlightAt = 265 + random.fx() * 30;
         }
@@ -3535,12 +3537,13 @@ export function regn(nr, k, mag, c) {
   }
   if (Math.abs(mag) > 10) {
     if (game.phase == PHASE.race) {
-      recording.repcar[c].regat[recording.repcar[c].nreg] = 430;
-      recording.repcar[c].regnr[recording.repcar[c].nreg] = nr;
-      recording.repcar[c].regk[recording.repcar[c].nreg] = k;
-      recording.repcar[c].regmag[recording.repcar[c].nreg] = mag;
-      recording.repcar[c].regmtch[recording.repcar[c].nreg] = racers[c].mtouch;
-      recording.repcar[c].nreg++;
+      recording.tape.cars[c].hitAt[recording.tape.cars[c].hitCount] = 430;
+      recording.tape.cars[c].hitSide[recording.tape.cars[c].hitCount] = nr;
+      recording.tape.cars[c].hitPoint[recording.tape.cars[c].hitCount] = k;
+      recording.tape.cars[c].hitMag[recording.tape.cars[c].hitCount] = mag;
+      recording.tape.cars[c].hitMtouch[recording.tape.cars[c].hitCount] =
+        racers[c].mtouch;
+      recording.tape.cars[c].hitCount++;
     }
     if (mag > 10) {
       mag -= 10;
