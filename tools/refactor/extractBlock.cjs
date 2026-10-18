@@ -88,9 +88,8 @@ walk.ancestor(fn.body, {
   },
 });
 
-// identifiers used as variables (not property names), and whether a use writes first
+// identifiers used as variables (not property names), with their ancestors
 const uses = [];
-const writes = new Set();
 walk.fullAncestor(fn.body, (node, _, ancestors) => {
   if (node.type !== "Identifier") return;
   const parent = ancestors[ancestors.length - 2];
@@ -107,27 +106,116 @@ walk.fullAncestor(fn.body, (node, _, ancestors) => {
     !parent.shorthand
   )
     return;
-  if (
-    parent?.type === "VariableDeclarator" &&
-    parent.id === node &&
-    parent.init
-  )
-    writes.add(node);
-  if (
-    parent?.type === "AssignmentExpression" &&
-    parent.left === node &&
-    parent.operator === "="
-  )
-    writes.add(node);
-  uses.push(node);
+  uses.push(Object.assign(node, { ancestors: [...ancestors] }));
 });
 uses.sort((a, b) => a.start - b.start);
-// a var the function declares again elsewhere is fine when the lines write it before
-// reading it and the rest of the function does too after them
+
+const mentions = (node, n) => {
+  let found = false;
+  if (node)
+    walk.full(node, (x) => {
+      if (x.type === "Identifier" && x.name === n) found = true;
+    });
+  return found;
+};
+// The statement a use plainly writes the variable in, unconditionally where the statement
+// runs: `n = ...` or `let/var n = ...` as a statement of its own (or a for loop's start),
+// the right side not reading n.
+const plainWrite = (u) => {
+  const a = u.ancestors;
+  const parent = a[a.length - 2];
+  if (
+    parent?.type === "VariableDeclarator" &&
+    parent.id === u &&
+    parent.init &&
+    !mentions(parent.init, u.name)
+  ) {
+    const declaration = a[a.length - 3];
+    const holder = a[a.length - 4];
+    if (holder?.type === "ForStatement" && holder.init === declaration)
+      return holder;
+    return declaration;
+  }
+  if (
+    parent?.type === "AssignmentExpression" &&
+    parent.left === u &&
+    parent.operator === "=" &&
+    !mentions(parent.right, u.name)
+  ) {
+    const statement = a[a.length - 3];
+    if (statement?.type === "ExpressionStatement") return statement;
+    const holder = a[a.length - 4];
+    if (statement?.type === "SequenceExpression") return null;
+    if (holder?.type === "ForStatement" && holder.init === parent)
+      return holder;
+  }
+  return null;
+};
+// the lists of statements around the lines, innermost last
+const blockList = (() => {
+  let found = null;
+  walk.fullAncestor(fn.body, (node, _, ancestors) => {
+    if (node === statements[0])
+      found = ancestors.filter((x) => x.type === "BlockStatement");
+  });
+  return found;
+})();
+const loopsAround = (() => {
+  let found = [];
+  walk.fullAncestor(fn.body, (node, _, ancestors) => {
+    if (node === statements[0])
+      found = ancestors.filter((x) =>
+        /ForStatement|ForIn|ForOf|WhileStatement|DoWhile/.test(x.type),
+      );
+  });
+  return found;
+})();
+// A var the lines write before reading, unconditionally, where the rest of the function
+// writes it before reading after them, holds nothing the lines need or give: the new
+// function can have its own.
+const setsInLoop = (u, n) =>
+  u.ancestors.some(
+    (x) =>
+      x.type === "ForStatement" &&
+      x.init &&
+      ((x.init.type === "VariableDeclaration" &&
+        x.init.declarations.some((d) => d.id.name === n && d.init)) ||
+        (x.init.type === "AssignmentExpression" && x.init.left.name === n)),
+  );
+// A use is covered when it cannot see a value from before `since`: it plainly writes the
+// variable, or lies in a for loop setting it, or an earlier statement of one of its
+// enclosing statement lists (starting after `since`) plainly writes it.
+const covered = (u, n, since) => {
+  if (plainWrite(u) || setsInLoop(u, n)) return true;
+  return u.ancestors.some((x, i) => {
+    if (x.type !== "BlockStatement") return false;
+    const own = u.ancestors[i + 1];
+    return x.body.some(
+      (statement) =>
+        statement.start >= since &&
+        statement.end <= own.start &&
+        uses.some(
+          (w) =>
+            w.name === n &&
+            w.start >= statement.start &&
+            w.end <= statement.end &&
+            plainWrite(w) === statement,
+        ),
+    );
+  });
+};
+// A var whose every use inside the lines, and after them, is covered holds nothing the
+// lines need or give: the new function can have its own.
 const ownCopy = (n) => {
-  const firstInside = uses.find((u) => u.name === n && inside(u));
-  const firstAfter = uses.find((u) => u.name === n && u.start >= to);
-  return writes.has(firstInside) && (!firstAfter || writes.has(firstAfter));
+  for (const loop of loopsAround) {
+    if (
+      uses.some((u) => u.name === n && u.start >= loop.start && u.start < from)
+    )
+      return false;
+  }
+  return uses
+    .filter((u) => u.name === n && u.start >= from)
+    .every((u) => covered(u, n, u.start < to ? from : to));
 };
 
 const both = [...declaredInside].filter(
@@ -159,6 +247,10 @@ for (const s of statements) {
       assigned.add(n.argument.name);
   });
 }
+// a local the lines write before reading, and the rest writes before reading after
+// them, becomes the new function's own
+const scratch = params.filter((p) => assigned.has(p) && ownCopy(p));
+for (const p of scratch) params.splice(params.indexOf(p), 1);
 const assignedParams = params.filter((p) => assigned.has(p));
 if (assignedParams.length > 1)
   fail(`assigns the function's locals: ${assignedParams.join(", ")}`);
@@ -195,7 +287,9 @@ const lineStart = src.lastIndexOf("\n", from) + 1;
 const indent = src.slice(lineStart, from);
 const call = `${returned ? `${returned} = ` : ""}${name}(${params.join(", ")});`;
 const body =
-  src.slice(lineStart, to) + (returned ? `\n${indent}return ${returned};` : "");
+  (scratch.length ? `${indent}let ${scratch.join(", ")};\n` : "") +
+  src.slice(lineStart, to) +
+  (returned ? `\n${indent}return ${returned};` : "");
 const fnEnd = topLevel.end;
 const added = `\n\nfunction ${name}(${params.join(", ")}) {\n${body}\n}\n`;
 const out =
