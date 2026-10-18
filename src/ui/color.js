@@ -3,7 +3,7 @@
 import { scene } from "../render/scene.js";
 
 export function hslToRgb(h, s, l) {
-  var r, g, b;
+  let r, g, b;
   if (s == 0) {
     r = g = b = l;
   } else {
@@ -25,15 +25,15 @@ export function hslToRgb(h, s, l) {
 }
 export function rgbToHsl(r, g, b) {
   (r /= 255), (g /= 255), (b /= 255);
-  var max = Math.max(r, g, b),
+  let max = Math.max(r, g, b),
     min = Math.min(r, g, b);
-  var h,
+  let h,
     s,
     l = (max + min) / 2;
   if (max == min) {
     h = s = 0;
   } else {
-    var d = max - min;
+    let d = max - min;
     s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
     switch (max) {
       case r:

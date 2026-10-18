@@ -154,7 +154,7 @@ export function inishcontrol() {
   if (track.stage != 9) {
     for (let j = 0; j < pieces.fixCount; j++) {
       let pyclos = -10;
-      for (var i = 0; i < track.n; i++) {
+      for (let i = 0; i < track.n; i++) {
         if (
           distanceSquaredXZ(
             pieces.list[pieces.fixes[j]].x / 10,
@@ -174,7 +174,7 @@ export function inishcontrol() {
         }
       }
     }
-    for (var i = 0; i < pieces.fixCount; i++) {
+    for (let i = 0; i < pieces.fixCount; i++) {
       fixApproach[i] -= 4;
       if (fixApproach[i] < 0) {
         fixApproach[i] += track.nsp;
@@ -351,7 +351,7 @@ function headForFix(c, point) {
           }
           let nearest = -10;
           let nearestFix = 0;
-          for (var i = firstFix; i < pieces.fixCount; i++) {
+          for (let i = firstFix; i < pieces.fixCount; i++) {
             if (
               distanceSquaredXZ(
                 car[c].x / 10,
@@ -380,7 +380,7 @@ function headForFix(c, point) {
             ai[c].ignoreMissed = false;
           }
         }
-        for (var i = firstFix; i < pieces.fixCount; i++) {
+        for (let i = firstFix; i < pieces.fixCount; i++) {
           if (
             distanceSquaredXZ(
               car[c].x / 10,
@@ -411,7 +411,7 @@ function headForFix(c, point) {
 function aimAtPathPoint(c, point) {
   if (ai[c].ticksSinceAim > ai[c].ticksToNextAim) {
     if (!ai[c].goingToWait) {
-      var behind = 0;
+      let behind = 0;
       if (track.x[point] - car[c].x >= 0) {
         behind = 180;
       }
@@ -422,7 +422,7 @@ function aimAtPathPoint(c, point) {
             0.017453292519943295,
       );
     } else {
-      var behind = 0;
+      let behind = 0;
       if (ai[c].waitX - car[c].x >= 0) {
         behind = 180;
       }
@@ -1104,8 +1104,8 @@ function cutCorners(pnt, c) {
       tpnt = pnt;
       let notimpcp = false;
       if (track.typ[tpnt] > 0) {
-        var ic = 0;
-        for (var i = 0; i < track.n; i++) {
+        let ic = 0;
+        for (let i = 0; i < track.n; i++) {
           if (track.typ[i] > 0 && i < tpnt) {
             ic++;
           }
@@ -1125,8 +1125,8 @@ function cutCorners(pnt, c) {
         }
         notimpcp = false;
         if (track.typ[tpnt] > 0) {
-          var ic = 0;
-          for (var i = 0; i < track.n; i++) {
+          let ic = 0;
+          for (let i = 0; i < track.n; i++) {
             if (track.typ[i] > 0 && i < tpnt) {
               ic++;
             }
@@ -1634,7 +1634,7 @@ function bullyOnStage16(type, c, pnt) {
 
 function bullyAsElKingOnStage16(c, pnt) {
   if (racers[c].power > 60) {
-    var i = racers[game.player].pcleared;
+    let i = racers[game.player].pcleared;
     let found = -1;
     while (found == -1) {
       i++;
@@ -1664,7 +1664,7 @@ function bullyAsElKingOnStage16(c, pnt) {
     pnt = found;
   } else {
     let pyclos = -10;
-    for (var i = 0; i < track.n; i++) {
+    for (let i = 0; i < track.n; i++) {
       if (
         pieces.list[track.obi[i]].typ == 24 ||
         pieces.list[track.obi[i]].typ == 25 ||

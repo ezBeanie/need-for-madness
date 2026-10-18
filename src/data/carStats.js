@@ -42,8 +42,8 @@ class CarDefine {
         Array.isArray(car[key]) ? [...car[key]] : car[key],
       );
     }
-    for (var i = 0; i < 19; i++) {
-      for (var k = 0; k < 3; k++) {
+    for (let i = 0; i < 19; i++) {
+      for (let k = 0; k < 3; k++) {
         this.swits[i][k] = this.swits[i][k] / 10;
         this.acelf[i][k] = this.acelf[i][k] / 10;
       }
