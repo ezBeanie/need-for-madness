@@ -18,6 +18,16 @@ const FIX = { none: 0, onTheWay: 1, nearest: 2, close: 3, jumping: 4 };
 // A jump: on taking off a driver decides on a stunt (or none), flips and rolls, and
 // straightens up to land.
 const STUNT = { none: -1, takeoff: 0, flipping: 1, landing: 2 };
+// The stunt a stage asks for at its next jump (free: chosen at random). Flipping up holds the
+// up key, down the down key; "at once" starts flipping right on takeoff and always jumps.
+const STUNT_PLAN = {
+  free: 0,
+  flipUp: 1,
+  flipDown: 2,
+  roll: 3,
+  flipUpAtOnce: 4,
+  flipDownAtOnce: 5,
+};
 // what a driver does in a sharp turn besides steering (a turn of more than 50 degrees
 // above its first gear's top speed)
 const SHARP_TURN = { steer: 0, brake: 1, handbrake: 2, liftGas: 3 };
@@ -47,12 +57,12 @@ const newPursuit = () => ({
   oupnt: 0,
   // drives to (waitX, waitZ) to lie in wait
   goingToWait: false,
-  apunch: 0,
-  exitattack: false,
+  // stage 15: stops attacking on missing a checkpoint
+  quitsAttackOnMissedCheckpoint: false,
 });
 
 // What every computer driver is up to. Some fields keep their original names, as they mean
-// different things on different stages (afta, oupnt, runbul, apunch, exitattack, stuntf).
+// different things on different stages (afta, oupnt, runbul).
 const newDriver = () => ({
   ...newPursuit(),
   // ticks it keeps its steering after hitting a wall
@@ -75,7 +85,8 @@ const newDriver = () => ({
   landingMargin: 30,
   // the chance of not correcting a landing
   landingSloppiness: 0.5,
-  stuntf: 0,
+  // see STUNT_PLAN
+  stuntPlan: 0,
   avoidPlayerRange: 0,
   // fewer and later stunts
   stuntCaution: 0.5,
@@ -462,7 +473,7 @@ function chaseTarget(c) {
   }
   if (
     track.stage == 15 &&
-    ai[c].exitattack &&
+    ai[c].quitsAttackOnMissedCheckpoint &&
     !ai[c].bully &&
     racers[c].missedcp != 0
   ) {
@@ -641,7 +652,8 @@ function takeOff(c) {
   }
   if (
     lift > 7 &&
-    (random.sim() > ai[c].stuntCaution / cautionDivisor || ai[c].stuntf == 4)
+    (random.sim() > ai[c].stuntCaution / cautionDivisor ||
+      ai[c].stuntPlan == STUNT_PLAN.flipUpAtOnce)
   ) {
     ai[c].takeoffXy = racers[c].pxy;
     ai[c].takeoffZy = racers[c].pzy;
@@ -693,43 +705,51 @@ function chooseFlipsAndRolls(lift, c) {
     ai[c].flipReverses = false;
   } else {
     if (
-      (random.sim() > random.sim() && ai[c].stuntf != 3) ||
-      ai[c].stuntf == 1 ||
-      ai[c].stuntf == 2 ||
-      ai[c].stuntf == 4
+      (random.sim() > random.sim() && ai[c].stuntPlan != STUNT_PLAN.roll) ||
+      ai[c].stuntPlan == STUNT_PLAN.flipUp ||
+      ai[c].stuntPlan == STUNT_PLAN.flipDown ||
+      ai[c].stuntPlan == STUNT_PLAN.flipUpAtOnce
     ) {
-      if (ai[c].stuntf == 4 && racers[c].pcleared == 47 && ai[c].oupnt == 0) {
-        ai[c].stuntf = 5;
+      if (
+        ai[c].stuntPlan == STUNT_PLAN.flipUpAtOnce &&
+        racers[c].pcleared == 47 &&
+        ai[c].oupnt == 0
+      ) {
+        ai[c].stuntPlan = STUNT_PLAN.flipDownAtOnce;
       }
       if (
         (random.sim() > random.sim() ||
-          ai[c].stuntf == 2 ||
-          ai[c].stuntf == 5) &&
-        ai[c].stuntf != 1 &&
-        ai[c].stuntf != 4
+          ai[c].stuntPlan == STUNT_PLAN.flipDown ||
+          ai[c].stuntPlan == STUNT_PLAN.flipDownAtOnce) &&
+        ai[c].stuntPlan != STUNT_PLAN.flipUp &&
+        ai[c].stuntPlan != STUNT_PLAN.flipUpAtOnce
       ) {
         ai[c].flip = -1;
       } else {
         ai[c].flip = 1;
       }
       ai[c].flipAfter = Math.floor(10 * random.sim() * ai[c].stuntCaution);
-      if (ai[c].stuntf == 4 || ai[c].stuntf == 5 || track.stage == 16) {
+      if (
+        ai[c].stuntPlan == STUNT_PLAN.flipUpAtOnce ||
+        ai[c].stuntPlan == STUNT_PLAN.flipDownAtOnce ||
+        track.stage == 16
+      ) {
         ai[c].flipAfter = 0;
       }
       if (
         random.sim() > 0.85 &&
-        ai[c].stuntf != 1 &&
-        ai[c].stuntf != 4 &&
-        ai[c].stuntf != 5
+        ai[c].stuntPlan != STUNT_PLAN.flipUp &&
+        ai[c].stuntPlan != STUNT_PLAN.flipUpAtOnce &&
+        ai[c].stuntPlan != STUNT_PLAN.flipDownAtOnce
       ) {
         ai[c].flipReverses = true;
       }
       if (
         random.sim() > ai[c].stuntCaution + 0.3 &&
-        ai[c].stuntf != 1 &&
-        ai[c].stuntf != 2 &&
-        ai[c].stuntf != 4 &&
-        ai[c].stuntf != 5
+        ai[c].stuntPlan != STUNT_PLAN.flipUp &&
+        ai[c].stuntPlan != STUNT_PLAN.flipDown &&
+        ai[c].stuntPlan != STUNT_PLAN.flipUpAtOnce &&
+        ai[c].stuntPlan != STUNT_PLAN.flipDownAtOnce
       ) {
         if (random.sim() > random.sim()) {
           ai[c].roll = -1;
@@ -752,7 +772,7 @@ function chooseFlipsAndRolls(lift, c) {
         ai[c].rollReverses = true;
       }
       if (random.sim() > ai[c].stuntCaution + 0.3) {
-        if (random.sim() > random.sim() || ai[c].stuntf == 3) {
+        if (random.sim() > random.sim() || ai[c].stuntPlan == STUNT_PLAN.roll) {
           ai[c].flip = -1;
         } else {
           ai[c].flip = 1;
@@ -807,10 +827,6 @@ function flyAndWaitForLanding(c) {
       } else {
         racers[c].u.handb = true;
         racers[c].u.up = true;
-        if (ai[c].apunch > 0) {
-          racers[c].u.down = true;
-          ai[c].apunch--;
-        }
       }
     }
   }
@@ -2115,32 +2131,32 @@ function chooseLandingCare(c) {
 
 function chooseStuntPlan(c) {
   const type = car[c].typ;
-  ai[c].stuntf = 0;
+  ai[c].stuntPlan = STUNT_PLAN.free;
   if (track.stage == 10) {
     if (
       track.pos[c] - track.pos[game.player] > 1 ||
       random.sim() > random.sim()
     ) {
-      ai[c].stuntf = 1;
+      ai[c].stuntPlan = STUNT_PLAN.flipUp;
       ai[c].landingMargin = 10;
     } else {
-      ai[c].stuntf = 2;
+      ai[c].stuntPlan = STUNT_PLAN.flipDown;
     }
   }
   if (track.stage == 11 && racers[c].pcleared == 18) {
-    ai[c].stuntf = 2;
+    ai[c].stuntPlan = STUNT_PLAN.flipDown;
   }
   if (track.stage == 11 && type == CAR.masheen) {
-    ai[c].stuntf = 3;
+    ai[c].stuntPlan = STUNT_PLAN.roll;
   }
   if (track.stage == 14) {
     if (type == CAR.radicalOne) {
-      ai[c].stuntf = 4;
+      ai[c].stuntPlan = STUNT_PLAN.flipUpAtOnce;
       ai[c].landingMargin = 20;
     } else {
       ai[c].landingMargin = 10;
       if (racers[c].pcleared == 47) {
-        ai[c].stuntf = 2;
+        ai[c].stuntPlan = STUNT_PLAN.flipDown;
       }
     }
   }
@@ -2148,16 +2164,16 @@ function chooseStuntPlan(c) {
     ai[c].landingSloppiness = 0;
     ai[c].landingMargin = 20;
     if (racers[c].pcleared == 152 || racers[c].pcleared == 20) {
-      ai[c].stuntf = 2;
+      ai[c].stuntPlan = STUNT_PLAN.flipDown;
     }
     if (racers[c].pcleared == 35) {
-      ai[c].stuntf = 1;
+      ai[c].stuntPlan = STUNT_PLAN.flipUp;
     }
     if (racers[c].pcleared == 112) {
-      ai[c].stuntf = 1;
+      ai[c].stuntPlan = STUNT_PLAN.flipUp;
     }
     if (racers[c].pcleared == 120) {
-      ai[c].stuntf = 2;
+      ai[c].stuntPlan = STUNT_PLAN.flipDown;
     }
     ai[c].avoidPlayerRange = Math.floor(2700 * random.sim());
   }
@@ -2841,9 +2857,9 @@ function startAttack(c, other, type, onlyPlayer) {
     ai[c].leadAhead = random.sim() * 1.5;
     ai[c].attackTicks = ai[c].attackTicks / 2;
     if (random.sim() > random.sim()) {
-      ai[c].exitattack = true;
+      ai[c].quitsAttackOnMissedCheckpoint = true;
     } else {
-      ai[c].exitattack = false;
+      ai[c].quitsAttackOnMissedCheckpoint = false;
     }
   }
   if (track.stage == 16) {
