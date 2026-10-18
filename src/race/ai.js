@@ -2304,471 +2304,510 @@ function chooseWhetherToBully(c) {
 function chooseWhomToAttack(c) {
   const type = car[c].typ;
   if (ai[c].attackTicks == 0) {
-    let startsway = true;
+    const swervesAway = swervesFromCars(c);
+    const onlyPlayer = attacksOnlyThePlayer(type);
+    const powerToAttack = powerNeededToAttack(c, type, onlyPlayer);
+    for (let other = 0; other < game.carCount; other++) {
+      if (other != c && track.clear[other] != -1) {
+        considerAttacking(
+          c,
+          other,
+          type,
+          onlyPlayer,
+          powerToAttack,
+          swervesAway,
+        );
+      }
+    }
+  }
+}
+
+function considerAttacking(
+  c,
+  other,
+  type,
+  onlyPlayer,
+  powerToAttack,
+  swervesAway,
+) {
+  let heading = car[c].xz;
+  if (racers[c].u.zyinv) {
+    heading += 180;
+  }
+  while (heading < 0) {
+    heading += 360;
+  }
+  while (heading > 180) {
+    heading -= 360;
+  }
+  let halfTurn = 0;
+  if (car[other].x - car[c].x >= 0) {
+    halfTurn = 180;
+  }
+  let headingToOther =
+    90 +
+    halfTurn +
+    Math.atan((car[other].z - car[c].z) / (car[other].x - car[c].x)) /
+      0.017453292519943295;
+  while (headingToOther < 0) {
+    headingToOther += 360;
+  }
+  while (headingToOther > 180) {
+    headingToOther -= 360;
+  }
+  let angleOff = Math.abs(heading - headingToOther);
+  if (angleOff > 180) {
+    angleOff = Math.abs(angleOff - 360);
+  }
+  let attackRange = 2000 * (Math.abs(track.clear[other] - racers[c].clear) + 1);
+  if (track.stage == 3 && type == 12) {
+    if (attackRange < 12000) {
+      attackRange = 12000;
+    }
+  }
+  if (track.stage == 4) {
+    if (attackRange < 4000) {
+      attackRange = 4000;
+    }
+  }
+  if (track.stage == 8 && type == 14) {
+    if (attackRange < 12000) {
+      attackRange = 12000;
+    }
+    angleOff = 10;
+  }
+  if (track.stage == 9) {
+    if (onlyPlayer && attackRange < 12000) {
+      attackRange = 12000;
+    }
+  }
+  if (track.stage == 11) {
+    if (ai[c].bully) {
+      attackRange = 8000;
+      angleOff = 10;
+      ai[c].afta = true;
+    } else {
+      if (attackRange < 6000) {
+        attackRange = 6000;
+      }
+    }
+  }
+  if (track.stage == 12 && ai[c].bully) {
+    attackRange = 6000;
+    angleOff = 10;
+  }
+  if (track.stage == 13) {
+    if (track.clear[c] - track.clear[game.player] > 3) {
+      attackRange = 21000;
+    }
+  }
+  if (track.stage == 15) {
+    attackRange *= Math.abs(track.clear[other] - racers[c].clear) + 1;
+    if (ai[c].bully) {
+      attackRange = 4000 * (Math.abs(track.clear[other] - racers[c].clear) + 1);
+      angleOff = 10;
+    }
+  }
+  if (track.stage == 16) {
+    if (type == 14) {
+      attackRange = 16000;
+      angleOff = 10;
+    }
+    if (type == 16) {
+      attackRange = 6000;
+      angleOff = 10;
+    }
+    if (type == 18 || type == 12) {
+      attackRange *= Math.abs(track.clear[other] - racers[c].clear) + 1;
+    }
+  }
+  const sight = sightAngle(onlyPlayer, c, type, other);
+  if (
+    angleOff < sight &&
+    distanceSquaredXZ(
+      car[c].x / 10,
+      car[other].x / 10,
+      car[c].z / 10,
+      car[other].z / 10,
+    ) < attackRange &&
+    ai[c].afta &&
+    racers[c].power > powerToAttack
+  ) {
+    let closeness = 35 - Math.abs(track.clear[other] - racers[c].clear) * 10;
+    if (closeness < 1) {
+      closeness = 1;
+    }
+    let chance = ((rank(c) + 1) * (7 - rank(other))) / closeness;
+    chance = attackChance(chance, other, c, onlyPlayer, type, heading);
+    if (random.sim() < chance) {
+      startAttack(c, other, type, onlyPlayer);
+    }
+  }
+  if (
+    swervesAway &&
+    angleOff > 100 &&
+    distanceSquaredXZ(
+      car[c].x / 10,
+      car[other].x / 10,
+      car[c].z / 10,
+      car[other].z / 10,
+    ) < 300 &&
+    random.sim() > 0.6 - rank(c) / 10
+  ) {
+    ai[c].steerTolerance = 0;
+    ai[c].aimLag = 0;
+  }
+}
+
+function swervesFromCars(c) {
+  let swervesAway = true;
+  if (
+    track.stage == 3 ||
+    track.stage == 1 ||
+    track.stage == 4 ||
+    track.stage == 9 ||
+    track.stage == 13 ||
+    track.stage == 16
+  ) {
+    swervesAway = ai[c].afta;
+  }
+  if (
+    track.stage == 6 ||
+    track.stage == 8 ||
+    track.stage == 10 ||
+    track.stage == 14
+  ) {
+    swervesAway = false;
+  }
+  return swervesAway;
+}
+
+function attacksOnlyThePlayer(type) {
+  let onlyPlayer = false;
+  if (track.stage == 3 && type == 12) {
+    onlyPlayer = true;
+  }
+  if (track.stage == 8 && type == 14) {
+    onlyPlayer = true;
+  }
+  if (
+    track.stage == 9 &&
+    track.clear[game.player] >= 8 &&
+    track.pos[game.player] == 0
+  ) {
+    onlyPlayer = true;
+  }
+  if (
+    track.stage == 11 ||
+    track.stage == 12 ||
+    track.stage == 13 ||
+    track.stage == 15 ||
+    track.stage == 16
+  ) {
+    onlyPlayer = true;
+  }
+  return onlyPlayer;
+}
+
+function powerNeededToAttack(c, type, onlyPlayer) {
+  let power = 60;
+  if (track.stage == 3 || track.stage == 17) {
+    power = 30;
+  }
+  if (track.stage == 4) {
+    power = 20;
+  }
+  if (track.stage == 5 && c != boss()) {
+    power = 40;
+  }
+  if ((track.stage == 2 || track.stage == 13) && type == 16) {
+    power = 50;
+  }
+  if (track.stage == 7) {
+    power = 40;
+  }
+  if (track.stage == 8 && type == 14) {
+    power = 40;
+  }
+  if (track.stage == 9 && onlyPlayer) {
+    power = 30;
+  }
+  if (track.stage == 11 && ai[c].bully) {
+    power = 30;
+  }
+  if (track.stage == 12) {
+    power = 50;
+  }
+  if (track.stage == 15 && ai[c].bully) {
+    power = 40;
+  }
+  if (track.stage == 16) {
+    if (type == 14) {
+      power = 40;
+    }
+    if (type == 16) {
+      power = 50;
+    }
+    if (type == 18 || type == 12) {
+      power = 50;
+    }
+    if (track.pos[game.player] > track.pos[c]) {
+      power = 80;
+    }
+  }
+  return power;
+}
+
+function sightAngle(onlyPlayer, c, type, other) {
+  let sight = 85 + 15 * (Math.abs(track.clear[other] - racers[c].clear) + 1);
+  if (track.stage == 9 && !onlyPlayer) {
     if (
-      track.stage == 3 ||
-      track.stage == 1 ||
-      track.stage == 4 ||
-      track.stage == 9 ||
-      track.stage == 13 ||
-      track.stage == 16
+      car[game.player].typ != 14 ||
+      track.clear[c] - track.clear[game.player] < 8
     ) {
-      startsway = ai[c].afta;
+      sight = 45;
     }
-    if (
-      track.stage == 6 ||
-      track.stage == 8 ||
-      track.stage == 10 ||
-      track.stage == 14
-    ) {
-      startsway = false;
+  }
+  if (track.stage == 13) {
+    sight = 45;
+  }
+  if (track.stage == 16) {
+    if (type == 18 || type == 12 || type == 17) {
+      sight = 50 + 70 * Math.abs(track.clear[other] - racers[c].clear);
     }
-    let onlyou = false;
-    if (track.stage == 3 && type == 12) {
-      onlyou = true;
+  }
+  return sight;
+}
+
+function attackChance(chance, other, c, onlyPlayer, type, heading) {
+  if (game.mode != MODE.switchCars) {
+    if (track.stage != 17) {
+      if (chance > 0.7) {
+        chance = 0.7;
+      }
     }
-    if (track.stage == 8 && type == 14) {
-      onlyou = true;
+    if (other != game.player && track.pos[game.player] < track.pos[c]) {
+      chance = 0;
     }
-    if (
-      track.stage == 9 &&
-      track.clear[game.player] >= 8 &&
-      track.pos[game.player] == 0
-    ) {
-      onlyou = true;
+    if (other != game.player && onlyPlayer) {
+      chance = 0;
     }
-    if (
-      track.stage == 11 ||
-      track.stage == 12 ||
-      track.stage == 13 ||
-      track.stage == 15 ||
-      track.stage == 16
-    ) {
-      onlyou = true;
+    if (track.stage == 3) {
+      if (type == 12 || (type == 16 && ai[c].bully)) {
+        chance *= 2;
+      } else {
+        chance *= 0.5;
+      }
     }
-    let powtoattack = 60;
-    if (track.stage == 3 || track.stage == 17) {
-      powtoattack = 30;
+    if (track.stage == 5 && c == boss()) {
+      chance *= 0.7;
     }
-    if (track.stage == 4) {
-      powtoattack = 20;
+    if (track.stage == 6) {
+      chance = 0;
     }
-    if (track.stage == 5 && c != boss()) {
-      powtoattack = 40;
+    if (track.stage == 7 && c == boss() && other == game.player) {
+      chance *= 1.5;
     }
-    if ((track.stage == 2 || track.stage == 13) && type == 16) {
-      powtoattack = 50;
+    if (track.stage == 8) {
+      if (ai[c].bully && other == game.player) {
+        chance = 1;
+      } else {
+        chance = 0;
+      }
     }
-    if (track.stage == 7) {
-      powtoattack = 40;
+    if (track.stage == 10) {
+      chance = 0;
     }
-    if (track.stage == 8 && type == 14) {
-      powtoattack = 40;
-    }
-    if (track.stage == 9 && onlyou) {
-      powtoattack = 30;
-    }
-    if (track.stage == 11 && ai[c].bully) {
-      powtoattack = 30;
+    if (track.stage == 11) {
+      if (ai[c].bully && other == game.player) {
+        chance = 1;
+      }
+      if (
+        track.pos[c] == 0 ||
+        (track.pos[c] == 1 && track.pos[game.player] == 0)
+      ) {
+        chance = 0;
+      }
     }
     if (track.stage == 12) {
-      powtoattack = 50;
+      if (type != 14 && type != 16) {
+        chance = 0;
+      }
+      if ((type == 16 || type == 14) && other == game.player) {
+        chance = 1;
+      }
     }
-    if (track.stage == 15 && ai[c].bully) {
-      powtoattack = 40;
+    if (track.stage == 14) {
+      chance = 0;
+    }
+    if (track.stage == 15) {
+      if (track.pos[c] == 0) {
+        chance *= 0.5;
+      }
+      if (track.pos[game.player] < track.pos[c]) {
+        chance *= 2;
+      }
+      if (ai[c].bully && other == game.player) {
+        chance = 1;
+      }
     }
     if (track.stage == 16) {
+      if (type != 17) {
+        if (track.pos[game.player] < track.pos[c]) {
+          if (track.clear[game.player] - track.clear[c] != 1) {
+            chance *= 2;
+          }
+        }
+      } else {
+        chance *= 0.5;
+      }
+      if ((type == 14 || type == 16) && other == game.player && ai[c].bully) {
+        chance = 1;
+      }
+      if (
+        track.pos[c] == 0 ||
+        (track.pos[c] == 1 && track.pos[game.player] == 0)
+      ) {
+        chance = 0;
+      }
+      if (
+        track.clear[c] - track.clear[game.player] >= 5 &&
+        other == game.player
+      ) {
+        chance = 1;
+      }
+      if (type == 11 || type == 13 || type == 15) {
+        chance = 0;
+      }
+    }
+  } else {
+    let otherHeading = car[other].xz;
+    if (racers[other].u.zyinv) {
+      otherHeading += 180;
+    }
+    while (otherHeading < 0) {
+      otherHeading += 360;
+    }
+    while (otherHeading > 180) {
+      otherHeading -= 360;
+    }
+    if (Math.abs(Math.abs(heading - otherHeading) - 180) < 45) {
+      chance = 1;
+    }
+    if ((100 * racers[c].hitmag) / carStats.maxmag[type] > 80) {
+      chance = 0;
+    }
+  }
+  return chance;
+}
+
+function startAttack(c, other, type, onlyPlayer) {
+  ai[c].attackTicks = 40 * (Math.abs(track.clear[other] - racers[c].clear) + 1);
+  if (ai[c].attackTicks > 500) {
+    ai[c].attackTicks = 500;
+  }
+  ai[c].leadAhead = 0;
+  if (track.stage == 3 && type == 12) {
+    if (random.sim() > random.sim()) {
+      ai[c].leadAhead = 1;
+    }
+  }
+  if (track.stage == 4) {
+    if (other == game.player && track.pos[game.player] < track.pos[c]) {
+      ai[c].leadAhead = 1.5;
+    } else {
+      ai[c].leadAhead = random.sim();
+    }
+  }
+  if (track.stage == 5) {
+    ai[c].leadAhead = random.sim() * 1.5;
+  }
+  if (track.stage == 7) {
+    if (c != boss()) {
+      if (
+        random.sim() > random.sim() ||
+        track.pos[game.player] < track.pos[c]
+      ) {
+        ai[c].leadAhead = 1;
+      }
+    }
+  }
+  if (track.stage == 8 && type == 14) {
+    if (random.sim() > random.sim()) {
+      ai[c].leadAhead = 0.76 + random.sim() * 0.76;
+    }
+  }
+  if (track.stage == 9) {
+    ai[c].leadAhead = 1;
+    if (
+      car[game.player].typ != 14 ||
+      track.clear[c] - track.clear[game.player] < 8
+    ) {
+      if (ai[c].attackTicks > 150 && !onlyPlayer) {
+        ai[c].attackTicks = 150;
+      }
+    }
+  }
+  if (track.stage == 11) {
+    if (ai[c].bully) {
+      ai[c].leadAhead = 0.7;
+      if (ai[c].attackTicks > 150) {
+        ai[c].attackTicks = 150;
+      }
+    } else {
+      ai[c].leadAhead = random.sim();
+    }
+  }
+  if (track.stage == 12) {
+    if (random.sim() > random.sim()) {
+      ai[c].leadAhead = 0.7;
       if (type == 14) {
-        powtoattack = 40;
-      }
-      if (type == 16) {
-        powtoattack = 50;
-      }
-      if (type == 18 || type == 12) {
-        powtoattack = 50;
-      }
-      if (track.pos[game.player] > track.pos[c]) {
-        powtoattack = 80;
+        ai[c].leadAhead += 0.7;
       }
     }
-    for (let i = 0; i < game.carCount; i++) {
-      if (i != c && track.clear[i] != -1) {
-        let myxz = car[c].xz;
-        if (racers[c].u.zyinv) {
-          myxz += 180;
-        }
-        while (myxz < 0) {
-          myxz += 360;
-        }
-        while (myxz > 180) {
-          myxz -= 360;
-        }
-        let ad = 0;
-        if (car[i].x - car[c].x >= 0) {
-          ad = 180;
-        }
-        let pnxz =
-          90 +
-          ad +
-          Math.atan((car[i].z - car[c].z) / (car[i].x - car[c].x)) /
-            0.017453292519943295;
-        while (pnxz < 0) {
-          pnxz += 360;
-        }
-        while (pnxz > 180) {
-          pnxz -= 360;
-        }
-        let vis = Math.abs(myxz - pnxz);
-        if (vis > 180) {
-          vis = Math.abs(vis - 360);
-        }
-        let attackrad = 2000 * (Math.abs(track.clear[i] - racers[c].clear) + 1);
-        if (track.stage == 3 && type == 12) {
-          if (attackrad < 12000) {
-            attackrad = 12000;
-          }
-        }
-        if (track.stage == 4) {
-          if (attackrad < 4000) {
-            attackrad = 4000;
-          }
-        }
-        if (track.stage == 8 && type == 14) {
-          if (attackrad < 12000) {
-            attackrad = 12000;
-          }
-          vis = 10;
-        }
-        if (track.stage == 9) {
-          if (onlyou && attackrad < 12000) {
-            attackrad = 12000;
-          }
-        }
-        if (track.stage == 11) {
-          if (ai[c].bully) {
-            attackrad = 8000;
-            vis = 10;
-            ai[c].afta = true;
-          } else {
-            if (attackrad < 6000) {
-              attackrad = 6000;
-            }
-          }
-        }
-        if (track.stage == 12 && ai[c].bully) {
-          attackrad = 6000;
-          vis = 10;
-        }
-        if (track.stage == 13) {
-          if (track.clear[c] - track.clear[game.player] > 3) {
-            attackrad = 21000;
-          }
-        }
-        if (track.stage == 15) {
-          attackrad *= Math.abs(track.clear[i] - racers[c].clear) + 1;
-          if (ai[c].bully) {
-            attackrad = 4000 * (Math.abs(track.clear[i] - racers[c].clear) + 1);
-            vis = 10;
-          }
-        }
-        if (track.stage == 16) {
-          if (type == 14) {
-            attackrad = 16000;
-            vis = 10;
-          }
-          if (type == 16) {
-            attackrad = 6000;
-            vis = 10;
-          }
-          if (type == 18 || type == 12) {
-            attackrad *= Math.abs(track.clear[i] - racers[c].clear) + 1;
-          }
-        }
-        let visan = 85 + 15 * (Math.abs(track.clear[i] - racers[c].clear) + 1);
-        if (track.stage == 9 && !onlyou) {
-          if (
-            car[game.player].typ != 14 ||
-            track.clear[c] - track.clear[game.player] < 8
-          ) {
-            visan = 45;
-          }
-        }
-        if (track.stage == 13) {
-          visan = 45;
-        }
-        if (track.stage == 16) {
-          if (type == 18 || type == 12 || type == 17) {
-            visan = 50 + 70 * Math.abs(track.clear[i] - racers[c].clear);
-          }
-        }
-        if (
-          vis < visan &&
-          distanceSquaredXZ(
-            car[c].x / 10,
-            car[i].x / 10,
-            car[c].z / 10,
-            car[i].z / 10,
-          ) < attackrad &&
-          ai[c].afta &&
-          racers[c].power > powtoattack
-        ) {
-          let bim = 35 - Math.abs(track.clear[i] - racers[c].clear) * 10;
-          if (bim < 1) {
-            bim = 1;
-          }
-          let atp = ((rank(c) + 1) * (7 - rank(i))) / bim;
-          if (game.mode != MODE.switchCars) {
-            if (track.stage != 17) {
-              if (atp > 0.7) {
-                atp = 0.7;
-              }
-            }
-            if (i != game.player && track.pos[game.player] < track.pos[c]) {
-              atp = 0;
-            }
-            if (i != game.player && onlyou) {
-              atp = 0;
-            }
-            if (track.stage == 3) {
-              if (type == 12 || (type == 16 && ai[c].bully)) {
-                atp *= 2;
-              } else {
-                atp *= 0.5;
-              }
-            }
-            if (track.stage == 5 && c == boss()) {
-              atp *= 0.7;
-            }
-            if (track.stage == 6) {
-              atp = 0;
-            }
-            if (track.stage == 7 && c == boss() && i == game.player) {
-              atp *= 1.5;
-            }
-            if (track.stage == 8) {
-              if (ai[c].bully && i == game.player) {
-                atp = 1;
-              } else {
-                atp = 0;
-              }
-            }
-            if (track.stage == 10) {
-              atp = 0;
-            }
-            if (track.stage == 11) {
-              if (ai[c].bully && i == game.player) {
-                atp = 1;
-              }
-              if (
-                track.pos[c] == 0 ||
-                (track.pos[c] == 1 && track.pos[game.player] == 0)
-              ) {
-                atp = 0;
-              }
-            }
-            if (track.stage == 12) {
-              if (type != 14 && type != 16) {
-                atp = 0;
-              }
-              if ((type == 16 || type == 14) && i == game.player) {
-                atp = 1;
-              }
-            }
-            if (track.stage == 14) {
-              atp = 0;
-            }
-            if (track.stage == 15) {
-              if (track.pos[c] == 0) {
-                atp *= 0.5;
-              }
-              if (track.pos[game.player] < track.pos[c]) {
-                atp *= 2;
-              }
-              if (ai[c].bully && i == game.player) {
-                atp = 1;
-              }
-            }
-            if (track.stage == 16) {
-              if (type != 17) {
-                if (track.pos[game.player] < track.pos[c]) {
-                  if (track.clear[game.player] - track.clear[c] != 1) {
-                    atp *= 2;
-                  }
-                }
-              } else {
-                atp *= 0.5;
-              }
-              if (
-                (type == 14 || type == 16) &&
-                i == game.player &&
-                ai[c].bully
-              ) {
-                atp = 1;
-              }
-              if (
-                track.pos[c] == 0 ||
-                (track.pos[c] == 1 && track.pos[game.player] == 0)
-              ) {
-                atp = 0;
-              }
-              if (
-                track.clear[c] - track.clear[game.player] >= 5 &&
-                i == game.player
-              ) {
-                atp = 1;
-              }
-              if (type == 11 || type == 13 || type == 15) {
-                atp = 0;
-              }
-            }
-          } else {
-            let opxz = car[i].xz;
-            if (racers[i].u.zyinv) {
-              opxz += 180;
-            }
-            while (opxz < 0) {
-              opxz += 360;
-            }
-            while (opxz > 180) {
-              opxz -= 360;
-            }
-            if (Math.abs(Math.abs(myxz - opxz) - 180) < 45) {
-              atp = 1;
-            }
-            if ((100 * racers[c].hitmag) / carStats.maxmag[type] > 80) {
-              atp = 0;
-            }
-          }
-          if (random.sim() < atp) {
-            ai[c].attackTicks =
-              40 * (Math.abs(track.clear[i] - racers[c].clear) + 1);
-            if (ai[c].attackTicks > 500) {
-              ai[c].attackTicks = 500;
-            }
-            ai[c].leadAhead = 0;
-            if (track.stage == 3 && type == 12) {
-              if (random.sim() > random.sim()) {
-                ai[c].leadAhead = 1;
-              }
-            }
-            if (track.stage == 4) {
-              if (i == game.player && track.pos[game.player] < track.pos[c]) {
-                ai[c].leadAhead = 1.5;
-              } else {
-                ai[c].leadAhead = random.sim();
-              }
-            }
-            if (track.stage == 5) {
-              ai[c].leadAhead = random.sim() * 1.5;
-            }
-            if (track.stage == 7) {
-              if (c != boss()) {
-                if (
-                  random.sim() > random.sim() ||
-                  track.pos[game.player] < track.pos[c]
-                ) {
-                  ai[c].leadAhead = 1;
-                }
-              }
-            }
-            if (track.stage == 8 && type == 14) {
-              if (random.sim() > random.sim()) {
-                ai[c].leadAhead = 0.76 + random.sim() * 0.76;
-              }
-            }
-            if (track.stage == 9) {
-              ai[c].leadAhead = 1;
-              if (
-                car[game.player].typ != 14 ||
-                track.clear[c] - track.clear[game.player] < 8
-              ) {
-                if (ai[c].attackTicks > 150 && !onlyou) {
-                  ai[c].attackTicks = 150;
-                }
-              }
-            }
-            if (track.stage == 11) {
-              if (ai[c].bully) {
-                ai[c].leadAhead = 0.7;
-                if (ai[c].attackTicks > 150) {
-                  ai[c].attackTicks = 150;
-                }
-              } else {
-                ai[c].leadAhead = random.sim();
-              }
-            }
-            if (track.stage == 12) {
-              if (random.sim() > random.sim()) {
-                ai[c].leadAhead = 0.7;
-                if (type == 14) {
-                  ai[c].leadAhead += 0.7;
-                }
-              }
-              if (ai[c].bully) {
-                if (ai[c].attackTicks > 150) {
-                  ai[c].attackTicks = 150;
-                }
-              }
-            }
-            if (track.stage == 13) {
-              if (ai[c].attackTicks > 60) {
-                ai[c].attackTicks = 60;
-              }
-            }
-            if (track.stage == 15) {
-              ai[c].leadAhead = random.sim() * 1.5;
-              ai[c].attackTicks = ai[c].attackTicks / 2;
-              if (random.sim() > random.sim()) {
-                ai[c].exitattack = true;
-              } else {
-                ai[c].exitattack = false;
-              }
-            }
-            if (track.stage == 16) {
-              if (type == 14) {
-                ai[c].leadAhead = 0.2 + random.sim() * 0.8;
-                ai[c].attackTicks = 70;
-              }
-              if (type == 16) {
-                if (random.sim() > random.sim()) {
-                  ai[c].leadAhead = 0.7;
-                }
-                if (ai[c].attackTicks > 150) {
-                  ai[c].attackTicks = 150;
-                }
-              }
-              if (type == 18 || type == 12 || type == 17) {
-                ai[c].leadAhead = random.sim() * 1.5;
-                if (
-                  Math.abs(track.clear[i] - racers[c].clear) <= 2 ||
-                  type == 17
-                ) {
-                  ai[c].attackTicks = ai[c].attackTicks / 3;
-                }
-              }
-            }
-            ai[c].attackedCar = i;
-            ai[c].sharpTurn = Math.floor(1 + random.sim() * 2);
-            if (ai[c].sharpTurn == SHARP_TURN.liftGas) {
-              ai[c].sharpTurn = SHARP_TURN.handbrake;
-            }
-          }
-        }
-        if (
-          startsway &&
-          vis > 100 &&
-          distanceSquaredXZ(
-            car[c].x / 10,
-            car[i].x / 10,
-            car[c].z / 10,
-            car[i].z / 10,
-          ) < 300 &&
-          random.sim() > 0.6 - rank(c) / 10
-        ) {
-          ai[c].steerTolerance = 0;
-          ai[c].aimLag = 0;
-        }
+    if (ai[c].bully) {
+      if (ai[c].attackTicks > 150) {
+        ai[c].attackTicks = 150;
       }
     }
+  }
+  if (track.stage == 13) {
+    if (ai[c].attackTicks > 60) {
+      ai[c].attackTicks = 60;
+    }
+  }
+  if (track.stage == 15) {
+    ai[c].leadAhead = random.sim() * 1.5;
+    ai[c].attackTicks = ai[c].attackTicks / 2;
+    if (random.sim() > random.sim()) {
+      ai[c].exitattack = true;
+    } else {
+      ai[c].exitattack = false;
+    }
+  }
+  if (track.stage == 16) {
+    if (type == 14) {
+      ai[c].leadAhead = 0.2 + random.sim() * 0.8;
+      ai[c].attackTicks = 70;
+    }
+    if (type == 16) {
+      if (random.sim() > random.sim()) {
+        ai[c].leadAhead = 0.7;
+      }
+      if (ai[c].attackTicks > 150) {
+        ai[c].attackTicks = 150;
+      }
+    }
+    if (type == 18 || type == 12 || type == 17) {
+      ai[c].leadAhead = random.sim() * 1.5;
+      if (Math.abs(track.clear[other] - racers[c].clear) <= 2 || type == 17) {
+        ai[c].attackTicks = ai[c].attackTicks / 3;
+      }
+    }
+  }
+  ai[c].attackedCar = other;
+  ai[c].sharpTurn = Math.floor(1 + random.sim() * 2);
+  if (ai[c].sharpTurn == SHARP_TURN.liftGas) {
+    ai[c].sharpTurn = SHARP_TURN.handbrake;
   }
 }
