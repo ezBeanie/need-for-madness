@@ -59,14 +59,36 @@ const problems = [];
 walk.fullAncestor(ast, (node, _state, ancestors) => {
   if (node.type !== "Identifier" || !Object.hasOwn(map, node.name)) return;
   const parent = ancestors[ancestors.length - 2];
-  if (parent.type === "MemberExpression" && parent.property === node && !parent.computed) return;
-  if (parent.type === "Property" && parent.key === node && !parent.computed && !parent.shorthand) return;
-  if ((parent.type === "MethodDefinition" || parent.type === "PropertyDefinition") && parent.key === node) return;
+  if (
+    parent.type === "MemberExpression" &&
+    parent.property === node &&
+    !parent.computed
+  )
+    return;
+  if (
+    parent.type === "Property" &&
+    parent.key === node &&
+    !parent.computed &&
+    !parent.shorthand
+  )
+    return;
+  if (
+    (parent.type === "MethodDefinition" ||
+      parent.type === "PropertyDefinition") &&
+    parent.key === node
+  )
+    return;
   if (parent.type === "ImportSpecifier") return;
   const fns = ancestors.slice(0, -1).filter(isFunction);
   if (fns.some((fn) => declaredIn(fn).has(node.name))) return;
-  if (parent.type === "VariableDeclarator" && parent.id === node && fns.length === 0) return;
-  if (parent.type === "Property" && parent.shorthand) problems.push(`shorthand ${node.name} @${node.start}`);
+  if (
+    parent.type === "VariableDeclarator" &&
+    parent.id === node &&
+    fns.length === 0
+  )
+    return;
+  if (parent.type === "Property" && parent.shorthand)
+    problems.push(`shorthand ${node.name} @${node.start}`);
   edits.push([node.start, node.end, map[node.name]]);
   counts[node.name] = (counts[node.name] || 0) + 1;
 });
@@ -74,10 +96,15 @@ walk.fullAncestor(ast, (node, _state, ancestors) => {
 for (const stmt of ast.body) {
   if (stmt.type !== "VariableDeclaration") continue;
   const keep = stmt.declarations.filter((d) => !Object.hasOwn(map, d.id.name));
-  const removed = stmt.declarations.filter((d) => Object.hasOwn(map, d.id.name));
+  const removed = stmt.declarations.filter((d) =>
+    Object.hasOwn(map, d.id.name),
+  );
   if (removed.length === 0) continue;
-  for (const d of removed) if (d.init) console.log("removed initializer:", src.slice(d.start, d.end));
-  const text = keep.length ? `var ${keep.map((d) => src.slice(d.start, d.end)).join(", ")};` : "";
+  for (const d of removed)
+    if (d.init) console.log("removed initializer:", src.slice(d.start, d.end));
+  const text = keep.length
+    ? `var ${keep.map((d) => src.slice(d.start, d.end)).join(", ")};`
+    : "";
   edits.push([stmt.start, stmt.end, text]);
 }
 
@@ -87,6 +114,7 @@ if (problems.length) {
 }
 edits.sort((a, b) => b[0] - a[0]);
 let out = src;
-for (const [start, end, text] of edits) out = out.slice(0, start) + text + out.slice(end);
+for (const [start, end, text] of edits)
+  out = out.slice(0, start) + text + out.slice(end);
 fs.writeFileSync(file, out);
 console.log(counts);

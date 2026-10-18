@@ -27,13 +27,19 @@ for (const n of ast.body) {
   if (n.type === "ImportDeclaration")
     for (const s of n.specifiers) {
       imports.set(s.local.name, {
-        imported: s.type === "ImportDefaultSpecifier" ? "default" : s.imported.name,
+        imported:
+          s.type === "ImportDefaultSpecifier" ? "default" : s.imported.name,
         from: n.source.value,
       });
     }
-  if (n.type === "VariableDeclaration") n.declarations.forEach((d) => topLevel.add(d.id.name));
-  if (n.type === "FunctionDeclaration" || n.type === "ClassDeclaration") topLevel.add(n.id.name);
-  if (n.type === "ExportNamedDeclaration" && n.declaration?.type === "FunctionDeclaration")
+  if (n.type === "VariableDeclaration")
+    n.declarations.forEach((d) => topLevel.add(d.id.name));
+  if (n.type === "FunctionDeclaration" || n.type === "ClassDeclaration")
+    topLevel.add(n.id.name);
+  if (
+    n.type === "ExportNamedDeclaration" &&
+    n.declaration?.type === "FunctionDeclaration"
+  )
     topLevel.add(n.declaration.id.name);
 }
 // functions that stay in the source: moved code imports them back (cycles are fine for
@@ -42,7 +48,8 @@ const functionsHere = new Set(
   ast.body.flatMap((n) =>
     n.type === "FunctionDeclaration"
       ? [n.id.name]
-      : n.type === "ExportNamedDeclaration" && n.declaration?.type === "FunctionDeclaration"
+      : n.type === "ExportNamedDeclaration" &&
+          n.declaration?.type === "FunctionDeclaration"
         ? [n.declaration.id.name]
         : [],
   ),
@@ -52,11 +59,14 @@ if (autoVars) {
   const usedBy = new Map();
   const vars = new Set();
   for (const n of ast.body)
-    if (n.type === "VariableDeclaration") n.declarations.forEach((d) => vars.add(d.id.name));
+    if (n.type === "VariableDeclaration")
+      n.declarations.forEach((d) => vars.add(d.id.name));
   for (const n of ast.body) {
     const owner = n.type === "FunctionDeclaration" ? n.id.name : "<top>";
     const declaredHere =
-      n.type === "VariableDeclaration" ? new Set(n.declarations.map((d) => d.id.name)) : new Set();
+      n.type === "VariableDeclaration"
+        ? new Set(n.declarations.map((d) => d.id.name))
+        : new Set();
     walk.full(n, (x) => {
       if (x.type !== "Identifier" || !vars.has(x.name)) return;
       if (owner === "<top>" && declaredHere.has(x.name)) return;
@@ -74,20 +84,29 @@ const declared = (n) =>
   n.type === "ExportNamedDeclaration" && n.declaration
     ? declared(n.declaration)
     : n.type === "FunctionDeclaration"
-    ? [n.id.name]
-    : n.type === "VariableDeclaration"
-      ? n.declarations.map((d) => d.id.name)
-      : [];
-const moved = ast.body.filter((n) => declared(n).length && declared(n).every((d) => names.includes(d)));
-const missing = names.filter((n) => !moved.some((m) => declared(m).includes(n)));
+      ? [n.id.name]
+      : n.type === "VariableDeclaration"
+        ? n.declarations.map((d) => d.id.name)
+        : [];
+const moved = ast.body.filter(
+  (n) => declared(n).length && declared(n).every((d) => names.includes(d)),
+);
+const missing = names.filter(
+  (n) => !moved.some((m) => declared(m).includes(n)),
+);
 if (missing.length) {
   console.error("not found:", missing);
   process.exit(1);
 }
 
 const free = new Set();
-for (const fn of moved) walk.full(fn, (x) => { if (x.type === "Identifier") free.add(x.name); });
-const stayingBehind = [...free].filter((n) => topLevel.has(n) && !names.includes(n) && !imports.has(n));
+for (const fn of moved)
+  walk.full(fn, (x) => {
+    if (x.type === "Identifier") free.add(x.name);
+  });
+const stayingBehind = [...free].filter(
+  (n) => topLevel.has(n) && !names.includes(n) && !imports.has(n),
+);
 const importedBack = stayingBehind.filter((n) => functionsHere.has(n));
 const blocking = stayingBehind.filter((n) => !functionsHere.has(n));
 if (blocking.length) {
@@ -100,20 +119,27 @@ const ranges = moved
     let start = fn.start;
     const lines = src.slice(0, start).split("\n");
     lines.pop();
-    while (lines.length && /^\/\//.test(lines[lines.length - 1])) start -= lines.pop().length + 1;
+    while (lines.length && /^\/\//.test(lines[lines.length - 1]))
+      start -= lines.pop().length + 1;
     let end = fn.end;
     if (src[end] === "\n") end++;
     return [start, end];
   })
   .sort((a, b) => a[0] - b[0]);
 let movedText = ranges.map(([s, e]) => src.slice(s, e)).join("");
-for (const [s, e] of [...ranges].reverse()) src = src.slice(0, s) + src.slice(e);
+for (const [s, e] of [...ranges].reverse())
+  src = src.slice(0, s) + src.slice(e);
 
 const usedIn = (text, name) => new RegExp(`(^|[^.\\w$])${name}\\b`).test(text);
 const otherFiles = extra.map((f) => fs.readFileSync(f, "utf8"));
-const exported = names.filter((n) => usedIn(src, n) || otherFiles.some((t) => usedIn(t, n)));
+const exported = names.filter(
+  (n) => usedIn(src, n) || otherFiles.some((t) => usedIn(t, n)),
+);
 for (const n of exported)
-  movedText = movedText.replace(new RegExp(`^function ${n}\\(`, "m"), `export function ${n}(`);
+  movedText = movedText.replace(
+    new RegExp(`^function ${n}\\(`, "m"),
+    `export function ${n}(`,
+  );
 
 const rel = (from) => {
   if (!from.startsWith(".")) return from;
@@ -130,14 +156,25 @@ for (const n of free)
     const r = rel(from);
     if (r === `./${path.basename(targetFile)}`) continue;
     if (!needed.has(r)) needed.set(r, []);
-    needed.get(r).push(imported === "default" ? `default:${n}` : imported === n ? n : `${imported} as ${n}`);
+    needed
+      .get(r)
+      .push(
+        imported === "default"
+          ? `default:${n}`
+          : imported === n
+            ? n
+            : `${imported} as ${n}`,
+      );
   }
 if (importedBack.length) {
   let back = path.relative(path.dirname(targetFile), srcFile);
   if (!back.startsWith(".")) back = `./${back}`;
   needed.set(back, importedBack);
   for (const n of importedBack)
-    src = src.replace(new RegExp(`^function ${n}\\(`, "m"), `export function ${n}(`);
+    src = src.replace(
+      new RegExp(`^function ${n}\\(`, "m"),
+      `export function ${n}(`,
+    );
 }
 const importLines = [...needed]
   .sort()
@@ -148,15 +185,23 @@ const importLines = [...needed]
     return `import { ${named.join(", ")} } from "${from}";`;
   })
   .join("\n");
-if (!exists) target = `// ${header.split("\n").join("\n// ")}\n\n${importLines}\n\n${movedText}`;
-else target = target + "\n" + movedText + (importLines ? `\n// TODO merge imports:\n${importLines}\n` : "");
+if (!exists)
+  target = `// ${header.split("\n").join("\n// ")}\n\n${importLines}\n\n${movedText}`;
+else
+  target =
+    target +
+    "\n" +
+    movedText +
+    (importLines ? `\n// TODO merge imports:\n${importLines}\n` : "");
 fs.writeFileSync(targetFile, target);
 
 if (exported.length) {
   let r = path.relative(path.dirname(srcFile), targetFile);
   if (!r.startsWith(".")) r = `./${r}`;
   const line = `import { ${exported.sort().join(", ")} } from "${r}";\n`;
-  const lastImport = ast.body.filter((n) => n.type === "ImportDeclaration").pop();
+  const lastImport = ast.body
+    .filter((n) => n.type === "ImportDeclaration")
+    .pop();
   const at = lastImport.end + 1;
   src = src.slice(0, at) + line + src.slice(at);
 }

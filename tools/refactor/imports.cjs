@@ -18,7 +18,9 @@ const prune = (src) => {
   const used = new Set();
   for (const n of ast.body) {
     if (n.type === "ImportDeclaration") continue;
-    walk.full(n, (x) => { if (x.type === "Identifier") used.add(x.name); });
+    walk.full(n, (x) => {
+      if (x.type === "Identifier") used.add(x.name);
+    });
   }
   const edits = [];
   const removed = [];
@@ -26,7 +28,9 @@ const prune = (src) => {
     if (n.type !== "ImportDeclaration" || n.specifiers.length === 0) continue;
     const keep = n.specifiers.filter((s) => used.has(s.local.name));
     if (keep.length === n.specifiers.length) continue;
-    n.specifiers.filter((s) => !used.has(s.local.name)).forEach((s) => removed.push(s.local.name));
+    n.specifiers
+      .filter((s) => !used.has(s.local.name))
+      .forEach((s) => removed.push(s.local.name));
     const text = (s) => src.slice(s.start, s.end);
     const def = keep.find((s) => s.type === "ImportDefaultSpecifier");
     const named = keep.filter((s) => s.type === "ImportSpecifier").map(text);
@@ -44,18 +48,31 @@ const merge = (src) => {
   const ast = parse(src, { ecmaVersion: "latest", sourceType: "module" });
   const bySource = new Map();
   for (const n of ast.body)
-    if (n.type === "ImportDeclaration" && n.specifiers.length && n.specifiers.every((s) => s.type === "ImportSpecifier")) {
+    if (
+      n.type === "ImportDeclaration" &&
+      n.specifiers.length &&
+      n.specifiers.every((s) => s.type === "ImportSpecifier")
+    ) {
       if (!bySource.has(n.source.value)) bySource.set(n.source.value, []);
       bySource.get(n.source.value).push(n);
     }
   const edits = [];
   for (const [source, decls] of bySource) {
     if (decls.length < 2) continue;
-    const specs = [...new Set(decls.flatMap((d) => d.specifiers.map((s) => src.slice(s.start, s.end))))].sort((a, b) =>
-      a.localeCompare(b),
-    );
-    edits.push([decls[0].start, decls[0].end, `import { ${specs.join(", ")} } from "${source}";`]);
-    for (const d of decls.slice(1)) edits.push([d.start, src[d.end] === "\n" ? d.end + 1 : d.end, ""]);
+    const specs = [
+      ...new Set(
+        decls.flatMap((d) =>
+          d.specifiers.map((s) => src.slice(s.start, s.end)),
+        ),
+      ),
+    ].sort((a, b) => a.localeCompare(b));
+    edits.push([
+      decls[0].start,
+      decls[0].end,
+      `import { ${specs.join(", ")} } from "${source}";`,
+    ]);
+    for (const d of decls.slice(1))
+      edits.push([d.start, src[d.end] === "\n" ? d.end + 1 : d.end, ""]);
   }
   return applyEdits(src, edits);
 };
@@ -68,16 +85,38 @@ const mergeAsText = (src) => {
   const matches = [...src.matchAll(NAMED_IMPORT)];
   const sources = matches.map((m) => m[2]);
   const header = src.match(/^(?:\/\/.*\n)*\n*/)[0];
-  const atTop = matches.every((m, i) => i === 0 ? m.index === header.length : m.index === matches[i - 1].index + matches[i - 1][0].length);
-  if (!matches.length || (atTop && new Set(sources).size === sources.length)) return src;
+  const atTop = matches.every((m, i) =>
+    i === 0
+      ? m.index === header.length
+      : m.index === matches[i - 1].index + matches[i - 1][0].length,
+  );
+  if (!matches.length || (atTop && new Set(sources).size === sources.length))
+    return src;
   const bySource = new Map();
   for (const [, names, source] of matches) {
     if (!bySource.has(source)) bySource.set(source, new Set());
-    names.split(",").map((n) => n.trim()).filter(Boolean).forEach((n) => bySource.get(source).add(n));
+    names
+      .split(",")
+      .map((n) => n.trim())
+      .filter(Boolean)
+      .forEach((n) => bySource.get(source).add(n));
   }
-  const block = [...bySource].map(([source, names]) => `import { ${[...names].sort().join(", ")} } from "${source}";\n`).join("");
-  const rest = src.replace(NAMED_IMPORT, "").slice(header.length).replace(/^\n+/, "");
-  return (header && !header.endsWith("\n\n") ? header + "\n" : header) + block + "\n" + rest;
+  const block = [...bySource]
+    .map(
+      ([source, names]) =>
+        `import { ${[...names].sort().join(", ")} } from "${source}";\n`,
+    )
+    .join("");
+  const rest = src
+    .replace(NAMED_IMPORT, "")
+    .slice(header.length)
+    .replace(/^\n+/, "");
+  return (
+    (header && !header.endsWith("\n\n") ? header + "\n" : header) +
+    block +
+    "\n" +
+    rest
+  );
 };
 
 for (const file of process.argv.slice(2)) {

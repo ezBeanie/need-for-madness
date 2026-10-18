@@ -11,7 +11,8 @@ const dry = process.argv.includes("--dry");
 const files = (dir) =>
   fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
     const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) return entry.name.startsWith("__") ? [] : files(full);
+    if (entry.isDirectory())
+      return entry.name.startsWith("__") ? [] : files(full);
     return entry.name.endsWith(".js") ? [full] : [];
   });
 const counts = Object.fromEntries(Object.keys(map).map((name) => [name, 0]));
