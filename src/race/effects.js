@@ -1,4 +1,5 @@
 // The flying particles of a race: sparks, chips broken off cars, dust and explosions.
+// Every list is used up to its count and keeps its entries for reuse.
 
 import { cosDeg, distance, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
@@ -11,296 +12,353 @@ import { gl } from "../render/renderer.js";
 import { car, racers } from "./racers.js";
 import { recording } from "./recording.js";
 
-// Each list is used up to its count; the lists keep their entries for reuse.
-// Fields keep their original names for now.
 export const effects = {
-  sprk: [],
-  nspr: 0,
-  chip: [],
-  nchp: 0,
-  dust: [],
-  ndst: 0,
-  dwer: [],
-  exp: [],
-  nexp: 0,
-  ewer: [],
+  // stat: 0 gone, then its age in ticks up to 8
+  sparks: [],
+  sparkCount: 0,
+  // models; loaded: 0 gone, then its age
+  chips: [],
+  chipCount: 0,
+  // stg: 0 gone, then its age up to 10
+  dustClouds: [],
+  dustCount: 0,
+  // indices of the clouds, farthest from the camera first, so the nearest are drawn last
+  dustBackToFront: [],
+  // ani: the animation frame, -1 gone
+  explosions: [],
+  explosionCount: 0,
+  explosionsBackToFront: [],
 };
 
-export function chipaway(c, x, y, z, ctmag) {
-  if (racers[c].carnchp < 120 && !recording.onpausefr) {
-    var ui = -1;
-    for (var i = 0; i < effects.nchp; i++) {
-      if (effects.chip[i].loaded == 0) {
-        ui = i;
-        break;
-      }
+// sparks from scraping the ground, or a wall (from higher up)
+export const SPARKS = { ground: 1, wall: 2 };
+// the ground the dust comes from (dust kinds 0-2 smoke, 3-5 sand, 6-8 the stage's ground)
+export const DUST = { road: 0, ground: 1, sand: 2 };
+
+const MAX_CHIPS_PER_CAR = 120;
+const CHIP_TICKS = 100;
+const SPARK_TICKS = 8;
+const DUST_TICKS = 10;
+const EXPLOSION_FRAMES = 6;
+// how long a recorded effect stays in the replay (see recording.js)
+const RECORDED_TICKS = 430;
+
+// The first free entry of a list, or -1.
+const freeSlot = (list, count, isFree) => {
+  for (let i = 0; i < count; i++) {
+    if (isFree(list[i])) {
+      return i;
     }
-    if (ui == -1) {
-      ui = effects.nchp;
-      effects.nchp++;
-      racers[c].carnchp++;
-    }
-    if (ctmag > 0.4) {
-      ctmag = 0.3;
-    }
-    if (ctmag < -0.4) {
-      ctmag = -0.3;
-    }
-    effects.chip[ui] = newModel();
-    effects.chip[i].rx =
-      x * car[c].mat[0] + y * car[c].mat[4] + z * car[c].mat[8];
-    effects.chip[i].ry =
-      x * car[c].mat[1] + y * car[c].mat[5] + z * car[c].mat[9];
-    effects.chip[i].rz =
-      x * car[c].mat[2] + y * car[c].mat[6] + z * car[c].mat[10];
-    effects.chip[i].cn = c;
-    effects.chip[ui].vx = ctmag * (30 - random.fx() * 60);
-    effects.chip[ui].vy = ctmag * (30 - random.fx() * 60);
-    effects.chip[ui].vz = ctmag * (30 - random.fx() * 60);
-    effects.chip[ui].rtn1 = Math.floor(random.fx() * 5);
-    if (effects.chip[ui].rtn1 < 3) {
-      effects.chip[ui].rtn1mag = random.fx() * 60;
-    }
-    effects.chip[ui].rtn2 = Math.floor(random.fx() * 5);
-    if (effects.chip[ui].rtn2 < 3) {
-      effects.chip[ui].rtn2mag = random.fx() * 60;
-    }
-    var ox = [];
-    ox[0] = 0;
-    var avox = 0;
-    for (var i = 1; i < 3; i++) {
-      ox[i] = ox[0] + ctmag * (10 - random.fx() * 20);
-      avox += ox[i];
-    }
-    avox = avox / 2;
-    for (var i = 0; i < 3; i++) {
-      ox[i] -= (avox / 2) * (1 - random.fx() * random.fx());
-    }
-    var oy = [];
-    oy[0] = 0;
-    var avoy = 0;
-    for (var i = 1; i < 3; i++) {
-      oy[i] = oy[0] + ctmag * (10 - random.fx() * 20);
-      avoy += oy[i];
-    }
-    avoy = avoy / 2;
-    for (var i = 0; i < 3; i++) {
-      oy[i] -= (avoy / 2) * (1 - random.fx() * random.fx());
-    }
-    var oz = [];
-    oz[0] = 0;
-    var avoz = 0;
-    for (var i = 1; i < 3; i++) {
-      oz[i] = oz[0] + ctmag * (10 - random.fx() * 20);
-      avoz += oz[i];
-    }
-    avoz = avoz / 2;
-    for (var i = 0; i < 3; i++) {
-      oz[i] -= (avoz / 2) * (1 - random.fx() * random.fx());
-    }
-    var rmx =
-      (oy[1] - oy[0]) * (oz[2] - oz[0]) - (oz[1] - oz[0]) * (oy[2] - oy[0]);
-    var rmy =
-      (oz[1] - oz[0]) * (ox[2] - ox[0]) - (ox[1] - ox[0]) * (oz[2] - oz[0]);
-    var rmz =
-      (ox[1] - ox[0]) * (oy[2] - oy[0]) - (oy[1] - oy[0]) * (ox[2] - ox[0]);
-    var normx = rmx / Math.sqrt(rmx * rmx + rmy * rmy + rmz * rmz);
-    var normy = rmy / Math.sqrt(rmx * rmx + rmy * rmy + rmz * rmz);
-    var normz = rmz / Math.sqrt(rmx * rmx + rmy * rmy + rmz * rmz);
-    var indice = [];
-    var vert = [];
-    var norm = [];
-    var texu = [];
-    for (var i = 0; i < 3; i++) {
-      indice[i] = i;
-      vert[i * 3] = ox[i];
-      vert[i * 3 + 1] = oy[i];
-      vert[i * 3 + 2] = oz[i];
-      norm[i * 3] = normx;
-      norm[i * 3 + 1] = normy;
-      norm[i * 3 + 2] = normz;
-      texu[i * 2] = car[c].ctxl[0];
-      texu[i * 2 + 1] = car[c].ctxl[1];
-    }
-    effects.chip[ui].ni = 3;
-    effects.chip[ui].nt = 1;
-    var roni = random.fx();
-    if (roni > 0.334) {
-      effects.chip[ui].ownshade = true;
-    }
-    if (roni > 0.667) {
-      effects.chip[ui].ownlight = true;
-    }
-    effects.chip[ui].vbuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, effects.chip[ui].vbuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vert), gl.STATIC_DRAW);
-    effects.chip[ui].nbuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, effects.chip[ui].nbuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(norm), gl.STATIC_DRAW);
-    effects.chip[ui].tbuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, effects.chip[ui].tbuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(texu), gl.STATIC_DRAW);
-    effects.chip[ui].ibuf = gl.createBuffer();
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, effects.chip[ui].ibuf);
-    gl.bufferData(
-      gl.ELEMENT_ARRAY_BUFFER,
-      new Uint16Array(indice),
-      gl.STATIC_DRAW,
+  }
+  return -1;
+};
+
+// Back to front by distance from the camera: an item counts one up for every other one
+// farther away.
+const sortBackToFront = (items, count, order) => {
+  const ranks = [];
+  const distances = [];
+  for (let i = 0; i < count; i++) {
+    ranks[i] = 0;
+    distances[i] = distance(
+      items[i].x,
+      camera.x,
+      items[i].y,
+      camera.y,
+      items[i].z,
+      camera.z,
     );
-    effects.chip[ui].mat = mat4.create();
-    effects.chip[ui].texture = racers[c].body.texture[1];
-    effects.chip[ui].loaded = 1;
   }
-}
-export function chipsfly() {
-  var nfly = false;
-  for (var i = 0; i < effects.nchp; i++) {
-    if (effects.chip[i].loaded) {
-      effects.chip[i].x = car[effects.chip[i].cn].x + effects.chip[i].rx;
-      effects.chip[i].y = car[effects.chip[i].cn].y + effects.chip[i].ry;
-      effects.chip[i].z = car[effects.chip[i].cn].z + effects.chip[i].rz;
-      effects.chip[i].rx += effects.chip[i].vx * tick.scale;
-      effects.chip[i].ry += effects.chip[i].vy * tick.scale;
-      effects.chip[i].rz += effects.chip[i].vz * tick.scale;
-      effects.chip[i].vy -= 0.7 * tick.scale;
-      if (effects.chip[i].rtn1 < 3) {
-        var a1rot = [0, 0, 0];
-        a1rot[effects.chip[i].rtn1] = 1;
-        mat4.rotate(
-          effects.chip[i].mat,
-          effects.chip[i].mat,
-          effects.chip[i].rtn1mag * (Math.PI / 180),
-          a1rot,
-        );
-      }
-      if (effects.chip[i].rtn2 < 3) {
-        var a2rot = [0, 0, 0];
-        a2rot[effects.chip[i].rtn2] = 1;
-        mat4.rotate(
-          effects.chip[i].mat,
-          effects.chip[i].mat,
-          effects.chip[i].rtn2mag * (Math.PI / 180),
-          a2rot,
-        );
-      }
-      if (tick.fraction >= tick.scale) {
-        effects.chip[i].loaded++;
-        if (effects.chip[i].loaded == 100) {
-          effects.chip[i].loaded = 0;
-        }
-      }
-      if (effects.chip[i].y < 0) {
-        effects.chip[i].loaded = 0;
-      }
-      if (effects.chip[i].loaded == 0) {
-        gl.deleteBuffer(effects.chip[i].vbuf);
-        effects.chip[i].vbuf = null;
-        gl.deleteBuffer(effects.chip[i].tbuf);
-        effects.chip[i].tbuf = null;
-        gl.deleteBuffer(effects.chip[i].ibuf);
-        effects.chip[i].ibuf = null;
-        effects.chip[i].texture = null;
+  for (let i = 0; i < count; i++) {
+    for (let j = i + 1; j < count; j++) {
+      if (distances[i] < distances[j]) {
+        ranks[i]++;
       } else {
-        nfly = true;
+        ranks[j]++;
       }
     }
+    order[ranks[i]] = i;
   }
-  if (!nfly) {
-    effects.nchp = 0;
+};
+
+const buffer = (target, data) => {
+  const made = gl.createBuffer();
+  gl.bindBuffer(target, made);
+  gl.bufferData(target, data, gl.STATIC_DRAW);
+  return made;
+};
+
+// A random coordinate for each of the three corners of a chip, then all shifted by a
+// random share of half their mean, as in the original.
+const chipCorners = (size) => {
+  const corners = [0];
+  let sum = 0;
+  for (let i = 1; i < 3; i++) {
+    corners[i] = corners[0] + size * (10 - random.fx() * 20);
+    sum += corners[i];
+  }
+  const mean = sum / 2;
+  for (let i = 0; i < 3; i++) {
+    corners[i] -= (mean / 2) * (1 - random.fx() * random.fx());
+  }
+  return corners;
+};
+
+// A triangular chip breaks off car c at (x, y, z) on its body, flying off and spinning.
+export function chipaway(c, x, y, z, size) {
+  if (!(racers[c].carnchp < MAX_CHIPS_PER_CAR && !recording.onpausefr)) {
+    return;
+  }
+  let slot = freeSlot(
+    effects.chips,
+    effects.chipCount,
+    (chip) => chip.loaded == 0,
+  );
+  if (slot == -1) {
+    slot = effects.chipCount;
+    effects.chipCount++;
+    racers[c].carnchp++;
+  }
+  if (size > 0.4) {
+    size = 0.3;
+  }
+  if (size < -0.4) {
+    size = -0.3;
+  }
+  const chip = newModel();
+  effects.chips[slot] = chip;
+  const m = car[c].mat;
+  // where on the car, turned with it
+  chip.rx = x * m[0] + y * m[4] + z * m[8];
+  chip.ry = x * m[1] + y * m[5] + z * m[9];
+  chip.rz = x * m[2] + y * m[6] + z * m[10];
+  chip.cn = c;
+  chip.vx = size * (30 - random.fx() * 60);
+  chip.vy = size * (30 - random.fx() * 60);
+  chip.vz = size * (30 - random.fx() * 60);
+  // spins about up to two axes (0 x, 1 y, 2 z; 3 and 4 none)
+  chip.rtn1 = Math.floor(random.fx() * 5);
+  if (chip.rtn1 < 3) {
+    chip.rtn1mag = random.fx() * 60;
+  }
+  chip.rtn2 = Math.floor(random.fx() * 5);
+  if (chip.rtn2 < 3) {
+    chip.rtn2mag = random.fx() * 60;
+  }
+  const ox = chipCorners(size);
+  const oy = chipCorners(size);
+  const oz = chipCorners(size);
+  const crossX =
+    (oy[1] - oy[0]) * (oz[2] - oz[0]) - (oz[1] - oz[0]) * (oy[2] - oy[0]);
+  const crossY =
+    (oz[1] - oz[0]) * (ox[2] - ox[0]) - (ox[1] - ox[0]) * (oz[2] - oz[0]);
+  const crossZ =
+    (ox[1] - ox[0]) * (oy[2] - oy[0]) - (oy[1] - oy[0]) * (ox[2] - ox[0]);
+  const length = Math.sqrt(crossX * crossX + crossY * crossY + crossZ * crossZ);
+  const vertices = [];
+  const normals = [];
+  const texture = [];
+  for (let i = 0; i < 3; i++) {
+    vertices.push(ox[i], oy[i], oz[i]);
+    normals.push(crossX / length, crossY / length, crossZ / length);
+    // the whole chip shows one spot of the car's paint
+    texture.push(car[c].ctxl[0], car[c].ctxl[1]);
+  }
+  chip.ni = 3;
+  chip.nt = 1;
+  const shade = random.fx();
+  if (shade > 0.334) {
+    chip.ownshade = true;
+  }
+  if (shade > 0.667) {
+    chip.ownlight = true;
+  }
+  chip.vbuf = buffer(gl.ARRAY_BUFFER, new Float32Array(vertices));
+  chip.nbuf = buffer(gl.ARRAY_BUFFER, new Float32Array(normals));
+  chip.tbuf = buffer(gl.ARRAY_BUFFER, new Float32Array(texture));
+  chip.ibuf = buffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2]));
+  chip.mat = mat4.create();
+  chip.texture = racers[c].body.texture[1];
+  chip.loaded = 1;
+}
+
+// Chips fly off their car, fall and spin, until they reach the ground or get old.
+export function chipsfly() {
+  let anyFlying = false;
+  for (let i = 0; i < effects.chipCount; i++) {
+    const chip = effects.chips[i];
+    if (!chip.loaded) {
+      continue;
+    }
+    chip.x = car[chip.cn].x + chip.rx;
+    chip.y = car[chip.cn].y + chip.ry;
+    chip.z = car[chip.cn].z + chip.rz;
+    chip.rx += chip.vx * tick.scale;
+    chip.ry += chip.vy * tick.scale;
+    chip.rz += chip.vz * tick.scale;
+    chip.vy -= 0.7 * tick.scale;
+    for (const [axis, degrees] of [
+      [chip.rtn1, chip.rtn1mag],
+      [chip.rtn2, chip.rtn2mag],
+    ]) {
+      if (axis < 3) {
+        const around = [0, 0, 0];
+        around[axis] = 1;
+        mat4.rotate(chip.mat, chip.mat, degrees * (Math.PI / 180), around);
+      }
+    }
+    if (tick.fraction >= tick.scale) {
+      chip.loaded++;
+      if (chip.loaded == CHIP_TICKS) {
+        chip.loaded = 0;
+      }
+    }
+    if (chip.y < 0) {
+      chip.loaded = 0;
+    }
+    if (chip.loaded == 0) {
+      gl.deleteBuffer(chip.vbuf);
+      chip.vbuf = null;
+      gl.deleteBuffer(chip.tbuf);
+      chip.tbuf = null;
+      gl.deleteBuffer(chip.ibuf);
+      chip.ibuf = null;
+      chip.texture = null;
+    } else {
+      anyFlying = true;
+    }
+  }
+  if (!anyFlying) {
+    effects.chipCount = 0;
     for (const racer of racers) {
       racer.carnchp = 0;
     }
   }
 }
-function newsprk() {
-  return { typ: 0, stat: 0, x: 0, y: 0, z: 0, sp: 0, mat: null };
-}
-export function sprks(cn, x, y, z, sx, sy, sz, cap) {
-  var vdist = Math.sqrt(sx * sx + sy * sy + sz * sz);
-  if (vdist > 5 && !recording.onpausefr) {
-    if (game.phase == PHASE.race) {
-      recordsprks(cn, x, y, z, sx, sy, sz, cap);
+
+// Sparks fly from where a car of type `type` scrapes (x, y, z) at the speed (sx, sy, sz):
+// backwards along it, faster the slower the car scrapes.
+export function sprks(type, x, y, z, sx, sy, sz, kind) {
+  const speed = Math.sqrt(sx * sx + sy * sy + sz * sz);
+  if (!(speed > 5 && !recording.onpausefr)) {
+    return;
+  }
+  if (game.phase == PHASE.race) {
+    recordSparks(type, x, y, z, sx, sy, sz, kind);
+  }
+  let count = 1;
+  if (kind == SPARKS.wall && random.fx() > random.fx()) {
+    count = 2;
+  }
+  for (let n = 0; n < count; n++) {
+    let slot = freeSlot(
+      effects.sparks,
+      effects.sparkCount,
+      (spark) => spark.stat == 0,
+    );
+    if (slot == -1) {
+      slot = effects.sparkCount;
+      effects.sparkCount++;
     }
-    var oli = 1;
-    if (cap == 2) {
-      if (random.fx() > random.fx()) {
-        oli = 2;
-      }
+    const spark = { typ: 0, stat: 0, x: 0, y: 0, z: 0, sp: 0, mat: null };
+    effects.sparks[slot] = spark;
+    spark.typ = Math.floor(random.fx() * 6);
+    if (spark.typ == 6) {
+      spark.typ = 0;
     }
-    for (var ka = 0; ka < oli; ka++) {
-      var ui = -1;
-      for (var i = 0; i < effects.nspr; i++) {
-        if (effects.sprk[i].stat == 0) {
-          ui = i;
-          break;
-        }
-      }
-      if (ui == -1) {
-        ui = effects.nspr;
-        effects.nspr++;
-      }
-      effects.sprk[ui] = newsprk();
-      effects.sprk[ui].typ = Math.floor(random.fx() * 6);
-      if (effects.sprk[ui].typ == 6) {
-        effects.sprk[ui].typ = 0;
-      }
-      effects.sprk[ui].x = x + (random.fx() * 3 - 1.5);
-      if (cap == 2) {
-        effects.sprk[ui].y =
-          y + carStats.wlh[cn][0] * 2.4 + (random.fx() * 3 - 1.5);
-      } else {
-        effects.sprk[ui].y = y + random.fx() * 2;
-      }
-      effects.sprk[ui].z = z + (random.fx() * 3 - 1.5);
-      if (cap == 2) {
-        sy -= random.fx() * 1;
-      } else {
-        sx += random.fx() * 1 - 0.5;
-        sz += random.fx() * 1 - 0.5;
-      }
-      effects.sprk[ui].sp = 32 - random.fx() * 2 - vdist;
-      effects.sprk[ui].sp *= 0.4;
-      effects.sprk[ui].mat = mat4.create();
-      var vx = -(sx / vdist);
-      var vy = -(sy / vdist);
-      var vz = -(sz / vdist);
-      effects.sprk[ui].mat[8] = vx;
-      effects.sprk[ui].mat[9] = vy;
-      effects.sprk[ui].mat[10] = vz;
-      effects.sprk[ui].mat[0] = vz;
-      effects.sprk[ui].mat[1] = 0;
-      effects.sprk[ui].mat[2] = vx;
-      effects.sprk[ui].mat[4] = -vx;
-      effects.sprk[ui].mat[5] = Math.sqrt(1 - vy * vy);
-      effects.sprk[ui].mat[6] = -vz;
-      effects.sprk[ui].stat = 1;
+    spark.x = x + (random.fx() * 3 - 1.5);
+    if (kind == SPARKS.wall) {
+      spark.y = y + carStats.wlh[type][0] * 2.4 + (random.fx() * 3 - 1.5);
+    } else {
+      spark.y = y + random.fx() * 2;
     }
+    spark.z = z + (random.fx() * 3 - 1.5);
+    if (kind == SPARKS.wall) {
+      sy -= random.fx() * 1;
+    } else {
+      sx += random.fx() * 1 - 0.5;
+      sz += random.fx() * 1 - 0.5;
+    }
+    spark.sp = 32 - random.fx() * 2 - speed;
+    spark.sp *= 0.4;
+    // pointing backwards along the speed
+    spark.mat = mat4.create();
+    const vx = -(sx / speed);
+    const vy = -(sy / speed);
+    const vz = -(sz / speed);
+    spark.mat[8] = vx;
+    spark.mat[9] = vy;
+    spark.mat[10] = vz;
+    spark.mat[0] = vz;
+    spark.mat[1] = 0;
+    spark.mat[2] = vx;
+    spark.mat[4] = -vx;
+    spark.mat[5] = Math.sqrt(1 - vy * vy);
+    spark.mat[6] = -vz;
+    spark.stat = 1;
   }
 }
+
 export function sprksfly() {
-  var nfly = false;
-  for (var i = 0; i < effects.nspr; i++) {
-    if (effects.sprk[i].stat != 0) {
-      effects.sprk[i].x +=
-        effects.sprk[i].mat[8] * effects.sprk[i].sp * tick.scale;
-      effects.sprk[i].y +=
-        effects.sprk[i].mat[9] * effects.sprk[i].sp * tick.scale;
-      effects.sprk[i].z +=
-        effects.sprk[i].mat[10] * effects.sprk[i].sp * tick.scale;
-      effects.sprk[i].stat++;
-      if (effects.sprk[i].stat == 8) {
-        effects.sprk[i].stat = 0;
-      } else {
-        nfly = true;
-      }
+  let anyFlying = false;
+  for (let i = 0; i < effects.sparkCount; i++) {
+    const spark = effects.sparks[i];
+    if (spark.stat == 0) {
+      continue;
+    }
+    spark.x += spark.mat[8] * spark.sp * tick.scale;
+    spark.y += spark.mat[9] * spark.sp * tick.scale;
+    spark.z += spark.mat[10] * spark.sp * tick.scale;
+    spark.stat++;
+    if (spark.stat == SPARK_TICKS) {
+      spark.stat = 0;
+    } else {
+      anyFlying = true;
     }
   }
-  if (!nfly) {
-    effects.nspr = 0;
+  if (!anyFlying) {
+    effects.sparkCount = 0;
   }
 }
-function newdust() {
-  return {
+
+// Dust whirls up where wheel `wheel` of car c skids at (x, y, z) at the speed (sx, sz),
+// the faster the bigger, from the ground `ground` (see DUST). A wheel lifted by the car's
+// tilt raises none.
+export function dustup(
+  ground,
+  c,
+  wheel,
+  x,
+  y,
+  z,
+  sx,
+  sz,
+  size,
+  tilt,
+  capsized,
+) {
+  const leftWheel = wheel == 0 || wheel == 2;
+  const lifted = (tilt > 5 && leftWheel) || (tilt < -5 && !leftWheel);
+  let strength = (Math.sqrt(sx * sx + sz * sz) - 4) / 16;
+  if (strength > 1) {
+    strength = 1;
+  }
+  if (!(strength > 0.2 && !lifted && !recording.onpausefr)) {
+    return;
+  }
+  if (game.phase == PHASE.race) {
+    recordDust(ground, c, wheel, x, y, z, sx, sz, size, tilt, capsized);
+  }
+  let slot = freeSlot(
+    effects.dustClouds,
+    effects.dustCount,
+    (cloud) => cloud.stg == 0,
+  );
+  if (slot == -1) {
+    slot = effects.dustCount;
+    effects.dustCount++;
+  }
+  const cloud = {
     stg: 0,
     x: 0,
     dy: 0,
@@ -314,370 +372,300 @@ function newdust() {
     tx: 0,
     ta: 0,
   };
-}
-export function dustup(tskd, c, mst, x, y, z, sx, sz, smag, tlt, capsz) {
-  var tilted = false;
-  if (tlt > 5 && (mst == 0 || mst == 2)) {
-    tilted = true;
-  }
-  if (tlt < -5 && (mst == 1 || mst == 3)) {
-    tilted = true;
-  }
-  var bk = (Math.sqrt(sx * sx + sz * sz) - 4) / 16;
-  if (bk > 1) {
-    bk = 1;
-  }
-  if (bk > 0.2 && !tilted && !recording.onpausefr) {
-    if (game.phase == PHASE.race) {
-      recordust(tskd, c, mst, x, y, z, sx, sz, smag, tlt, capsz);
-    }
-    var ui = -1;
-    for (var i = 0; i < effects.ndst; i++) {
-      if (effects.dust[i].stg == 0) {
-        ui = i;
-        break;
-      }
-    }
-    if (ui == -1) {
-      ui = effects.ndst;
-      effects.ndst++;
-    }
-    effects.dust[ui] = newdust();
-    if (!capsz) {
-      var fk = random.fx();
-      effects.dust[ui].x = (x + car[c].x * fk) / (1 + fk);
-      effects.dust[ui].z = (z + car[c].z * fk) / (1 + fk);
-      effects.dust[ui].dy = (y + car[c].y * fk) / (1 + fk);
-    } else {
-      effects.dust[ui].x = (x + (car[c].x + sx)) / 2;
-      effects.dust[ui].z = (z + (car[c].z + sz)) / 2;
-      effects.dust[ui].dy = y;
-    }
-    if (effects.dust[ui].y < 0) {
-      effects.dust[ui].y = 0;
-    }
-    effects.dust[ui].mag = 0.2 + smag * bk * 0.8;
-    var ron = Math.floor(4 * random.fx());
-    if (ron == 4) {
-      ron = 0;
-    }
-    effects.dust[ui].rot = 90 * ron - 90;
-    var sk = 0.1 + random.fx();
-    if (sk > 1) {
-      sk = 1;
-    }
-    effects.dust[ui].sx = sx * sk;
-    effects.dust[ui].sz = sz * sk;
-    effects.dust[ui].stg = 1;
-    effects.dust[ui].tx = Math.floor(random.fx() * 3);
-    if (effects.dust[ui].tx == 3) {
-      effects.dust[ui].tx = 0;
-    }
-    if (tskd == 2) {
-      effects.dust[ui].tx += 3;
-    }
-    if (tskd == 1) {
-      effects.dust[ui].tx += 6;
-    }
-    effects.dust[ui].ta = 0;
-    effects.dust[ui].mat = mat4.create();
-    effects.dwer[ui] = ui;
-  }
-}
-export function dustfly() {
-  var nfly = false;
-  for (var i = 0; i < effects.ndst; i++) {
-    if (effects.dust[i].stg != 0) {
-      if (!recording.onpausefr) {
-        effects.dust[i].x += effects.dust[i].sx / (effects.dust[i].stg + 1);
-        effects.dust[i].z += effects.dust[i].sz / (effects.dust[i].stg + 1);
-        effects.dust[i].y = effects.dust[i].dy + 3 * effects.dust[i].mag;
-      }
-      var fct =
-        1 /
-        Math.sqrt(
-          effects.dust[i].sx * effects.dust[i].sx +
-            effects.dust[i].sz * effects.dust[i].sz,
-        );
-      var vfx = effects.dust[i].sx * fct * effects.dust[i].sx * fct;
-      var vfz = effects.dust[i].sz * fct * effects.dust[i].sz * fct;
-      var mlt = 1;
-      if (vfx > vfz) {
-        mlt = 1 + (1 - Math.abs(cosDeg(camera.yaw) * cosDeg(camera.yaw) - vfx));
-      } else {
-        mlt = 1 + (1 - Math.abs(sinDeg(camera.yaw) * sinDeg(camera.yaw) - vfz));
-      }
-      faceCamera(effects.dust[i]);
-      mat4.rotate(
-        effects.dust[i].mat,
-        effects.dust[i].mat,
-        effects.dust[i].rot * (Math.PI / 180),
-        [0, 0, 1],
-      );
-      var kmt = 0;
-      if (Math.abs(effects.dust[i].rot) == 90) {
-        kmt = 1;
-      }
-      for (var k = 0; k < 3; k++) {
-        var mt = 1;
-        if (k == kmt) {
-          mt = mlt;
-        }
-        effects.dust[i].mat[k * 4] *= effects.dust[i].mag * mt;
-        effects.dust[i].mat[k * 4 + 1] *= effects.dust[i].mag * mt;
-        effects.dust[i].mat[k * 4 + 2] *= effects.dust[i].mag * mt;
-      }
-      if (!recording.onpausefr) {
-        effects.dust[i].mag += 0.05 + random.fx() * 0.05;
-        if (effects.dust[i].stg >= 2) {
-          effects.dust[i].ta += 0.45;
-          if (effects.dust[i].ta > 4) {
-            effects.dust[i].ta = 4;
-          }
-        }
-        if (effects.dust[i].stg == 10) {
-          effects.dust[i].stg = 0;
-        } else {
-          effects.dust[i].stg++;
-          nfly = true;
-        }
-      } else {
-        nfly = true;
-      }
-    }
-  }
-  if (nfly) {
-    var wer = [];
-    var dustd = [];
-    for (var i = 0; i < effects.ndst; i++) {
-      wer[i] = 0;
-      dustd[i] = distance(
-        effects.dust[i].x,
-        camera.x,
-        effects.dust[i].y,
-        camera.y,
-        effects.dust[i].z,
-        camera.z,
-      );
-    }
-    for (var i = 0; i < effects.ndst; i++) {
-      for (var j = i + 1; j < effects.ndst; j++) {
-        if (dustd[i] < dustd[j]) {
-          wer[i]++;
-        } else {
-          wer[j]++;
-        }
-      }
-      effects.dwer[wer[i]] = i;
-    }
+  effects.dustClouds[slot] = cloud;
+  if (!capsized) {
+    // somewhere between the wheel and the car's middle
+    const towardsCar = random.fx();
+    cloud.x = (x + car[c].x * towardsCar) / (1 + towardsCar);
+    cloud.z = (z + car[c].z * towardsCar) / (1 + towardsCar);
+    cloud.dy = (y + car[c].y * towardsCar) / (1 + towardsCar);
   } else {
-    effects.ndst = 0;
+    cloud.x = (x + (car[c].x + sx)) / 2;
+    cloud.z = (z + (car[c].z + sz)) / 2;
+    cloud.dy = y;
+  }
+  cloud.mag = 0.2 + size * strength * 0.8;
+  let quarter = Math.floor(4 * random.fx());
+  if (quarter == 4) {
+    quarter = 0;
+  }
+  cloud.rot = 90 * quarter - 90;
+  const drift = Math.min(0.1 + random.fx(), 1);
+  cloud.sx = sx * drift;
+  cloud.sz = sz * drift;
+  cloud.stg = 1;
+  cloud.tx = Math.floor(random.fx() * 3);
+  if (cloud.tx == 3) {
+    cloud.tx = 0;
+  }
+  if (ground == DUST.sand) {
+    cloud.tx += 3;
+  }
+  if (ground == DUST.ground) {
+    cloud.tx += 6;
+  }
+  cloud.ta = 0;
+  cloud.mat = mat4.create();
+  effects.dustBackToFront[slot] = slot;
+}
+
+// Dust drifts, grows and fades; it faces the camera, stretched along its drift.
+export function dustfly() {
+  let anyFlying = false;
+  for (let i = 0; i < effects.dustCount; i++) {
+    const cloud = effects.dustClouds[i];
+    if (cloud.stg == 0) {
+      continue;
+    }
+    if (!recording.onpausefr) {
+      cloud.x += cloud.sx / (cloud.stg + 1);
+      cloud.z += cloud.sz / (cloud.stg + 1);
+      cloud.y = cloud.dy + 3 * cloud.mag;
+    }
+    const unit = 1 / Math.sqrt(cloud.sx * cloud.sx + cloud.sz * cloud.sz);
+    const alongX = cloud.sx * unit * cloud.sx * unit;
+    const alongZ = cloud.sz * unit * cloud.sz * unit;
+    let stretch = 1;
+    if (alongX > alongZ) {
+      stretch =
+        1 + (1 - Math.abs(cosDeg(camera.yaw) * cosDeg(camera.yaw) - alongX));
+    } else {
+      stretch =
+        1 + (1 - Math.abs(sinDeg(camera.yaw) * sinDeg(camera.yaw) - alongZ));
+    }
+    faceCamera(cloud);
+    mat4.rotate(cloud.mat, cloud.mat, cloud.rot * (Math.PI / 180), [0, 0, 1]);
+    const stretched = Math.abs(cloud.rot) == 90 ? 1 : 0;
+    for (let k = 0; k < 3; k++) {
+      const scale = k == stretched ? stretch : 1;
+      cloud.mat[k * 4] *= cloud.mag * scale;
+      cloud.mat[k * 4 + 1] *= cloud.mag * scale;
+      cloud.mat[k * 4 + 2] *= cloud.mag * scale;
+    }
+    if (recording.onpausefr) {
+      anyFlying = true;
+      continue;
+    }
+    cloud.mag += 0.05 + random.fx() * 0.05;
+    if (cloud.stg >= 2) {
+      cloud.ta = Math.min(cloud.ta + 0.45, 4);
+    }
+    if (cloud.stg == DUST_TICKS) {
+      cloud.stg = 0;
+    } else {
+      cloud.stg++;
+      anyFlying = true;
+    }
+  }
+  if (anyFlying) {
+    sortBackToFront(
+      effects.dustClouds,
+      effects.dustCount,
+      effects.dustBackToFront,
+    );
+  } else {
+    effects.dustCount = 0;
   }
 }
-function newexp() {
-  return {
-    x: 0,
-    y: 0,
-    z: 0,
+
+// A burst of fire at a random vertex of car c's body, drifting with (vsx, vsy, vsz).
+export function firexp(c, vsx, vsy, vsz) {
+  let slot = freeSlot(
+    effects.explosions,
+    effects.explosionCount,
+    (explosion) => explosion.ani == -1,
+  );
+  if (slot == -1) {
+    slot = effects.explosionCount;
+    effects.explosionCount++;
+  }
+  const body = racers[c].body;
+  let vertex = Math.floor(body.ni * random.fx());
+  if (vertex == body.ni) {
+    vertex = 0;
+  }
+  const v = body.dvert;
+  const m = car[c].mat;
+  // at the vertex, turned with the car (summed in the original's order)
+  const at = (position, k) =>
+    position +
+    v[vertex * 3] * m[k] +
+    v[vertex * 3 + 1] * m[k + 4] +
+    v[vertex * 3 + 2] * m[k + 8];
+  const explosion = {
+    x: at(car[c].x, 0),
+    y: at(car[c].y, 1),
+    z: at(car[c].z, 2),
     rot: 0,
     vy: 0,
-    vsx: 0,
-    vsy: 0,
-    vsz: 0,
+    vsx,
+    vsy,
+    vsz,
     typ: 0,
     ani: -1,
     size: 0,
     mat: null,
     first: false,
   };
+  effects.explosions[slot] = explosion;
+  explosion.vy = 0.4 + random.fx() * 0.2;
+  explosion.size = 0.6 + random.fx() * 0.6;
+  explosion.rot = 360 * random.fx();
+  explosion.typ = Math.floor(random.fx() * 3);
+  if (explosion.typ == 3) {
+    explosion.typ = 0;
+  }
+  explosion.ani = 0;
+  explosion.mat = mat4.create();
+  effects.explosionsBackToFront[slot] = slot;
 }
-export function firexp(c, vsx, vsy, vsz) {
-  var ui = -1;
-  for (var i = 0; i < effects.nexp; i++) {
-    if (effects.exp[i].ani == -1) {
-      ui = i;
-      break;
-    }
-  }
-  if (ui == -1) {
-    ui = effects.nexp;
-    effects.nexp++;
-  }
-  var rad = racers[c].body;
-  var ir = Math.floor(rad.ni * random.fx());
-  if (ir == rad.ni) {
-    ir = 0;
-  }
-  effects.exp[ui] = newexp();
-  effects.exp[ui].x =
-    car[c].x +
-    rad.dvert[ir * 3] * car[c].mat[0] +
-    rad.dvert[ir * 3 + 1] * car[c].mat[4] +
-    rad.dvert[ir * 3 + 2] * car[c].mat[8];
-  effects.exp[ui].y =
-    car[c].y +
-    rad.dvert[ir * 3] * car[c].mat[1] +
-    rad.dvert[ir * 3 + 1] * car[c].mat[5] +
-    rad.dvert[ir * 3 + 2] * car[c].mat[9];
-  effects.exp[ui].z =
-    car[c].z +
-    rad.dvert[ir * 3] * car[c].mat[2] +
-    rad.dvert[ir * 3 + 1] * car[c].mat[6] +
-    rad.dvert[ir * 3 + 2] * car[c].mat[10];
-  effects.exp[ui].vsx = vsx;
-  effects.exp[ui].vsy = vsy;
-  effects.exp[ui].vsz = vsz;
-  effects.exp[ui].vy = 0.4 + random.fx() * 0.2;
-  effects.exp[ui].size = 0.6 + random.fx() * 0.6;
-  effects.exp[ui].rot = 360 * random.fx();
-  effects.exp[ui].typ = Math.floor(random.fx() * 3);
-  if (effects.exp[ui].typ == 3) {
-    effects.exp[ui].typ = 0;
-  }
-  effects.exp[ui].ani = 0;
-  effects.exp[ui].mat = mat4.create();
-  effects.exp[ui].first = false;
-  effects.ewer[ui] = ui;
-}
+
+// Explosions rise, grow and drift (from their second tick on) through their frames.
 export function expburn() {
-  var nfly = false;
-  for (var i = 0; i < effects.nexp; i++) {
-    if (effects.exp[i].ani != -1) {
-      faceCamera(effects.exp[i]);
-      mat4.rotate(
-        effects.exp[i].mat,
-        effects.exp[i].mat,
-        effects.exp[i].rot * (Math.PI / 180),
-        [0, 0, 1],
-      );
-      for (var k = 0; k < 3; k++) {
-        effects.exp[i].mat[k * 4] *= effects.exp[i].size;
-        effects.exp[i].mat[k * 4 + 1] *= effects.exp[i].size;
-        effects.exp[i].mat[k * 4 + 2] *= effects.exp[i].size;
-      }
-      effects.exp[i].y += effects.exp[i].vy;
-      if (effects.exp[i].first) {
-        effects.exp[i].x += effects.exp[i].vsx * tick.scale;
-        effects.exp[i].vsx *= 0.95;
-        effects.exp[i].y += effects.exp[i].vsy * tick.scale;
-        effects.exp[i].vsy *= 0.95;
-        effects.exp[i].z += effects.exp[i].vsz * tick.scale;
-        effects.exp[i].vsz *= 0.95;
-        effects.exp[i].size += effects.exp[i].size * 0.05 * tick.scale;
-        effects.exp[i].ani += 0.85 * tick.scale;
-      } else {
-        effects.exp[i].first = true;
-      }
-      if (effects.exp[i].ani >= 6) {
-        effects.exp[i].ani = -1;
-      } else {
-        nfly = true;
-      }
+  let anyBurning = false;
+  for (let i = 0; i < effects.explosionCount; i++) {
+    const explosion = effects.explosions[i];
+    if (explosion.ani == -1) {
+      continue;
+    }
+    faceCamera(explosion);
+    mat4.rotate(
+      explosion.mat,
+      explosion.mat,
+      explosion.rot * (Math.PI / 180),
+      [0, 0, 1],
+    );
+    for (let k = 0; k < 3; k++) {
+      explosion.mat[k * 4] *= explosion.size;
+      explosion.mat[k * 4 + 1] *= explosion.size;
+      explosion.mat[k * 4 + 2] *= explosion.size;
+    }
+    explosion.y += explosion.vy;
+    if (explosion.first) {
+      explosion.x += explosion.vsx * tick.scale;
+      explosion.vsx *= 0.95;
+      explosion.y += explosion.vsy * tick.scale;
+      explosion.vsy *= 0.95;
+      explosion.z += explosion.vsz * tick.scale;
+      explosion.vsz *= 0.95;
+      explosion.size += explosion.size * 0.05 * tick.scale;
+      explosion.ani += 0.85 * tick.scale;
+    } else {
+      explosion.first = true;
+    }
+    if (explosion.ani >= EXPLOSION_FRAMES) {
+      explosion.ani = -1;
+    } else {
+      anyBurning = true;
     }
   }
-  if (nfly) {
-    var wer = [];
-    var expd = [];
-    for (var i = 0; i < effects.nexp; i++) {
-      wer[i] = 0;
-      expd[i] = distance(
-        effects.exp[i].x,
-        camera.x,
-        effects.exp[i].y,
-        camera.y,
-        effects.exp[i].z,
-        camera.z,
-      );
-    }
-    for (var i = 0; i < effects.nexp; i++) {
-      for (var j = i + 1; j < effects.nexp; j++) {
-        if (expd[i] < expd[j]) {
-          wer[i]++;
-        } else {
-          wer[j]++;
-        }
-      }
-      effects.ewer[wer[i]] = i;
-    }
+  if (anyBurning) {
+    sortBackToFront(
+      effects.explosions,
+      effects.explosionCount,
+      effects.explosionsBackToFront,
+    );
   } else {
-    effects.nexp = 0;
+    effects.explosionCount = 0;
   }
 }
+
+// A wasted car burns: every tick a third of its texture's pixels darken to a reddish
+// black, in turns (bshft).
 export function burn(c) {
-  var rad = racers[c].body;
-  var pixels = rad.damagePixels;
+  const body = racers[c].body;
+  const pixels = body.damagePixels;
   if (pixels != null) {
-    for (var p = racers[c].bshft; p < 256 * 256 * 4; p += 12) {
+    for (let p = racers[c].bshft; p < 256 * 256 * 4; p += 12) {
       pixels[p] = 14 + pixels[p] * 0.6667;
       pixels[p + 1] = 4 + pixels[p + 1] * 0.6667;
       pixels[p + 2] = pixels[p + 2] * 0.6667;
     }
-    rad.damagedPixels = true;
+    body.damagedPixels = true;
   }
   racers[c].bshft += 4;
   if (racers[c].bshft == 12) {
     racers[c].bshft = 0;
   }
 }
+
+// A wasted car sheds chips from about a quarter of its vertices.
 export function chipburn(c) {
-  var rad = racers[c].body;
-  for (var i = 0; i < rad.ni; i++) {
+  const body = racers[c].body;
+  for (let i = 0; i < body.ni; i++) {
     if (random.fx() > random.fx() && random.fx() > random.fx()) {
       car[c].ctxl[0] = random.fx();
       car[c].ctxl[1] = random.fx();
       chipaway(
         c,
-        rad.dvert[i * 3],
-        rad.dvert[i * 3 + 1],
-        rad.dvert[i * 3 + 2],
+        body.dvert[i * 3],
+        body.dvert[i * 3 + 1],
+        body.dvert[i * 3 + 2],
         0.1 + random.fx() * 0.2,
       );
     }
   }
 }
-function recordust(tskd, c, mst, x, y, z, sx, sz, smag, tlt, capsz) {
-  var ui = -1;
-  for (var i = 0; i < recording.repcar[c].ndst; i++) {
-    if (recording.repcar[c].dstat[i] < 0) {
-      ui = i;
+
+// The replays keep the dust and sparks of each car (see recording.js).
+const recordDust = (
+  ground,
+  c,
+  wheel,
+  x,
+  y,
+  z,
+  sx,
+  sz,
+  size,
+  tilt,
+  capsized,
+) => {
+  const replay = recording.repcar[c];
+  let slot = -1;
+  for (let i = 0; i < replay.ndst; i++) {
+    if (replay.dstat[i] < 0) {
+      slot = i;
       break;
     }
   }
-  if (ui == -1) {
-    ui = recording.repcar[c].ndst;
-    recording.repcar[c].ndst++;
+  if (slot == -1) {
+    slot = replay.ndst;
+    replay.ndst++;
   }
-  recording.repcar[c].dstat[ui] = 430;
-  recording.repcar[c].tskd[ui] = tskd;
-  recording.repcar[c].mst[ui] = mst;
-  recording.repcar[c].dx[ui] = x;
-  recording.repcar[c].dy[ui] = y;
-  recording.repcar[c].dz[ui] = z;
-  recording.repcar[c].sx[ui] = sx;
-  recording.repcar[c].sz[ui] = sz;
-  recording.repcar[c].smag[ui] = smag;
-  recording.repcar[c].tlt[ui] = tlt;
-  recording.repcar[c].capsz[ui] = capsz;
-}
-function recordsprks(cn, x, y, z, sx, sy, sz, cap) {
-  var ui = -1;
-  for (var i = 0; i < recording.repsprks.n; i++) {
-    if (recording.repsprks.sprkat[i] < 0) {
-      ui = i;
+  replay.dstat[slot] = RECORDED_TICKS;
+  replay.tskd[slot] = ground;
+  replay.mst[slot] = wheel;
+  replay.dx[slot] = x;
+  replay.dy[slot] = y;
+  replay.dz[slot] = z;
+  replay.sx[slot] = sx;
+  replay.sz[slot] = sz;
+  replay.smag[slot] = size;
+  replay.tlt[slot] = tilt;
+  replay.capsz[slot] = capsized;
+};
+
+const recordSparks = (type, x, y, z, sx, sy, sz, kind) => {
+  const replay = recording.repsprks;
+  let slot = -1;
+  for (let i = 0; i < replay.n; i++) {
+    if (replay.sprkat[i] < 0) {
+      slot = i;
       break;
     }
   }
-  if (ui == -1) {
-    ui = recording.repsprks.n;
-    recording.repsprks.n++;
+  if (slot == -1) {
+    slot = replay.n;
+    replay.n++;
   }
-  recording.repsprks.sprkat[ui] = 430;
-  recording.repsprks.cn[ui] = cn;
-  recording.repsprks.x[ui] = x;
-  recording.repsprks.y[ui] = y;
-  recording.repsprks.z[ui] = z;
-  recording.repsprks.sx[ui] = sx;
-  recording.repsprks.sy[ui] = sy;
-  recording.repsprks.sz[ui] = sz;
-  recording.repsprks.cap[ui] = cap;
-}
+  replay.sprkat[slot] = RECORDED_TICKS;
+  replay.cn[slot] = type;
+  replay.x[slot] = x;
+  replay.y[slot] = y;
+  replay.z[slot] = z;
+  replay.sx[slot] = sx;
+  replay.sy[slot] = sy;
+  replay.sz[slot] = sz;
+  replay.cap[slot] = kind;
+};

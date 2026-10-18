@@ -186,8 +186,8 @@ const drawRace = () => {
       gl.disable(gl.CULL_FACE);
     }
   }
-  for (let i = 0; i < effects.nspr; i++) {
-    const spark = effects.sprk[i];
+  for (let i = 0; i < effects.sparkCount; i++) {
+    const spark = effects.sparks[i];
     if (spark.stat != 0) {
       const model = sparkModels[spark.typ];
       placeAt(model, spark);
@@ -205,8 +205,8 @@ const drawRace = () => {
       gl.enable(gl.DEPTH_TEST);
     }
   }
-  for (let i = 0; i < effects.nchp; i++) {
-    drawModel(effects.chip[i]);
+  for (let i = 0; i < effects.chipCount; i++) {
+    drawModel(effects.chips[i]);
   }
   if (raceEvents.oncheckpoint != -1) {
     drawParticle(checkpointText);
@@ -249,8 +249,8 @@ const drawRace = () => {
       drawParticle(racers[c].switchLine);
     }
   }
-  for (let i = 0; i < effects.nexp; i++) {
-    const explosion = effects.exp[effects.ewer[i]];
+  for (let i = 0; i < effects.explosionCount; i++) {
+    const explosion = effects.explosions[effects.explosionsBackToFront[i]];
     if (explosion.ani != -1) {
       const model = explosionModels[explosion.typ];
       model.x = explosion.x;
@@ -261,8 +261,8 @@ const drawRace = () => {
       drawModel(model);
     }
   }
-  for (let k = 0; k < effects.ndst; k++) {
-    const dust = effects.dust[effects.dwer[k]];
+  for (let k = 0; k < effects.dustCount; k++) {
+    const dust = effects.dustClouds[effects.dustBackToFront[k]];
     if (dust.stg != 0) {
       placeAt(dustSprite, dust);
       dustSprite.texture = dustTextures[dust.tx][Math.floor(dust.ta)];

@@ -90,8 +90,8 @@ describe("interpolated drawing in a real race", () => {
               ...ctx.racers[c].wheels.map((w) => w.mat),
             ]),
         ),
-        dust: ctx.effects.dust.map((d) => (d.stg != 0 ? d.mat : null)),
-        explosions: ctx.effects.exp.map((e) => (e.ani != -1 ? e.mat : null)),
+        dust: ctx.effects.dustClouds.map((d) => (d.stg != 0 ? d.mat : null)),
+        explosions: ctx.effects.explosions.map((e) => (e.ani != -1 ? e.mat : null)),
       };
       if (before) {
         for (const kind of Object.keys(now)) {

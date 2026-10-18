@@ -321,10 +321,10 @@ const prepareStage = () => {
   raceCarTextures();
   createSparks();
   colorCheckpointText();
-  effects.nchp = 0;
-  effects.nspr = 0;
-  effects.ndst = 0;
-  effects.nexp = 0;
+  effects.chipCount = 0;
+  effects.sparkCount = 0;
+  effects.dustCount = 0;
+  effects.explosionCount = 0;
   if (stageLoad.after != AFTER_LOAD.race) {
     // the stage select tints the stage the other way round, three times as strong
     const oppositeTint = [
