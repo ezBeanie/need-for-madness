@@ -38,11 +38,14 @@ export const MAX_CARS = 20;
 // the field sizes the stage select offers, 7 as in the original
 export const RACE_SIZES = [7, 10, 15, 20];
 
+// The championship, or switch mode: one lap without fixing, and whenever its timer runs
+// out the player drives another car of the field.
+export const MODE = { championship: 0, switchCars: 1 };
+
 // What the game is doing: the screen it shows, the race setup and the player's progress.
 export const game = {
   phase: PHASE.loading,
-  // 0 the regular championship, 1 "switch" mode (stage after stage without menus)
-  mode: 0,
+  mode: MODE.championship,
   // stages the player can pick (1..17)
   unlocked: 1,
   // car type of every car in the race, the player's at index 0

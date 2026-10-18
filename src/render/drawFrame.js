@@ -3,7 +3,7 @@
 // is drawn once a logic tick has moved it (menu.redraw), then every frame of its phase.
 
 import { random } from "../core/random.js";
-import { PHASE, RACE_PHASES, game } from "../core/state.js";
+import { MODE, PHASE, RACE_PHASES, game } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
 import { effects } from "../race/effects.js";
 import { paintDents } from "../race/physics.js";
@@ -241,7 +241,7 @@ const drawRace = () => {
     }
   }
   // switch mode has no fixing
-  if (game.mode != 1) {
+  if (game.mode != MODE.switchCars) {
     drawFixHoops();
   }
   if (game.phase == PHASE.switchScreen) {

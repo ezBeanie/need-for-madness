@@ -16,7 +16,7 @@ import {
 } from "../core/math.js";
 import { isPhone } from "../core/platform.js";
 import { random } from "../core/random.js";
-import { MAX_CARS, PHASE, game } from "../core/state.js";
+import { MAX_CARS, MODE, PHASE, game } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
@@ -1459,7 +1459,11 @@ export function drawHud() {
     }
   }
   if (raceEvents.countdown <= 65) {
-    if (game.mode == 1 && raceEvents.countdown == 0 && !raceOver) {
+    if (
+      game.mode == MODE.switchCars &&
+      raceEvents.countdown == 0 &&
+      !raceOver
+    ) {
       drawSwitchTimer();
     }
     if (

@@ -18,7 +18,7 @@ import {
   sinDeg,
 } from "../core/math.js";
 import { random } from "../core/random.js";
-import { MAX_CARS, PHASE, game } from "../core/state.js";
+import { MAX_CARS, MODE, PHASE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
 import { gl, keepDamageTexture } from "../render/renderer.js";
@@ -2654,7 +2654,7 @@ export function drive() {
       racers[c].nofocus = false;
     }
     racers[c].point = pnt;
-    if (game.mode != 1) {
+    if (game.mode != MODE.switchCars) {
       if (!car[c].fcnt) {
         for (var i = 0; i < pieces.fixCount; i++) {
           if (

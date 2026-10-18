@@ -3,7 +3,7 @@
 
 import { pauseMenuMusic } from "../audio/audio.js";
 import { random } from "../core/random.js";
-import { PHASE, game } from "../core/state.js";
+import { MODE, PHASE, game } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
 import { carStats } from "../data/carStats.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
@@ -585,9 +585,9 @@ const openStageSelect = () => {
     track.stage = game.unlocked;
   }
   // switch mode needs all stages won
-  if (game.unlocked != LAST_STAGE && game.mode == 1) {
+  if (game.unlocked != LAST_STAGE && game.mode == MODE.switchCars) {
     track.stage = game.unlocked;
-    game.mode = 0;
+    game.mode = MODE.championship;
   }
   stageLoad.after = AFTER_LOAD.stageSelect;
   stageLoad.progress = STAGE_LOAD.requested;

@@ -2,7 +2,7 @@
 
 import { cosDeg, distanceSquaredXZ, distanceXZ, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
-import { MAX_CARS, game } from "../core/state.js";
+import { MAX_CARS, MODE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
 import { car, racers } from "./racers.js";
@@ -309,7 +309,7 @@ export function control() {
               }
             }
             if (
-              game.mode == 1 &&
+              game.mode == MODE.switchCars &&
               (100 * racers[c].hitmag) / carStats.maxmag[cn] > 85
             ) {
               ai[c].skiplev = 0;
@@ -522,7 +522,7 @@ export function control() {
               }
               ai[c].avoidnlev = Math.floor(2700 * random.sim());
             }
-            if (game.mode == 1) {
+            if (game.mode == MODE.switchCars) {
               ai[c].avoidnlev = Math.floor(2700 * random.sim());
             }
             ai[c].trickprf = (racers[c].power - 38) / 50 - random.sim() * 0.5;
@@ -826,7 +826,7 @@ export function control() {
                       bim = 1;
                     }
                     var atp = ((rank(c) + 1) * (7 - rank(i))) / bim;
-                    if (game.mode != 1) {
+                    if (game.mode != MODE.switchCars) {
                       if (track.stage != 17) {
                         if (atp > 0.7) {
                           atp = 0.7;
@@ -1107,7 +1107,7 @@ export function control() {
             if (track.stage == 17) {
               norunfix = true;
             }
-            if (game.mode != 1) {
+            if (game.mode != MODE.switchCars) {
               if (ai[c].trfix != 3) {
                 ai[c].trfix = 0;
                 var trunfix = 50;
@@ -1493,7 +1493,7 @@ export function control() {
                 }
               }
               if (
-                game.mode == 1 &&
+                game.mode == MODE.switchCars &&
                 (100 * racers[c].hitmag) / carStats.maxmag[cn] > 85
               ) {
                 var myxz = car[c].xz;
@@ -1935,7 +1935,7 @@ export function control() {
               }
               racers[c].nofocus = true;
             }
-            if (track.stage != 17 && game.mode != 1) {
+            if (track.stage != 17 && game.mode != MODE.switchCars) {
               if (racers[c].missedcp == 0 || ai[c].forget || ai[c].trfix == 4) {
                 if (ai[c].trfix != 0) {
                   var istr = 0;

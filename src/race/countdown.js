@@ -5,7 +5,7 @@
 import { isEngineLoaded, loadEngine, playStageMusic } from "../audio/audio.js";
 import { updateEngineSound, resetEngineSound } from "../audio/engineSound.js";
 import { isPhone } from "../core/platform.js";
-import { PHASE, game } from "../core/state.js";
+import { MODE, PHASE, game } from "../core/state.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { pointer } from "../input/pointer.js";
 import { CAMERA, camera } from "../render/camera.js";
@@ -54,7 +54,7 @@ const beginRace = () => {
     scene.fogDistance,
   );
   // switch mode: the player can drive every car, in one lap
-  if (game.mode == 1) {
+  if (game.mode == MODE.switchCars) {
     for (let c = 1; c < game.carCount; c++) {
       if (!isEngineLoaded(game.carTypes[c])) {
         loadEngine(game.carTypes[c]);
@@ -85,7 +85,7 @@ export function countDown() {
   drawHud();
   // switch mode: one lap, no fixing
   if (
-    game.mode == 1 &&
+    game.mode == MODE.switchCars &&
     raceEvents.countdown < 180 &&
     raceEvents.countdown > 80
   ) {

@@ -9,7 +9,7 @@ import {
 } from "../audio/audio.js";
 import { cosDeg, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
-import { PHASE, game } from "../core/state.js";
+import { MODE, PHASE, game } from "../core/state.js";
 import { applyFieldSize, nextRaceSize } from "../race/field.js";
 import {
   AFTER_LOAD,
@@ -605,7 +605,7 @@ const drawPlaySwitchButton = (colors) => {
     })
   ) {
     applyFieldSize();
-    game.mode = 1;
+    game.mode = MODE.switchCars;
     pauseMenuMusic();
     flashIntoRace();
   }
@@ -651,7 +651,7 @@ const drawPlayButton = (hue) => {
 
 const play = () => {
   applyFieldSize();
-  game.mode = 0;
+  game.mode = MODE.championship;
   pauseMenuMusic();
   flashIntoRace();
 };
