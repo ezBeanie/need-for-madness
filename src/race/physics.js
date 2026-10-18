@@ -218,436 +218,26 @@ function driveCar(c) {
     keyy = carStats.flipy[cn] + racers[c].squash;
   }
   racers[c].u.zyinv = zyinv;
-  let xtrim = 0,
-    ztrim = 0,
-    ytrim = 0;
+  // how the stunt keys push the car in the air
+  const airPush = { x: 0, y: 0, z: 0 };
   if (racers[c].mtouch) {
     racers[c].loop = 0;
   }
-  if (racers[c].wtouch) {
-    if (racers[c].loop == 2 || racers[c].loop == -1) {
-      racers[c].loop = -1;
-      if (racers[c].u.left) {
-        racers[c].pl = true;
-      }
-      if (racers[c].u.right) {
-        racers[c].pr = true;
-      }
-      if (racers[c].u.up) {
-        racers[c].pu = true;
-      }
-      if (racers[c].u.down) {
-        racers[c].pd = true;
-      }
-    }
-    racers[c].ucomp = 0;
-    racers[c].dcomp = 0;
-    racers[c].lcomp = 0;
-    racers[c].rcomp = 0;
-  }
-  if (c == game.player) {
-    if (!racers[c].wtouch) {
-      if (racers[c].u.up) {
-        if (!racers[c].actu) {
-          if (racers[c].loop == 0) {
-            racers[c].loop = 1;
-          }
-        }
-      } else {
-        racers[c].actu = false;
-      }
-      if (racers[c].u.down) {
-        if (!racers[c].actd) {
-          if (racers[c].loop == 0) {
-            racers[c].loop = 1;
-          }
-        }
-      } else {
-        racers[c].actd = false;
-      }
-      if (racers[c].u.left) {
-        if (!racers[c].actl) {
-          if (racers[c].loop == 0) {
-            racers[c].loop = 1;
-          }
-        }
-      } else {
-        racers[c].actl = false;
-      }
-      if (racers[c].u.right) {
-        if (!racers[c].actr) {
-          if (racers[c].loop == 0) {
-            racers[c].loop = 1;
-          }
-        }
-      } else {
-        racers[c].actr = false;
-      }
-    } else {
-      racers[c].actl = true;
-      racers[c].actr = true;
-      racers[c].actu = true;
-      racers[c].actd = true;
-    }
-  }
-  if (racers[c].u.handb) {
-    if (!racers[c].pushed) {
-      if (!racers[c].wtouch) {
-        if (racers[c].loop == 0) {
-          racers[c].loop = 1;
-          racers[c].actl = false;
-          racers[c].actr = false;
-          racers[c].actu = false;
-          racers[c].actd = false;
-        }
-      } else {
-        if (racers[c].gtouch) {
-          racers[c].pushed = true;
-        }
-      }
-    }
-  } else {
-    racers[c].pushed = false;
-  }
-  if (racers[c].loop == 1) {
-    let avay =
-      (racers[c].scy[0] +
-        racers[c].scy[1] +
-        racers[c].scy[2] +
-        racers[c].scy[3]) /
-      4;
-    for (let i = 0; i < 4; i++) {
-      racers[c].scy[i] = avay;
-    }
-    racers[c].loop = 2;
-  }
+  touchDownFromStunt(c);
+  watchPlayerStuntKeys(c);
+  startStuntWithHandbrake(c);
+  startStunt(c);
   if (!racers[c].dest) {
     if (racers[c].loop == 2) {
-      if (racers[c].u.up && !racers[c].actu) {
-        if (racers[c].ucomp == 0) {
-          racers[c].ucomp = 10 + (-racers[c].scy[0] * 10 + 50) / 20;
-          if (racers[c].ucomp < 5) {
-            racers[c].ucomp = 5;
-          }
-          if (racers[c].ucomp > 10) {
-            racers[c].ucomp = 10;
-          }
-          racers[c].ucomp *= carStats.airs[cn];
-        }
-        if (racers[c].ucomp < 20) {
-          racers[c].ucomp += 0.5 * carStats.airs[cn];
-        }
-        xtrim = -carStats.airc[cn] * sinDeg(car[c].xz) * cov;
-        ztrim = carStats.airc[cn] * cosDeg(car[c].xz) * cov;
-      } else {
-        if (racers[c].ucomp != 0) {
-          if (racers[c].ucomp > -2) {
-            racers[c].ucomp -= 0.5 * carStats.airs[cn];
-          }
-        }
-      }
-      if (racers[c].u.down && !racers[c].actd) {
-        if (racers[c].dcomp == 0) {
-          racers[c].dcomp = 10 + (-racers[c].scy[0] * 10 + 50) / 20;
-          if (racers[c].dcomp < 5) {
-            racers[c].dcomp = 5;
-          }
-          if (racers[c].dcomp > 10) {
-            racers[c].dcomp = 10;
-          }
-          racers[c].dcomp *= carStats.airs[cn];
-        }
-        if (racers[c].dcomp < 20) {
-          racers[c].dcomp += 0.5 * carStats.airs[cn];
-        }
-        ytrim = carStats.airc[cn];
-      } else {
-        if (racers[c].dcomp != 0) {
-          if (racers[c].ucomp > -2) {
-            racers[c].dcomp -= 0.5 * carStats.airs[cn];
-          }
-        }
-      }
-      if (racers[c].u.left && !racers[c].actl) {
-        if (racers[c].lcomp == 0) {
-          racers[c].lcomp = 5;
-        }
-        if (racers[c].lcomp < 20) {
-          racers[c].lcomp += 2 * carStats.airs[cn];
-        }
-        xtrim = carStats.airc[cn] * cosDeg(car[c].xz) * mlt;
-        ztrim = carStats.airc[cn] * sinDeg(car[c].xz) * mlt;
-      } else {
-        if (racers[c].lcomp > 0) {
-          racers[c].lcomp -= 2 * carStats.airs[cn];
-        }
-      }
-      if (racers[c].u.right && !racers[c].actr) {
-        if (racers[c].rcomp == 0) {
-          racers[c].rcomp = 5;
-        }
-        if (racers[c].rcomp < 20) {
-          racers[c].rcomp += 2 * carStats.airs[cn];
-        }
-        xtrim = -carStats.airc[cn] * cosDeg(car[c].xz) * mlt;
-        ztrim = -carStats.airc[cn] * sinDeg(car[c].xz) * mlt;
-      } else {
-        if (racers[c].rcomp > 0) {
-          racers[c].rcomp -= 2 * carStats.airs[cn];
-        }
-      }
-      racers[c].pzy -=
-        (racers[c].dcomp - racers[c].ucomp) *
-        cosDeg(racers[c].pxy) *
-        tick.scale;
-      if (zyinv) {
-        car[c].xz -=
-          (racers[c].dcomp - racers[c].ucomp) *
-          sinDeg(racers[c].pxy) *
-          tick.scale;
-      } else {
-        car[c].xz +=
-          (racers[c].dcomp - racers[c].ucomp) *
-          sinDeg(racers[c].pxy) *
-          tick.scale;
-      }
-      racers[c].pxy += (racers[c].rcomp - racers[c].lcomp) * tick.scale;
+      rotateInStunt(c, cn, airPush, cov, mlt, zyinv);
     } else {
-      let upower = racers[c].power;
-      if (upower < 40) {
-        upower = 40;
-      }
-      if (racers[c].u.down) {
-        if (racers[c].speed > 0) {
-          racers[c].speed -= (carStats.handb[cn] / 2) * tick.scale;
-        } else {
-          let sw = 0;
-          for (let i = 0; i < 2; i++) {
-            if (
-              racers[c].speed <=
-              -(
-                carStats.swits[cn][i] / 2 +
-                (upower * carStats.swits[cn][i]) / 196
-              )
-            ) {
-              sw++;
-            }
-          }
-          if (sw != 2) {
-            racers[c].speed -=
-              (carStats.acelf[cn][sw] / 2 +
-                (upower * carStats.acelf[cn][sw]) / 196) *
-              tick.scale;
-          } else {
-            racers[c].speed = -(
-              (carStats.swits[cn][1] / 2 +
-                (upower * carStats.swits[cn][1]) / 196) *
-              tick.scale
-            );
-          }
-        }
-      }
-      if (racers[c].u.up) {
-        if (racers[c].speed < 0) {
-          racers[c].speed += carStats.handb[cn] * tick.scale;
-        } else {
-          let sw = 0;
-          for (let i = 0; i < 3; i++) {
-            if (
-              racers[c].speed >=
-              carStats.swits[cn][i] / 2 + (upower * carStats.swits[cn][i]) / 196
-            ) {
-              sw++;
-            }
-          }
-          if (sw != 3) {
-            racers[c].speed +=
-              (carStats.acelf[cn][sw] / 2 +
-                (upower * carStats.acelf[cn][sw]) / 196) *
-              tick.scale;
-          } else {
-            racers[c].speed =
-              carStats.swits[cn][2] / 2 +
-              (upower * carStats.swits[cn][2]) / 196;
-          }
-        }
-      }
-      if (racers[c].u.handb) {
-        if (Math.abs(racers[c].speed) > carStats.handb[cn]) {
-          if (racers[c].speed < 0) {
-            racers[c].speed += carStats.handb[cn] * tick.scale;
-          } else {
-            racers[c].speed -= carStats.handb[cn] * tick.scale;
-          }
-        }
-      }
-      if (racers[c].loop == -1) {
-        if (car[c].y > 15) {
-          if (racers[c].u.left) {
-            if (!racers[c].pl) {
-              if (racers[c].lcomp == 0) {
-                racers[c].lcomp = 5 * carStats.airs[cn];
-              }
-              if (racers[c].lcomp < 20) {
-                racers[c].lcomp += 2 * carStats.airs[cn];
-              }
-            }
-          } else {
-            if (racers[c].lcomp > 0) {
-              racers[c].lcomp -= 2 * carStats.airs[cn];
-            }
-            racers[c].pl = false;
-          }
-          if (racers[c].u.right) {
-            if (!racers[c].pr) {
-              if (racers[c].rcomp == 0) {
-                racers[c].rcomp = 5 * carStats.airs[cn];
-              }
-              if (racers[c].rcomp < 20) {
-                racers[c].rcomp += 2 * carStats.airs[cn];
-              }
-            }
-          } else {
-            if (racers[c].rcomp > 0) {
-              racers[c].rcomp -= 2 * carStats.airs[cn];
-            }
-            racers[c].pr = false;
-          }
-          if (racers[c].u.up) {
-            if (!racers[c].pu) {
-              if (racers[c].ucomp == 0) {
-                racers[c].ucomp = 5 * carStats.airs[cn];
-              }
-              if (racers[c].ucomp < 20) {
-                racers[c].ucomp += 2 * carStats.airs[cn];
-              }
-            }
-          } else {
-            if (racers[c].ucomp > 0) {
-              racers[c].ucomp -= 2 * carStats.airs[cn];
-            }
-            racers[c].pu = false;
-          }
-          if (racers[c].u.down) {
-            if (!racers[c].pd) {
-              if (racers[c].dcomp == 0) {
-                racers[c].dcomp = 5 * carStats.airs[cn];
-              }
-              if (racers[c].dcomp < 20) {
-                racers[c].dcomp += 2 * carStats.airs[cn];
-              }
-            }
-          } else {
-            if (racers[c].dcomp > 0) {
-              racers[c].dcomp -= 2 * carStats.airs[cn];
-            }
-            racers[c].pd = false;
-          }
-          racers[c].pzy -=
-            (racers[c].dcomp - racers[c].ucomp) *
-            cosDeg(racers[c].pxy) *
-            tick.scale;
-          if (zyinv) {
-            car[c].xz -=
-              (racers[c].dcomp - racers[c].ucomp) *
-              sinDeg(racers[c].pxy) *
-              tick.scale;
-          } else {
-            car[c].xz +=
-              (racers[c].dcomp - racers[c].ucomp) *
-              sinDeg(racers[c].pxy) *
-              tick.scale;
-          }
-          racers[c].pxy += (racers[c].rcomp - racers[c].lcomp) * tick.scale;
-        }
-      }
+      driveOnGround(c, cn, zyinv);
     }
   }
-  let wrots = (200 * racers[c].speed) / (154 * carStats.simag[cn]);
-  car[c].wzy -= wrots * tick.scale;
-  if (car[c].wzy < -360) {
-    car[c].wzy += 360;
-  }
-  if (car[c].wzy > 360) {
-    car[c].wzy -= 360;
-  }
-  if (racers[c].u.left) {
-    car[c].wxz -= carStats.turn[cn] * tick.scale;
-    if (car[c].wxz < -36) {
-      car[c].wxz = -36;
-    }
-  }
-  if (racers[c].u.right) {
-    car[c].wxz += carStats.turn[cn] * tick.scale;
-    if (car[c].wxz > 36) {
-      car[c].wxz = 36;
-    }
-  }
-  if (car[c].wxz != 0 && !racers[c].u.left && !racers[c].u.right) {
-    if (Math.abs(racers[c].speed) < 1) {
-      if (Math.abs(car[c].wxz) <= tick.scale) {
-        car[c].wxz = 0;
-      }
-      if (car[c].wxz > 0) {
-        car[c].wxz -= tick.scale;
-      }
-      if (car[c].wxz < 0) {
-        car[c].wxz += tick.scale;
-      }
-    } else {
-      if (Math.abs(car[c].wxz) < carStats.turn[cn] * 2 * tick.scale) {
-        car[c].wxz = 0;
-      }
-      if (car[c].wxz > 0) {
-        car[c].wxz -= carStats.turn[cn] * 2 * tick.scale;
-      }
-      if (car[c].wxz < 0) {
-        car[c].wxz += carStats.turn[cn] * 2 * tick.scale;
-      }
-    }
-  }
-  let divt = 36 / (racers[c].speed * racers[c].speed);
-  if (divt < 5) {
-    divt = 5;
-  }
-  if (racers[c].speed < 0) {
-    divt = -divt;
-  }
-  if (racers[c].wtouch) {
-    if (!racers[c].capsized) {
-      if (!racers[c].u.handb) {
-        racers[c].fxz = (car[c].wxz / (divt * 3)) * tick.scale;
-      } else {
-        racers[c].fxz = (car[c].wxz / divt) * tick.scale;
-      }
-      car[c].xz += (car[c].wxz / divt) * tick.scale;
-    }
-    racers[c].wtouch = false;
-    racers[c].gtouch = false;
-  } else {
-    car[c].xz += racers[c].fxz;
-  }
-  if (racers[c].speed > 3 || racers[c].speed < -7) {
-    while (Math.abs(racers[c].mxz - racers[c].cxz) > 180) {
-      if (racers[c].cxz > racers[c].mxz) {
-        racers[c].cxz -= 360;
-      } else {
-        if (racers[c].cxz < racers[c].mxz) {
-          racers[c].cxz += 360;
-        }
-      }
-    }
-    if (Math.abs(racers[c].mxz - racers[c].cxz) < 30) {
-      racers[c].cxz += (racers[c].mxz - racers[c].cxz) / 4;
-    } else {
-      if (racers[c].cxz > racers[c].mxz) {
-        racers[c].cxz -= 10 * tick.scale;
-      }
-      if (racers[c].cxz < racers[c].mxz) {
-        racers[c].cxz += 10 * tick.scale;
-      }
-    }
-  }
+  rollWheels(c, cn);
+  steerFrontWheels(c, cn);
+  turnWithFrontWheels(c);
+  swingCameraHeading(c);
   let kx = [];
   let kz = [];
   let ky = [];
@@ -2279,7 +1869,7 @@ function driveCar(c) {
   car[c].y =
     (ky[0] + ky[1] + ky[2] + ky[3]) / 4 -
     keyy * cosDeg(racers[c].pzy) * cosDeg(racers[c].pxy) +
-    ytrim * tick.scale;
+    airPush.y * tick.scale;
   if (zyinv) {
     mlt = -1;
   } else {
@@ -2301,7 +1891,7 @@ function driveCar(c) {
       4 +
     keyy * sinDeg(racers[c].pxy) * cosDeg(car[c].xz) -
     keyy * sinDeg(racers[c].pzy) * sinDeg(car[c].xz) +
-    xtrim * tick.scale;
+    airPush.x * tick.scale;
   car[c].z =
     (kz[0] -
       mlt * car[c].keyz[0] * cosDeg(car[c].xz) -
@@ -2318,7 +1908,7 @@ function driveCar(c) {
       4 +
     keyy * sinDeg(racers[c].pxy) * sinDeg(car[c].xz) -
     keyy * sinDeg(racers[c].pzy) * cosDeg(car[c].xz) +
-    ztrim * tick.scale;
+    airPush.z * tick.scale;
   if (Math.abs(racers[c].speed) > 10 || !racers[c].mtouch) {
     if (Math.abs(racers[c].pxy - car[c].xy) >= 4 * tick.scale) {
       if (racers[c].pxy > car[c].xy) {
@@ -2970,6 +2560,446 @@ function driveCar(c) {
     car[c].mat[racers[c].embodir * 4] *= racers[c].embomag;
     car[c].mat[racers[c].embodir * 4 + 1] *= racers[c].embomag;
     car[c].mat[racers[c].embodir * 4 + 2] *= racers[c].embomag;
+  }
+}
+
+function touchDownFromStunt(c) {
+  if (racers[c].wtouch) {
+    if (racers[c].loop == 2 || racers[c].loop == -1) {
+      racers[c].loop = -1;
+      if (racers[c].u.left) {
+        racers[c].pl = true;
+      }
+      if (racers[c].u.right) {
+        racers[c].pr = true;
+      }
+      if (racers[c].u.up) {
+        racers[c].pu = true;
+      }
+      if (racers[c].u.down) {
+        racers[c].pd = true;
+      }
+    }
+    racers[c].ucomp = 0;
+    racers[c].dcomp = 0;
+    racers[c].lcomp = 0;
+    racers[c].rcomp = 0;
+  }
+}
+
+function watchPlayerStuntKeys(c) {
+  if (c == game.player) {
+    if (!racers[c].wtouch) {
+      if (racers[c].u.up) {
+        if (!racers[c].actu) {
+          if (racers[c].loop == 0) {
+            racers[c].loop = 1;
+          }
+        }
+      } else {
+        racers[c].actu = false;
+      }
+      if (racers[c].u.down) {
+        if (!racers[c].actd) {
+          if (racers[c].loop == 0) {
+            racers[c].loop = 1;
+          }
+        }
+      } else {
+        racers[c].actd = false;
+      }
+      if (racers[c].u.left) {
+        if (!racers[c].actl) {
+          if (racers[c].loop == 0) {
+            racers[c].loop = 1;
+          }
+        }
+      } else {
+        racers[c].actl = false;
+      }
+      if (racers[c].u.right) {
+        if (!racers[c].actr) {
+          if (racers[c].loop == 0) {
+            racers[c].loop = 1;
+          }
+        }
+      } else {
+        racers[c].actr = false;
+      }
+    } else {
+      racers[c].actl = true;
+      racers[c].actr = true;
+      racers[c].actu = true;
+      racers[c].actd = true;
+    }
+  }
+}
+
+function startStuntWithHandbrake(c) {
+  if (racers[c].u.handb) {
+    if (!racers[c].pushed) {
+      if (!racers[c].wtouch) {
+        if (racers[c].loop == 0) {
+          racers[c].loop = 1;
+          racers[c].actl = false;
+          racers[c].actr = false;
+          racers[c].actu = false;
+          racers[c].actd = false;
+        }
+      } else {
+        if (racers[c].gtouch) {
+          racers[c].pushed = true;
+        }
+      }
+    }
+  } else {
+    racers[c].pushed = false;
+  }
+}
+
+function startStunt(c) {
+  if (racers[c].loop == 1) {
+    let avay =
+      (racers[c].scy[0] +
+        racers[c].scy[1] +
+        racers[c].scy[2] +
+        racers[c].scy[3]) /
+      4;
+    for (let i = 0; i < 4; i++) {
+      racers[c].scy[i] = avay;
+    }
+    racers[c].loop = 2;
+  }
+}
+
+function rollWheels(c, cn) {
+  let wrots = (200 * racers[c].speed) / (154 * carStats.simag[cn]);
+  car[c].wzy -= wrots * tick.scale;
+  if (car[c].wzy < -360) {
+    car[c].wzy += 360;
+  }
+  if (car[c].wzy > 360) {
+    car[c].wzy -= 360;
+  }
+}
+
+function steerFrontWheels(c, cn) {
+  if (racers[c].u.left) {
+    car[c].wxz -= carStats.turn[cn] * tick.scale;
+    if (car[c].wxz < -36) {
+      car[c].wxz = -36;
+    }
+  }
+  if (racers[c].u.right) {
+    car[c].wxz += carStats.turn[cn] * tick.scale;
+    if (car[c].wxz > 36) {
+      car[c].wxz = 36;
+    }
+  }
+  if (car[c].wxz != 0 && !racers[c].u.left && !racers[c].u.right) {
+    if (Math.abs(racers[c].speed) < 1) {
+      if (Math.abs(car[c].wxz) <= tick.scale) {
+        car[c].wxz = 0;
+      }
+      if (car[c].wxz > 0) {
+        car[c].wxz -= tick.scale;
+      }
+      if (car[c].wxz < 0) {
+        car[c].wxz += tick.scale;
+      }
+    } else {
+      if (Math.abs(car[c].wxz) < carStats.turn[cn] * 2 * tick.scale) {
+        car[c].wxz = 0;
+      }
+      if (car[c].wxz > 0) {
+        car[c].wxz -= carStats.turn[cn] * 2 * tick.scale;
+      }
+      if (car[c].wxz < 0) {
+        car[c].wxz += carStats.turn[cn] * 2 * tick.scale;
+      }
+    }
+  }
+}
+
+function turnWithFrontWheels(c) {
+  let divt = 36 / (racers[c].speed * racers[c].speed);
+  if (divt < 5) {
+    divt = 5;
+  }
+  if (racers[c].speed < 0) {
+    divt = -divt;
+  }
+  if (racers[c].wtouch) {
+    if (!racers[c].capsized) {
+      if (!racers[c].u.handb) {
+        racers[c].fxz = (car[c].wxz / (divt * 3)) * tick.scale;
+      } else {
+        racers[c].fxz = (car[c].wxz / divt) * tick.scale;
+      }
+      car[c].xz += (car[c].wxz / divt) * tick.scale;
+    }
+    racers[c].wtouch = false;
+    racers[c].gtouch = false;
+  } else {
+    car[c].xz += racers[c].fxz;
+  }
+}
+
+function swingCameraHeading(c) {
+  if (racers[c].speed > 3 || racers[c].speed < -7) {
+    while (Math.abs(racers[c].mxz - racers[c].cxz) > 180) {
+      if (racers[c].cxz > racers[c].mxz) {
+        racers[c].cxz -= 360;
+      } else {
+        if (racers[c].cxz < racers[c].mxz) {
+          racers[c].cxz += 360;
+        }
+      }
+    }
+    if (Math.abs(racers[c].mxz - racers[c].cxz) < 30) {
+      racers[c].cxz += (racers[c].mxz - racers[c].cxz) / 4;
+    } else {
+      if (racers[c].cxz > racers[c].mxz) {
+        racers[c].cxz -= 10 * tick.scale;
+      }
+      if (racers[c].cxz < racers[c].mxz) {
+        racers[c].cxz += 10 * tick.scale;
+      }
+    }
+  }
+}
+
+function rotateInStunt(c, cn, airPush, cov, mlt, zyinv) {
+  if (racers[c].u.up && !racers[c].actu) {
+    if (racers[c].ucomp == 0) {
+      racers[c].ucomp = 10 + (-racers[c].scy[0] * 10 + 50) / 20;
+      if (racers[c].ucomp < 5) {
+        racers[c].ucomp = 5;
+      }
+      if (racers[c].ucomp > 10) {
+        racers[c].ucomp = 10;
+      }
+      racers[c].ucomp *= carStats.airs[cn];
+    }
+    if (racers[c].ucomp < 20) {
+      racers[c].ucomp += 0.5 * carStats.airs[cn];
+    }
+    airPush.x = -carStats.airc[cn] * sinDeg(car[c].xz) * cov;
+    airPush.z = carStats.airc[cn] * cosDeg(car[c].xz) * cov;
+  } else {
+    if (racers[c].ucomp != 0) {
+      if (racers[c].ucomp > -2) {
+        racers[c].ucomp -= 0.5 * carStats.airs[cn];
+      }
+    }
+  }
+  if (racers[c].u.down && !racers[c].actd) {
+    if (racers[c].dcomp == 0) {
+      racers[c].dcomp = 10 + (-racers[c].scy[0] * 10 + 50) / 20;
+      if (racers[c].dcomp < 5) {
+        racers[c].dcomp = 5;
+      }
+      if (racers[c].dcomp > 10) {
+        racers[c].dcomp = 10;
+      }
+      racers[c].dcomp *= carStats.airs[cn];
+    }
+    if (racers[c].dcomp < 20) {
+      racers[c].dcomp += 0.5 * carStats.airs[cn];
+    }
+    airPush.y = carStats.airc[cn];
+  } else {
+    if (racers[c].dcomp != 0) {
+      if (racers[c].ucomp > -2) {
+        racers[c].dcomp -= 0.5 * carStats.airs[cn];
+      }
+    }
+  }
+  if (racers[c].u.left && !racers[c].actl) {
+    if (racers[c].lcomp == 0) {
+      racers[c].lcomp = 5;
+    }
+    if (racers[c].lcomp < 20) {
+      racers[c].lcomp += 2 * carStats.airs[cn];
+    }
+    airPush.x = carStats.airc[cn] * cosDeg(car[c].xz) * mlt;
+    airPush.z = carStats.airc[cn] * sinDeg(car[c].xz) * mlt;
+  } else {
+    if (racers[c].lcomp > 0) {
+      racers[c].lcomp -= 2 * carStats.airs[cn];
+    }
+  }
+  if (racers[c].u.right && !racers[c].actr) {
+    if (racers[c].rcomp == 0) {
+      racers[c].rcomp = 5;
+    }
+    if (racers[c].rcomp < 20) {
+      racers[c].rcomp += 2 * carStats.airs[cn];
+    }
+    airPush.x = -carStats.airc[cn] * cosDeg(car[c].xz) * mlt;
+    airPush.z = -carStats.airc[cn] * sinDeg(car[c].xz) * mlt;
+  } else {
+    if (racers[c].rcomp > 0) {
+      racers[c].rcomp -= 2 * carStats.airs[cn];
+    }
+  }
+  racers[c].pzy -=
+    (racers[c].dcomp - racers[c].ucomp) * cosDeg(racers[c].pxy) * tick.scale;
+  if (zyinv) {
+    car[c].xz -=
+      (racers[c].dcomp - racers[c].ucomp) * sinDeg(racers[c].pxy) * tick.scale;
+  } else {
+    car[c].xz +=
+      (racers[c].dcomp - racers[c].ucomp) * sinDeg(racers[c].pxy) * tick.scale;
+  }
+  racers[c].pxy += (racers[c].rcomp - racers[c].lcomp) * tick.scale;
+}
+
+function driveOnGround(c, cn, zyinv) {
+  let upower = racers[c].power;
+  if (upower < 40) {
+    upower = 40;
+  }
+  if (racers[c].u.down) {
+    if (racers[c].speed > 0) {
+      racers[c].speed -= (carStats.handb[cn] / 2) * tick.scale;
+    } else {
+      let sw = 0;
+      for (let i = 0; i < 2; i++) {
+        if (
+          racers[c].speed <=
+          -(carStats.swits[cn][i] / 2 + (upower * carStats.swits[cn][i]) / 196)
+        ) {
+          sw++;
+        }
+      }
+      if (sw != 2) {
+        racers[c].speed -=
+          (carStats.acelf[cn][sw] / 2 +
+            (upower * carStats.acelf[cn][sw]) / 196) *
+          tick.scale;
+      } else {
+        racers[c].speed = -(
+          (carStats.swits[cn][1] / 2 + (upower * carStats.swits[cn][1]) / 196) *
+          tick.scale
+        );
+      }
+    }
+  }
+  if (racers[c].u.up) {
+    if (racers[c].speed < 0) {
+      racers[c].speed += carStats.handb[cn] * tick.scale;
+    } else {
+      let sw = 0;
+      for (let i = 0; i < 3; i++) {
+        if (
+          racers[c].speed >=
+          carStats.swits[cn][i] / 2 + (upower * carStats.swits[cn][i]) / 196
+        ) {
+          sw++;
+        }
+      }
+      if (sw != 3) {
+        racers[c].speed +=
+          (carStats.acelf[cn][sw] / 2 +
+            (upower * carStats.acelf[cn][sw]) / 196) *
+          tick.scale;
+      } else {
+        racers[c].speed =
+          carStats.swits[cn][2] / 2 + (upower * carStats.swits[cn][2]) / 196;
+      }
+    }
+  }
+  if (racers[c].u.handb) {
+    if (Math.abs(racers[c].speed) > carStats.handb[cn]) {
+      if (racers[c].speed < 0) {
+        racers[c].speed += carStats.handb[cn] * tick.scale;
+      } else {
+        racers[c].speed -= carStats.handb[cn] * tick.scale;
+      }
+    }
+  }
+  if (racers[c].loop == -1) {
+    rotateAfterStunt(c, cn, zyinv);
+  }
+}
+
+function rotateAfterStunt(c, cn, zyinv) {
+  if (car[c].y > 15) {
+    if (racers[c].u.left) {
+      if (!racers[c].pl) {
+        if (racers[c].lcomp == 0) {
+          racers[c].lcomp = 5 * carStats.airs[cn];
+        }
+        if (racers[c].lcomp < 20) {
+          racers[c].lcomp += 2 * carStats.airs[cn];
+        }
+      }
+    } else {
+      if (racers[c].lcomp > 0) {
+        racers[c].lcomp -= 2 * carStats.airs[cn];
+      }
+      racers[c].pl = false;
+    }
+    if (racers[c].u.right) {
+      if (!racers[c].pr) {
+        if (racers[c].rcomp == 0) {
+          racers[c].rcomp = 5 * carStats.airs[cn];
+        }
+        if (racers[c].rcomp < 20) {
+          racers[c].rcomp += 2 * carStats.airs[cn];
+        }
+      }
+    } else {
+      if (racers[c].rcomp > 0) {
+        racers[c].rcomp -= 2 * carStats.airs[cn];
+      }
+      racers[c].pr = false;
+    }
+    if (racers[c].u.up) {
+      if (!racers[c].pu) {
+        if (racers[c].ucomp == 0) {
+          racers[c].ucomp = 5 * carStats.airs[cn];
+        }
+        if (racers[c].ucomp < 20) {
+          racers[c].ucomp += 2 * carStats.airs[cn];
+        }
+      }
+    } else {
+      if (racers[c].ucomp > 0) {
+        racers[c].ucomp -= 2 * carStats.airs[cn];
+      }
+      racers[c].pu = false;
+    }
+    if (racers[c].u.down) {
+      if (!racers[c].pd) {
+        if (racers[c].dcomp == 0) {
+          racers[c].dcomp = 5 * carStats.airs[cn];
+        }
+        if (racers[c].dcomp < 20) {
+          racers[c].dcomp += 2 * carStats.airs[cn];
+        }
+      }
+    } else {
+      if (racers[c].dcomp > 0) {
+        racers[c].dcomp -= 2 * carStats.airs[cn];
+      }
+      racers[c].pd = false;
+    }
+    racers[c].pzy -=
+      (racers[c].dcomp - racers[c].ucomp) * cosDeg(racers[c].pxy) * tick.scale;
+    if (zyinv) {
+      car[c].xz -=
+        (racers[c].dcomp - racers[c].ucomp) *
+        sinDeg(racers[c].pxy) *
+        tick.scale;
+    } else {
+      car[c].xz +=
+        (racers[c].dcomp - racers[c].ucomp) *
+        sinDeg(racers[c].pxy) *
+        tick.scale;
+    }
+    racers[c].pxy += (racers[c].rcomp - racers[c].lcomp) * tick.scale;
   }
 }
 
