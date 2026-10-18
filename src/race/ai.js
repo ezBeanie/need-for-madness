@@ -25,56 +25,81 @@ const SHARP_TURN = { steer: 0, brake: 1, handbrake: 2, liftGas: 3 };
 // Whom a driver chases (or flees from) and how; forgotten at the start and when the
 // player winds back time.
 const newPursuit = () => ({
+  // the heading the driver steers to, in degrees
   aimHeading: 0,
+  // ticks left attacking attackedCar (0: following the path)
   attackTicks: 0,
   attackedCar: 0,
   afta: false,
+  // see FIX
   fixing: 0,
+  // up to how many ticks pass between aiming anew (sloppier drivers aim less often)
   aimLag: 0,
+  // ticks per gas cycle it rolls without gas, letting the player catch up (see waitAtStart)
   holdBack: 0,
+  // heads for a fix hoop off the path, missed checkpoints or not
   ignoreMissed: false,
+  // chases the player instead of racing
   bully: false,
   runbul: 0,
+  // ticks it backs up at the start
   reverseTicks: 0,
   oupnt: 0,
+  // drives to (waitX, waitZ) to lie in wait
   goingToWait: false,
   apunch: 0,
   exitattack: false,
 });
 
-// What every computer driver is up to. Fields keep their original names for now.
+// What every computer driver is up to. Some fields keep their original names, as they mean
+// different things on different stages (afta, oupnt, runbul, apunch, exitattack, stuntf).
 const newDriver = () => ({
   ...newPursuit(),
+  // ticks it keeps its steering after hitting a wall
   steerFreeze: 0,
-  statusque: 0,
-  stcnt: 0,
+  // it decides anew how to drive (see rethink) after this many ticks on the ground
+  rethinkAfter: 0,
+  ticksSinceRethink: 0,
+  // degrees off its aim it does not steer for
   steerTolerance: 5,
+  // the chance of skipping path points (0..1)
   cornerCutting: 1,
+  // see RAMPS
   rampChoice: 0,
-  cntrn: 0,
+  turnStyleTicks: 0,
+  // keeps the gas in sharp turns
   gasInTurns: false,
+  // see SHARP_TURN
   sharpTurn: 0,
+  // how early it straightens up before landing
   landingMargin: 30,
+  // the chance of not correcting a landing
   landingSloppiness: 0.5,
   stuntf: 0,
-  avoidnlev: 0,
-  trickprf: 0.5,
-  usebounce: false,
-  perfection: false,
+  avoidPlayerRange: 0,
+  // fewer and later stunts
+  stuntCaution: 0.5,
+  groundByWheels: false,
+  landsPerfectly: false,
+  // how far ahead of its victim it aims, in half their distance
   leadAhead: 0,
   stuntPhase: 0,
+  // ticks into the gas cycle, and the hold back of this cycle
   gasCycle: 0,
   holdBackNow: 0,
   waitX: 0,
   waitZ: 0,
-  frx: 0,
-  frz: 0,
-  frad: 0,
+  // where it lies in wait for the player: a circle (ambushRadius is squared, in tenths)
+  ambushX: 0,
+  ambushZ: 0,
+  ambushRadius: 0,
   ticksToNextAim: 0,
   ticksSinceAim: 0,
   lastTurnedLeft: false,
   lastWall: -1,
   wallTurnLeft: false,
+  // a stunt: its angles at take-off, ticks in the air, flip and roll (-1, 0, 1), when
+  // they start and whether they turn back after half a turn
   takeoffXy: 0,
   takeoffZy: 0,
   airTicks: 0,
@@ -84,6 +109,7 @@ const newDriver = () => ({
   rollReverses: false,
   flipAfter: 0,
   rollAfter: 0,
+  // straightening up to land: what it pressed, and whether pitch and roll are done
   pressedUp: false,
   pressedDown: false,
   pressedLeft: false,
@@ -174,7 +200,7 @@ export function inishcontrol() {
       } else {
         ai[c].steerFreeze = 5;
       }
-      ai[c].statusque = 0;
+      ai[c].rethinkAfter = 0;
     }
     if (track.stage == 12) {
       if (c != boss()) {
@@ -183,11 +209,11 @@ export function inishcontrol() {
       } else {
         ai[c].steerFreeze = 5;
       }
-      ai[c].statusque = 0;
+      ai[c].rethinkAfter = 0;
     }
     if (track.stage == 14) {
       ai[c].steerFreeze = 30;
-      ai[c].statusque = 0;
+      ai[c].rethinkAfter = 0;
       if (c != boss()) {
         ai[c].reverseTicks = 1;
       }
@@ -216,16 +242,16 @@ export function control() {
       racers[c].u.handb = false;
       if (!racers[c].dest) {
         if (racers[c].mtouch) {
-          if (ai[c].stcnt > ai[c].statusque) {
+          if (ai[c].ticksSinceRethink > ai[c].rethinkAfter) {
             rethink(c, cn);
           } else {
             if (tick.fraction >= tick.scale) {
-              ai[c].stcnt++;
+              ai[c].ticksSinceRethink++;
             }
           }
         }
         var ride = false;
-        if (ai[c].usebounce) {
+        if (ai[c].groundByWheels) {
           ride = racers[c].wtouch;
         } else {
           ride = racers[c].mtouch;
@@ -602,7 +628,7 @@ function flyStunts(c, cn) {
     }
     if (
       upv > 7 &&
-      (random.sim() > ai[c].trickprf / divo || ai[c].stuntf == 4)
+      (random.sim() > ai[c].stuntCaution / divo || ai[c].stuntf == 4)
     ) {
       ai[c].takeoffXy = racers[c].pxy;
       ai[c].takeoffZy = racers[c].pzy;
@@ -641,7 +667,7 @@ function flyStunts(c, cn) {
           } else {
             ai[c].flip = 1;
           }
-          ai[c].flipAfter = Math.floor(10 * random.sim() * ai[c].trickprf);
+          ai[c].flipAfter = Math.floor(10 * random.sim() * ai[c].stuntCaution);
           if (ai[c].stuntf == 4 || ai[c].stuntf == 5 || track.stage == 16) {
             ai[c].flipAfter = 0;
           }
@@ -654,7 +680,7 @@ function flyStunts(c, cn) {
             ai[c].flipReverses = true;
           }
           if (
-            random.sim() > ai[c].trickprf + 0.3 &&
+            random.sim() > ai[c].stuntCaution + 0.3 &&
             ai[c].stuntf != 1 &&
             ai[c].stuntf != 2 &&
             ai[c].stuntf != 4 &&
@@ -676,11 +702,11 @@ function flyStunts(c, cn) {
           } else {
             ai[c].roll = 1;
           }
-          ai[c].rollAfter = Math.floor(10 * random.sim() * ai[c].trickprf);
+          ai[c].rollAfter = Math.floor(10 * random.sim() * ai[c].stuntCaution);
           if (random.sim() > 0.75) {
             ai[c].rollReverses = true;
           }
-          if (random.sim() > ai[c].trickprf + 0.3) {
+          if (random.sim() > ai[c].stuntCaution + 0.3) {
             if (random.sim() > random.sim() || ai[c].stuntf == 3) {
               ai[c].flip = -1;
             } else {
@@ -723,7 +749,7 @@ function flyStunts(c, cn) {
     }
     if (ai[c].fixing == FIX.close) {
       ai[c].fixing = FIX.jumping;
-      ai[c].statusque += 30;
+      ai[c].rethinkAfter += 30;
     }
   }
   if (ai[c].stuntPhase == STUNT.flipping) {
@@ -854,7 +880,7 @@ function flyStunts(c, cn) {
           }
         } else {
           if (ai[c].pitchSettled) {
-            if (ai[c].perfection && Math.abs(pzyr - 90) > 30) {
+            if (ai[c].landsPerfectly && Math.abs(pzyr - 90) > 30) {
               if (pzyr < 90) {
                 racers[c].u.up = true;
               } else {
@@ -883,7 +909,7 @@ function flyStunts(c, cn) {
           }
         } else {
           if (ai[c].pitchSettled) {
-            if (ai[c].perfection && Math.abs(pzyr - 90) > 30) {
+            if (ai[c].landsPerfectly && Math.abs(pzyr - 90) > 30) {
               if (pzyr < 90) {
                 racers[c].u.up = true;
               } else {
@@ -931,7 +957,7 @@ function flyStunts(c, cn) {
           }
         } else {
           if (ai[c].rollSettled) {
-            if (ai[c].perfection && Math.abs(pxyr - 90) > 30) {
+            if (ai[c].landsPerfectly && Math.abs(pxyr - 90) > 30) {
               if (pxyr > 90) {
                 racers[c].u.left = true;
               } else {
@@ -960,7 +986,7 @@ function flyStunts(c, cn) {
           }
         } else {
           if (ai[c].rollSettled) {
-            if (ai[c].perfection && Math.abs(pxyr - 90) > 30) {
+            if (ai[c].landsPerfectly && Math.abs(pxyr - 90) > 30) {
               if (pxyr > 90) {
                 racers[c].u.left = true;
               } else {
@@ -1193,7 +1219,7 @@ function choosePathPoint(c, powbul, pnt, cn) {
           car[c].z / 10,
           car[game.player].z / 10,
         ) <
-          1000 + ai[c].avoidnlev
+          1000 + ai[c].avoidPlayerRange
       ) {
         var myxz = car[c].xz;
         if (racers[c].u.zyinv) {
@@ -1255,7 +1281,7 @@ function choosePathPoint(c, powbul, pnt, cn) {
               car[c].z / 10,
               car[i].z / 10,
             ) <
-            1000 + ai[c].avoidnlev
+            1000 + ai[c].avoidPlayerRange
           ) {
             var ad = 0;
             if (car[i].x - car[c].x >= 0) {
@@ -1330,9 +1356,9 @@ function choosePathPoint(c, powbul, pnt, cn) {
         if (track.clear[game.player] == 0) {
           ai[c].waitX = 350;
           ai[c].waitZ = 1900;
-          ai[c].frx = 350;
-          ai[c].frz = 3900;
-          ai[c].frad = 12000;
+          ai[c].ambushX = 350;
+          ai[c].ambushZ = 3900;
+          ai[c].ambushRadius = 12000;
           ai[c].oupnt = 37;
           ai[c].goingToWait = true;
           ai[c].afta = false;
@@ -1340,9 +1366,9 @@ function choosePathPoint(c, powbul, pnt, cn) {
         if (track.clear[game.player] == 7) {
           ai[c].waitX = 4480;
           ai[c].waitZ = 4032;
-          ai[c].frx = 4480;
-          ai[c].frz = 3472;
-          ai[c].frad = 30000;
+          ai[c].ambushX = 4480;
+          ai[c].ambushZ = 3472;
+          ai[c].ambushRadius = 30000;
           ai[c].oupnt = 27;
           ai[c].goingToWait = true;
           ai[c].afta = false;
@@ -1350,9 +1376,9 @@ function choosePathPoint(c, powbul, pnt, cn) {
         if (track.clear[game.player] == 10) {
           ai[c].waitX = 0;
           ai[c].waitZ = 4873.9;
-          ai[c].frx = 0;
-          ai[c].frz = 3858.9;
-          ai[c].frad = 90000;
+          ai[c].ambushX = 0;
+          ai[c].ambushZ = 3858.9;
+          ai[c].ambushRadius = 90000;
           ai[c].oupnt = 55;
           ai[c].goingToWait = true;
           ai[c].afta = false;
@@ -1360,9 +1386,9 @@ function choosePathPoint(c, powbul, pnt, cn) {
         if (track.clear[game.player] == 14) {
           ai[c].waitX = 350;
           ai[c].waitZ = 1900;
-          ai[c].frx = 1470;
-          ai[c].frz = 3900;
-          ai[c].frad = 45000;
+          ai[c].ambushX = 1470;
+          ai[c].ambushZ = 3900;
+          ai[c].ambushRadius = 45000;
           ai[c].oupnt = 37;
           ai[c].goingToWait = true;
           ai[c].afta = false;
@@ -1370,9 +1396,9 @@ function choosePathPoint(c, powbul, pnt, cn) {
         if (track.clear[game.player] == 18) {
           ai[c].waitX = 4830;
           ai[c].waitZ = -455;
-          ai[c].frx = 4830;
-          ai[c].frz = 560;
-          ai[c].frad = 90000;
+          ai[c].ambushX = 4830;
+          ai[c].ambushZ = 560;
+          ai[c].ambushRadius = 90000;
           ai[c].oupnt = 17;
           ai[c].goingToWait = true;
           ai[c].afta = false;
@@ -1406,10 +1432,10 @@ function choosePathPoint(c, powbul, pnt, cn) {
           racers[game.player].pcleared == ai[c].oupnt &&
           distanceSquaredXZ(
             car[game.player].x / 10,
-            ai[c].frx / 10,
+            ai[c].ambushX / 10,
             car[game.player].z / 10,
-            ai[c].frz / 10,
-          ) < ai[c].frad
+            ai[c].ambushZ / 10,
+          ) < ai[c].ambushRadius
         ) {
           ai[c].afta = true;
           ai[c].goingToWait = false;
@@ -1549,9 +1575,9 @@ function choosePathPoint(c, powbul, pnt, cn) {
           ) {
             ai[c].waitX = 820;
             ai[c].waitZ = 120;
-            ai[c].frx = 1364;
-            ai[c].frz = 218;
-            ai[c].frad = 50000;
+            ai[c].ambushX = 1364;
+            ai[c].ambushZ = 218;
+            ai[c].ambushRadius = 50000;
             ai[c].oupnt = 35;
             ai[c].goingToWait = true;
             ai[c].afta = false;
@@ -1564,9 +1590,9 @@ function choosePathPoint(c, powbul, pnt, cn) {
             if (racers[c].power > 60) {
               ai[c].waitX = 3000;
               ai[c].waitZ = 1600;
-              ai[c].frx = 4206;
-              ai[c].frz = 1365;
-              ai[c].frad = 30000;
+              ai[c].ambushX = 4206;
+              ai[c].ambushZ = 1365;
+              ai[c].ambushRadius = 30000;
               ai[c].oupnt = 64;
               ai[c].goingToWait = true;
               ai[c].afta = false;
@@ -1582,9 +1608,9 @@ function choosePathPoint(c, powbul, pnt, cn) {
             if (racers[c].power > 60) {
               ai[c].waitX = 6408.2;
               ai[c].waitZ = 1571.4;
-              ai[c].frx = 6184;
-              ai[c].frz = 780;
-              ai[c].frad = 90000;
+              ai[c].ambushX = 6184;
+              ai[c].ambushZ = 780;
+              ai[c].ambushRadius = 90000;
               ai[c].oupnt = 112;
               ai[c].goingToWait = true;
               ai[c].afta = false;
@@ -1594,14 +1620,14 @@ function choosePathPoint(c, powbul, pnt, cn) {
             }
           }
           if (racers[game.player].pcleared == 112 && ai[c].oupnt == 112) {
-            ai[c].stcnt = 0;
-            ai[c].statusque = 10;
+            ai[c].ticksSinceRethink = 0;
+            ai[c].rethinkAfter = 10;
             if (
               distanceSquaredXZ(
                 car[c].x / 10,
-                ai[c].frx / 10,
+                ai[c].ambushX / 10,
                 car[c].z / 10,
-                ai[c].frz / 10,
+                ai[c].ambushZ / 10,
               ) < 100
             ) {
               ai[c].attackTicks = 200;
@@ -1639,10 +1665,10 @@ function choosePathPoint(c, powbul, pnt, cn) {
             racers[game.player].pcleared == ai[c].oupnt &&
             distanceSquaredXZ(
               car[game.player].x / 10,
-              ai[c].frx / 10,
+              ai[c].ambushX / 10,
               car[game.player].z / 10,
-              ai[c].frz / 10,
-            ) < ai[c].frad
+              ai[c].ambushZ / 10,
+            ) < ai[c].ambushRadius
           ) {
             ai[c].afta = true;
             ai[c].goingToWait = false;
@@ -1811,7 +1837,7 @@ function rethink(c, cn) {
   if (track.stage == 15 || track.stage == 16) {
     ai[c].rampChoice = RAMPS.either;
   }
-  if (ai[c].cntrn == 0) {
+  if (ai[c].turnStyleTicks == 0) {
     ai[c].gasInTurns = false;
     ai[c].sharpTurn = Math.floor(random.sim() * 4);
     if (track.stage == 3 && cn == 12) {
@@ -1887,9 +1913,9 @@ function rethink(c, cn) {
     ) {
       ai[c].gasInTurns = true;
     }
-    ai[c].cntrn = 5;
+    ai[c].turnStyleTicks = 5;
   } else {
-    ai[c].cntrn--;
+    ai[c].turnStyleTicks--;
   }
   ai[c].landingMargin = Math.floor(
     (98 - racers[c].power) * 0.5 * (random.sim() * 0.5 + 0.5),
@@ -1985,76 +2011,76 @@ function rethink(c, cn) {
     if (racers[c].pcleared == 120) {
       ai[c].stuntf = 2;
     }
-    ai[c].avoidnlev = Math.floor(2700 * random.sim());
+    ai[c].avoidPlayerRange = Math.floor(2700 * random.sim());
   }
   if (game.mode == MODE.switchCars) {
-    ai[c].avoidnlev = Math.floor(2700 * random.sim());
+    ai[c].avoidPlayerRange = Math.floor(2700 * random.sim());
   }
-  ai[c].trickprf = (racers[c].power - 38) / 50 - random.sim() * 0.5;
+  ai[c].stuntCaution = (racers[c].power - 38) / 50 - random.sim() * 0.5;
   if (racers[c].power < 60) {
-    ai[c].trickprf = -1;
+    ai[c].stuntCaution = -1;
   }
   if (track.stage == 3 && cn == 12) {
-    if (ai[c].trickprf > 0.7) {
-      ai[c].trickprf = 0.7;
+    if (ai[c].stuntCaution > 0.7) {
+      ai[c].stuntCaution = 0.7;
     }
   }
   if (track.stage == 6 && cn != 13) {
-    if (ai[c].trickprf > 0.3) {
-      ai[c].trickprf = 0.3;
+    if (ai[c].stuntCaution > 0.3) {
+      ai[c].stuntCaution = 0.3;
     }
   }
   if (track.stage == 8) {
-    if (ai[c].trickprf > 0.2) {
-      ai[c].trickprf = 0.2;
+    if (ai[c].stuntCaution > 0.2) {
+      ai[c].stuntCaution = 0.2;
     }
   }
   if (track.stage == 11) {
-    if (ai[c].trickprf != -1) {
-      ai[c].trickprf *= 0.75;
+    if (ai[c].stuntCaution != -1) {
+      ai[c].stuntCaution *= 0.75;
     }
   }
   if (track.stage == 12) {
     if (racers[c].pcleared == 55 || racers[c].pcleared == 7) {
-      ai[c].trickprf = -1;
+      ai[c].stuntCaution = -1;
     }
   }
   if (track.stage == 14) {
-    if (ai[c].trickprf > 0.5) {
-      ai[c].trickprf = 0.5;
+    if (ai[c].stuntCaution > 0.5) {
+      ai[c].stuntCaution = 0.5;
     }
   }
   if (track.stage == 17) {
-    ai[c].trickprf = -1;
+    ai[c].stuntCaution = -1;
   }
   if (random.sim() > racers[c].power / 100) {
-    ai[c].usebounce = true;
+    ai[c].groundByWheels = true;
   } else {
-    ai[c].usebounce = false;
+    ai[c].groundByWheels = false;
   }
   if (track.stage == 4) {
-    ai[c].usebounce = true;
+    ai[c].groundByWheels = true;
   }
   if (track.stage == 6) {
     if (cn == 13) {
-      ai[c].usebounce = false;
+      ai[c].groundByWheels = false;
     } else {
-      ai[c].usebounce = true;
+      ai[c].groundByWheels = true;
     }
   }
   if (track.stage == 9 || track.stage == 10 || track.stage == 14) {
-    ai[c].usebounce = false;
+    ai[c].groundByWheels = false;
   }
   if (random.sim() > racers[c].hitmag / carStats.maxmag[cn]) {
-    ai[c].perfection = false;
+    ai[c].landsPerfectly = false;
   } else {
-    ai[c].perfection = true;
+    ai[c].landsPerfectly = true;
   }
   if ((100 * racers[c].hitmag) / carStats.maxmag[cn] > 60) {
-    ai[c].perfection = true;
+    ai[c].landsPerfectly = true;
   }
   if (track.stage == 3 && cn == 12) {
-    ai[c].perfection = true;
+    ai[c].landsPerfectly = true;
   }
   if (
     track.stage == 6 ||
@@ -2066,16 +2092,16 @@ function rethink(c, cn) {
     track.stage == 16 ||
     track.stage == 17
   ) {
-    ai[c].perfection = true;
+    ai[c].landsPerfectly = true;
   }
   if (track.stage == 15 && cn == 18) {
-    ai[c].perfection = true;
+    ai[c].landsPerfectly = true;
   }
   chooseWhomToAttack(c, cn);
   chooseWhetherToFix(cn, c);
   chooseWhetherToBully(c, cn);
-  ai[c].stcnt = 0;
-  ai[c].statusque = Math.floor(20 * random.sim());
+  ai[c].ticksSinceRethink = 0;
+  ai[c].rethinkAfter = Math.floor(20 * random.sim());
 }
 
 function chooseWhetherToFix(cn, c) {
