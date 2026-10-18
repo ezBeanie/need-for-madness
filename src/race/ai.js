@@ -1700,6 +1700,23 @@ function choosePathPoint(c, powbul, pnt, cn) {
 }
 
 function rethink(c, cn) {
+  chooseAimLag(c);
+  chooseHoldBack(cn, c);
+  chooseCornerCutting(c, cn);
+  chooseRamps(c);
+  chooseTurnStyle(c, cn);
+  chooseLandingCare(c, cn);
+  chooseStuntPlan(c, cn);
+  chooseStuntCaution(c, cn);
+  chooseLandingHabits(c, cn);
+  chooseWhomToAttack(c, cn);
+  chooseWhetherToFix(cn, c);
+  chooseWhetherToBully(c, cn);
+  ai[c].ticksSinceRethink = 0;
+  ai[c].rethinkAfter = Math.floor(20 * random.sim());
+}
+
+function chooseAimLag(c) {
   let tstage = track.stage;
   ai[c].aimLag = Math.floor(
     (7 - rank(c)) * rank(game.player) * (6 - tstage * 2),
@@ -1719,24 +1736,27 @@ function rethink(c, cn) {
   if (track.stage == 16) {
     ai[c].steerTolerance = 3;
   }
-  let mw = 0;
+}
+
+function chooseHoldBack(cn, c) {
+  let holdBackScale = 0;
   if (track.stage == 1) {
-    mw = 2;
+    holdBackScale = 2;
   }
   if (track.stage == 2) {
-    mw = 1.5;
+    holdBackScale = 1.5;
   }
   if (track.stage == 3 && cn != 12) {
-    mw = 0.5;
+    holdBackScale = 0.5;
   }
   if (track.stage == 4) {
-    mw = 0.5;
+    holdBackScale = 0.5;
   }
   ai[c].holdBack = Math.floor(
     (rank(game.player) - rank(c)) *
       (rank(game.player) - rank(c)) *
       (rank(game.player) - rank(c)) *
-      mw,
+      holdBackScale,
   );
   if (ai[c].holdBack > 80) {
     ai[c].holdBack = 80;
@@ -1746,18 +1766,21 @@ function rethink(c, cn) {
       ai[c].holdBack = 20;
     }
   }
-  mw = 0;
+}
+
+function chooseCornerCutting(c, cn) {
+  let maxCutting = 0;
   if (track.stage == 1 || track.stage == 2) {
-    mw = 1;
+    maxCutting = 1;
   }
   if (track.stage == 3) {
-    mw = 0.5;
+    maxCutting = 0.5;
   }
   if (track.stage == 4) {
-    mw = 0.5;
+    maxCutting = 0.5;
   }
   if (track.stage == 5) {
-    mw = 0.2;
+    maxCutting = 0.2;
   }
   if (track.pos[c] - track.pos[game.player] >= -1) {
     ai[c].cornerCutting -= 0.1;
@@ -1766,8 +1789,8 @@ function rethink(c, cn) {
     }
   } else {
     ai[c].cornerCutting += 0.2;
-    if (ai[c].cornerCutting > mw) {
-      ai[c].cornerCutting = mw;
+    if (ai[c].cornerCutting > maxCutting) {
+      ai[c].cornerCutting = maxCutting;
     }
   }
   if (track.stage == 9 || track.stage == 12) {
@@ -1811,6 +1834,9 @@ function rethink(c, cn) {
   ) {
     ai[c].cornerCutting = 0;
   }
+}
+
+function chooseRamps(c) {
   ai[c].rampChoice = Math.floor(random.sim() * 4 - 2);
   if (ai[c].rampChoice == RAMPS.stayBefore) {
     ai[c].rampChoice = RAMPS.take;
@@ -1837,6 +1863,9 @@ function rethink(c, cn) {
   if (track.stage == 15 || track.stage == 16) {
     ai[c].rampChoice = RAMPS.either;
   }
+}
+
+function chooseTurnStyle(c, cn) {
   if (ai[c].turnStyleTicks == 0) {
     ai[c].gasInTurns = false;
     ai[c].sharpTurn = Math.floor(random.sim() * 4);
@@ -1917,36 +1946,39 @@ function rethink(c, cn) {
   } else {
     ai[c].turnStyleTicks--;
   }
+}
+
+function chooseLandingCare(c, cn) {
   ai[c].landingMargin = Math.floor(
     (98 - racers[c].power) * 0.5 * (random.sim() * 0.5 + 0.5),
   );
   if (ai[c].landingMargin > 20) {
     ai[c].landingMargin = 20;
   }
-  mw = 0;
+  let sloppiness = 0;
   if (track.stage == 1) {
-    mw = 0.9;
+    sloppiness = 0.9;
   }
   if (track.stage == 2) {
-    mw = 0.7;
+    sloppiness = 0.7;
   }
   if (track.stage == 3) {
-    mw = 0.4;
+    sloppiness = 0.4;
   }
-  ai[c].landingSloppiness = mw + (random.sim() / 2 - 0.25);
-  mw = 1;
+  ai[c].landingSloppiness = sloppiness + (random.sim() / 2 - 0.25);
+  let marginScale = 1;
   if (track.stage == 1) {
-    mw = 5;
+    marginScale = 5;
   }
   if (track.stage == 2) {
-    mw = 2;
+    marginScale = 2;
   }
   if (track.stage == 3) {
-    mw = 1.5;
+    marginScale = 1.5;
   }
   if (racers[c].power > 50) {
     if (track.pos[game.player] - track.pos[c] > 0) {
-      ai[c].landingMargin *= mw;
+      ai[c].landingMargin *= marginScale;
     } else {
       ai[c].landingSloppiness = 0;
     }
@@ -1967,6 +1999,9 @@ function rethink(c, cn) {
   ) {
     ai[c].landingSloppiness = 0;
   }
+}
+
+function chooseStuntPlan(c, cn) {
   ai[c].stuntf = 0;
   if (track.stage == 10) {
     if (
@@ -2016,6 +2051,9 @@ function rethink(c, cn) {
   if (game.mode == MODE.switchCars) {
     ai[c].avoidPlayerRange = Math.floor(2700 * random.sim());
   }
+}
+
+function chooseStuntCaution(c, cn) {
   ai[c].stuntCaution = (racers[c].power - 38) / 50 - random.sim() * 0.5;
   if (racers[c].power < 60) {
     ai[c].stuntCaution = -1;
@@ -2053,6 +2091,9 @@ function rethink(c, cn) {
   if (track.stage == 17) {
     ai[c].stuntCaution = -1;
   }
+}
+
+function chooseLandingHabits(c, cn) {
   if (random.sim() > racers[c].power / 100) {
     ai[c].groundByWheels = true;
   } else {
@@ -2097,11 +2138,6 @@ function rethink(c, cn) {
   if (track.stage == 15 && cn == 18) {
     ai[c].landsPerfectly = true;
   }
-  chooseWhomToAttack(c, cn);
-  chooseWhetherToFix(cn, c);
-  chooseWhetherToBully(c, cn);
-  ai[c].ticksSinceRethink = 0;
-  ai[c].rethinkAfter = Math.floor(20 * random.sim());
 }
 
 function chooseWhetherToFix(cn, c) {
