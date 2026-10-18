@@ -39,6 +39,10 @@ const newRacer = () => ({
   colidim: false,
 });
 
+// racer.skid: how the wheels hold the ground. Sliding loses speed; on gripping again (and in
+// the air) the speed is taken from how the car really moves.
+export const SKID = { gripping: 0, sliding: 1, takeSpeedFromMotion: 2 };
+
 export const racers = Array.from({ length: MAX_CARS }, newRacer);
 
 const newCar = () => ({

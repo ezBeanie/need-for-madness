@@ -6,7 +6,7 @@ import { random } from "../core/random.js";
 import { game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { raceEvents } from "../race/events.js";
-import { racers } from "../race/racers.js";
+import { SKID, racers } from "../race/racers.js";
 import { engine, startEngine } from "./audio.js";
 import { coolDownCarSounds } from "./carSounds.js";
 
@@ -97,7 +97,11 @@ export function updateEngineSound() {
 const slipping = (car) => {
   const uneven = (push) =>
     Math.abs(push[0] - (push[1] + push[0] + push[2] + push[3]) / 4) > 0.1;
-  return (car.skid == 1 && car.u.handb) || uneven(car.scz) || uneven(car.scx);
+  return (
+    (car.skid == SKID.sliding && car.u.handb) ||
+    uneven(car.scz) ||
+    uneven(car.scx)
+  );
 };
 
 // Returns whether the car is at its top speed.
