@@ -23,7 +23,15 @@ import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
 import { gl, keepDamageTexture } from "../render/renderer.js";
 import { carModels, carTextures, scene } from "../render/scene.js";
-import { burn, chipaway, chipburn, dustup, firexp, sprks } from "./effects.js";
+import {
+  burn,
+  chipaway,
+  chipburn,
+  dustup,
+  effects,
+  firexp,
+  sprks,
+} from "./effects.js";
 import { raceEvents } from "./events.js";
 import { car, racers } from "./racers.js";
 import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
@@ -3662,16 +3670,13 @@ export function regn(nr, k, mag, c) {
           }
           modpix = 1;
         }
+        // The original also let vertices near the roof's height count, but it looked up
+        // msquash by car index and type (msquash[c][typ]), which is never a number, so
+        // only vertices above it ever do. With 20 cars that lookup crashed for car 19.
         if (
           nr == 3 &&
-          (Math.abs(
-            rad.dvert[i * 3 + 1] -
-              carStats.flipy[car[c].typ] -
-              racers[c].squash,
-          ) <
-            carStats.msquash[c][car[c].typ] * 3 ||
-            rad.dvert[i * 3 + 1] >
-              carStats.flipy[car[c].typ] + racers[c].squash) &&
+          rad.dvert[i * 3 + 1] >
+            carStats.flipy[car[c].typ] + racers[c].squash &&
           Math.abs(racers[c].squash) < carStats.msquash[car[c].typ]
         ) {
           tmag = (mag / 15) * random.sim();
@@ -3732,9 +3737,15 @@ export function fixcar(c) {
   gl.bindBuffer(gl.ARRAY_BUFFER, rad.vbuf);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(rad.dvert), gl.STATIC_DRAW);
   rad.damagedVertices = false;
-  gl.deleteTexture(rad.texture[1]);
-  rad.texture[1] = null;
+  const brokenTexture = rad.texture[1];
+  gl.deleteTexture(brokenTexture);
   rad.texture[1] = gl.createTexture();
+  // chips still flying would show the deleted texture
+  for (let i = 0; i < effects.chipCount; i++) {
+    if (effects.chips[i].texture === brokenTexture) {
+      effects.chips[i].texture = rad.texture[1];
+    }
+  }
   gl.bindTexture(gl.TEXTURE_2D, rad.texture[1]);
   // The repaired texture is the one raceCarTextures made when the stage loaded; copying
   // it avoids reading it back from the GPU, which waits for all drawing queued so far.

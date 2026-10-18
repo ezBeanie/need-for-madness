@@ -89,3 +89,12 @@ test("a field size chosen in the stage select applies to the race started from i
   expect(ctx.game.carCount).toBe(10);
   expect(ctx.car[9].z).toBeGreaterThan(ctx.car[6].z);
 });
+
+// The original looked up a roof hit's limit by car index, which only stayed harmless for
+// the indices of car types (0 to 18).
+test("the 20th car can be hit on its roof", async () => {
+  const { ctx } = await startRace({ stage: 1, car: 5, cars: 20 });
+  for (let point = 0; point < 4; point++) {
+    expect(() => ctx.regn(3, point, 30, 19)).not.toThrow();
+  }
+});

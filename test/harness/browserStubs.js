@@ -55,7 +55,16 @@ const createWebGLStub = (glNames) => {
   let framebuffer = null;
   Object.assign(gl, {
     bindTexture: (target, t) => {
+      // a browser refuses this (INVALID_OPERATION) and draws with whatever is bound
+      if (t?.deleted) {
+        throw new Error("bound a deleted texture");
+      }
       texture = t;
+    },
+    deleteTexture: (t) => {
+      if (t) {
+        t.deleted = true;
+      }
     },
     texImage2D: (...args) => {
       if (texture) {
