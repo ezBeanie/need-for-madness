@@ -234,7 +234,7 @@ export function inishcontrol() {
 export function control() {
   for (let c = 0; c < game.carCount; c++) {
     if (c != game.player) {
-      let cn = car[c].typ;
+      let type = car[c].typ;
       racers[c].u.left = false;
       racers[c].u.right = false;
       racers[c].u.up = false;
@@ -243,7 +243,7 @@ export function control() {
       if (!racers[c].dest) {
         if (racers[c].mtouch) {
           if (ai[c].ticksSinceRethink > ai[c].rethinkAfter) {
-            rethink(c, cn);
+            rethink(c);
           } else {
             if (tick.fraction >= tick.scale) {
               ai[c].ticksSinceRethink++;
@@ -274,20 +274,20 @@ export function control() {
               powbul = 40;
             }
             if (track.stage == 16) {
-              if (cn == 14 || cn == 16) {
+              if (type == 14 || type == 16) {
                 powbul = 0;
               }
             }
-            pnt = choosePathPoint(c, powbul, pnt, cn);
+            pnt = choosePathPoint(c, powbul, pnt);
             pnt = headForFix(c, pnt);
             aimAtPathPoint(c, pnt);
           } else {
             chaseTarget(c);
           }
-          steerToAim(c, cn);
+          steerToAim(c);
           bounceOffWalls(c);
         } else {
-          flyStunts(c, cn);
+          flyStunts(c);
         }
       }
     }
@@ -485,7 +485,8 @@ function chaseTarget(c) {
   }
 }
 
-function steerToAim(c, cn) {
+function steerToAim(c) {
+  const type = car[c].typ;
   let heading = car[c].xz;
   if (racers[c].u.zyinv) {
     heading += 180;
@@ -519,7 +520,7 @@ function steerToAim(c, cn) {
         }
         if (
           Math.abs(heading - ai[c].aimHeading) > 50 &&
-          racers[c].speed > carStats.swits[cn][0] &&
+          racers[c].speed > carStats.swits[type][0] &&
           ai[c].sharpTurn != SHARP_TURN.steer
         ) {
           if (ai[c].sharpTurn == SHARP_TURN.brake) {
@@ -547,7 +548,7 @@ function steerToAim(c, cn) {
         }
         if (
           Math.abs(heading - ai[c].aimHeading) < 310 &&
-          racers[c].speed > carStats.swits[cn][0] &&
+          racers[c].speed > carStats.swits[type][0] &&
           ai[c].sharpTurn != SHARP_TURN.steer
         ) {
           if (ai[c].sharpTurn == SHARP_TURN.brake) {
@@ -602,7 +603,8 @@ function bounceOffWalls(c) {
   }
 }
 
-function flyStunts(c, cn) {
+function flyStunts(c) {
+  const type = car[c].typ;
   if (ai[c].stuntPhase == STUNT.takeoff) {
     let upv =
       ((racers[c].scy[0] +
@@ -719,7 +721,7 @@ function flyStunts(c, cn) {
           }
         }
       }
-      if (track.stage == 16 && cn == 16) {
+      if (track.stage == 16 && type == 16) {
         ai[c].roll = -1;
         ai[c].rollAfter = 0;
         ai[c].flip = -1;
@@ -1005,7 +1007,8 @@ function flyStunts(c, cn) {
   }
 }
 
-function choosePathPoint(c, powbul, pnt, cn) {
+function choosePathPoint(c, powbul, pnt) {
+  const type = car[c].typ;
   if (
     !ai[c].bully ||
     ai[c].fixing == FIX.nearest ||
@@ -1133,7 +1136,7 @@ function choosePathPoint(c, powbul, pnt, cn) {
       if (ai[c].fixing == FIX.nearest) {
         fixApproach[0] = 65;
       }
-      if ((100 * racers[c].hitmag) / carStats.maxmag[cn] < 10) {
+      if ((100 * racers[c].hitmag) / carStats.maxmag[type] < 10) {
         ai[c].fixing = FIX.none;
       }
       if (ai[c].fixing == FIX.close) {
@@ -1151,7 +1154,7 @@ function choosePathPoint(c, powbul, pnt, cn) {
       if (racers[c].pcleared == 47 && pnt > 58 && ai[c].oupnt == 0) {
         ai[c].oupnt = 1;
       }
-      if (cn != 17 || ai[c].attackedCar == 0) {
+      if (type != 17 || ai[c].attackedCar == 0) {
         while (track.typ[pnt] == -1) {
           pnt++;
           if (pnt >= track.n) {
@@ -1260,7 +1263,7 @@ function choosePathPoint(c, powbul, pnt, cn) {
     }
     if (
       game.mode == MODE.switchCars &&
-      (100 * racers[c].hitmag) / carStats.maxmag[cn] > 85
+      (100 * racers[c].hitmag) / carStats.maxmag[type] > 85
     ) {
       var myxz = car[c].xz;
       if (racers[c].u.zyinv) {
@@ -1306,7 +1309,7 @@ function choosePathPoint(c, powbul, pnt, cn) {
             if (vis < 45) {
               racers[c].wall = 0;
             }
-            if ((100 * racers[c].hitmag) / carStats.maxmag[cn] > 95) {
+            if ((100 * racers[c].hitmag) / carStats.maxmag[type] > 95) {
               if (vis < 90) {
                 racers[c].wall = 0;
               }
@@ -1506,7 +1509,7 @@ function choosePathPoint(c, powbul, pnt, cn) {
       }
     }
     if (track.stage == 16) {
-      if (cn == 14) {
+      if (type == 14) {
         if (racers[c].power > 60) {
           var i = racers[game.player].pcleared;
           let found = -1;
@@ -1566,7 +1569,7 @@ function choosePathPoint(c, powbul, pnt, cn) {
           }
         }
       }
-      if (cn == 16) {
+      if (type == 16) {
         if (!ai[c].goingToWait) {
           if (
             racers[game.player].pcleared == 152 ||
@@ -1699,19 +1702,19 @@ function choosePathPoint(c, powbul, pnt, cn) {
   return pnt;
 }
 
-function rethink(c, cn) {
+function rethink(c) {
   chooseAimLag(c);
-  chooseHoldBack(cn, c);
-  chooseCornerCutting(c, cn);
+  chooseHoldBack(c);
+  chooseCornerCutting(c);
   chooseRamps(c);
-  chooseTurnStyle(c, cn);
-  chooseLandingCare(c, cn);
-  chooseStuntPlan(c, cn);
-  chooseStuntCaution(c, cn);
-  chooseLandingHabits(c, cn);
-  chooseWhomToAttack(c, cn);
-  chooseWhetherToFix(cn, c);
-  chooseWhetherToBully(c, cn);
+  chooseTurnStyle(c);
+  chooseLandingCare(c);
+  chooseStuntPlan(c);
+  chooseStuntCaution(c);
+  chooseLandingHabits(c);
+  chooseWhomToAttack(c);
+  chooseWhetherToFix(c);
+  chooseWhetherToBully(c);
   ai[c].ticksSinceRethink = 0;
   ai[c].rethinkAfter = Math.floor(20 * random.sim());
 }
@@ -1738,7 +1741,8 @@ function chooseAimLag(c) {
   }
 }
 
-function chooseHoldBack(cn, c) {
+function chooseHoldBack(c) {
+  const type = car[c].typ;
   let holdBackScale = 0;
   if (track.stage == 1) {
     holdBackScale = 2;
@@ -1746,7 +1750,7 @@ function chooseHoldBack(cn, c) {
   if (track.stage == 2) {
     holdBackScale = 1.5;
   }
-  if (track.stage == 3 && cn != 12) {
+  if (track.stage == 3 && type != 12) {
     holdBackScale = 0.5;
   }
   if (track.stage == 4) {
@@ -1768,7 +1772,8 @@ function chooseHoldBack(cn, c) {
   }
 }
 
-function chooseCornerCutting(c, cn) {
+function chooseCornerCutting(c) {
+  const type = car[c].typ;
   let maxCutting = 0;
   if (track.stage == 1 || track.stage == 2) {
     maxCutting = 1;
@@ -1810,7 +1815,7 @@ function chooseCornerCutting(c, cn) {
   }
   if (track.stage == 14) {
     ai[c].cornerCutting = 1;
-    if (cn == 17) {
+    if (type == 17) {
       if (random.sim() > 0.8) {
         ai[c].attackedCar = 1;
       } else {
@@ -1830,7 +1835,7 @@ function chooseCornerCutting(c, cn) {
   }
   if (
     game.mode == MODE.switchCars &&
-    (100 * racers[c].hitmag) / carStats.maxmag[cn] > 85
+    (100 * racers[c].hitmag) / carStats.maxmag[type] > 85
   ) {
     ai[c].cornerCutting = 0;
   }
@@ -1865,11 +1870,12 @@ function chooseRamps(c) {
   }
 }
 
-function chooseTurnStyle(c, cn) {
+function chooseTurnStyle(c) {
+  const type = car[c].typ;
   if (ai[c].turnStyleTicks == 0) {
     ai[c].gasInTurns = false;
     ai[c].sharpTurn = Math.floor(random.sim() * 4);
-    if (track.stage == 3 && cn == 12) {
+    if (track.stage == 3 && type == 12) {
       ai[c].sharpTurn = SHARP_TURN.brake;
       if (ai[c].attackTicks == 0) {
         ai[c].gasInTurns = true;
@@ -1924,7 +1930,7 @@ function chooseTurnStyle(c, cn) {
         }
       }
       if (track.stage == 16) {
-        if (cn == 14) {
+        if (type == 14) {
           ai[c].sharpTurn = SHARP_TURN.steer;
         }
       }
@@ -1948,7 +1954,8 @@ function chooseTurnStyle(c, cn) {
   }
 }
 
-function chooseLandingCare(c, cn) {
+function chooseLandingCare(c) {
+  const type = car[c].typ;
   ai[c].landingMargin = Math.floor(
     (98 - racers[c].power) * 0.5 * (random.sim() * 0.5 + 0.5),
   );
@@ -1986,7 +1993,7 @@ function chooseLandingCare(c, cn) {
     ai[c].landingSloppiness -= 0.5;
   }
   if (track.stage == 6) {
-    if (cn == 13) {
+    if (type == 13) {
       ai[c].landingSloppiness = 0;
     }
   }
@@ -2001,7 +2008,8 @@ function chooseLandingCare(c, cn) {
   }
 }
 
-function chooseStuntPlan(c, cn) {
+function chooseStuntPlan(c) {
+  const type = car[c].typ;
   ai[c].stuntf = 0;
   if (track.stage == 10) {
     if (
@@ -2017,11 +2025,11 @@ function chooseStuntPlan(c, cn) {
   if (track.stage == 11 && racers[c].pcleared == 18) {
     ai[c].stuntf = 2;
   }
-  if (track.stage == 11 && cn == 16) {
+  if (track.stage == 11 && type == 16) {
     ai[c].stuntf = 3;
   }
   if (track.stage == 14) {
-    if (cn == 17) {
+    if (type == 17) {
       ai[c].stuntf = 4;
       ai[c].landingMargin = 20;
     } else {
@@ -2053,17 +2061,18 @@ function chooseStuntPlan(c, cn) {
   }
 }
 
-function chooseStuntCaution(c, cn) {
+function chooseStuntCaution(c) {
+  const type = car[c].typ;
   ai[c].stuntCaution = (racers[c].power - 38) / 50 - random.sim() * 0.5;
   if (racers[c].power < 60) {
     ai[c].stuntCaution = -1;
   }
-  if (track.stage == 3 && cn == 12) {
+  if (track.stage == 3 && type == 12) {
     if (ai[c].stuntCaution > 0.7) {
       ai[c].stuntCaution = 0.7;
     }
   }
-  if (track.stage == 6 && cn != 13) {
+  if (track.stage == 6 && type != 13) {
     if (ai[c].stuntCaution > 0.3) {
       ai[c].stuntCaution = 0.3;
     }
@@ -2093,7 +2102,8 @@ function chooseStuntCaution(c, cn) {
   }
 }
 
-function chooseLandingHabits(c, cn) {
+function chooseLandingHabits(c) {
+  const type = car[c].typ;
   if (random.sim() > racers[c].power / 100) {
     ai[c].groundByWheels = true;
   } else {
@@ -2103,7 +2113,7 @@ function chooseLandingHabits(c, cn) {
     ai[c].groundByWheels = true;
   }
   if (track.stage == 6) {
-    if (cn == 13) {
+    if (type == 13) {
       ai[c].groundByWheels = false;
     } else {
       ai[c].groundByWheels = true;
@@ -2112,15 +2122,15 @@ function chooseLandingHabits(c, cn) {
   if (track.stage == 9 || track.stage == 10 || track.stage == 14) {
     ai[c].groundByWheels = false;
   }
-  if (random.sim() > racers[c].hitmag / carStats.maxmag[cn]) {
+  if (random.sim() > racers[c].hitmag / carStats.maxmag[type]) {
     ai[c].landsPerfectly = false;
   } else {
     ai[c].landsPerfectly = true;
   }
-  if ((100 * racers[c].hitmag) / carStats.maxmag[cn] > 60) {
+  if ((100 * racers[c].hitmag) / carStats.maxmag[type] > 60) {
     ai[c].landsPerfectly = true;
   }
-  if (track.stage == 3 && cn == 12) {
+  if (track.stage == 3 && type == 12) {
     ai[c].landsPerfectly = true;
   }
   if (
@@ -2135,12 +2145,13 @@ function chooseLandingHabits(c, cn) {
   ) {
     ai[c].landsPerfectly = true;
   }
-  if (track.stage == 15 && cn == 18) {
+  if (track.stage == 15 && type == 18) {
     ai[c].landsPerfectly = true;
   }
 }
 
-function chooseWhetherToFix(cn, c) {
+function chooseWhetherToFix(c) {
+  const type = car[c].typ;
   let norunfix = false;
   if (
     track.stage == 6 ||
@@ -2150,7 +2161,7 @@ function chooseWhetherToFix(cn, c) {
   ) {
     norunfix = true;
   }
-  if (track.stage == 8 && cn != 14) {
+  if (track.stage == 8 && type != 14) {
     norunfix = true;
   }
   if (track.stage == 15 && !ai[c].bully) {
@@ -2166,7 +2177,7 @@ function chooseWhetherToFix(cn, c) {
       if (track.stage == 16) {
         trunfix = 100;
       }
-      if ((100 * racers[c].hitmag) / carStats.maxmag[cn] > trunfix) {
+      if ((100 * racers[c].hitmag) / carStats.maxmag[type] > trunfix) {
         ai[c].fixing = FIX.onTheWay;
       }
       if (!norunfix) {
@@ -2174,7 +2185,7 @@ function chooseWhetherToFix(cn, c) {
         if (track.stage == 9) {
           runfix = 70;
         }
-        if ((100 * racers[c].hitmag) / carStats.maxmag[cn] > runfix) {
+        if ((100 * racers[c].hitmag) / carStats.maxmag[type] > runfix) {
           ai[c].fixing = FIX.nearest;
         }
       }
@@ -2187,15 +2198,16 @@ function chooseWhetherToFix(cn, c) {
   }
 }
 
-function chooseWhetherToBully(c, cn) {
+function chooseWhetherToBully(c) {
+  const type = car[c].typ;
   if (!ai[c].bully) {
-    if (track.stage == 8 && cn == 14) {
+    if (track.stage == 8 && type == 14) {
       ai[c].bully = true;
     }
-    if (track.stage == 11 && cn == 16) {
+    if (track.stage == 11 && type == 16) {
       ai[c].bully = true;
     }
-    if (track.stage == 12 && cn == 16) {
+    if (track.stage == 12 && type == 16) {
       ai[c].bully = true;
     }
     if (
@@ -2207,10 +2219,10 @@ function chooseWhetherToBully(c, cn) {
       ai[c].oupnt = -1;
     }
     if (track.stage == 16) {
-      if (cn == 14 && track.clear[c] >= 1) {
+      if (type == 14 && track.clear[c] >= 1) {
         ai[c].bully = true;
       }
-      if (cn == 16) {
+      if (type == 16) {
         ai[c].bully = true;
       }
     }
@@ -2223,7 +2235,7 @@ function chooseWhetherToBully(c, cn) {
       track.stage != game.unlocked
     ) {
       if (
-        cn == 16 &&
+        type == 16 &&
         Math.abs(track.clear[game.player] - racers[c].clear) >= 2
       ) {
         ai[c].bully = true;
@@ -2233,7 +2245,8 @@ function chooseWhetherToBully(c, cn) {
   }
 }
 
-function chooseWhomToAttack(c, cn) {
+function chooseWhomToAttack(c) {
+  const type = car[c].typ;
   if (ai[c].attackTicks == 0) {
     let startsway = true;
     if (
@@ -2255,10 +2268,10 @@ function chooseWhomToAttack(c, cn) {
       startsway = false;
     }
     let onlyou = false;
-    if (track.stage == 3 && cn == 12) {
+    if (track.stage == 3 && type == 12) {
       onlyou = true;
     }
-    if (track.stage == 8 && cn == 14) {
+    if (track.stage == 8 && type == 14) {
       onlyou = true;
     }
     if (
@@ -2287,13 +2300,13 @@ function chooseWhomToAttack(c, cn) {
     if (track.stage == 5 && c != boss()) {
       powtoattack = 40;
     }
-    if ((track.stage == 2 || track.stage == 13) && cn == 16) {
+    if ((track.stage == 2 || track.stage == 13) && type == 16) {
       powtoattack = 50;
     }
     if (track.stage == 7) {
       powtoattack = 40;
     }
-    if (track.stage == 8 && cn == 14) {
+    if (track.stage == 8 && type == 14) {
       powtoattack = 40;
     }
     if (track.stage == 9 && onlyou) {
@@ -2309,13 +2322,13 @@ function chooseWhomToAttack(c, cn) {
       powtoattack = 40;
     }
     if (track.stage == 16) {
-      if (cn == 14) {
+      if (type == 14) {
         powtoattack = 40;
       }
-      if (cn == 16) {
+      if (type == 16) {
         powtoattack = 50;
       }
-      if (cn == 18 || cn == 12) {
+      if (type == 18 || type == 12) {
         powtoattack = 50;
       }
       if (track.pos[game.player] > track.pos[c]) {
@@ -2354,7 +2367,7 @@ function chooseWhomToAttack(c, cn) {
           vis = Math.abs(vis - 360);
         }
         let attackrad = 2000 * (Math.abs(track.clear[i] - racers[c].clear) + 1);
-        if (track.stage == 3 && cn == 12) {
+        if (track.stage == 3 && type == 12) {
           if (attackrad < 12000) {
             attackrad = 12000;
           }
@@ -2364,7 +2377,7 @@ function chooseWhomToAttack(c, cn) {
             attackrad = 4000;
           }
         }
-        if (track.stage == 8 && cn == 14) {
+        if (track.stage == 8 && type == 14) {
           if (attackrad < 12000) {
             attackrad = 12000;
           }
@@ -2403,15 +2416,15 @@ function chooseWhomToAttack(c, cn) {
           }
         }
         if (track.stage == 16) {
-          if (cn == 14) {
+          if (type == 14) {
             attackrad = 16000;
             vis = 10;
           }
-          if (cn == 16) {
+          if (type == 16) {
             attackrad = 6000;
             vis = 10;
           }
-          if (cn == 18 || cn == 12) {
+          if (type == 18 || type == 12) {
             attackrad *= Math.abs(track.clear[i] - racers[c].clear) + 1;
           }
         }
@@ -2428,7 +2441,7 @@ function chooseWhomToAttack(c, cn) {
           visan = 45;
         }
         if (track.stage == 16) {
-          if (cn == 18 || cn == 12 || cn == 17) {
+          if (type == 18 || type == 12 || type == 17) {
             visan = 50 + 70 * Math.abs(track.clear[i] - racers[c].clear);
           }
         }
@@ -2461,7 +2474,7 @@ function chooseWhomToAttack(c, cn) {
               atp = 0;
             }
             if (track.stage == 3) {
-              if (cn == 12 || (cn == 16 && ai[c].bully)) {
+              if (type == 12 || (type == 16 && ai[c].bully)) {
                 atp *= 2;
               } else {
                 atp *= 0.5;
@@ -2498,10 +2511,10 @@ function chooseWhomToAttack(c, cn) {
               }
             }
             if (track.stage == 12) {
-              if (cn != 14 && cn != 16) {
+              if (type != 14 && type != 16) {
                 atp = 0;
               }
-              if ((cn == 16 || cn == 14) && i == game.player) {
+              if ((type == 16 || type == 14) && i == game.player) {
                 atp = 1;
               }
             }
@@ -2520,7 +2533,7 @@ function chooseWhomToAttack(c, cn) {
               }
             }
             if (track.stage == 16) {
-              if (cn != 17) {
+              if (type != 17) {
                 if (track.pos[game.player] < track.pos[c]) {
                   if (track.clear[game.player] - track.clear[c] != 1) {
                     atp *= 2;
@@ -2529,7 +2542,11 @@ function chooseWhomToAttack(c, cn) {
               } else {
                 atp *= 0.5;
               }
-              if ((cn == 14 || cn == 16) && i == game.player && ai[c].bully) {
+              if (
+                (type == 14 || type == 16) &&
+                i == game.player &&
+                ai[c].bully
+              ) {
                 atp = 1;
               }
               if (
@@ -2544,7 +2561,7 @@ function chooseWhomToAttack(c, cn) {
               ) {
                 atp = 1;
               }
-              if (cn == 11 || cn == 13 || cn == 15) {
+              if (type == 11 || type == 13 || type == 15) {
                 atp = 0;
               }
             }
@@ -2562,7 +2579,7 @@ function chooseWhomToAttack(c, cn) {
             if (Math.abs(Math.abs(myxz - opxz) - 180) < 45) {
               atp = 1;
             }
-            if ((100 * racers[c].hitmag) / carStats.maxmag[cn] > 80) {
+            if ((100 * racers[c].hitmag) / carStats.maxmag[type] > 80) {
               atp = 0;
             }
           }
@@ -2573,7 +2590,7 @@ function chooseWhomToAttack(c, cn) {
               ai[c].attackTicks = 500;
             }
             ai[c].leadAhead = 0;
-            if (track.stage == 3 && cn == 12) {
+            if (track.stage == 3 && type == 12) {
               if (random.sim() > random.sim()) {
                 ai[c].leadAhead = 1;
               }
@@ -2598,7 +2615,7 @@ function chooseWhomToAttack(c, cn) {
                 }
               }
             }
-            if (track.stage == 8 && cn == 14) {
+            if (track.stage == 8 && type == 14) {
               if (random.sim() > random.sim()) {
                 ai[c].leadAhead = 0.76 + random.sim() * 0.76;
               }
@@ -2627,7 +2644,7 @@ function chooseWhomToAttack(c, cn) {
             if (track.stage == 12) {
               if (random.sim() > random.sim()) {
                 ai[c].leadAhead = 0.7;
-                if (cn == 14) {
+                if (type == 14) {
                   ai[c].leadAhead += 0.7;
                 }
               }
@@ -2652,11 +2669,11 @@ function chooseWhomToAttack(c, cn) {
               }
             }
             if (track.stage == 16) {
-              if (cn == 14) {
+              if (type == 14) {
                 ai[c].leadAhead = 0.2 + random.sim() * 0.8;
                 ai[c].attackTicks = 70;
               }
-              if (cn == 16) {
+              if (type == 16) {
                 if (random.sim() > random.sim()) {
                   ai[c].leadAhead = 0.7;
                 }
@@ -2664,11 +2681,11 @@ function chooseWhomToAttack(c, cn) {
                   ai[c].attackTicks = 150;
                 }
               }
-              if (cn == 18 || cn == 12 || cn == 17) {
+              if (type == 18 || type == 12 || type == 17) {
                 ai[c].leadAhead = random.sim() * 1.5;
                 if (
                   Math.abs(track.clear[i] - racers[c].clear) <= 2 ||
-                  cn == 17
+                  type == 17
                 ) {
                   ai[c].attackTicks = ai[c].attackTicks / 3;
                 }
