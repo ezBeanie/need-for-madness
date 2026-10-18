@@ -6,6 +6,7 @@
 // uses, or leave through return, break or continue.
 const { parse } = require("acorn");
 const walk = require("acorn-walk");
+const eslintScope = require("eslint-scope");
 const fs = require("fs");
 
 const [file, startArg, endArg, name] = process.argv.slice(2);
@@ -17,6 +18,7 @@ const ast = parse(src, {
   ecmaVersion: "latest",
   sourceType: "module",
   locations: true,
+  ranges: true,
 });
 
 const fail = (message) => {
@@ -65,6 +67,30 @@ const from = statements[0].start;
 const to = statements[statements.length - 1].end;
 const inside = (node) => node.start >= from && node.end <= to;
 
+// let/const variables declared in the lines and only used there move along as they are,
+// even when other blocks of the function have their own of the same name
+const movedAlong = new Set();
+for (const scope of eslintScope.analyze(ast, {
+  ecmaVersion: 2022,
+  sourceType: "module",
+}).scopes) {
+  for (const variable of scope.variables) {
+    const ids = [
+      ...variable.identifiers,
+      ...variable.references.map((r) => r.identifier),
+    ];
+    const blockScoped = variable.defs.every(
+      (d) => d.type === "Variable" && d.parent.kind !== "var",
+    );
+    if (
+      variable.defs.length &&
+      blockScoped &&
+      ids.every((id) => id.start >= from && id.end <= to)
+    )
+      ids.forEach((id) => movedAlong.add(id.start));
+  }
+}
+
 const isFunction = (n) =>
   n.type === "FunctionDeclaration" ||
   n.type === "FunctionExpression" ||
@@ -84,6 +110,7 @@ walk.ancestor(fn.body, {
   VariableDeclarator(n, _, ancestors) {
     // not those of functions nested in this one
     if (ancestors.slice(0, -1).some((a) => a !== fn && isFunction(a))) return;
+    if (n.id.type === "Identifier" && movedAlong.has(n.id.start)) return;
     declare(n.id, inside(n));
   },
 });
@@ -91,7 +118,7 @@ walk.ancestor(fn.body, {
 // identifiers used as variables (not property names), with their ancestors
 const uses = [];
 walk.fullAncestor(fn.body, (node, _, ancestors) => {
-  if (node.type !== "Identifier") return;
+  if (node.type !== "Identifier" || movedAlong.has(node.start)) return;
   const parent = ancestors[ancestors.length - 2];
   if (
     parent?.type === "MemberExpression" &&
@@ -241,9 +268,17 @@ if (leaking.length) fail(`declared inside, used after: ${leaking.join(", ")}`);
 const assigned = new Set();
 for (const s of statements) {
   walk.full(s, (n) => {
-    if (n.type === "AssignmentExpression" && n.left.type === "Identifier")
+    if (
+      n.type === "AssignmentExpression" &&
+      n.left.type === "Identifier" &&
+      !movedAlong.has(n.left.start)
+    )
       assigned.add(n.left.name);
-    if (n.type === "UpdateExpression" && n.argument.type === "Identifier")
+    if (
+      n.type === "UpdateExpression" &&
+      n.argument.type === "Identifier" &&
+      !movedAlong.has(n.argument.start)
+    )
       assigned.add(n.argument.name);
   });
 }
