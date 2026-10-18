@@ -4,7 +4,7 @@ import { cosDeg, distanceSquaredXZ, distanceXZ, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
 import { MAX_CARS, MODE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
-import { carStats } from "../data/carStats.js";
+import { CAR, carStats } from "../data/carStats.js";
 import { car, racers } from "./racers.js";
 import { pieceModels, pieces, track } from "./track.js";
 
@@ -274,7 +274,7 @@ export function control() {
               powbul = 40;
             }
             if (track.stage == 16) {
-              if (type == 14 || type == 16) {
+              if (type == CAR.elKing || type == CAR.masheen) {
                 powbul = 0;
               }
             }
@@ -326,7 +326,7 @@ function headForFix(c, point) {
         let firstFix = 0;
         if (
           track.stage == 9 &&
-          car[game.player].typ == 14 &&
+          car[game.player].typ == CAR.elKing &&
           track.clear[c] - track.clear[game.player] >= 4
         ) {
           firstFix = 1;
@@ -652,7 +652,7 @@ function takeOff(c) {
     ai[c].rollReverses = false;
     ai[c].stuntPhase = STUNT.flipping;
     chooseFlipsAndRolls(lift, c);
-    if (track.stage == 16 && type == 16) {
+    if (track.stage == 16 && type == CAR.masheen) {
       ai[c].roll = -1;
       ai[c].rollAfter = 0;
       ai[c].flip = -1;
@@ -1219,7 +1219,7 @@ function routeOnStage14(c, pnt, type) {
     if (racers[c].pcleared == 47 && pnt > 58 && ai[c].oupnt == 0) {
       ai[c].oupnt = 1;
     }
-    if (type != 17 || ai[c].attackedCar == 0) {
+    if (type != CAR.radicalOne || ai[c].attackedCar == 0) {
       while (track.typ[pnt] == -1) {
         pnt++;
         if (pnt >= track.n) {
@@ -1607,16 +1607,16 @@ function bullyOnStage15(c, pnt) {
 }
 
 function bullyOnStage16(type, c, pnt) {
-  if (type == 14) {
-    pnt = bullyAsType14OnStage16(c, pnt);
+  if (type == CAR.elKing) {
+    pnt = bullyAsElKingOnStage16(c, pnt);
   }
-  if (type == 16) {
-    pnt = bullyAsType16OnStage16(c, pnt);
+  if (type == CAR.masheen) {
+    pnt = bullyAsMasheenOnStage16(c, pnt);
   }
   return pnt;
 }
 
-function bullyAsType14OnStage16(c, pnt) {
+function bullyAsElKingOnStage16(c, pnt) {
   if (racers[c].power > 60) {
     var i = racers[game.player].pcleared;
     let found = -1;
@@ -1678,7 +1678,7 @@ function bullyAsType14OnStage16(c, pnt) {
   return pnt;
 }
 
-function bullyAsType16OnStage16(c, pnt) {
+function bullyAsMasheenOnStage16(c, pnt) {
   if (!ai[c].goingToWait) {
     if (
       racers[game.player].pcleared == 152 ||
@@ -1855,7 +1855,7 @@ function chooseHoldBack(c) {
   if (track.stage == 2) {
     holdBackScale = 1.5;
   }
-  if (track.stage == 3 && type != 12) {
+  if (track.stage == 3 && type != CAR.swordOfJustice) {
     holdBackScale = 0.5;
   }
   if (track.stage == 4) {
@@ -1920,7 +1920,7 @@ function chooseCornerCutting(c) {
   }
   if (track.stage == 14) {
     ai[c].cornerCutting = 1;
-    if (type == 17) {
+    if (type == CAR.radicalOne) {
       if (random.sim() > 0.8) {
         ai[c].attackedCar = 1;
       } else {
@@ -1980,7 +1980,7 @@ function chooseTurnStyle(c) {
   if (ai[c].turnStyleTicks == 0) {
     ai[c].gasInTurns = false;
     ai[c].sharpTurn = Math.floor(random.sim() * 4);
-    if (track.stage == 3 && type == 12) {
+    if (track.stage == 3 && type == CAR.swordOfJustice) {
       ai[c].sharpTurn = SHARP_TURN.brake;
       if (ai[c].attackTicks == 0) {
         ai[c].gasInTurns = true;
@@ -2035,7 +2035,7 @@ function chooseTurnStyle(c) {
         }
       }
       if (track.stage == 16) {
-        if (type == 14) {
+        if (type == CAR.elKing) {
           ai[c].sharpTurn = SHARP_TURN.steer;
         }
       }
@@ -2098,7 +2098,7 @@ function chooseLandingCare(c) {
     ai[c].landingSloppiness -= 0.5;
   }
   if (track.stage == 6) {
-    if (type == 13) {
+    if (type == CAR.highRider) {
       ai[c].landingSloppiness = 0;
     }
   }
@@ -2130,11 +2130,11 @@ function chooseStuntPlan(c) {
   if (track.stage == 11 && racers[c].pcleared == 18) {
     ai[c].stuntf = 2;
   }
-  if (track.stage == 11 && type == 16) {
+  if (track.stage == 11 && type == CAR.masheen) {
     ai[c].stuntf = 3;
   }
   if (track.stage == 14) {
-    if (type == 17) {
+    if (type == CAR.radicalOne) {
       ai[c].stuntf = 4;
       ai[c].landingMargin = 20;
     } else {
@@ -2172,12 +2172,12 @@ function chooseStuntCaution(c) {
   if (racers[c].power < 60) {
     ai[c].stuntCaution = -1;
   }
-  if (track.stage == 3 && type == 12) {
+  if (track.stage == 3 && type == CAR.swordOfJustice) {
     if (ai[c].stuntCaution > 0.7) {
       ai[c].stuntCaution = 0.7;
     }
   }
-  if (track.stage == 6 && type != 13) {
+  if (track.stage == 6 && type != CAR.highRider) {
     if (ai[c].stuntCaution > 0.3) {
       ai[c].stuntCaution = 0.3;
     }
@@ -2218,7 +2218,7 @@ function chooseLandingHabits(c) {
     ai[c].groundByWheels = true;
   }
   if (track.stage == 6) {
-    if (type == 13) {
+    if (type == CAR.highRider) {
       ai[c].groundByWheels = false;
     } else {
       ai[c].groundByWheels = true;
@@ -2235,7 +2235,7 @@ function chooseLandingHabits(c) {
   if ((100 * racers[c].hitmag) / carStats.maxmag[type] > 60) {
     ai[c].landsPerfectly = true;
   }
-  if (track.stage == 3 && type == 12) {
+  if (track.stage == 3 && type == CAR.swordOfJustice) {
     ai[c].landsPerfectly = true;
   }
   if (
@@ -2250,7 +2250,7 @@ function chooseLandingHabits(c) {
   ) {
     ai[c].landsPerfectly = true;
   }
-  if (track.stage == 15 && type == 18) {
+  if (track.stage == 15 && type == CAR.drMonstaa) {
     ai[c].landsPerfectly = true;
   }
 }
@@ -2266,7 +2266,7 @@ function chooseWhetherToFix(c) {
   ) {
     norunfix = true;
   }
-  if (track.stage == 8 && type != 14) {
+  if (track.stage == 8 && type != CAR.elKing) {
     norunfix = true;
   }
   if (track.stage == 15 && !ai[c].bully) {
@@ -2306,13 +2306,13 @@ function chooseWhetherToFix(c) {
 function chooseWhetherToBully(c) {
   const type = car[c].typ;
   if (!ai[c].bully) {
-    if (track.stage == 8 && type == 14) {
+    if (track.stage == 8 && type == CAR.elKing) {
       ai[c].bully = true;
     }
-    if (track.stage == 11 && type == 16) {
+    if (track.stage == 11 && type == CAR.masheen) {
       ai[c].bully = true;
     }
-    if (track.stage == 12 && type == 16) {
+    if (track.stage == 12 && type == CAR.masheen) {
       ai[c].bully = true;
     }
     if (
@@ -2324,10 +2324,10 @@ function chooseWhetherToBully(c) {
       ai[c].oupnt = -1;
     }
     if (track.stage == 16) {
-      if (type == 14 && track.clear[c] >= 1) {
+      if (type == CAR.elKing && track.clear[c] >= 1) {
         ai[c].bully = true;
       }
-      if (type == 16) {
+      if (type == CAR.masheen) {
         ai[c].bully = true;
       }
     }
@@ -2340,7 +2340,7 @@ function chooseWhetherToBully(c) {
       track.stage != game.unlocked
     ) {
       if (
-        type == 16 &&
+        type == CAR.masheen &&
         Math.abs(track.clear[game.player] - racers[c].clear) >= 2
       ) {
         ai[c].bully = true;
@@ -2409,7 +2409,7 @@ function considerAttacking(
     angleOff = Math.abs(angleOff - 360);
   }
   let attackRange = 2000 * (Math.abs(track.clear[other] - racers[c].clear) + 1);
-  if (track.stage == 3 && type == 12) {
+  if (track.stage == 3 && type == CAR.swordOfJustice) {
     if (attackRange < 12000) {
       attackRange = 12000;
     }
@@ -2419,7 +2419,7 @@ function considerAttacking(
       attackRange = 4000;
     }
   }
-  if (track.stage == 8 && type == 14) {
+  if (track.stage == 8 && type == CAR.elKing) {
     if (attackRange < 12000) {
       attackRange = 12000;
     }
@@ -2458,15 +2458,15 @@ function considerAttacking(
     }
   }
   if (track.stage == 16) {
-    if (type == 14) {
+    if (type == CAR.elKing) {
       attackRange = 16000;
       angleOff = 10;
     }
-    if (type == 16) {
+    if (type == CAR.masheen) {
       attackRange = 6000;
       angleOff = 10;
     }
-    if (type == 18 || type == 12) {
+    if (type == CAR.drMonstaa || type == CAR.swordOfJustice) {
       attackRange *= Math.abs(track.clear[other] - racers[c].clear) + 1;
     }
   }
@@ -2533,10 +2533,10 @@ function swervesFromCars(c) {
 
 function attacksOnlyThePlayer(type) {
   let onlyPlayer = false;
-  if (track.stage == 3 && type == 12) {
+  if (track.stage == 3 && type == CAR.swordOfJustice) {
     onlyPlayer = true;
   }
-  if (track.stage == 8 && type == 14) {
+  if (track.stage == 8 && type == CAR.elKing) {
     onlyPlayer = true;
   }
   if (
@@ -2569,13 +2569,13 @@ function powerNeededToAttack(c, type, onlyPlayer) {
   if (track.stage == 5 && c != boss()) {
     power = 40;
   }
-  if ((track.stage == 2 || track.stage == 13) && type == 16) {
+  if ((track.stage == 2 || track.stage == 13) && type == CAR.masheen) {
     power = 50;
   }
   if (track.stage == 7) {
     power = 40;
   }
-  if (track.stage == 8 && type == 14) {
+  if (track.stage == 8 && type == CAR.elKing) {
     power = 40;
   }
   if (track.stage == 9 && onlyPlayer) {
@@ -2591,13 +2591,13 @@ function powerNeededToAttack(c, type, onlyPlayer) {
     power = 40;
   }
   if (track.stage == 16) {
-    if (type == 14) {
+    if (type == CAR.elKing) {
       power = 40;
     }
-    if (type == 16) {
+    if (type == CAR.masheen) {
       power = 50;
     }
-    if (type == 18 || type == 12) {
+    if (type == CAR.drMonstaa || type == CAR.swordOfJustice) {
       power = 50;
     }
     if (track.pos[game.player] > track.pos[c]) {
@@ -2611,7 +2611,7 @@ function sightAngle(onlyPlayer, c, type, other) {
   let sight = 85 + 15 * (Math.abs(track.clear[other] - racers[c].clear) + 1);
   if (track.stage == 9 && !onlyPlayer) {
     if (
-      car[game.player].typ != 14 ||
+      car[game.player].typ != CAR.elKing ||
       track.clear[c] - track.clear[game.player] < 8
     ) {
       sight = 45;
@@ -2621,7 +2621,11 @@ function sightAngle(onlyPlayer, c, type, other) {
     sight = 45;
   }
   if (track.stage == 16) {
-    if (type == 18 || type == 12 || type == 17) {
+    if (
+      type == CAR.drMonstaa ||
+      type == CAR.swordOfJustice ||
+      type == CAR.radicalOne
+    ) {
       sight = 50 + 70 * Math.abs(track.clear[other] - racers[c].clear);
     }
   }
@@ -2642,7 +2646,7 @@ function attackChance(chance, other, c, onlyPlayer, type, heading) {
       chance = 0;
     }
     if (track.stage == 3) {
-      if (type == 12 || (type == 16 && ai[c].bully)) {
+      if (type == CAR.swordOfJustice || (type == CAR.masheen && ai[c].bully)) {
         chance *= 2;
       } else {
         chance *= 0.5;
@@ -2679,10 +2683,10 @@ function attackChance(chance, other, c, onlyPlayer, type, heading) {
       }
     }
     if (track.stage == 12) {
-      if (type != 14 && type != 16) {
+      if (type != CAR.elKing && type != CAR.masheen) {
         chance = 0;
       }
-      if ((type == 16 || type == 14) && other == game.player) {
+      if ((type == CAR.masheen || type == CAR.elKing) && other == game.player) {
         chance = 1;
       }
     }
@@ -2701,7 +2705,7 @@ function attackChance(chance, other, c, onlyPlayer, type, heading) {
       }
     }
     if (track.stage == 16) {
-      if (type != 17) {
+      if (type != CAR.radicalOne) {
         if (track.pos[game.player] < track.pos[c]) {
           if (track.clear[game.player] - track.clear[c] != 1) {
             chance *= 2;
@@ -2710,7 +2714,11 @@ function attackChance(chance, other, c, onlyPlayer, type, heading) {
       } else {
         chance *= 0.5;
       }
-      if ((type == 14 || type == 16) && other == game.player && ai[c].bully) {
+      if (
+        (type == CAR.elKing || type == CAR.masheen) &&
+        other == game.player &&
+        ai[c].bully
+      ) {
         chance = 1;
       }
       if (
@@ -2725,7 +2733,11 @@ function attackChance(chance, other, c, onlyPlayer, type, heading) {
       ) {
         chance = 1;
       }
-      if (type == 11 || type == 13 || type == 15) {
+      if (
+        type == CAR.shadowRider ||
+        type == CAR.highRider ||
+        type == CAR.mightyEight
+      ) {
         chance = 0;
       }
     }
@@ -2756,7 +2768,7 @@ function startAttack(c, other, type, onlyPlayer) {
     ai[c].attackTicks = 500;
   }
   ai[c].leadAhead = 0;
-  if (track.stage == 3 && type == 12) {
+  if (track.stage == 3 && type == CAR.swordOfJustice) {
     if (random.sim() > random.sim()) {
       ai[c].leadAhead = 1;
     }
@@ -2781,7 +2793,7 @@ function startAttack(c, other, type, onlyPlayer) {
       }
     }
   }
-  if (track.stage == 8 && type == 14) {
+  if (track.stage == 8 && type == CAR.elKing) {
     if (random.sim() > random.sim()) {
       ai[c].leadAhead = 0.76 + random.sim() * 0.76;
     }
@@ -2789,7 +2801,7 @@ function startAttack(c, other, type, onlyPlayer) {
   if (track.stage == 9) {
     ai[c].leadAhead = 1;
     if (
-      car[game.player].typ != 14 ||
+      car[game.player].typ != CAR.elKing ||
       track.clear[c] - track.clear[game.player] < 8
     ) {
       if (ai[c].attackTicks > 150 && !onlyPlayer) {
@@ -2810,7 +2822,7 @@ function startAttack(c, other, type, onlyPlayer) {
   if (track.stage == 12) {
     if (random.sim() > random.sim()) {
       ai[c].leadAhead = 0.7;
-      if (type == 14) {
+      if (type == CAR.elKing) {
         ai[c].leadAhead += 0.7;
       }
     }
@@ -2835,11 +2847,11 @@ function startAttack(c, other, type, onlyPlayer) {
     }
   }
   if (track.stage == 16) {
-    if (type == 14) {
+    if (type == CAR.elKing) {
       ai[c].leadAhead = 0.2 + random.sim() * 0.8;
       ai[c].attackTicks = 70;
     }
-    if (type == 16) {
+    if (type == CAR.masheen) {
       if (random.sim() > random.sim()) {
         ai[c].leadAhead = 0.7;
       }
@@ -2847,9 +2859,16 @@ function startAttack(c, other, type, onlyPlayer) {
         ai[c].attackTicks = 150;
       }
     }
-    if (type == 18 || type == 12 || type == 17) {
+    if (
+      type == CAR.drMonstaa ||
+      type == CAR.swordOfJustice ||
+      type == CAR.radicalOne
+    ) {
       ai[c].leadAhead = random.sim() * 1.5;
-      if (Math.abs(track.clear[other] - racers[c].clear) <= 2 || type == 17) {
+      if (
+        Math.abs(track.clear[other] - racers[c].clear) <= 2 ||
+        type == CAR.radicalOne
+      ) {
         ai[c].attackTicks = ai[c].attackTicks / 3;
       }
     }

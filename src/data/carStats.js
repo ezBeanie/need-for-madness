@@ -61,3 +61,26 @@ class CarDefine {
 }
 
 export const carStats = new CarDefine();
+
+// car types, in the order of cars.json
+export const CAR = {
+  tornadoShark: 0,
+  formula7: 1,
+  wowCaninaro: 2,
+  laVitaCrab: 3,
+  nimi: 4,
+  maxRevenge: 5,
+  leadOxide: 6,
+  tragdor: 7,
+  koolKat: 8,
+  iceCream: 9,
+  drifterX: 10,
+  shadowRider: 11,
+  swordOfJustice: 12,
+  highRider: 13,
+  elKing: 14,
+  mightyEight: 15,
+  masheen: 16,
+  radicalOne: 17,
+  drMonstaa: 18,
+};

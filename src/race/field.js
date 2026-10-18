@@ -3,7 +3,7 @@
 import { random } from "../core/random.js";
 import { MAX_CARS, RACE_SIZES, game } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
-import { carStats } from "../data/carStats.js";
+import { CAR, carStats } from "../data/carStats.js";
 import { raceCarTextures } from "../render/generated.js";
 import { resetHud } from "../ui/hud.js";
 import { inishcontrol } from "./ai.js";
@@ -98,7 +98,7 @@ const NEW_STAGE_RULES = {
   12: (type) => type > 4,
   13: (type) => {
     let allowed = type > 4;
-    if ((type == 14 || type == 16) && coinFlip()) {
+    if ((type == CAR.elKing || type == CAR.masheen) && coinFlip()) {
       allowed = false;
     }
     return allowed;
