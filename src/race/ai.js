@@ -1297,7 +1297,7 @@ function routeOnStage16(c, pnt) {
       ) <
         1000 + ai[c].avoidPlayerRange
     ) {
-      var myxz = car[c].xz;
+      let myxz = car[c].xz;
       if (racers[c].u.zyinv) {
         myxz += 180;
       }
@@ -1307,11 +1307,11 @@ function routeOnStage16(c, pnt) {
       while (myxz > 180) {
         myxz -= 360;
       }
-      var ad = 0;
+      let ad = 0;
       if (car[game.player].x - car[c].x >= 0) {
         ad = 180;
       }
-      var pnxz = Math.floor(
+      let pnxz = Math.floor(
         90 +
           ad +
           Math.atan(
@@ -1325,7 +1325,7 @@ function routeOnStage16(c, pnt) {
       while (pnxz > 180) {
         pnxz -= 360;
       }
-      var vis = Math.abs(myxz - pnxz);
+      let vis = Math.abs(myxz - pnxz);
       if (vis > 180) {
         vis = Math.abs(vis - 360);
       }
@@ -1342,7 +1342,7 @@ function nearlyWastedInSwitchMode(c, type) {
     game.mode == MODE.switchCars &&
     (100 * racers[c].hitmag) / carStats.maxmag[type] > 85
   ) {
-    var myxz = car[c].xz;
+    let myxz = car[c].xz;
     if (racers[c].u.zyinv) {
       myxz += 180;
     }
@@ -1352,7 +1352,7 @@ function nearlyWastedInSwitchMode(c, type) {
     while (myxz > 180) {
       myxz -= 360;
     }
-    for (var i = 0; i < game.carCount; i++) {
+    for (let i = 0; i < game.carCount; i++) {
       if (i != c && track.clear[i] != -1) {
         if (
           distanceSquaredXZ(
@@ -1363,11 +1363,11 @@ function nearlyWastedInSwitchMode(c, type) {
           ) <
           1000 + ai[c].avoidPlayerRange
         ) {
-          var ad = 0;
+          let ad = 0;
           if (car[i].x - car[c].x >= 0) {
             ad = 180;
           }
-          var pnxz = Math.floor(
+          let pnxz = Math.floor(
             90 +
               ad +
               Math.atan((car[i].z - car[c].z) / (car[i].x - car[c].x)) /
@@ -1379,7 +1379,7 @@ function nearlyWastedInSwitchMode(c, type) {
           while (pnxz > 180) {
             pnxz -= 360;
           }
-          var vis = Math.abs(myxz - pnxz);
+          let vis = Math.abs(myxz - pnxz);
           if (vis > 180) {
             vis = Math.abs(vis - 360);
           }
@@ -1416,16 +1416,7 @@ function stayBeforeRamp(c, pnt) {
 
 function bullyPathPoint(c, pnt, type) {
   if (track.stage != 15 || ai[c].runbul == 0) {
-    pnt -= 2;
-    if (pnt < 0) {
-      pnt += track.n;
-    }
-    while (track.typ[pnt] == -4) {
-      pnt--;
-      if (pnt < 0) {
-        pnt += track.n;
-      }
-    }
+    pnt = pathPointBehind(pnt);
   }
   if (track.stage == 11) {
     if (pnt < 38 && pnt > 25) {
@@ -1433,346 +1424,384 @@ function bullyPathPoint(c, pnt, type) {
     }
   }
   if (track.stage == 12) {
-    if (!ai[c].goingToWait) {
-      if (track.clear[game.player] == 0) {
-        ai[c].waitX = 350;
-        ai[c].waitZ = 1900;
-        ai[c].ambushX = 350;
-        ai[c].ambushZ = 3900;
-        ai[c].ambushRadius = 12000;
-        ai[c].oupnt = 37;
-        ai[c].goingToWait = true;
-        ai[c].afta = false;
-      }
-      if (track.clear[game.player] == 7) {
-        ai[c].waitX = 4480;
-        ai[c].waitZ = 4032;
-        ai[c].ambushX = 4480;
-        ai[c].ambushZ = 3472;
-        ai[c].ambushRadius = 30000;
-        ai[c].oupnt = 27;
-        ai[c].goingToWait = true;
-        ai[c].afta = false;
-      }
-      if (track.clear[game.player] == 10) {
-        ai[c].waitX = 0;
-        ai[c].waitZ = 4873.9;
-        ai[c].ambushX = 0;
-        ai[c].ambushZ = 3858.9;
-        ai[c].ambushRadius = 90000;
-        ai[c].oupnt = 55;
-        ai[c].goingToWait = true;
-        ai[c].afta = false;
-      }
-      if (track.clear[game.player] == 14) {
-        ai[c].waitX = 350;
-        ai[c].waitZ = 1900;
-        ai[c].ambushX = 1470;
-        ai[c].ambushZ = 3900;
-        ai[c].ambushRadius = 45000;
-        ai[c].oupnt = 37;
-        ai[c].goingToWait = true;
-        ai[c].afta = false;
-      }
-      if (track.clear[game.player] == 18) {
-        ai[c].waitX = 4830;
-        ai[c].waitZ = -455;
-        ai[c].ambushX = 4830;
-        ai[c].ambushZ = 560;
-        ai[c].ambushRadius = 90000;
-        ai[c].oupnt = 17;
-        ai[c].goingToWait = true;
-        ai[c].afta = false;
-      }
-    }
-    if (ai[c].goingToWait) {
-      if (
-        distanceSquaredXZ(
-          car[c].x / 10,
-          ai[c].waitX / 10,
-          car[c].z / 10,
-          ai[c].waitZ / 10,
-        ) < 10000
-      ) {
-        if (racers[c].speed > 5) {
-          racers[c].u.up = false;
-        }
-      }
-      if (
-        distanceSquaredXZ(
-          car[c].x / 10,
-          ai[c].waitX / 10,
-          car[c].z / 10,
-          ai[c].waitZ / 10,
-        ) < 200
-      ) {
-        racers[c].u.up = false;
-        racers[c].u.handb = true;
-      }
-      if (
-        racers[game.player].pcleared == ai[c].oupnt &&
-        distanceSquaredXZ(
-          car[game.player].x / 10,
-          ai[c].ambushX / 10,
-          car[game.player].z / 10,
-          ai[c].ambushZ / 10,
-        ) < ai[c].ambushRadius
-      ) {
-        ai[c].afta = true;
-        ai[c].goingToWait = false;
-      }
-      if (
-        distanceSquaredXZ(
-          car[c].x / 10,
-          car[game.player].x / 10,
-          car[c].z / 10,
-          car[game.player].z / 10,
-        ) < 25
-      ) {
-        ai[c].afta = true;
-        ai[c].goingToWait = false;
-        ai[c].attackTicks = 200;
-        ai[c].attackedCar = 0;
-      }
-    }
+    bullyOnStage12(c);
   }
   if (track.stage == 15) {
-    if (ai[c].oupnt == -1) {
-      var pyclos = -10;
-      for (var i = 0; i < track.n; i++) {
-        if (track.typ[i] == RAMP_POINT && i < 71) {
-          if (
-            distanceSquaredXZ(
-              car[c].x / 10,
-              track.x[i] / 10,
-              car[c].z / 10,
-              track.z[i] / 10,
-            ) < pyclos ||
-            pyclos == -10
-          ) {
-            pyclos = distanceSquaredXZ(
-              car[c].x / 10,
-              track.x[i] / 10,
-              car[c].z / 10,
-              track.z[i] / 10,
-            );
-            ai[c].oupnt = i;
-          }
-        }
-      }
-      ai[c].oupnt--;
-      if (ai[c].oupnt < 0) {
-        ai[c].oupnt += track.n;
+    pnt = bullyOnStage15(c, pnt);
+  }
+  if (track.stage == 16) {
+    pnt = bullyOnStage16(type, c, pnt);
+  }
+  return pnt;
+}
+
+function pathPointBehind(pnt) {
+  pnt -= 2;
+  if (pnt < 0) {
+    pnt += track.n;
+  }
+  while (track.typ[pnt] == -4) {
+    pnt--;
+    if (pnt < 0) {
+      pnt += track.n;
+    }
+  }
+  return pnt;
+}
+
+function bullyOnStage12(c) {
+  if (!ai[c].goingToWait) {
+    if (track.clear[game.player] == 0) {
+      ai[c].waitX = 350;
+      ai[c].waitZ = 1900;
+      ai[c].ambushX = 350;
+      ai[c].ambushZ = 3900;
+      ai[c].ambushRadius = 12000;
+      ai[c].oupnt = 37;
+      ai[c].goingToWait = true;
+      ai[c].afta = false;
+    }
+    if (track.clear[game.player] == 7) {
+      ai[c].waitX = 4480;
+      ai[c].waitZ = 4032;
+      ai[c].ambushX = 4480;
+      ai[c].ambushZ = 3472;
+      ai[c].ambushRadius = 30000;
+      ai[c].oupnt = 27;
+      ai[c].goingToWait = true;
+      ai[c].afta = false;
+    }
+    if (track.clear[game.player] == 10) {
+      ai[c].waitX = 0;
+      ai[c].waitZ = 4873.9;
+      ai[c].ambushX = 0;
+      ai[c].ambushZ = 3858.9;
+      ai[c].ambushRadius = 90000;
+      ai[c].oupnt = 55;
+      ai[c].goingToWait = true;
+      ai[c].afta = false;
+    }
+    if (track.clear[game.player] == 14) {
+      ai[c].waitX = 350;
+      ai[c].waitZ = 1900;
+      ai[c].ambushX = 1470;
+      ai[c].ambushZ = 3900;
+      ai[c].ambushRadius = 45000;
+      ai[c].oupnt = 37;
+      ai[c].goingToWait = true;
+      ai[c].afta = false;
+    }
+    if (track.clear[game.player] == 18) {
+      ai[c].waitX = 4830;
+      ai[c].waitZ = -455;
+      ai[c].ambushX = 4830;
+      ai[c].ambushZ = 560;
+      ai[c].ambushRadius = 90000;
+      ai[c].oupnt = 17;
+      ai[c].goingToWait = true;
+      ai[c].afta = false;
+    }
+  }
+  if (ai[c].goingToWait) {
+    if (
+      distanceSquaredXZ(
+        car[c].x / 10,
+        ai[c].waitX / 10,
+        car[c].z / 10,
+        ai[c].waitZ / 10,
+      ) < 10000
+    ) {
+      if (racers[c].speed > 5) {
+        racers[c].u.up = false;
       }
     }
-    if (ai[c].oupnt >= 0 && ai[c].oupnt < track.n) {
-      pnt = ai[c].oupnt;
+    if (
+      distanceSquaredXZ(
+        car[c].x / 10,
+        ai[c].waitX / 10,
+        car[c].z / 10,
+        ai[c].waitZ / 10,
+      ) < 200
+    ) {
+      racers[c].u.up = false;
+      racers[c].u.handb = true;
+    }
+    if (
+      racers[game.player].pcleared == ai[c].oupnt &&
+      distanceSquaredXZ(
+        car[game.player].x / 10,
+        ai[c].ambushX / 10,
+        car[game.player].z / 10,
+        ai[c].ambushZ / 10,
+      ) < ai[c].ambushRadius
+    ) {
+      ai[c].afta = true;
+      ai[c].goingToWait = false;
+    }
+    if (
+      distanceSquaredXZ(
+        car[c].x / 10,
+        car[game.player].x / 10,
+        car[c].z / 10,
+        car[game.player].z / 10,
+      ) < 25
+    ) {
+      ai[c].afta = true;
+      ai[c].goingToWait = false;
+      ai[c].attackTicks = 200;
+      ai[c].attackedCar = 0;
+    }
+  }
+}
+
+function bullyOnStage15(c, pnt) {
+  if (ai[c].oupnt == -1) {
+    let pyclos = -10;
+    for (let i = 0; i < track.n; i++) {
+      if (track.typ[i] == RAMP_POINT && i < 71) {
+        if (
+          distanceSquaredXZ(
+            car[c].x / 10,
+            track.x[i] / 10,
+            car[c].z / 10,
+            track.z[i] / 10,
+          ) < pyclos ||
+          pyclos == -10
+        ) {
+          pyclos = distanceSquaredXZ(
+            car[c].x / 10,
+            track.x[i] / 10,
+            car[c].z / 10,
+            track.z[i] / 10,
+          );
+          ai[c].oupnt = i;
+        }
+      }
+    }
+    ai[c].oupnt--;
+    if (ai[c].oupnt < 0) {
+      ai[c].oupnt += track.n;
+    }
+  }
+  if (ai[c].oupnt >= 0 && ai[c].oupnt < track.n) {
+    pnt = ai[c].oupnt;
+    if (
+      distanceSquaredXZ(
+        car[c].x / 10,
+        track.x[pnt] / 10,
+        car[c].z / 10,
+        track.z[pnt] / 10,
+      ) < 800
+    ) {
+      ai[c].oupnt = -Math.floor(75 + random.sim() * 200);
+      ai[c].runbul = Math.floor(50 + random.sim() * 100);
+    }
+  }
+  if (ai[c].oupnt < -1) {
+    ai[c].oupnt++;
+  }
+  if (ai[c].runbul != 0) {
+    ai[c].runbul--;
+  }
+  return pnt;
+}
+
+function bullyOnStage16(type, c, pnt) {
+  if (type == 14) {
+    pnt = bullyAsType14OnStage16(c, pnt);
+  }
+  if (type == 16) {
+    pnt = bullyAsType16OnStage16(c, pnt);
+  }
+  return pnt;
+}
+
+function bullyAsType14OnStage16(c, pnt) {
+  if (racers[c].power > 60) {
+    var i = racers[game.player].pcleared;
+    let found = -1;
+    while (found == -1) {
+      i++;
+      if (i >= track.n) {
+        i -= track.n;
+        found = 152;
+      }
+      if (track.typ[i] == 1 || track.typ[i] == 2) {
+        found = i;
+      }
+    }
+    if (found == 129) {
+      found = 152;
+    }
+    if (
+      distanceSquaredXZ(
+        car[c].x / 10,
+        track.x[found] / 10,
+        car[c].z / 10,
+        track.z[found] / 10,
+      ) < 1000
+    ) {
+      ai[c].attackedCar = 0;
+      ai[c].leadAhead = 1;
+      ai[c].attackTicks = 100;
+    }
+    pnt = found;
+  } else {
+    let pyclos = -10;
+    for (var i = 0; i < track.n; i++) {
+      if (
+        pieces.list[track.obi[i]].typ == 24 ||
+        pieces.list[track.obi[i]].typ == 25 ||
+        pieces.list[track.obi[i]].typ == 43 ||
+        pieces.list[track.obi[i]].typ == 45
+      ) {
+        if (
+          distanceSquaredXZ(
+            car[c].x / 10,
+            track.x[i] / 10,
+            car[c].z / 10,
+            track.z[i] / 10,
+          ) < pyclos ||
+          pyclos == -10
+        ) {
+          pyclos = distanceSquaredXZ(
+            car[c].x / 10,
+            track.x[i] / 10,
+            car[c].z / 10,
+            track.z[i] / 10,
+          );
+          pnt = i;
+        }
+      }
+    }
+  }
+  return pnt;
+}
+
+function bullyAsType16OnStage16(c, pnt) {
+  if (!ai[c].goingToWait) {
+    if (
+      racers[game.player].pcleared == 152 ||
+      racers[game.player].pcleared == 10 ||
+      racers[game.player].pcleared == 20
+    ) {
+      ai[c].waitX = 820;
+      ai[c].waitZ = 120;
+      ai[c].ambushX = 1364;
+      ai[c].ambushZ = 218;
+      ai[c].ambushRadius = 50000;
+      ai[c].oupnt = 35;
+      ai[c].goingToWait = true;
+      ai[c].afta = false;
+      ai[c].runbul = 1;
+    }
+    if (
+      racers[game.player].pcleared == 45 ||
+      racers[game.player].pcleared == 55
+    ) {
+      if (racers[c].power > 60) {
+        ai[c].waitX = 3000;
+        ai[c].waitZ = 1600;
+        ai[c].ambushX = 4206;
+        ai[c].ambushZ = 1365;
+        ai[c].ambushRadius = 30000;
+        ai[c].oupnt = 64;
+        ai[c].goingToWait = true;
+        ai[c].afta = false;
+        ai[c].runbul = 1;
+      } else {
+        pnt = 73;
+      }
+    }
+    if (
+      racers[game.player].pcleared == 92 ||
+      racers[game.player].pcleared == 103
+    ) {
+      if (racers[c].power > 60) {
+        ai[c].waitX = 6408.2;
+        ai[c].waitZ = 1571.4;
+        ai[c].ambushX = 6184;
+        ai[c].ambushZ = 780;
+        ai[c].ambushRadius = 90000;
+        ai[c].oupnt = 112;
+        ai[c].goingToWait = true;
+        ai[c].afta = false;
+        ai[c].runbul = 0;
+      } else {
+        pnt = 73;
+      }
+    }
+    if (racers[game.player].pcleared == 112 && ai[c].oupnt == 112) {
+      ai[c].ticksSinceRethink = 0;
+      ai[c].rethinkAfter = 10;
       if (
         distanceSquaredXZ(
           car[c].x / 10,
-          track.x[pnt] / 10,
+          ai[c].ambushX / 10,
           car[c].z / 10,
-          track.z[pnt] / 10,
-        ) < 800
+          ai[c].ambushZ / 10,
+        ) < 100
       ) {
-        ai[c].oupnt = -Math.floor(75 + random.sim() * 200);
-        ai[c].runbul = Math.floor(50 + random.sim() * 100);
+        ai[c].attackTicks = 200;
+        ai[c].attackedCar = 0;
+        ai[c].leadAhead = 0.7;
+        ai[c].oupnt = -1;
       }
-    }
-    if (ai[c].oupnt < -1) {
-      ai[c].oupnt++;
-    }
-    if (ai[c].runbul != 0) {
-      ai[c].runbul--;
     }
   }
-  if (track.stage == 16) {
-    if (type == 14) {
-      if (racers[c].power > 60) {
-        var i = racers[game.player].pcleared;
-        let found = -1;
-        while (found == -1) {
-          i++;
-          if (i >= track.n) {
-            i -= track.n;
-            found = 152;
-          }
-          if (track.typ[i] == 1 || track.typ[i] == 2) {
-            found = i;
-          }
-        }
-        if (found == 129) {
-          found = 152;
-        }
-        if (
-          distanceSquaredXZ(
-            car[c].x / 10,
-            track.x[found] / 10,
-            car[c].z / 10,
-            track.z[found] / 10,
-          ) < 1000
-        ) {
-          ai[c].attackedCar = 0;
-          ai[c].leadAhead = 1;
-          ai[c].attackTicks = 100;
-        }
-        pnt = found;
-      } else {
-        var pyclos = -10;
-        for (var i = 0; i < track.n; i++) {
-          if (
-            pieces.list[track.obi[i]].typ == 24 ||
-            pieces.list[track.obi[i]].typ == 25 ||
-            pieces.list[track.obi[i]].typ == 43 ||
-            pieces.list[track.obi[i]].typ == 45
-          ) {
-            if (
-              distanceSquaredXZ(
-                car[c].x / 10,
-                track.x[i] / 10,
-                car[c].z / 10,
-                track.z[i] / 10,
-              ) < pyclos ||
-              pyclos == -10
-            ) {
-              pyclos = distanceSquaredXZ(
-                car[c].x / 10,
-                track.x[i] / 10,
-                car[c].z / 10,
-                track.z[i] / 10,
-              );
-              pnt = i;
-            }
-          }
-        }
+  if (ai[c].goingToWait) {
+    if (
+      distanceSquaredXZ(
+        car[c].x / 10,
+        ai[c].waitX / 10,
+        car[c].z / 10,
+        ai[c].waitZ / 10,
+      ) < 10000
+    ) {
+      if (racers[c].speed > 5) {
+        racers[c].u.up = false;
       }
     }
-    if (type == 16) {
-      if (!ai[c].goingToWait) {
-        if (
-          racers[game.player].pcleared == 152 ||
-          racers[game.player].pcleared == 10 ||
-          racers[game.player].pcleared == 20
-        ) {
-          ai[c].waitX = 820;
-          ai[c].waitZ = 120;
-          ai[c].ambushX = 1364;
-          ai[c].ambushZ = 218;
-          ai[c].ambushRadius = 50000;
-          ai[c].oupnt = 35;
-          ai[c].goingToWait = true;
-          ai[c].afta = false;
-          ai[c].runbul = 1;
-        }
-        if (
-          racers[game.player].pcleared == 45 ||
-          racers[game.player].pcleared == 55
-        ) {
-          if (racers[c].power > 60) {
-            ai[c].waitX = 3000;
-            ai[c].waitZ = 1600;
-            ai[c].ambushX = 4206;
-            ai[c].ambushZ = 1365;
-            ai[c].ambushRadius = 30000;
-            ai[c].oupnt = 64;
-            ai[c].goingToWait = true;
-            ai[c].afta = false;
-            ai[c].runbul = 1;
-          } else {
-            pnt = 73;
-          }
-        }
-        if (
-          racers[game.player].pcleared == 92 ||
-          racers[game.player].pcleared == 103
-        ) {
-          if (racers[c].power > 60) {
-            ai[c].waitX = 6408.2;
-            ai[c].waitZ = 1571.4;
-            ai[c].ambushX = 6184;
-            ai[c].ambushZ = 780;
-            ai[c].ambushRadius = 90000;
-            ai[c].oupnt = 112;
-            ai[c].goingToWait = true;
-            ai[c].afta = false;
-            ai[c].runbul = 0;
-          } else {
-            pnt = 73;
-          }
-        }
-        if (racers[game.player].pcleared == 112 && ai[c].oupnt == 112) {
-          ai[c].ticksSinceRethink = 0;
-          ai[c].rethinkAfter = 10;
-          if (
-            distanceSquaredXZ(
-              car[c].x / 10,
-              ai[c].ambushX / 10,
-              car[c].z / 10,
-              ai[c].ambushZ / 10,
-            ) < 100
-          ) {
-            ai[c].attackTicks = 200;
-            ai[c].attackedCar = 0;
-            ai[c].leadAhead = 0.7;
-            ai[c].oupnt = -1;
-          }
-        }
+    if (
+      distanceSquaredXZ(
+        car[c].x / 10,
+        ai[c].waitX / 10,
+        car[c].z / 10,
+        ai[c].waitZ / 10,
+      ) < 200
+    ) {
+      racers[c].u.up = false;
+      racers[c].u.handb = true;
+    }
+    if (
+      racers[game.player].pcleared == ai[c].oupnt &&
+      distanceSquaredXZ(
+        car[game.player].x / 10,
+        ai[c].ambushX / 10,
+        car[game.player].z / 10,
+        ai[c].ambushZ / 10,
+      ) < ai[c].ambushRadius
+    ) {
+      ai[c].afta = true;
+      ai[c].goingToWait = false;
+      if (ai[c].runbul) {
+        ai[c].attackTicks = 200;
+        ai[c].attackedCar = 0;
+        ai[c].leadAhead = 0.7;
       }
-      if (ai[c].goingToWait) {
-        if (
-          distanceSquaredXZ(
-            car[c].x / 10,
-            ai[c].waitX / 10,
-            car[c].z / 10,
-            ai[c].waitZ / 10,
-          ) < 10000
-        ) {
-          if (racers[c].speed > 5) {
-            racers[c].u.up = false;
-          }
-        }
-        if (
-          distanceSquaredXZ(
-            car[c].x / 10,
-            ai[c].waitX / 10,
-            car[c].z / 10,
-            ai[c].waitZ / 10,
-          ) < 200
-        ) {
-          racers[c].u.up = false;
-          racers[c].u.handb = true;
-        }
-        if (
-          racers[game.player].pcleared == ai[c].oupnt &&
-          distanceSquaredXZ(
-            car[game.player].x / 10,
-            ai[c].ambushX / 10,
-            car[game.player].z / 10,
-            ai[c].ambushZ / 10,
-          ) < ai[c].ambushRadius
-        ) {
-          ai[c].afta = true;
-          ai[c].goingToWait = false;
-          if (ai[c].runbul) {
-            ai[c].attackTicks = 200;
-            ai[c].attackedCar = 0;
-            ai[c].leadAhead = 0.7;
-          }
-        }
-        if (
-          distanceSquaredXZ(
-            car[c].x / 10,
-            car[game.player].x / 10,
-            car[c].z / 10,
-            car[game.player].z / 10,
-          ) < 25
-        ) {
-          ai[c].afta = true;
-          ai[c].goingToWait = false;
-          ai[c].attackTicks = 200;
-          ai[c].attackedCar = 0;
-        }
-      }
+    }
+    if (
+      distanceSquaredXZ(
+        car[c].x / 10,
+        car[game.player].x / 10,
+        car[c].z / 10,
+        car[game.player].z / 10,
+      ) < 25
+    ) {
+      ai[c].afta = true;
+      ai[c].goingToWait = false;
+      ai[c].attackTicks = 200;
+      ai[c].attackedCar = 0;
     }
   }
   return pnt;
