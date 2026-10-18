@@ -83,7 +83,7 @@ const newSpin = (puff) => {
   puff.rota = (1 + 3 * random.fx()) * randomSign();
 };
 
-export function carselect() {
+export function carSelectTick() {
   startProjection();
   camera.x = 0;
   camera.y = 0;
@@ -122,7 +122,7 @@ export function carselect() {
     camera.pitch * (Math.PI / 180),
     [1, 0, 0],
   );
-  drawcarselect();
+  drawCarSelect();
   menu.redraw = true;
 }
 
@@ -257,7 +257,7 @@ const unlockingStage = (type) => {
   return type >= FIRST_LOCKED_CAR && game.unlocked <= stage ? stage : 0;
 };
 
-function drawcarselect() {
+function drawCarSelect() {
   rd.clearRect(0, 0, view.width, view.height);
   let left = (view.width - 1380 * view.scaleY) / 2;
   let right = left + 1380 * view.scaleY;

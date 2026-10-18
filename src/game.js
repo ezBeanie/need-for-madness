@@ -9,7 +9,7 @@ import {
   stopEngine,
   unlockAudio,
 } from "./audio/audio.js";
-import { enginsnd } from "./audio/engineSound.js";
+import { updateEngineSound } from "./audio/engineSound.js";
 import { installKeyboard } from "./input/keyboard.js";
 import { installPointer } from "./input/pointer.js";
 import { interpolation } from "./render/interpolation.js";
@@ -24,12 +24,12 @@ import {
   drawReplayOverlay,
   drawRewindOverlay,
   drawSwitchScreen,
-  drawinter,
+  drawHud,
 } from "./ui/hud.js";
 import { menu } from "./screens/menuState.js";
-import { carselect, scatterMenuSmoke } from "./screens/carSelect.js";
-import { stageloading, stageselect } from "./screens/stageSelect.js";
-import { gameinstructions } from "./screens/instructions.js";
+import { carSelectTick, scatterMenuSmoke } from "./screens/carSelect.js";
+import { stageLoadingTick, stageSelectTick } from "./screens/stageSelect.js";
+import { instructionsTick } from "./screens/instructions.js";
 import { PHASE, RACE_PHASES, game } from "./core/state.js";
 import { tick } from "./core/tick.js";
 import {
@@ -43,11 +43,11 @@ import { raceEvents } from "./race/events.js";
 import { control } from "./race/ai.js";
 import { chipsfly, dustfly, expburn, sprksfly } from "./race/effects.js";
 import { drive } from "./race/physics.js";
-import { raceEndScreen, unlockedcar } from "./screens/raceEnd.js";
-import { pausedgame } from "./screens/pauseMenu.js";
-import { drawmain, resetgame } from "./screens/mainMenu.js";
-import { loaddata } from "./loading/assets.js";
-import { checkstat } from "./race/standings.js";
+import { raceEndScreen, unlockedCarTick } from "./screens/raceEnd.js";
+import { pauseMenuTick } from "./screens/pauseMenu.js";
+import { mainMenuTick, resetQuestionTick } from "./screens/mainMenu.js";
+import { loadAssets } from "./loading/assets.js";
+import { updateStandings } from "./race/standings.js";
 import { animateTrack, castShadows, placeWheels } from "./render/raceScene.js";
 import { countDown, flashTick } from "./race/countdown.js";
 import { onKey } from "./input/controls.js";
@@ -67,10 +67,10 @@ function raceTick() {
       drive();
       moveScenery(true);
       record();
-      checkstat();
+      updateStandings();
       control();
-      drawinter();
-      enginsnd();
+      drawHud();
+      updateEngineSound();
     } else {
       countDown();
     }
@@ -114,22 +114,22 @@ const moveScenery = (chipsAndSparksFly) => {
 // What runs in a logic tick, by phase, in this order: when one changes the phase, the
 // next one runs in the same tick.
 const TICKS = [
-  [[PHASE.loading], loaddata],
-  [[PHASE.mainMenu], drawmain],
-  [[PHASE.carSelect], carselect],
-  [[PHASE.stageLoading], stageloading],
-  [[PHASE.stageSelect], stageselect],
-  [[PHASE.instructions], gameinstructions],
+  [[PHASE.loading], loadAssets],
+  [[PHASE.mainMenu], mainMenuTick],
+  [[PHASE.carSelect], carSelectTick],
+  [[PHASE.stageLoading], stageLoadingTick],
+  [[PHASE.stageSelect], stageSelectTick],
+  [[PHASE.instructions], instructionsTick],
   [RACE_PHASES, raceTick],
-  [[PHASE.paused], pausedgame],
+  [[PHASE.paused], pauseMenuTick],
   [
     [PHASE.raceEnd],
     () => {
       raceEndScreen();
-      unlockedcar();
+      unlockedCarTick();
     },
   ],
-  [[PHASE.resetQuestion], resetgame],
+  [[PHASE.resetQuestion], resetQuestionTick],
   [[PHASE.startFlash], flashTick],
 ];
 

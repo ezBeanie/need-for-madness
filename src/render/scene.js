@@ -5,7 +5,7 @@ import { gl } from "./renderer.js";
 export const carModels = Array.from({ length: 19 }, newModel);
 export const carShadows = Array.from({ length: 19 }, newModel);
 
-// The six spark shapes, rebuilt in the stage's colours (see createsparks).
+// The six spark shapes, rebuilt in the stage's colours (see createSparks).
 export const sparkModels = Array.from({ length: 6 }, newParticleModel);
 
 // Set per stage: the colour tint of everything (r, g, b offsets) and the colour of car
@@ -22,13 +22,13 @@ export const scene = {
 // The tube the time travels through while winding back time (see drawrevtime).
 export const timeTube = newParticleModel();
 
-// The textures of every car type (see cartextures).
+// The textures of every car type (see menuCarTextures).
 export const carTextures = [];
 
-// The models of the world and the menus, loaded with the game data (see loaddata).
+// The models of the world and the menus, loaded with the game data (see loadAssets).
 export const ground = newModel();
 export const sky = newModel();
-// a wheel's disc, and the tread close up and far away, shaped per car type (createwheels)
+// a wheel's disc, and the tread close up and far away, shaped per car type (createWheels)
 export const wheelDisk = newModel();
 export const wheelTread = newParticleModel();
 export const wheelTreadLow = newParticleModel();

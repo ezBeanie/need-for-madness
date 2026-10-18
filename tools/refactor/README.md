@@ -10,6 +10,7 @@ game does. Run them from the repository root.
 | `imports.cjs` | Removes unused imports and merges imports from the same module. |
 | `constants.cjs` | Replaces numbers compared with or assigned to an expression by named constants. |
 | `callToObject.cjs` | Turns positional calls `f(a, b)` into `g({ key1: a, key2: b })`. |
+| `renameAll.cjs` | Renames names unique across the code base, as whole words, in src and test. |
 | `deps.cjs` | Lists the top-level names some functions depend on, and who else uses them. |
 | `check.sh` | Prettier, ESLint, unit and golden tests, screenshot tests. |
 

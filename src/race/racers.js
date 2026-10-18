@@ -32,7 +32,7 @@ const newRacer = () => ({
   wheels: Array.from({ length: 4 }, newWheel),
   shadow: newShadow(),
   // the car model it dents and scratches, its own when another car has the same type
-  // (see gamecartextures)
+  // (see raceCarTextures)
   body: null,
   carnchp: 0,
   wall: -1,

@@ -98,7 +98,7 @@ const dark = (vertexCount) =>
 
 // The wheels of every car type, front and rear: the disk (with the type's tire texture)
 // and the tread, both scaled to the type's wheel size.
-export function createwheels() {
+export function createWheels() {
   for (let c = 0; c < WHEEL_WIDTH.length; c++) {
     for (let k = 0; k < 2; k++) {
       buildDisk(wheelDisks[c][k], c, k);

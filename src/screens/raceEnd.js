@@ -30,7 +30,7 @@ import {
 } from "../render/camera.js";
 
 // menu.animation on this screen: it fades in until FADED_IN; an unlocked car is then
-// presented (see unlockedcar) while it is UNLOCKED_CAR_SHOWN.
+// presented (see unlockedCarTick) while it is UNLOCKED_CAR_SHOWN.
 const FADED_IN = 50;
 export const UNLOCKED_CAR_SHOWN = 76;
 
@@ -318,7 +318,7 @@ const leaveRaceEnd = () => {
 };
 
 // The unlocked car turns in front of the stage backdrop, rocking its nose up and down.
-export function unlockedcar() {
+export function unlockedCarTick() {
   if (menu.animation == UNLOCKED_CAR_SHOWN) {
     startProjection();
     camera.x = 0;

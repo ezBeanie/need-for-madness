@@ -1,4 +1,4 @@
-// The images, loaded with the game data (see loaddata).
+// The images, loaded with the game data (see loadAssets).
 export const images = {
   // the textures the 3D world is made from (ground, sky and halo per stage, tires per car
   // type, dust and smoke)

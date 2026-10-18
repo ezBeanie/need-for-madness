@@ -467,7 +467,7 @@ let damageBlink = false;
 // how the HUD last saw each car wasted (see track.dested), to announce changes
 const knownWrecks = [];
 
-export function inishinter() {
+export function resetHud() {
   game.player = 0;
   track.switchtime = 800;
   switchTimer = track.switchtime;
@@ -1440,7 +1440,7 @@ const announceEvents = () => {
 };
 
 // Everything drawn over the race, every tick.
-export function drawinter() {
+export function drawHud() {
   rd.clearRect(0, 0, view.width, view.height);
   if (touchControlsShown()) {
     drawTouchControls();

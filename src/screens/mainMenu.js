@@ -61,7 +61,7 @@ const SUBTITLES = [
 let subtitle = -1;
 let subtitleWait = 0;
 
-export function drawmain() {
+export function mainMenuTick() {
   rd.fillStyle = "#000000";
   rd.fillRect(0, 0, view.width, view.height);
   if (menu.animation == OPENED) {
@@ -289,7 +289,7 @@ const openCarSelect = () => {
   game.phase = PHASE.carSelect;
 };
 
-export function resetgame() {
+export function resetQuestionTick() {
   rd.fillStyle = "#000000";
   rd.fillRect(0, 0, view.width, view.height);
   drawMenuBackground();

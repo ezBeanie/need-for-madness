@@ -10,11 +10,11 @@ import {
 import { cosDeg, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
 import { PHASE, game } from "../core/state.js";
-import { applyracecars, nextRaceSize } from "../race/field.js";
+import { applyFieldSize, nextRaceSize } from "../race/field.js";
 import {
   AFTER_LOAD,
   STAGE_LOAD,
-  loadstage,
+  loadStage,
   stageLoad,
 } from "../loading/stageLoad.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
@@ -95,7 +95,7 @@ const colorBackdrop = () => {
   colorStageBackdrop(hslToRgb(hue, 1, 0.94), hslToRgb(hue, 1, 0.7));
 };
 
-export function stageselect() {
+export function stageSelectTick() {
   startProjection();
   camera.y = height + 100;
   camera.x = lookAtX - 1700 * sinDeg(camera.yaw);
@@ -122,7 +122,7 @@ export function stageselect() {
   stageBackdrop.y = camera.y - 106 * stageBackdrop.mat[9];
   stageBackdrop.z = camera.z - 106 * stageBackdrop.mat[10];
   turnView();
-  drawstageselect();
+  drawStageSelect();
   menu.redraw = true;
 }
 
@@ -168,13 +168,13 @@ const followPath = () => {
 };
 
 // The loading screen before a stage: it requests the stage file once the screen is shown.
-export function stageloading() {
+export function stageLoadingTick() {
   rd.clearRect(0, 0, view.width, view.height);
   if (
     stageLoad.progress == STAGE_LOAD.screenShown &&
     (menu.redraw || stageLoad.after == AFTER_LOAD.race)
   ) {
-    loadstage();
+    loadStage();
     if (!isEngineLoaded(game.carTypes[0])) {
       loadEngine(game.carTypes[0]);
     }
@@ -239,7 +239,7 @@ const openStageSelect = () => {
   game.phase = PHASE.stageSelect;
 };
 
-function drawstageselect() {
+function drawStageSelect() {
   rd.clearRect(0, 0, view.width, view.height);
   if (stageSelect.hiddenTicks && !showingTip) {
     drawHiddenStage();
@@ -604,7 +604,7 @@ const drawPlaySwitchButton = (colors) => {
       pulsing: true,
     })
   ) {
-    applyracecars();
+    applyFieldSize();
     game.mode = 1;
     pauseMenuMusic();
     flashIntoRace();
@@ -650,7 +650,7 @@ const drawPlayButton = (hue) => {
 };
 
 const play = () => {
-  applyracecars();
+  applyFieldSize();
   game.mode = 0;
   pauseMenuMusic();
   flashIntoRace();

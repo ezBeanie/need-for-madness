@@ -17,8 +17,8 @@ test("cars of the same type are drawn with their own wheels and shadow", async (
   const { ctx, step } = await startRace({ stage: 1, car: 5 });
   const typ = ctx.car[1].typ;
   ctx.car[2].typ = typ;
-  const { gamecartextures } = await import("../src/render/generated.js");
-  gamecartextures();
+  const { raceCarTextures } = await import("../src/render/generated.js");
+  raceCarTextures();
   for (let frame = 0; frame < 40; frame++) {
     Object.assign(ctx.racers[0].u, { ...NO_INPUT, up: true });
     step();
@@ -48,8 +48,8 @@ test("a hit dents and scratches only the car hit, not another car of its type", 
   const { ctx, step } = await startRace({ stage: 1, car: 5 });
   const typ = ctx.car[1].typ;
   ctx.car[2].typ = typ;
-  const { gamecartextures } = await import("../src/render/generated.js");
-  gamecartextures();
+  const { raceCarTextures } = await import("../src/render/generated.js");
+  raceCarTextures();
   step();
   // the game's own instance of the physics module
   const { regn } = await import("../src/race/physics.js");

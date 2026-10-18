@@ -6,7 +6,7 @@ import { startRace } from "./harness/race.js";
 // differently while they are the next to win, and fields grow up to 20 cars.
 test("the opponents and the start grid of every stage", async () => {
   const { ctx } = await startRace({ stage: 1, car: 5 });
-  const { setupcars } = await import("../src/race/field.js");
+  const { setUpField } = await import("../src/race/field.js");
   const fields = [];
   for (let stage = 1; stage <= 17; stage++) {
     for (const unlocked of [stage, 17]) {
@@ -17,7 +17,7 @@ test("the opponents and the start grid of every stage", async () => {
           ctx.game.unlocked = unlocked;
           ctx.game.raceCars = raceCars;
           ctx.game.carTypes[0] = (stage + seed) % 11;
-          setupcars();
+          setUpField();
           const cars = ctx.game.carTypes.slice(0, ctx.game.carCount);
           const xs = cars.map((_, c) => ctx.car[c].x.toFixed(6));
           fields.push(

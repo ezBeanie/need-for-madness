@@ -40,7 +40,7 @@ export const resetEngineSound = () => {
   targetPitch = 1;
 };
 
-export function enginsnd() {
+export function updateEngineSound() {
   if (!engine.started) {
     if (!raceEvents.raceOverTicks) {
       startEngine(game.carTypes[game.player], true);

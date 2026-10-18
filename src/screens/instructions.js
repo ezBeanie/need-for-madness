@@ -46,7 +46,7 @@ export const PAGE = {
 // how long Insano talks after the page changes
 export const TALK_TICKS = 250;
 
-export function gameinstructions() {
+export function instructionsTick() {
   rd.fillStyle = "#000000";
   rd.fillRect(0, 0, view.width, view.height);
   if (instructions.fromMainMenu) {

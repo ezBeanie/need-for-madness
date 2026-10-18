@@ -1,6 +1,6 @@
 import { isPhone } from "../core/platform.js";
 
-// How far loading the game data is (see loaddata).
+// How far loading the game data is (see loadAssets).
 export const loading = {
   // which batch of files is requested next
   step: 0,

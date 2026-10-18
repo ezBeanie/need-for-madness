@@ -4,8 +4,8 @@ import { random } from "../core/random.js";
 import { MAX_CARS, RACE_SIZES, game } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
 import { carStats } from "../data/carStats.js";
-import { gamecartextures } from "../render/generated.js";
-import { inishinter } from "../ui/hud.js";
+import { raceCarTextures } from "../render/generated.js";
+import { resetHud } from "../ui/hud.js";
 import { inishcontrol } from "./ai.js";
 import { inishmad } from "./physics.js";
 import { car } from "./racers.js";
@@ -25,10 +25,10 @@ const gridZ = Array.from(
 );
 
 // Chooses the opponents and puts all cars on the start grid.
-export function setupcars() {
+export function setUpField() {
   track.insih();
-  sortcars(track.stage);
-  inishinter();
+  chooseOpponents(track.stage);
+  resetHud();
   placeOnGrid();
   inishcontrol();
   inishmad();
@@ -39,10 +39,10 @@ export function setupcars() {
 // stage loaded with its cars.
 let fieldSize = 0;
 
-export function applyracecars() {
+export function applyFieldSize() {
   if (fieldSize != game.raceCars) {
-    setupcars();
-    gamecartextures();
+    setUpField();
+    raceCarTextures();
   }
 }
 
@@ -114,7 +114,7 @@ const NEW_STAGE_RULES = {
   16: (type) => type >= 11,
 };
 
-function sortcars(stage) {
+function chooseOpponents(stage) {
   game.carCount = game.raceCars;
   fieldSize = game.raceCars;
   for (let i = 1; i < game.carCount; i++) {

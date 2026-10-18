@@ -8,7 +8,7 @@ import { PHASE, RACE_SIZES, game } from "../core/state.js";
 import { loadSetting } from "../core/storage.js";
 import { raceEvents } from "../race/events.js";
 import { pieceModels, track } from "../race/track.js";
-import { cartextures, creatdustextures } from "../render/generated.js";
+import { menuCarTextures, createDustTextures } from "../render/generated.js";
 import { loadModel, loadParticleModel } from "../render/models.js";
 import { gl, loadTextureGroup, textureGroups } from "../render/renderer.js";
 import {
@@ -30,7 +30,7 @@ import {
   wheelTread,
   wheelTreadLow,
 } from "../render/scene.js";
-import { createwheels } from "../render/wheels.js";
+import { createWheels } from "../render/wheels.js";
 import { menu } from "../screens/menuState.js";
 import { hud } from "../ui/hud.js";
 import { images } from "../ui/images.js";
@@ -311,7 +311,7 @@ const countLoaded = () => {
   countModel(menuBackdrop, 309);
 };
 
-export function loaddata() {
+export function loadAssets() {
   if (!gl) {
     drawNoWebGL();
     return;
@@ -323,9 +323,9 @@ export function loaddata() {
   }
   countLoaded();
   if (loading.loaded == loading.total) {
-    cartextures();
-    createwheels();
-    creatdustextures();
+    menuCarTextures();
+    createWheels();
+    createDustTextures();
     for (let i = 0; i < SOUNDS; i++) {
       loadSound(i);
     }

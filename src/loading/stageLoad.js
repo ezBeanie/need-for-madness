@@ -7,15 +7,15 @@ import {
   pathType,
   valueOf,
 } from "../data/stageFormat.js";
-import { setupcars } from "../race/field.js";
+import { setUpField } from "../race/field.js";
 import { effects } from "../race/effects.js";
 import { pieceModels, pieces, track } from "../race/track.js";
 import {
-  colorcptext,
-  createsparks,
-  gamecartextures,
-  groundtexture,
-  skytexture,
+  colorCheckpointText,
+  createSparks,
+  raceCarTextures,
+  groundTexture,
+  skyTexture,
 } from "../render/generated.js";
 import { setWorld } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
@@ -48,7 +48,7 @@ const AIR_CHECKPOINT = 54;
 // the walls around a stage are pieces this far apart
 const WALL_SPACING = 480;
 
-export function loadstage() {
+export function loadStage() {
   stageLoad.progress = STAGE_LOAD.loading;
   const request = new XMLHttpRequest();
   request.open("GET", "data/stages/" + track.stage + ".txt", true);
@@ -124,7 +124,7 @@ const COMMANDS = {
     cloudType = v("type");
   },
   ground: (e, v) => {
-    groundtexture(
+    groundTexture(
       v("texture"),
       v("r"),
       v("g"),
@@ -313,14 +313,14 @@ const addWall = (x, z, degrees) => {
 
 // After the file: the cars, the sky, the textures the stage tints, and the light.
 const prepareStage = () => {
-  setupcars();
-  skytexture(skyColor, scene.fog, cloudColor, cloudType);
+  setUpField();
+  skyTexture(skyColor, scene.fog, cloudColor, cloudType);
   for (let i = 0; i < 3; i++) {
     scene.glassColor[i] = Math.round((skyColor[i] * 2 + 70) / 3);
   }
-  gamecartextures();
-  createsparks();
-  colorcptext();
+  raceCarTextures();
+  createSparks();
+  colorCheckpointText();
   effects.nchp = 0;
   effects.nspr = 0;
   effects.ndst = 0;

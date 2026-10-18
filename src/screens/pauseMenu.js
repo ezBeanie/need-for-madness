@@ -61,7 +61,7 @@ let tooShortTicks = 0;
 // when the race resumes
 let musicPlayingForReplay = false;
 
-export function pausedgame() {
+export function pauseMenuTick() {
   stopEngine();
   rd.clearRect(0, 0, view.width, view.height);
   const hue = backdropHue();

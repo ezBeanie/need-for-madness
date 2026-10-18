@@ -3,7 +3,7 @@
 // player can skip to that drop.
 
 import { isEngineLoaded, loadEngine, playStageMusic } from "../audio/audio.js";
-import { enginsnd, resetEngineSound } from "../audio/engineSound.js";
+import { updateEngineSound, resetEngineSound } from "../audio/engineSound.js";
 import { isPhone } from "../core/platform.js";
 import { PHASE, game } from "../core/state.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
@@ -13,7 +13,7 @@ import { setWorld } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 import { menu } from "../screens/menuState.js";
 import { animateTrack, castShadows, placeWheels } from "../render/raceScene.js";
-import { drawinter } from "../ui/hud.js";
+import { drawHud } from "../ui/hud.js";
 import { images } from "../ui/images.js";
 import { drawStartHint } from "../ui/insano.js";
 import { rd, view } from "../ui/view.js";
@@ -82,7 +82,7 @@ export function countDown() {
   placeWheels();
   castShadows();
   animateTrack();
-  drawinter();
+  drawHud();
   // switch mode: one lap, no fixing
   if (
     game.mode == 1 &&
@@ -102,7 +102,7 @@ export function countDown() {
     drawKeyboardHints();
   }
   if (raceEvents.countdown < COUNTDOWN.behindTheCar) {
-    enginsnd();
+    updateEngineSound();
   } else if (
     (track.stage == 2 && game.unlocked == 2) ||
     (track.stage == 4 && game.unlocked == 4)

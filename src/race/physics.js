@@ -3733,7 +3733,7 @@ export function fixcar(c) {
   rad.texture[1] = null;
   rad.texture[1] = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, rad.texture[1]);
-  // The repaired texture is the one gamecartextures made when the stage loaded; copying
+  // The repaired texture is the one raceCarTextures made when the stage loaded; copying
   // it avoids reading it back from the GPU, which waits for all drawing queued so far.
   if (rad.cleanPixels) {
     var clean = Uint8Array.from(rad.cleanPixels);

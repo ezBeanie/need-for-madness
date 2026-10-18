@@ -88,7 +88,7 @@ export const resetPursuit = (c) => {
   Object.assign(ai[c], newPursuit());
 };
 
-// The last car is the stage's special opponent (see sortcars).
+// The last car is the stage's special opponent (see chooseOpponents).
 const boss = () => game.carCount - 1;
 
 // The race position of car c on the scale of the original seven cars (0 first, 6 last),

@@ -39,7 +39,7 @@ describe("races with 20 cars", () => {
       }
     }
     expect(ctx.game.phase).toBe(PHASE.race);
-    // positions can tie, in the original too (see checkstat)
+    // positions can tie, in the original too (see updateStandings)
     for (const c of range(20)) {
       expect(ctx.track.pos[c]).toBeGreaterThanOrEqual(0);
       expect(ctx.track.pos[c]).toBeLessThan(20);

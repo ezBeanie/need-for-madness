@@ -84,7 +84,7 @@ const isGlass = (pixels, p) =>
   pixels[p + 2] == GLASS[2];
 
 // The menu textures of the cars: windows light blue and see-through.
-export function cartextures() {
+export function menuCarTextures() {
   for (let i = 0; i < CAR_TYPES; i++) {
     carModels[i].nt = 2;
     carModels[i].texture = [];
@@ -106,7 +106,7 @@ export function cartextures() {
 
 // The race textures of the cars, windows in the colour of the stage's sky; they get the
 // damage scratched into them.
-export function gamecartextures() {
+export function raceCarTextures() {
   for (let c = 0; c < game.carCount; c++) {
     const model = carModels[car[c].typ];
     if (model.loaded == 4) {
@@ -158,7 +158,7 @@ export function gamecartextures() {
 // The ground (texture n) in the stage's colour: darker texture pixels shift hue and
 // saturation by hueShift and saturationShift. The stage's dust (kinds 6 to 8) gets a
 // lighter shade of it.
-export function groundtexture(n, r, g, b, hueShift, saturationShift) {
+export function groundTexture(n, r, g, b, hueShift, saturationShift) {
   if (ground.loaded == 4) {
     gl.deleteTexture(ground.texture);
     ground.texture = null;
@@ -242,7 +242,7 @@ const pixelsOf = (image) => {
 
 // The sky: the clouds (texture cloudType) in their colour on the sky's, fading into the
 // fog towards the horizon (the halo image).
-export function skytexture(skyColor, fogColor, cloudColor, cloudType) {
+export function skyTexture(skyColor, fogColor, cloudColor, cloudType) {
   if (sky.loaded == 4) {
     gl.deleteTexture(sky.texture);
     sky.texture = null;
@@ -267,7 +267,7 @@ export function skytexture(skyColor, fogColor, cloudColor, cloudType) {
 
 // The dust of the race (kinds 0 to 2 grey smoke, 3 to 5 sand), each fading in five steps,
 // and the blue smoke of the car select.
-export function creatdustextures() {
+export function createDustTextures() {
   for (let i = 0; i < 6; i++) {
     dustTextures[i] = [];
     for (let j = 0; j < DUST_FADES; j++) {
@@ -308,7 +308,7 @@ export function creatdustextures() {
 
 // Six sparks: thin triangles of growing size, randomly slanted and long, every second one
 // upside down, yellow to red in the stage's tint.
-export function createsparks() {
+export function createSparks() {
   let flip = 1;
   sparkModels.forEach((spark, s) => {
     if (spark.loaded == 1) {
@@ -361,7 +361,7 @@ export function createsparks() {
 const TEXT_BELOW = [62, 160, 252, 192];
 const TEXT_ABOVE = [211, 234, 255, 192];
 
-export function colorcptext() {
+export function colorCheckpointText() {
   gl.deleteBuffer(checkpointText.cbuf);
   checkpointText.cbuf = null;
   const colors = [];

@@ -15,7 +15,7 @@ const CLOSE_FINISH_TICKS = 43;
 // how close (squared, in tenths) the rival has to be
 const CLOSE = 14000;
 
-export function checkstat() {
+export function updateStandings() {
   if (!track.haltall) {
     updateDamageAndProgress();
     rank();
