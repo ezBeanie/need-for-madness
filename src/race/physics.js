@@ -448,48 +448,17 @@ function driveCar(c) {
                   }
                 }
                 if (Math.abs(normz) > Math.abs(normx)) {
-                  let areaOrig = Math.abs(
-                    (vertx[1] - vertx[0]) * (verty[2] - verty[0]) -
-                      (vertx[2] - vertx[0]) * (verty[1] - verty[0]),
-                  );
-                  let area1 = Math.abs(
-                    (vertx[0] - crx) * (verty[1] - cry) -
-                      (vertx[1] - crx) * (verty[0] - cry),
-                  );
-                  let area2 = Math.abs(
-                    (vertx[1] - crx) * (verty[2] - cry) -
-                      (vertx[2] - crx) * (verty[1] - cry),
-                  );
-                  let area3 = Math.abs(
-                    (vertx[2] - crx) * (verty[0] - cry) -
-                      (vertx[0] - crx) * (verty[2] - cry),
-                  );
-                  if (area1 + area2 + area3 <= areaOrig + 10) {
-                    let fct = 0;
-                    if (verty[0] - verty[1] != 0) {
-                      fct =
-                        (wheelY[k] - (verty[1] + rad.y)) /
-                        (verty[0] - verty[1]);
-                    } else {
-                      fct = 0;
-                    }
-                    let lx = vertx[1] + (vertx[0] - vertx[1]) * fct;
-                    let lz = vertz[1] + (vertz[0] - vertz[1]) * fct;
-                    if (verty[0] - verty[2] != 0) {
-                      fct =
-                        (wheelY[k] - (verty[2] + rad.y)) /
-                        (verty[0] - verty[2]);
-                    } else {
-                      fct = 0;
-                    }
-                    let tx = vertx[2] + (vertx[0] - vertx[2]) * fct;
-                    let tz = vertz[2] + (vertz[0] - vertz[2]) * fct;
-                    if (tx - lx != 0) {
-                      fct = (wheelX[k] - (lx + rad.x)) / (tx - lx);
-                    } else {
-                      fct = 0;
-                    }
-                    let colz = lz + rad.z + (tz - lz) * fct;
+                  if (overTriangle(vertx, verty, crx, cry)) {
+                    let colz = pointOnTriangle(
+                      verty,
+                      vertx,
+                      vertz,
+                      wheelY[k],
+                      rad.y,
+                      wheelX[k],
+                      rad.x,
+                      rad.z,
+                    );
                     if (
                       pieces.list[o].bnd[0] != 1 &&
                       normz > 0 &&
@@ -536,48 +505,17 @@ function driveCar(c) {
                     }
                   }
                 } else {
-                  let areaOrig = Math.abs(
-                    (verty[1] - verty[0]) * (vertz[2] - vertz[0]) -
-                      (verty[2] - verty[0]) * (vertz[1] - vertz[0]),
-                  );
-                  let area1 = Math.abs(
-                    (verty[0] - cry) * (vertz[1] - crz) -
-                      (verty[1] - cry) * (vertz[0] - crz),
-                  );
-                  let area2 = Math.abs(
-                    (verty[1] - cry) * (vertz[2] - crz) -
-                      (verty[2] - cry) * (vertz[1] - crz),
-                  );
-                  let area3 = Math.abs(
-                    (verty[2] - cry) * (vertz[0] - crz) -
-                      (verty[0] - cry) * (vertz[2] - crz),
-                  );
-                  if (area1 + area2 + area3 <= areaOrig + 10) {
-                    let fct = 0;
-                    if (vertz[0] - vertz[1] != 0) {
-                      fct =
-                        (wheelZ[k] - (vertz[1] + rad.z)) /
-                        (vertz[0] - vertz[1]);
-                    } else {
-                      fct = 0;
-                    }
-                    let lx = vertx[1] + (vertx[0] - vertx[1]) * fct;
-                    let ly = verty[1] + (verty[0] - verty[1]) * fct;
-                    if (vertz[0] - vertz[2] != 0) {
-                      fct =
-                        (wheelZ[k] - (vertz[2] + rad.z)) /
-                        (vertz[0] - vertz[2]);
-                    } else {
-                      fct = 0;
-                    }
-                    let tx = vertx[2] + (vertx[0] - vertx[2]) * fct;
-                    let ty = verty[2] + (verty[0] - verty[2]) * fct;
-                    if (ty - ly != 0) {
-                      fct = (wheelY[k] - (ly + rad.y)) / (ty - ly);
-                    } else {
-                      fct = 0;
-                    }
-                    let colx = lx + rad.x + (tx - lx) * fct;
+                  if (overTriangle(verty, vertz, cry, crz)) {
+                    let colx = pointOnTriangle(
+                      vertz,
+                      verty,
+                      vertx,
+                      wheelZ[k],
+                      rad.z,
+                      wheelY[k],
+                      rad.y,
+                      rad.x,
+                    );
                     if (
                       pieces.list[o].bnd[2] != 1 &&
                       normx > 0 &&
@@ -629,46 +567,17 @@ function driveCar(c) {
                 normy = Math.abs(normy);
               }
               if (normy > 0.4 && !cancelpln) {
-                let areaOrig = Math.abs(
-                  (vertx[1] - vertx[0]) * (vertz[2] - vertz[0]) -
-                    (vertx[2] - vertx[0]) * (vertz[1] - vertz[0]),
-                );
-                let area1 = Math.abs(
-                  (vertx[0] - crx) * (vertz[1] - crz) -
-                    (vertx[1] - crx) * (vertz[0] - crz),
-                );
-                let area2 = Math.abs(
-                  (vertx[1] - crx) * (vertz[2] - crz) -
-                    (vertx[2] - crx) * (vertz[1] - crz),
-                );
-                let area3 = Math.abs(
-                  (vertx[2] - crx) * (vertz[0] - crz) -
-                    (vertx[0] - crx) * (vertz[2] - crz),
-                );
-                if (area1 + area2 + area3 <= areaOrig + 10) {
-                  let fct = 0;
-                  if (vertz[0] - vertz[1] != 0) {
-                    fct =
-                      (wheelZ[k] - (vertz[1] + rad.z)) / (vertz[0] - vertz[1]);
-                  } else {
-                    fct = 0;
-                  }
-                  let lx = vertx[1] + (vertx[0] - vertx[1]) * fct;
-                  let ly = verty[1] + (verty[0] - verty[1]) * fct;
-                  if (vertz[0] - vertz[2] != 0) {
-                    fct =
-                      (wheelZ[k] - (vertz[2] + rad.z)) / (vertz[0] - vertz[2]);
-                  } else {
-                    fct = 0;
-                  }
-                  let tx = vertx[2] + (vertx[0] - vertx[2]) * fct;
-                  let ty = verty[2] + (verty[0] - verty[2]) * fct;
-                  if (tx - lx != 0) {
-                    fct = (wheelX[k] - (lx + rad.x)) / (tx - lx);
-                  } else {
-                    fct = 0;
-                  }
-                  let coly = ly + rad.y + (ty - ly) * fct;
+                if (overTriangle(vertx, vertz, crx, crz)) {
+                  let coly = pointOnTriangle(
+                    vertz,
+                    vertx,
+                    verty,
+                    wheelZ[k],
+                    rad.z,
+                    wheelX[k],
+                    rad.x,
+                    rad.y,
+                  );
                   if (Math.abs(normy) == 1) {
                     if (wheelY[k] < coly - 0.05 && wheelY[k] > coly - 20) {
                       ntrt++;
@@ -711,17 +620,7 @@ function driveCar(c) {
                           sparkKind[k] = 2;
                         }
                       }
-                      let bounce =
-                        Math.abs(sinDeg(racers[c].pxy)) +
-                        Math.abs(sinDeg(racers[c].pzy));
-                      bounce = bounce / 3;
-                      if (bounce > 0.4) {
-                        bounce = 0.4;
-                      }
-                      bounce += carStats.bounce[type];
-                      if (bounce < 1.1) {
-                        bounce = 1.1;
-                      }
+                      const bounce = groundBounce(c, type);
                       regn(2, k, Math.abs(racers[c].scy[k] * bounce), c);
                       if (racers[c].scy[k] < 0) {
                         racers[c].scy[k] += Math.abs(racers[c].scy[k] * bounce);
@@ -729,37 +628,26 @@ function driveCar(c) {
                       axleOnGround[Math.floor(k * 0.5)] = 1;
                     }
                   } else {
-                    if (ty - ly != 0) {
-                      fct = (wheelY[k] - (ly + rad.y)) / (ty - ly);
-                    } else {
-                      fct = 0;
-                    }
-                    let colx = lx + rad.x + (tx - lx) * fct;
-                    fct = 0;
-                    if (verty[0] - verty[1] != 0) {
-                      fct =
-                        (wheelY[k] - (verty[1] + rad.y)) /
-                        (verty[0] - verty[1]);
-                    } else {
-                      fct = 0;
-                    }
-                    lx = vertx[1] + (vertx[0] - vertx[1]) * fct;
-                    let lz = vertz[1] + (vertz[0] - vertz[1]) * fct;
-                    if (verty[0] - verty[2] != 0) {
-                      fct =
-                        (wheelY[k] - (verty[2] + rad.y)) /
-                        (verty[0] - verty[2]);
-                    } else {
-                      fct = 0;
-                    }
-                    tx = vertx[2] + (vertx[0] - vertx[2]) * fct;
-                    let tz = vertz[2] + (vertz[0] - vertz[2]) * fct;
-                    if (tx - lx != 0) {
-                      fct = (wheelX[k] - (lx + rad.x)) / (tx - lx);
-                    } else {
-                      fct = 0;
-                    }
-                    let colz = lz + rad.z + (tz - lz) * fct;
+                    let colx = pointOnTriangle(
+                      vertz,
+                      verty,
+                      vertx,
+                      wheelZ[k],
+                      rad.z,
+                      wheelY[k],
+                      rad.y,
+                      rad.x,
+                    );
+                    let colz = pointOnTriangle(
+                      verty,
+                      vertx,
+                      vertz,
+                      wheelY[k],
+                      rad.y,
+                      wheelX[k],
+                      rad.x,
+                      rad.z,
+                    );
                     if (wheelY[k] < coly && wheelY[k] > coly - 20) {
                       let bounceramp = false;
                       if (Math.abs(normz) > Math.abs(normx)) {
@@ -778,17 +666,7 @@ function driveCar(c) {
                         }
                       }
                       if (bounceramp) {
-                        let bounce =
-                          Math.abs(sinDeg(racers[c].pxy)) +
-                          Math.abs(sinDeg(racers[c].pzy));
-                        bounce = bounce / 3;
-                        if (bounce > 0.4) {
-                          bounce = 0.4;
-                        }
-                        bounce += carStats.bounce[type];
-                        if (bounce < 1.1) {
-                          bounce = 1.1;
-                        }
+                        const bounce = groundBounce(c, type);
                         if (racers[c].scy[k] < 0) {
                           racers[c].scy[k] += Math.abs(
                             racers[c].scy[k] * bounce,
@@ -1016,19 +894,7 @@ function driveCar(c) {
           }
         }
       }
-      let bounce =
-        Math.abs(cosDeg(racers[c].pxy)) + Math.abs(cosDeg(racers[c].pzy));
-      bounce = bounce / 4;
-      if (bounce > 0.3) {
-        bounce = 0.3;
-      }
-      if (touchedGround) {
-        bounce = 0;
-      }
-      bounce += carStats.bounce[type] - 0.2;
-      if (bounce < 1.1) {
-        bounce = 1.1;
-      }
+      const bounce = wallBounce(c, type, touchedGround);
       regn(1, k, Math.abs(racers[c].scz[k] * bounce), c);
       if (racers[c].scz[k] <= 0) {
         racers[c].scz[k] += Math.abs(racers[c].scz[k] * bounce);
@@ -1067,19 +933,7 @@ function driveCar(c) {
           }
         }
       }
-      let bounce =
-        Math.abs(cosDeg(racers[c].pxy)) + Math.abs(cosDeg(racers[c].pzy));
-      bounce = bounce / 4;
-      if (bounce > 0.3) {
-        bounce = 0.3;
-      }
-      if (touchedGround) {
-        bounce = 0;
-      }
-      bounce += carStats.bounce[type] - 0.2;
-      if (bounce < 1.1) {
-        bounce = 1.1;
-      }
+      const bounce = wallBounce(c, type, touchedGround);
       regn(1, k, -Math.abs(racers[c].scz[k] * bounce), c);
       if (racers[c].scz[k] >= 0) {
         racers[c].scz[k] -= Math.abs(racers[c].scz[k] * bounce);
@@ -1118,19 +972,7 @@ function driveCar(c) {
           }
         }
       }
-      let bounce =
-        Math.abs(cosDeg(racers[c].pxy)) + Math.abs(cosDeg(racers[c].pzy));
-      bounce = bounce / 4;
-      if (bounce > 0.3) {
-        bounce = 0.3;
-      }
-      if (touchedGround) {
-        bounce = 0;
-      }
-      bounce += carStats.bounce[type] - 0.2;
-      if (bounce < 1.1) {
-        bounce = 1.1;
-      }
+      const bounce = wallBounce(c, type, touchedGround);
       regn(0, k, Math.abs(racers[c].scx[k] * bounce), c);
       if (racers[c].scx[k] <= 0) {
         racers[c].scx[k] += Math.abs(racers[c].scx[k] * bounce);
@@ -1169,19 +1011,7 @@ function driveCar(c) {
           }
         }
       }
-      let bounce =
-        Math.abs(cosDeg(racers[c].pxy)) + Math.abs(cosDeg(racers[c].pzy));
-      bounce = bounce / 4;
-      if (bounce > 0.3) {
-        bounce = 0.3;
-      }
-      if (touchedGround) {
-        bounce = 0;
-      }
-      bounce += carStats.bounce[type] - 0.2;
-      if (bounce < 1.1) {
-        bounce = 1.1;
-      }
+      const bounce = wallBounce(c, type, touchedGround);
       regn(0, k, -Math.abs(racers[c].scx[k] * bounce), c);
       if (racers[c].scx[k] >= 0) {
         racers[c].scx[k] -= Math.abs(racers[c].scx[k] * bounce);
@@ -2360,16 +2190,7 @@ function bounceWheelsOffGround(
         }
       }
       wheelY[i] = 0;
-      let bounce =
-        Math.abs(sinDeg(racers[c].pxy)) + Math.abs(sinDeg(racers[c].pzy));
-      bounce = bounce / 3;
-      if (bounce > 0.4) {
-        bounce = 0.4;
-      }
-      bounce += carStats.bounce[type];
-      if (bounce < 1.1) {
-        bounce = 1.1;
-      }
+      const bounce = groundBounce(c, type);
       regn(2, i, Math.abs(racers[c].scy[i] * bounce), c);
       if (racers[c].scy[i] < 0) {
         racers[c].scy[i] += Math.abs(racers[c].scy[i] * bounce);
@@ -2625,6 +2446,55 @@ function kickUpDust(
       }
     }
   }
+}
+
+// Whether the point (p, q) lies over the triangle with the corners (a[i], b[i]), seen along
+// the third axis, with some slack: the triangles it makes with the edges add up to no more.
+function overTriangle(a, b, p, q) {
+  const whole = Math.abs(
+    (a[1] - a[0]) * (b[2] - b[0]) - (a[2] - a[0]) * (b[1] - b[0]),
+  );
+  const part1 = Math.abs((a[0] - p) * (b[1] - q) - (a[1] - p) * (b[0] - q));
+  const part2 = Math.abs((a[1] - p) * (b[2] - q) - (a[2] - p) * (b[1] - q));
+  const part3 = Math.abs((a[2] - p) * (b[0] - q) - (a[0] - p) * (b[2] - q));
+  return part1 + part2 + part3 <= whole + 10;
+}
+
+// Where the triangle with the corners (u[i], v[i], w[i]), placed at base*, lies along w at
+// (atU, atV): found on its edges from corner 0 at the height atU, then between those points.
+function pointOnTriangle(u, v, w, atU, baseU, atV, baseV, baseW) {
+  let along = 0;
+  if (u[0] - u[1] != 0) {
+    along = (atU - (u[1] + baseU)) / (u[0] - u[1]);
+  }
+  const v1 = v[1] + (v[0] - v[1]) * along;
+  const w1 = w[1] + (w[0] - w[1]) * along;
+  along = 0;
+  if (u[0] - u[2] != 0) {
+    along = (atU - (u[2] + baseU)) / (u[0] - u[2]);
+  }
+  const v2 = v[2] + (v[0] - v[2]) * along;
+  const w2 = w[2] + (w[0] - w[2]) * along;
+  along = 0;
+  if (v2 - v1 != 0) {
+    along = (atV - (v1 + baseV)) / (v2 - v1);
+  }
+  return w1 + baseW + (w2 - w1) * along;
+}
+
+// How strongly a wheel bounces back off the ground: more when the car lands tilted.
+function groundBounce(c, type) {
+  let bounce =
+    Math.abs(sinDeg(racers[c].pxy)) + Math.abs(sinDeg(racers[c].pzy));
+  bounce = bounce / 3;
+  if (bounce > 0.4) {
+    bounce = 0.4;
+  }
+  bounce += carStats.bounce[type];
+  if (bounce < 1.1) {
+    bounce = 1.1;
+  }
+  return bounce;
 }
 
 // How strongly a wheel bounces back off a wall: more when the car is upright, less once it
