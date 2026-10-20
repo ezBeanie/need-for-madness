@@ -152,6 +152,7 @@ const createCanvasStub = (context) => ({
   style: {},
   getContext: () => context,
   addEventListener: noop,
+  after: noop,
   toDataURL: () => "",
   getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }),
 });

@@ -45,7 +45,7 @@ const SOUNDS = 43;
 const TEXTURE_GROUPS = 19;
 
 // the stage pieces, by type; piece 40 (launchpad) is not loaded, as in the original
-const PIECE_FILES = [
+export const PIECE_FILES = [
   "road",
   "froad",
   "twister2",

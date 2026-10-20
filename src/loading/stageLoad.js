@@ -79,6 +79,14 @@ const readStage = (text) => {
   pieces.fixCount = 0;
   track.addons = 0;
   scene.tint = [0, 0, 0];
+  scene.colors = {
+    snap: [0, 0, 0],
+    sky: [170, 220, 255],
+    ground: [205, 200, 200],
+    fog: [255, 220, 220],
+    clouds: [210, 210, 210],
+    distance: 10700,
+  };
   skyColor = [];
   cloudColor = [];
   cloudType = 0;
@@ -106,24 +114,29 @@ const COMMANDS = {
     scene.tint[0] = v("r") / 100;
     scene.tint[1] = v("g") / 100;
     scene.tint[2] = v("b") / 100;
+    scene.colors.snap = [v("r"), v("g"), v("b")];
   },
   sky: (e, v) => {
     skyColor[0] = v("r");
     skyColor[1] = v("g");
     skyColor[2] = v("b");
+    scene.colors.sky = [...skyColor];
   },
   fog: (e, v) => {
     scene.fog[0] = v("r");
     scene.fog[1] = v("g");
     scene.fog[2] = v("b");
+    scene.colors.fog = scene.fog.slice(0, 3);
   },
   clouds: (e, v) => {
     cloudColor[0] = v("r");
     cloudColor[1] = v("g");
     cloudColor[2] = v("b");
     cloudType = v("type");
+    scene.colors.clouds = [...cloudColor];
   },
   ground: (e, v) => {
+    scene.colors.ground = [v("r"), v("g"), v("b")];
     groundTexture(
       v("texture"),
       v("r"),
@@ -154,6 +167,7 @@ const COMMANDS = {
   },
   distfog: (e, v) => {
     scene.fogDistance = v("distance");
+    scene.colors.distance = v("distance");
   },
   bnd: (e, v) => {
     bounds = [v("a"), v("b"), v("c"), v("d")];

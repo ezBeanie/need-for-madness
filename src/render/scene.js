@@ -17,6 +17,8 @@ export const scene = {
   fog: [],
   fogDistance: 10700,
   light: [0, 1, 0],
+  // the stage file's own colours, for the classic look (see classic/medium.js)
+  colors: null,
 };
 
 // The tube the time travels through while winding back time (see drawrevtime).

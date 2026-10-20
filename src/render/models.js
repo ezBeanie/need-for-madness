@@ -32,7 +32,7 @@ export const newParticleModel = () => ({
   copyonly: false,
 });
 
-const fetchText = (file, onText) => {
+export const fetchText = (file, onText) => {
   const request = new XMLHttpRequest();
   request.open("GET", file, true);
   request.onreadystatechange = () => {
