@@ -11,7 +11,7 @@ import { fetchText } from "../render/models.js";
 import { canvas3D } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 import { PIECE_FILES } from "../loading/assets.js";
-import { view } from "../ui/view.js";
+import { flushBatch, startBatch } from "./batch.js";
 import { drawObject, setView, tintModel } from "./draw.js";
 import { drawSkyAndGround, medium, setStageLook } from "./medium.js";
 import { parseRad } from "./rad.js";
@@ -91,34 +91,12 @@ const tintForStage = () => {
   tintedFor = colors;
 };
 
-let canvas = null;
-let g = null;
-
-const classicCanvas = () => {
-  if (!canvas) {
-    canvas = document.createElement("canvas");
-    canvas.style.cssText = canvas3D.style.cssText;
-    canvas.style.imageRendering = "pixelated";
-    canvas3D.after(canvas);
-    g = canvas.getContext("2d");
-  }
-  const width = Math.round(450 * view.aspect);
-  if (canvas.width != width || canvas.height != 450) {
-    canvas.width = width;
-    canvas.height = 450;
-  }
-  canvas.style.width = canvas3D.style.width;
-  canvas.style.height = canvas3D.style.height;
-  medium.w = width;
-  medium.cx = width / 2;
-  return g;
-};
-
-// Shows the classic canvas over the 3D one, or hides it.
-export const showClassic = (shown) => {
-  if (canvas) {
-    canvas.style.visibility = shown ? "visible" : "hidden";
-  }
+// The classic look draws on the 3D canvas, made 450 pixels high (see fitCanvas3D).
+const fitScreen = () => {
+  medium.w = canvas3D.width;
+  medium.h = canvas3D.height;
+  medium.cx = medium.w / 2;
+  medium.cy = medium.h / 2;
 };
 
 // how far each object was last frame: the original draws the farthest first by that
@@ -135,7 +113,8 @@ export const drawClassicRace = () => {
   if (!loading) {
     loadModels();
   }
-  const g = classicCanvas();
+  fitScreen();
+  startBatch();
   if (tintedFor !== scene.colors) {
     tintForStage();
   }
@@ -147,8 +126,7 @@ export const drawClassicRace = () => {
     Math.PI;
   medium.flicker = !medium.flicker;
   medium.lastCheck = raceEvents.onlastcheck;
-  g.lineWidth = 1;
-  drawSkyAndGround(g);
+  drawSkyAndGround();
   const objects = [];
   for (let i = 0; i < pieces.count; i++) {
     const piece = pieces.list[i];
@@ -185,7 +163,7 @@ export const drawClassicRace = () => {
   for (const object of [...unseen, ...seen]) {
     lastDist.set(
       object.key,
-      drawObject(g, object.rad, object.place(), {
+      drawObject(object.rad, object.place(), {
         wxz: object.car?.wxz ?? 0,
         wzy: object.car?.wzy ?? 0,
         nextCheckpoint: object.nextCheckpoint,
@@ -194,4 +172,5 @@ export const drawClassicRace = () => {
       }),
     );
   }
+  flushBatch(medium.w, medium.h);
 };

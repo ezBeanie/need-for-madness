@@ -2,7 +2,7 @@
 // switch screen), the car select, the stage select and the car a stage unlocked. A scene
 // is drawn once a logic tick has moved it (menu.redraw), then every frame of its phase.
 
-import { drawClassicRace, showClassic } from "../classic/frame.js";
+import { drawClassicRace } from "../classic/frame.js";
 import { random } from "../core/random.js";
 import { MODE, PHASE, RACE_PHASES, game } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
@@ -61,10 +61,9 @@ export function render() {
     lastPhase = game.phase;
   }
   placeCamera(camera.x, camera.y, camera.z, camera.matrix);
-  // the classic look draws races on a canvas of its own (see classic/frame.js)
+  // the classic look draws races the original game's way (see classic/frame.js)
   const classicRace =
     look.current == LOOK.classic && RACE_PHASES.includes(game.phase);
-  showClassic(classicRace);
   if (RACE_PHASES.includes(game.phase)) {
     drawWhenDue(classicRace ? drawClassicRace : drawRace);
   }

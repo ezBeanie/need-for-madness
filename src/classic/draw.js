@@ -1,6 +1,7 @@
 // Draws models the way the original Java game did (its ContO.d and Plane.d): no depth
 // buffer, the farthest object first and each object's farthest polygon first, every
 // polygon in one colour lit from above, fogged in bands, and outlined when near.
+import { drawPolygon, fillPolygon } from "./batch.js";
 import { hsbToRgb, rgbToHsb } from "./color.js";
 import { cosDeg, medium, sinDeg, xs, ys } from "./medium.js";
 
@@ -86,158 +87,161 @@ export const setView = (matrix) => {
   view.level = unit([-view.back[0], 0, -view.back[2]]);
 };
 
-const dot = (a, w) => a[0] * w[0] + a[1] * w[1] + a[2] * w[2];
+// The corners of the polygon being drawn, where the original's camera sees them: x1/z1
+// after the camera's heading only, y0 before its pitch, x/y/z after both; gx/gz over the
+// ground (for the light). Filled for one polygon at a time, so a frame allocates nothing.
+const MAX_CORNERS = 32;
+const X1 = new Float64Array(MAX_CORNERS);
+const Z1 = new Float64Array(MAX_CORNERS);
+const Y0 = new Float64Array(MAX_CORNERS);
+const X = new Float64Array(MAX_CORNERS);
+const Y = new Float64Array(MAX_CORNERS);
+const Z = new Float64Array(MAX_CORNERS);
+const GX = new Float64Array(MAX_CORNERS);
+const GZ = new Float64Array(MAX_CORNERS);
+// on screen
+const SX = new Float64Array(MAX_CORNERS);
+const SY = new Float64Array(MAX_CORNERS);
 
-// A point of an original model, placed with a modern model matrix (relative to the
-// camera): where the original's camera sees it. x1/z1 are after the camera's heading only,
-// x/y/z after its pitch too; gx/gz are over the ground, for the light.
-const project = (point, matrix) => seen(placed(point, matrix));
-
-// where a point of a model is, in our units relative to the camera
-const placed = (point, matrix) => {
+// Puts corner i of a polygon at (mx, my, mz) in the model (the original's units and
+// axes), placed with a modern model matrix relative to the camera; with a groundY, pressed
+// onto the ground there (a shadow).
+const placeCorner = (i, px, py, pz, matrix, groundY) => {
   // the original's axes into ours, ten times smaller
-  const mx = -point[0] / 10;
-  const my = -point[1] / 10;
-  const mz = point[2] / 10;
-  return [
-    matrix[0] * mx + matrix[4] * my + matrix[8] * mz + matrix[12],
-    matrix[1] * mx + matrix[5] * my + matrix[9] * mz + matrix[13],
-    matrix[2] * mx + matrix[6] * my + matrix[10] * mz + matrix[14],
-  ];
+  const mx = -px / 10;
+  const my = -py / 10;
+  const mz = pz / 10;
+  const wx = matrix[0] * mx + matrix[4] * my + matrix[8] * mz + matrix[12];
+  const wy =
+    groundY ?? matrix[1] * mx + matrix[5] * my + matrix[9] * mz + matrix[13];
+  const wz = matrix[2] * mx + matrix[6] * my + matrix[10] * mz + matrix[14];
+  const right =
+    (view.right[0] * wx + view.right[1] * wy + view.right[2] * wz) * 10;
+  GX[i] = wx * 10;
+  GZ[i] = wz * 10;
+  Y0[i] = medium.cy - wy * 10;
+  X1[i] = medium.cx + right;
+  Z1[i] = (view.level[0] * wx + view.level[2] * wz) * 10;
+  X[i] = medium.cx + right;
+  Y[i] = medium.cy - (view.up[0] * wx + view.up[1] * wy + view.up[2] * wz) * 10;
+  Z[i] = -(view.back[0] * wx + view.back[1] * wy + view.back[2] * wz) * 10;
 };
 
-const seen = (w) => {
-  const right = dot(view.right, w) * 10;
-  return {
-    gx: w[0] * 10,
-    gy: w[1] * 10,
-    gz: w[2] * 10,
-    // down, before the camera's pitch
-    y0: medium.cy - w[1] * 10,
-    x1: medium.cx + right,
-    z1: dot(view.level, w) * 10,
-    x: medium.cx + right,
-    y: medium.cy - dot(view.up, w) * 10,
-    z: -dot(view.back, w) * 10,
-  };
+// Places a polygon's corners, a wheel's turned with the wheel: spinning about its axle
+// (wzy) and steering about its pivot (wxz), in the model. Returns how many.
+const placePoly = (poly, matrix, wxz, wzy, groundY) => {
+  const points = poly.points;
+  const turns = poly.wz != 0 || poly.wx != 0;
+  const spinCos = cosDeg(wzy);
+  const spinSin = sinDeg(wzy);
+  const steerCos = cosDeg(wxz);
+  const steerSin = sinDeg(wxz);
+  for (let i = 0; i < points.length; i++) {
+    let [px, py, pz] = points[i];
+    if (turns) {
+      if (poly.wz != 0 && wzy != 0) {
+        const dy = py - poly.wy;
+        const dz = pz - poly.wz;
+        py = poly.wy + dy * spinCos - dz * spinSin;
+        pz = poly.wz + dy * spinSin + dz * spinCos;
+      }
+      if (poly.wx != 0 && wxz != 0) {
+        const dx = px - poly.wx;
+        const dz = pz - poly.wz;
+        px = poly.wx + dx * steerCos - dz * steerSin;
+        pz = poly.wz + dx * steerSin + dz * steerCos;
+      }
+    }
+    placeCorner(i, px, py, pz, matrix, groundY);
+  }
+  return points.length;
 };
 
 // --- drawing ---
 
-const rot = (a, b, pa, pb, angle) => {
-  if (angle == 0) {
-    return [a, b];
-  }
-  const c = cosDeg(angle);
-  const s = sinDeg(angle);
-  return [pa + (a - pa) * c - (b - pb) * s, pb + (a - pa) * s + (b - pb) * c];
-};
+const color = [0, 0, 0];
 
-// A wheel polygon's corner turned with the wheel: spinning about its axle (wzy) and
-// steering about its pivot (wxz), in the model.
-const turnWheel = (poly, [x, y, z], wxz, wzy) => {
-  let [py, pz] = [y, z];
-  if (poly.wz != 0) {
-    [py, pz] = rot(y, z, poly.wy, poly.wz, wzy);
-  }
-  let px = x;
-  if (poly.wx != 0) {
-    [px, pz] = rot(x, pz, poly.wx, poly.wz, wxz);
-  }
-  return [px, py, pz];
-};
-
-const rgb = ([r, g, b]) => `rgb(${r},${g},${b})`;
-
-const fogged = (color, av) => {
-  let [r, g, b] = color;
+// Into color: the colour after the fog bands the distance av has passed.
+const fog = (r, g, b, av) => {
+  const { fogd, cfade, fade } = medium;
   for (let i = 0; i < 16; i++) {
-    if (av > medium.fade[i]) {
-      r = Math.trunc((r * medium.fogd + medium.cfade[0]) / (medium.fogd + 1));
-      g = Math.trunc((g * medium.fogd + medium.cfade[1]) / (medium.fogd + 1));
-      b = Math.trunc((b * medium.fogd + medium.cfade[2]) / (medium.fogd + 1));
+    if (av > fade[i]) {
+      r = Math.trunc((r * fogd + cfade[0]) / (fogd + 1));
+      g = Math.trunc((g * fogd + cfade[1]) / (fogd + 1));
+      b = Math.trunc((b * fogd + cfade[2]) / (fogd + 1));
     }
   }
-  return [r, g, b];
+  color[0] = r;
+  color[1] = g;
+  color[2] = b;
 };
 
-const path = (g, sx, sy) => {
-  g.beginPath();
-  g.moveTo(sx[0], sy[0]);
-  for (let i = 1; i < sx.length; i++) {
-    g.lineTo(sx[i], sy[i]);
-  }
-  g.closePath();
-};
-
-// One polygon (Plane.d): seen at all, how bright, in which colour, outlined or not.
-// size is how big its object looks, or -1 for the next checkpoint.
-const drawPoly = (g, poly, corners, noline, size) => {
-  const n = corners.length;
-  // the light: how flat the polygon lies over the ground
-  let projf = 1;
-  for (let i = 0; i < 3; i++) {
-    for (let j = 0; j < 3; j++) {
-      if (j != i) {
-        projf *=
-          Math.sqrt(
-            (corners[i].gx - corners[j].gx) ** 2 +
-              (corners[i].gz - corners[j].gz) ** 2,
-          ) / 100;
-      }
-    }
-  }
-  projf /= 3;
-  // facing the camera or away (b2): judged after the camera's heading
-  let facingAway = false;
-  {
-    const sx = corners.map((p) => xs(p.x1, p.z1));
-    const sy = corners.map((p) => ys(p.y0, p.z1));
-    let best = 500;
-    let a = 1;
-    let b = 0;
-    for (let i = 0; i < n; i++) {
-      for (let j = i + 1; j < n; j++) {
-        const v = Math.abs(sx[i] - sx[j]) - Math.abs(sy[i] - sy[j]);
-        if (v < best) {
-          a = i;
-          b = j;
-          best = v;
-        }
-      }
-    }
-    if (sy[b] < sy[a]) {
-      [a, b] = [b, a];
-    }
-    const spy = (p) => Math.sqrt((p.x1 - medium.cx) ** 2 + p.z1 * p.z1);
-    if (spy(corners[b]) > spy(corners[a])) {
-      facingAway = true;
-      let level = 0;
-      for (let i = 0; i < n; i++) {
-        if (corners[i].z1 < 50 && corners[i].y0 > medium.cy) {
-          facingAway = false;
-        } else if (corners[i].y0 == corners[0].y0) {
-          level++;
-        }
-      }
-      if (level == n && corners[0].y0 > medium.cy) {
-        facingAway = false;
-      }
-    }
-  }
-  const sx = corners.map((p) => xs(p.x, p.z));
-  const sy = corners.map((p) => ys(p.y, p.z));
-  let off = [0, 0, 0, 0];
-  let behind = 0;
+// Whether a polygon faces away from the camera (b2), judged after the camera's heading.
+const facesAway = (n) => {
+  let best = 500;
+  let a = 1;
+  let b = 0;
   for (let i = 0; i < n; i++) {
-    const near = corners[i].z < 10;
-    off[0] += sy[i] < 0 || near ? 1 : 0;
-    off[1] += sy[i] > medium.h || near ? 1 : 0;
-    off[2] += sx[i] < 0 || near ? 1 : 0;
-    off[3] += sx[i] > medium.w || near ? 1 : 0;
-    behind += near ? 1 : 0;
+    const sxi = xs(X1[i], Z1[i]);
+    const syi = ys(Y0[i], Z1[i]);
+    for (let j = i + 1; j < n; j++) {
+      const v =
+        Math.abs(sxi - xs(X1[j], Z1[j])) - Math.abs(syi - ys(Y0[j], Z1[j]));
+      if (v < best) {
+        a = i;
+        b = j;
+        best = v;
+      }
+    }
   }
-  if (off.some((o) => o == n)) {
+  if (ys(Y0[b], Z1[b]) < ys(Y0[a], Z1[a])) {
+    [a, b] = [b, a];
+  }
+  const spy = (i) => Math.sqrt((X1[i] - medium.cx) ** 2 + Z1[i] * Z1[i]);
+  if (spy(b) <= spy(a)) {
+    return false;
+  }
+  let level = 0;
+  for (let i = 0; i < n; i++) {
+    if (Z1[i] < 50 && Y0[i] > medium.cy) {
+      return false;
+    }
+    if (Y0[i] == Y0[0]) {
+      level++;
+    }
+  }
+  return !(level == n && Y0[0] > medium.cy);
+};
+
+// One polygon (Plane.d), its corners placed: seen at all, how bright, in which colour,
+// outlined or not. size is how big its object looks, or -1 for the next checkpoint.
+const drawPoly = (poly, n, noline, size) => {
+  let off0 = 0;
+  let off1 = 0;
+  let off2 = 0;
+  let off3 = 0;
+  let behind = 0;
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i < n; i++) {
+    const sx = xs(X[i], Z[i]);
+    const sy = ys(Y[i], Z[i]);
+    SX[i] = sx;
+    SY[i] = sy;
+    const near = Z[i] < 10;
+    if (sy < 0 || near) off0++;
+    if (sy > medium.h || near) off1++;
+    if (sx < 0 || near) off2++;
+    if (sx > medium.w || near) off3++;
+    if (near) behind++;
+    minX = Math.min(minX, sx);
+    maxX = Math.max(maxX, sx);
+    minY = Math.min(minY, sy);
+    maxY = Math.max(maxY, sy);
+  }
+  if (off0 == n || off1 == n || off2 == n || off3 == n) {
     return;
   }
   // far (b in the original): no black outline, and the far light; models of stone
@@ -245,14 +249,8 @@ const drawPoly = (g, poly, corners, noline, size) => {
   let far = noline || behind != 0;
   // tiny polygons far away are left out
   if (size != -1) {
-    let spanX = 0;
-    let spanY = 0;
-    for (let i = 0; i < n; i++) {
-      for (let j = i; j < n; j++) {
-        spanX = Math.max(spanX, Math.abs(sx[i] - sx[j]));
-        spanY = Math.max(spanY, Math.abs(sy[i] - sy[j]));
-      }
-    }
+    const spanX = maxX - minX;
+    const spanY = maxY - minY;
     if (spanX == 0 || spanY == 0) {
       return;
     }
@@ -283,7 +281,7 @@ const drawPoly = (g, poly, corners, noline, size) => {
   if (poly.fs != 0) {
     let a;
     let b;
-    if (Math.abs(sy[0] - sy[1]) > Math.abs(sy[2] - sy[1])) {
+    if (Math.abs(SY[0] - SY[1]) > Math.abs(SY[2] - SY[1])) {
       a = 0;
       b = 2;
     } else {
@@ -291,10 +289,10 @@ const drawPoly = (g, poly, corners, noline, size) => {
       b = 0;
       side *= -1;
     }
-    if (sy[1] > sy[a]) {
+    if (SY[1] > SY[a]) {
       side *= -1;
     }
-    if (sx[1] > sx[b]) {
+    if (SX[1] > SX[b]) {
       side *= -1;
     }
     if (poly.fs != 22) {
@@ -309,13 +307,23 @@ const drawPoly = (g, poly, corners, noline, size) => {
     gr -= 40;
   }
   // how far: the middle of its extent, plus its gr cubed
-  const span = (axis) => {
-    const values = corners.map((p) => p[axis]);
-    return (Math.max(...values) + Math.min(...values)) / 2;
-  };
-  const my = span("y");
-  const mx = span("x");
-  const mz = span("z");
+  let lowX = X[0];
+  let highX = X[0];
+  let lowY = Y[0];
+  let highY = Y[0];
+  let lowZ = Z[0];
+  let highZ = Z[0];
+  for (let i = 1; i < n; i++) {
+    lowX = Math.min(lowX, X[i]);
+    highX = Math.max(highX, X[i]);
+    lowY = Math.min(lowY, Y[i]);
+    highY = Math.max(highY, Y[i]);
+    lowZ = Math.min(lowZ, Z[i]);
+    highZ = Math.max(highZ, Z[i]);
+  }
+  const my = (lowY + highY) / 2;
+  const mx = (lowX + highX) / 2;
+  const mz = (lowZ + highZ) / 2;
   const av = Math.trunc(
     Math.sqrt(
       Math.max(
@@ -344,17 +352,31 @@ const drawPoly = (g, poly, corners, noline, size) => {
     return;
   }
   if (
-    (poly.gr == -14 || poly.gr == -15 || poly.gr == -12) &&
-    (av > 11000 || facingAway || side == -111)
+    (poly.gr == -11 || poly.gr == -14 || poly.gr == -15 || poly.gr == -12) &&
+    av > 11000
   ) {
-    return;
-  }
-  if (poly.gr == -11 && av > 11000) {
     return;
   }
   if (poly.glass == 2 && av > 6700) {
     return;
   }
+  const facingAway = facesAway(n);
+  if (
+    (poly.gr == -14 || poly.gr == -15 || poly.gr == -12) &&
+    (facingAway || side == -111)
+  ) {
+    return;
+  }
+  // the light: how flat the polygon lies over the ground
+  let projf = 1;
+  for (let i = 0; i < 3; i++) {
+    for (let j = 0; j < 3; j++) {
+      if (j != i) {
+        projf *= Math.sqrt((GX[i] - GX[j]) ** 2 + (GZ[i] - GZ[j]) ** 2) / 100;
+      }
+    }
+  }
+  projf /= 3;
   let light = projf / poly.deltaf + 0.3;
   if (far && !poly.solo) {
     const bright = light >= 1.27;
@@ -394,93 +416,100 @@ const drawPoly = (g, poly, corners, noline, size) => {
       light = 0.6;
     }
   }
-  let color = hsbToRgb(poly.hsb[0], poly.hsb[1], poly.hsb[2] * light);
+  let [r, g, b] = hsbToRgb(poly.hsb[0], poly.hsb[1], poly.hsb[2] * light);
   if (
     medium.lightson &&
     (poly.light != 0 || ((poly.gr == -11 || poly.gr == -12) && size == -1))
   ) {
-    color = poly.oc.map((v) => Math.min(255, Math.max(0, v)));
+    [r, g, b] = poly.oc.map((v) => Math.min(255, Math.max(0, v)));
   }
-  color = fogged(color, av);
-  path(g, sx, sy);
-  g.fillStyle = rgb(color);
-  g.fill();
+  fog(r, g, b, av);
+  [r, g, b] = color;
+  fillPolygon(SX, SY, n, r, g, b, poly.master == 1 && n == 20);
   if (poly.gr == -10) {
     far = false;
   }
   if (!far) {
     if (!poly.solo) {
-      const line =
-        medium.lightson && poly.light != 0
-          ? poly.oc.map((v) => Math.min(255, Math.max(0, Math.trunc(v / 2))))
-          : [0, 0, 0];
-      g.strokeStyle = rgb(line);
-      g.stroke();
+      if (medium.lightson && poly.light != 0) {
+        const half = (v) => Math.min(255, Math.max(0, Math.trunc(v / 2)));
+        drawPolygon(
+          SX,
+          SY,
+          n,
+          half(poly.oc[0]),
+          half(poly.oc[1]),
+          half(poly.oc[2]),
+        );
+      } else {
+        drawPolygon(SX, SY, n, 0, 0, 0);
+      }
     }
   } else if (poly.road && av <= 3000 && medium.fade[0] > 4000) {
-    g.strokeStyle = rgb(color.map((v) => Math.max(0, v - 10)));
-    g.stroke();
+    drawPolygon(
+      SX,
+      SY,
+      n,
+      Math.max(0, r - 10),
+      Math.max(0, g - 10),
+      Math.max(0, b - 10),
+    );
   }
   // the checkpoints' frames, the next one's flashing brighter
   if (poly.gr == -10 || poly.gr == -18) {
-    const frame =
-      poly.gr == -10 && size == -1 && medium.flicker
-        ? // (the decompiled source multiplies by (int)1.6, which is 1)
-          poly.c.map((v) => Math.min(255, Math.trunc(v * 1.6)))
-        : poly.c;
-    g.strokeStyle = rgb(fogged(frame, av));
-    g.stroke();
+    // (the decompiled source multiplies by (int)1.6, which is 1)
+    const bright = poly.gr == -10 && size == -1 && medium.flicker ? 1.6 : 1;
+    const c = poly.c.map((v) => Math.min(255, Math.trunc(v * bright)));
+    fog(c[0], c[1], c[2], av);
+    drawPolygon(SX, SY, n, color[0], color[1], color[2]);
   }
 };
 
 // A car's shadow (Plane.s): each polygon pressed flat onto the ground below the car, in
 // the ground's colour darkened.
-const drawShadow = (g, rad, matrix, groundY, wxz, wzy) => {
+const drawShadow = (rad, matrix, groundY, wxz, wzy) => {
   for (const poly of rad.polys) {
-    const corners = poly.points.map((p) => {
-      const w = placed(
-        poly.wz != 0 || poly.wx != 0 ? turnWheel(poly, p, wxz, wzy) : p,
-        matrix,
-      );
-      w[1] = groundY;
-      return seen(w);
-    });
-    const sx = corners.map((p) => xs(p.x, p.z));
-    const sy = corners.map((p) => ys(p.y, p.z));
-    const n = corners.length;
-    const all = (test) => corners.every((p, i) => test(i) || p.z < 10);
-    if (
-      all((i) => sy[i] < 0) ||
-      all((i) => sy[i] > medium.h) ||
-      all((i) => sx[i] < 0) ||
-      all((i) => sx[i] > medium.w) ||
-      n < 3
-    ) {
+    const n = placePoly(poly, matrix, wxz, wzy, groundY);
+    let off0 = 0;
+    let off1 = 0;
+    let off2 = 0;
+    let off3 = 0;
+    for (let i = 0; i < n; i++) {
+      SX[i] = xs(X[i], Z[i]);
+      SY[i] = ys(Y[i], Z[i]);
+      const near = Z[i] < 10;
+      if (SY[i] < 0 || near) off0++;
+      if (SY[i] > medium.h || near) off1++;
+      if (SX[i] < 0 || near) off2++;
+      if (SX[i] > medium.w || near) off3++;
+    }
+    if (n < 3 || off0 == n || off1 == n || off2 == n || off3 == n) {
       continue;
     }
-    path(g, sx, sy);
-    g.fillStyle = rgb(
-      fogged(
-        medium.crgrnd.map((c) => Math.trunc(c / 1.5)),
-        poly.av ?? 0,
-      ),
+    const ground = medium.crgrnd;
+    fog(
+      Math.trunc(ground[0] / 1.5),
+      Math.trunc(ground[1] / 1.5),
+      Math.trunc(ground[2] / 1.5),
+      poly.av ?? 0,
     );
-    g.fill();
+    fillPolygon(SX, SY, n, color[0], color[1], color[2]);
   }
 };
 
 // An object (ContO.d): skipped when off screen or too far, else its polygons from the
 // farthest. Returns how far it is for ordering the next frame (0: not drawn).
 export const drawObject = (
-  g,
   rad,
   matrix,
   { wxz = 0, wzy = 0, nextCheckpoint = false, groundY = 0 } = {},
 ) => {
-  const centre = project([0, 0, 0], matrix);
+  placeCorner(0, 0, 0, 0, matrix);
   const maxR = rad.maxR;
-  const n = centre.x1;
-  const depth = centre.z;
+  const n = X1[0];
+  const depth = Z[0];
+  const centreY = Y[0];
+  const distance = Math.hypot(GX[0], (medium.cy - Y0[0]) / 1, GZ[0]);
   let size = xs(n + maxR, depth) - xs(n - maxR, depth);
   if (
     !(
@@ -494,39 +523,40 @@ export const drawObject = (
     return 0;
   }
   if (
-    !(ys(centre.y + maxR, depth) > 0 && ys(centre.y - maxR, depth) < medium.h)
+    !(ys(centreY + maxR, depth) > 0 && ys(centreY - maxR, depth) < medium.h)
   ) {
     return 0;
   }
   if (rad.shadow && depth < 2000) {
-    drawShadow(g, rad, matrix, groundY, wxz, wzy);
+    drawShadow(rad, matrix, groundY, wxz, wzy);
   }
   if (nextCheckpoint) {
     size = -1;
   }
-  const polys = rad.polys.map((poly) => ({
-    poly,
-    corners: poly.points.map((p) =>
-      project(
-        poly.wz != 0 || poly.wx != 0 ? turnWheel(poly, p, wxz, wzy) : p,
-        matrix,
-      ),
-    ),
-  }));
-  // the farthest first, by how far each was last frame, as in the original
-  const order = polys
-    .map((entry, i) => ({ entry, i }))
-    .sort(
-      (a, b) => (b.entry.poly.av ?? 0) - (a.entry.poly.av ?? 0) || a.i - b.i,
-    );
-  for (const { entry } of order) {
-    let corners = entry.corners;
-    // a tyre seen from afar has no hole for its rim
-    if (entry.poly.master == 1 && (entry.poly.av ?? 0) > 1500) {
-      corners = corners.slice(0, 12);
+  // the farthest first, by how far each was last frame, as in the original (an insertion
+  // sort: the order changes little from frame to frame)
+  const polys = rad.polys;
+  const order = (rad.order ??= polys.map((poly, i) => i));
+  const before = (i, j) =>
+    (polys[i].av ?? 0) > (polys[j].av ?? 0) ||
+    ((polys[i].av ?? 0) == (polys[j].av ?? 0) && i < j);
+  for (let k = 1; k < order.length; k++) {
+    const i = order[k];
+    let m = k - 1;
+    while (m >= 0 && before(i, order[m])) {
+      order[m + 1] = order[m];
+      m--;
     }
-    drawPoly(g, entry.poly, corners, rad.noline, size);
+    order[m + 1] = i;
   }
-  const d = Math.hypot(centre.gx, centre.gy, centre.gz);
-  return Math.trunc(Math.sqrt(Math.trunc(d)) * rad.grounded);
+  for (const i of order) {
+    const poly = polys[i];
+    let corners = placePoly(poly, matrix, wxz, wzy);
+    // a tyre seen from afar has no hole for its rim
+    if (poly.master == 1 && (poly.av ?? 0) > 1500) {
+      corners = 12;
+    }
+    drawPoly(poly, corners, rad.noline, size);
+  }
+  return Math.trunc(Math.sqrt(Math.trunc(distance)) * rad.grounded);
 };

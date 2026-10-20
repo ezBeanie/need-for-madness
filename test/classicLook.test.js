@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { canvasCalls } from "./harness/browserStubs.js";
+import { glCalls } from "./harness/browserStubs.js";
 import { startRace } from "./harness/race.js";
 
 test("L switches a race to the original game's look and back", async () => {
@@ -8,29 +8,32 @@ test("L switches a race to the original game's look and back", async () => {
     key(76, true);
     key(76, false);
   };
-  const filled = () => {
-    let fills = 0;
-    canvasCalls.listener = (name, args, call) => {
-      if (name === "fill" || name === "fillRect") {
-        fills++;
+  // the vertices of the classic look's one draw call in a frame (it paints everything,
+  // in order, as triangles), or 0
+  const classicVertices = () => {
+    let vertices = 0;
+    glCalls.listener = (name, args) => {
+      if (name === "drawArrays") {
+        vertices = args[2];
       }
-      return call();
     };
     step();
-    canvasCalls.listener = null;
-    return fills;
+    glCalls.listener = null;
+    return vertices;
   };
-  const modern = filled();
+  expect(classicVertices()).toBe(0);
 
   pressL();
   expect(ctx.look.current).toBe(ctx.LOOK.classic);
+  // the original drew into 800 x 450 pixels
+  expect(ctx.canvas3D.height).toBe(450);
   // the original's models arrive, then the sky, the ground and the stage's polygons
   for (let i = 0; i < 5; i++) {
     step();
   }
-  expect(filled()).toBeGreaterThan(modern + 100);
+  expect(classicVertices()).toBeGreaterThan(1000);
 
   pressL();
   expect(ctx.look.current).toBe(ctx.LOOK.modern);
-  expect(filled()).toBeLessThan(modern + 100);
+  expect(classicVertices()).toBe(0);
 });

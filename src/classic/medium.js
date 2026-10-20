@@ -1,3 +1,5 @@
+import { fillRect } from "./batch.js";
+
 // The original Java game's Medium: the camera, the stage's colours, its fog in bands and
 // its sky and ground, in the original's screen of 450 pixels high and its units.
 
@@ -92,14 +94,13 @@ export const ys = (y, z) => {
   return ((depth - medium.focus) * (medium.cy - y)) / depth + y;
 };
 
-const band = (g, color, top, bottom) => {
-  g.fillStyle = `rgb(${color[0]},${color[1]},${color[2]})`;
-  g.fillRect(0, top, medium.w, bottom - top);
+const band = (color, top, bottom) => {
+  fillRect(0, top, medium.w, bottom - top, ...color);
 };
 
 // The sky and the ground: bands from the horizon outwards, each further band a step
 // closer to the fog's colour (the original's Medium.d).
-export const drawSkyAndGround = (g) => {
+export const drawSkyAndGround = () => {
   const { cy, cz, h, zy, fade, cfade } = medium;
   medium.ground = 250 - medium.y;
   const pitch = (y, z) => ({
@@ -121,7 +122,7 @@ export const drawSkyAndGround = (g) => {
           : [...road];
     }
     if (top < h && below > 0) {
-      band(g, ground, top, below);
+      band(ground, top, below);
     }
     below = top;
   }
@@ -140,7 +141,7 @@ export const drawSkyAndGround = (g) => {
       hazeColor = [...sky];
     }
     if (bottom > 0 && above < h) {
-      band(g, sky, above, bottom);
+      band(sky, above, bottom);
     }
     above = bottom;
   }
@@ -152,7 +153,6 @@ export const drawSkyAndGround = (g) => {
       Math.max(0, (Math.abs(medium.y) - 250) / (fade[0] * 2)),
     );
     band(
-      g,
       sky.map((c, k) =>
         Math.trunc((c * (1 - high) + road[k] * (1 + high)) / 2),
       ),
@@ -172,7 +172,7 @@ export const drawSkyAndGround = (g) => {
       Math.trunc(c * (i == 2 ? 0.998 : 0.991)),
     );
     if (haze > 0 && top < h) {
-      band(g, hazeColor, top, haze);
+      band(hazeColor, top, haze);
     }
     haze = top;
   }
