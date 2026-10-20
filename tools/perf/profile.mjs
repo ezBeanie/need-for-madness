@@ -1,9 +1,12 @@
 // Plays the race of measure.mjs with Chrome's CPU profiler on and lists the functions
 // taking the most time (self time).
-// usage: node tools/perf/profile.mjs http://localhost:5173 [seconds] [cars]
+// usage: node tools/perf/profile.mjs http://localhost:5173 [seconds] [cars] [profile.json]
+// With a file name it also saves the profile (Chrome's .cpuprofile format), with the time
+// per source line.
+import { writeFileSync } from "node:fs";
 import { chromium } from "@playwright/test";
 
-const [baseURL, secondsArg, carsArg] = process.argv.slice(2);
+const [baseURL, secondsArg, carsArg, saveTo] = process.argv.slice(2);
 const seconds = Number(secondsArg ?? 15);
 const cars = carsArg ?? "20";
 
@@ -56,6 +59,9 @@ await cdp.send("Profiler.start");
 await page.waitForTimeout(seconds * 1000);
 const { profile } = await cdp.send("Profiler.stop");
 await browser.close();
+if (saveTo) {
+  writeFileSync(saveTo, JSON.stringify(profile));
+}
 
 const selfTime = new Map();
 const byId = new Map(profile.nodes.map((node) => [node.id, node]));

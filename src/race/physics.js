@@ -3109,14 +3109,20 @@ function dentHitCar(c, xc, hitSide, j, mag) {
 }
 // Dents regn made, waiting to be scratched into their car's texture. In a pile-up that
 // takes millions of steps in one tick, and it is only seen, so the drawing scratches as
-// many as fit into a frame (see paintDents).
+// many as fit into a frame (see paintDents). Each hit queues its dented spots together,
+// four numbers a spot (pxc, pyc, cmag, modpix): a pile-up dents tens of thousands.
 const dents = [];
 let nextDent = 0;
+let nextSpot = 0;
 
 // Scratches a dent into the damage texture: strokes walk from the dented spot (pxc, pyc),
 // greying, darkening and breaking windows on their way; a broken window (modpix 3) ends
 // the glass breaking for the following strokes. Returns the steps it took.
-function scratchDent({ pixels, c, pxc, pyc, cmag, modpix }) {
+function scratchDent({ pixels, c, spots }, at) {
+  let pxc = spots[at];
+  let pyc = spots[at + 1];
+  let cmag = spots[at + 2];
+  let modpix = spots[at + 3];
   let glassColor = scene.glassColor;
   let fx = random.scratch;
   let steps = 0;
@@ -3237,10 +3243,15 @@ function scratchDent({ pixels, c, pxc, pyc, cmag, modpix }) {
 export function paintDents(maxSteps) {
   let steps = 0;
   while (nextDent < dents.length && steps < maxSteps) {
-    let dent = dents[nextDent++];
+    const dent = dents[nextDent];
     if (dent.pixels == dent.model.damagePixels) {
-      steps += scratchDent(dent);
+      steps += scratchDent(dent, nextSpot);
       dent.model.damagedPixels = true;
+    }
+    nextSpot += 4;
+    if (nextSpot == dent.spots.length) {
+      nextDent++;
+      nextSpot = 0;
     }
   }
   // a pile-up queues tens of thousands of dents; shifting each one off would copy them all
@@ -3342,99 +3353,106 @@ function dentBody(c, rad, hitSide, k, mag) {
     }
     rad.iscar = 2;
   }
-  let pixels = rad.damagePixels;
-  let pixelread = pixels != null;
-  let tsq = 0,
-    nsq = 0;
-  for (let i = 0; i < rad.ni; i++) {
-    let tmag = 0;
-    let modpix = 0;
-    if (
-      hitSide < HIT.onRoof &&
-      distanceSquaredXZ(
-        car[c].keyx[k],
-        rad.dvert[i * 3],
-        car[c].keyz[k],
-        rad.dvert[i * 3 + 2],
-      ) < carStats.clrad[car[c].typ]
-    ) {
-      tmag = (mag / 30) * random.sim();
-      if (hitSide == HIT.alongX) {
-        rad.dvert[i * 3 + 2] -= tmag * sinDeg(car[c].xz) * cosDeg(car[c].zy);
-        rad.dvert[i * 3] += tmag * cosDeg(car[c].xz) * cosDeg(car[c].xy);
-      }
-      if (hitSide == HIT.alongZ) {
-        rad.dvert[i * 3 + 2] += tmag * cosDeg(car[c].xz) * cosDeg(car[c].zy);
-        rad.dvert[i * 3] += tmag * sinDeg(car[c].xz) * cosDeg(car[c].xy);
-      }
-      if (hitSide == HIT.fromBelow) {
-        rad.dvert[i * 3 + 2] -= tmag * sinDeg(car[c].zy);
-        rad.dvert[i * 3] += tmag * sinDeg(car[c].xy);
-      }
-      if (Math.abs(tmag) > 0.1) {
-        if (random.fx() > 0.91) {
-          if (game.phase != PHASE.replayRewind) {
-            chipaway(
-              c,
-              rad.dvert[i * 3],
-              rad.dvert[i * 3 + 1],
-              rad.dvert[i * 3 + 2],
-              tmag,
-            );
-          }
-        }
-      }
-      if (game.phase == PHASE.race) {
-        racers[c].hitmag += Math.abs(tmag) * 0.667;
-      }
-      modpix = 1;
-    }
-    // The original also let vertices near the roof's height count, but it looked up
-    // msquash by car index and type (msquash[c][typ]), which is never a number, so
-    // only vertices above it ever do. With 20 cars that lookup crashed for car 19.
-    if (
-      hitSide == HIT.onRoof &&
-      rad.dvert[i * 3 + 1] > carStats.flipy[car[c].typ] + racers[c].squash &&
-      Math.abs(racers[c].squash) < carStats.msquash[car[c].typ]
-    ) {
-      tmag = (mag / 15) * random.sim();
-      rad.dvert[i * 3 + 1] -= tmag;
-      tsq -= tmag;
-      nsq++;
-      if (Math.abs(tmag) > 0.1) {
-        if (random.fx() > 0.91) {
-          if (game.phase != PHASE.replayRewind) {
-            chipaway(
-              c,
-              rad.dvert[i * 3],
-              rad.dvert[i * 3 + 1],
-              rad.dvert[i * 3 + 2],
-              tmag,
-            );
-          }
-        }
-      }
-      if (game.phase == PHASE.race) {
-        racers[c].hitmag += Math.abs(tmag) * 0.667;
-      }
-      modpix = 2;
-    }
-    if (pixelread && modpix) {
-      let pxc = Math.round(rad.tex[rad.tri[i * 3 + 2] * 2] * 256);
-      let pyc = Math.round((1 - rad.tex[rad.tri[i * 3 + 2] * 2 + 1]) * 256);
-      let cmag =
-        Math.abs(tmag) *
-        11 *
-        carStats.dammult[car[c].typ] *
-        carStats.colrdammult[car[c].typ];
-      dents.push({ model: rad, pixels, c, pxc, pyc, cmag, modpix });
-    }
+  const pixels = rad.damagePixels;
+  const spots = pixels != null ? [] : null;
+  if (hitSide == HIT.onRoof) {
+    crushRoof(c, rad, mag, spots);
+  } else {
+    dentNearCorner(c, rad, hitSide, k, mag, spots);
   }
-  if (hitSide == HIT.onRoof && nsq > 0) {
-    racers[c].squash += tsq / nsq;
+  if (spots?.length) {
+    dents.push({ model: rad, pixels, c, spots });
   }
   rad.damagedVertices = true;
   rad.loaded = 2;
+}
+
+// A pile-up dents tens of thousands of vertices in a tick, hence what stays the same for
+// every vertex is looked up once.
+function dentNearCorner(c, rad, hitSide, k, mag, spots) {
+  const dvert = rad.dvert;
+  const keyX = car[c].keyx[k];
+  const keyZ = car[c].keyz[k];
+  const reach = carStats.clrad[car[c].typ];
+  const sinXZ = sinDeg(car[c].xz);
+  const cosXZ = cosDeg(car[c].xz);
+  const sinXY = sinDeg(car[c].xy);
+  const cosXY = cosDeg(car[c].xy);
+  const sinZY = sinDeg(car[c].zy);
+  const cosZY = cosDeg(car[c].zy);
+  for (let i = 0; i < rad.ni; i++) {
+    if (distanceSquaredXZ(keyX, dvert[i * 3], keyZ, dvert[i * 3 + 2]) < reach) {
+      const tmag = (mag / 30) * random.sim();
+      if (hitSide == HIT.alongX) {
+        dvert[i * 3 + 2] -= tmag * sinXZ * cosZY;
+        dvert[i * 3] += tmag * cosXZ * cosXY;
+      }
+      if (hitSide == HIT.alongZ) {
+        dvert[i * 3 + 2] += tmag * cosXZ * cosZY;
+        dvert[i * 3] += tmag * sinXZ * cosXY;
+      }
+      if (hitSide == HIT.fromBelow) {
+        dvert[i * 3 + 2] -= tmag * sinZY;
+        dvert[i * 3] += tmag * sinXY;
+      }
+      chipAndScratch(c, rad, i, tmag, 1, spots);
+    }
+  }
+}
+
+// The original also let vertices near the roof's height count, but it looked up msquash
+// by car index and type (msquash[c][typ]), which is never a number, so only vertices
+// above it ever do. With 20 cars that lookup crashed for car 19.
+function crushRoof(c, rad, mag, spots) {
+  let tsq = 0,
+    nsq = 0;
+  for (let i = 0; i < rad.ni; i++) {
+    if (
+      rad.dvert[i * 3 + 1] > carStats.flipy[car[c].typ] + racers[c].squash &&
+      Math.abs(racers[c].squash) < carStats.msquash[car[c].typ]
+    ) {
+      const tmag = (mag / 15) * random.sim();
+      rad.dvert[i * 3 + 1] -= tmag;
+      tsq -= tmag;
+      nsq++;
+      chipAndScratch(c, rad, i, tmag, 2, spots);
+    }
+  }
+  if (nsq > 0) {
+    racers[c].squash += tsq / nsq;
+  }
+}
+
+// After a vertex is dented: a chip may fly off, the car takes the damage, and the spot
+// is queued to be scratched into the texture (modpix 1 for a dent, 2 for a crushed roof).
+function chipAndScratch(c, rad, i, tmag, modpix, spots) {
+  if (Math.abs(tmag) > 0.1) {
+    if (random.fx() > 0.91) {
+      if (game.phase != PHASE.replayRewind) {
+        chipaway(
+          c,
+          rad.dvert[i * 3],
+          rad.dvert[i * 3 + 1],
+          rad.dvert[i * 3 + 2],
+          tmag,
+        );
+      }
+    }
+  }
+  if (game.phase == PHASE.race) {
+    racers[c].hitmag += Math.abs(tmag) * 0.667;
+  }
+  if (spots) {
+    spots.push(
+      Math.round(rad.tex[rad.tri[i * 3 + 2] * 2] * 256),
+      Math.round((1 - rad.tex[rad.tri[i * 3 + 2] * 2 + 1]) * 256),
+      Math.abs(tmag) *
+        11 *
+        carStats.dammult[car[c].typ] *
+        carStats.colrdammult[car[c].typ],
+      modpix,
+    );
+  }
 }
 export function fixcar(c) {
   let rad = racers[c].body;

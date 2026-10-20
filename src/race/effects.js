@@ -19,6 +19,9 @@ export const effects = {
   // models; loaded: 0 gone, then its age
   chips: [],
   chipCount: 0,
+  // the chips before it are all flying: a pile-up throws hundreds of chips a tick, and
+  // each looked for the first free one through all of them
+  chipsTakenBelow: 0,
   // stg: 0 gone, then its age up to 10
   dustClouds: [],
   dustCount: 0,
@@ -81,12 +84,17 @@ const sortBackToFront = (items, count, order) => {
   }
 };
 
-const buffer = (target, data) => {
-  const made = gl.createBuffer();
+// Fills a buffer of a chip, reusing the one of the chip its slot had before (without
+// one, a new one): a pile-up throws hundreds of chips a tick, and making buffers costs
+// more than filling them.
+const refill = (old, target, data) => {
+  const made = old ?? gl.createBuffer();
   gl.bindBuffer(target, made);
   gl.bufferData(target, data, gl.STATIC_DRAW);
   return made;
 };
+// every chip is one triangle
+let chipIndices = null;
 
 // A random coordinate for each of the three corners of a chip, then all shifted by a
 // random share of half their mean, as in the original.
@@ -109,22 +117,26 @@ export function chipaway(c, x, y, z, size) {
   if (!(racers[c].carnchp < MAX_CHIPS_PER_CAR && !recording.frozen)) {
     return;
   }
-  let slot = freeSlot(
-    effects.chips,
-    effects.chipCount,
-    (chip) => chip.loaded == 0,
-  );
+  let slot = -1;
+  for (let i = effects.chipsTakenBelow; i < effects.chipCount; i++) {
+    if (effects.chips[i].loaded == 0) {
+      slot = i;
+      break;
+    }
+  }
   if (slot == -1) {
     slot = effects.chipCount;
     effects.chipCount++;
     racers[c].carnchp++;
   }
+  effects.chipsTakenBelow = slot + 1;
   if (size > 0.4) {
     size = 0.3;
   }
   if (size < -0.4) {
     size = -0.3;
   }
+  const before = effects.chips[slot];
   const chip = newModel();
   effects.chips[slot] = chip;
   const m = car[c].mat;
@@ -173,10 +185,15 @@ export function chipaway(c, x, y, z, size) {
   if (shade > 0.667) {
     chip.ownlight = true;
   }
-  chip.vbuf = buffer(gl.ARRAY_BUFFER, new Float32Array(vertices));
-  chip.nbuf = buffer(gl.ARRAY_BUFFER, new Float32Array(normals));
-  chip.tbuf = buffer(gl.ARRAY_BUFFER, new Float32Array(texture));
-  chip.ibuf = buffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array([0, 1, 2]));
+  chip.vbuf = refill(before?.vbuf, gl.ARRAY_BUFFER, new Float32Array(vertices));
+  chip.nbuf = refill(before?.nbuf, gl.ARRAY_BUFFER, new Float32Array(normals));
+  chip.tbuf = refill(before?.tbuf, gl.ARRAY_BUFFER, new Float32Array(texture));
+  chipIndices ??= refill(
+    null,
+    gl.ELEMENT_ARRAY_BUFFER,
+    new Uint16Array([0, 1, 2]),
+  );
+  chip.ibuf = chipIndices;
   chip.mat = mat4.create();
   chip.texture = racers[c].body.texture[1];
   chip.loaded = 1;
@@ -217,12 +234,8 @@ export function chipsfly() {
       chip.loaded = 0;
     }
     if (chip.loaded == 0) {
-      gl.deleteBuffer(chip.vbuf);
-      chip.vbuf = null;
-      gl.deleteBuffer(chip.tbuf);
-      chip.tbuf = null;
-      gl.deleteBuffer(chip.ibuf);
-      chip.ibuf = null;
+      // its buffers wait for the next chip in its slot
+      effects.chipsTakenBelow = Math.min(effects.chipsTakenBelow, i);
       chip.texture = null;
     } else {
       anyFlying = true;
@@ -230,6 +243,7 @@ export function chipsfly() {
   }
   if (!anyFlying) {
     effects.chipCount = 0;
+    effects.chipsTakenBelow = 0;
     for (const racer of racers) {
       racer.carnchp = 0;
     }

@@ -322,6 +322,7 @@ const prepareStage = () => {
   createSparks();
   colorCheckpointText();
   effects.chipCount = 0;
+  effects.chipsTakenBelow = 0;
   effects.sparkCount = 0;
   effects.dustCount = 0;
   effects.explosionCount = 0;
