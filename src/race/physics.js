@@ -21,7 +21,7 @@ import { random } from "../core/random.js";
 import { MAX_CARS, MODE, PHASE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
-import { gl, keepDamageTexture } from "../render/renderer.js";
+import { BLEND, gl, keepDamageTexture } from "../render/renderer.js";
 import { carModels, carTextures, scene } from "../render/scene.js";
 import {
   DUST,
@@ -507,13 +507,13 @@ function passFixHoops(c) {
       }
     } else {
       raceEvents.onelec = true;
-      racers[c].body.alpha = 1;
+      racers[c].body.alpha = BLEND.alpha;
       if (car[c].fcnt % 2 == 0) {
         if (random.fx() > 0.333) {
           if (random.fx() > random.fx()) {
-            racers[c].body.alpha = 3;
+            racers[c].body.alpha = BLEND.brightGlow;
           } else {
-            racers[c].body.alpha = 2;
+            racers[c].body.alpha = BLEND.glow;
           }
         }
       }
@@ -1078,7 +1078,7 @@ function burnWhenWasted(c, type, avgSpeedX, avgSpeedZ) {
       }
       if (racers[c].cntdest < 6) {
         if (racers[c].embos == 0) {
-          racers[c].body.alpha = 1;
+          racers[c].body.alpha = BLEND.alpha;
           racers[c].embodir = Math.floor(random.fx() * 3);
           if (racers[c].embodir == 3) {
             racers[c].embodir = 0;
@@ -1086,7 +1086,7 @@ function burnWhenWasted(c, type, avgSpeedX, avgSpeedZ) {
           racers[c].embomag = 1.2 + random.fx() * 0.2;
         }
         if (racers[c].embos == 1) {
-          racers[c].body.alpha = 2;
+          racers[c].body.alpha = BLEND.glow;
         }
         racers[c].embos++;
         if (racers[c].embos == 2) {
@@ -1095,7 +1095,7 @@ function burnWhenWasted(c, type, avgSpeedX, avgSpeedZ) {
         }
       } else {
         if (racers[c].cntdest == 6) {
-          racers[c].body.alpha = 1;
+          racers[c].body.alpha = BLEND.alpha;
           racers[c].embodir = 0;
           chipburn(c);
           racers[c].embos = 0;
@@ -3438,7 +3438,7 @@ function dentBody(c, rad, hitSide, k, mag) {
 }
 export function fixcar(c) {
   let rad = racers[c].body;
-  rad.alpha = 1;
+  rad.alpha = BLEND.alpha;
   rad.dvert = [];
   for (var i = 0; i < rad.ni; i++) {
     rad.dvert[i * 3] = -rad.vrt[rad.tri[i * 3] * 3];

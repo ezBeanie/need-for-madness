@@ -9,6 +9,7 @@ import { random } from "../core/random.js";
 import { PHASE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { CAMERA, camera } from "../render/camera.js";
+import { BLEND } from "../render/renderer.js";
 import { resetPursuit } from "./ai.js";
 import { burn, chipburn, dustup, firexp, sprks } from "./effects.js";
 import { raceEvents } from "./events.js";
@@ -372,7 +373,7 @@ const resetCarsToTapeStart = (tape, onWasted) => {
     racer.nbsq = 0;
     car[c].fcnt = 0;
     fixcar(c);
-    racer.body.alpha = 1;
+    racer.body.alpha = BLEND.alpha;
     const carTape = tape.cars[c];
     if (carTape.wastedAt < 0) {
       onWasted(c);
@@ -544,7 +545,7 @@ const burnWreck = (c, carTape, frozen) => {
   const racer = racers[c];
   if (racer.cntdest < 6) {
     if (racer.embos == 0) {
-      racer.body.alpha = 1;
+      racer.body.alpha = BLEND.alpha;
       racer.embodir = Math.floor(random.fx() * 3);
       if (racer.embodir == 3) {
         racer.embodir = 0;
@@ -552,7 +553,7 @@ const burnWreck = (c, carTape, frozen) => {
       racer.embomag = 1.2 + random.fx() * 0.2;
     }
     if (racer.embos == 1) {
-      racer.body.alpha = 2;
+      racer.body.alpha = BLEND.glow;
     }
     racer.embos++;
     if (racer.embos == 2) {
@@ -564,7 +565,7 @@ const burnWreck = (c, carTape, frozen) => {
     return;
   }
   if (racer.cntdest == 6) {
-    racer.body.alpha = 1;
+    racer.body.alpha = BLEND.alpha;
     racer.embodir = 0;
     chipburn(c);
     racer.embos = 0;
@@ -590,9 +591,10 @@ const burnWreck = (c, carTape, frozen) => {
 // A car being fixed crackles with electricity and flashes now and then.
 const flickerWhileFixing = (c) => {
   raceEvents.onelec = true;
-  racers[c].body.alpha = 1;
+  racers[c].body.alpha = BLEND.alpha;
   if (car[c].fcnt % 2 == 0 && random.fx() > 0.333) {
-    racers[c].body.alpha = random.fx() > random.fx() ? 3 : 2;
+    racers[c].body.alpha =
+      random.fx() > random.fx() ? BLEND.brightGlow : BLEND.glow;
   }
 };
 
@@ -709,7 +711,7 @@ const backToTheRace = () => {
     racers[c].focus = -1;
     racers[c].missedcp = 0;
     racers[c].nofocus = false;
-    racers[c].body.alpha = 1;
+    racers[c].body.alpha = BLEND.alpha;
     if (recording.tape.cars[c].wastedAt > 0) {
       racers[c].dest = false;
       recording.tape.cars[c].wastedAt = NOT_WASTED;

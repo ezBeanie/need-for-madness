@@ -214,10 +214,15 @@ export const setWorld = (
   );
 };
 
+// model.alpha: how a model blends in (0 not at all). The glows (the blend colour stays
+// black, so the source counts fully) light up burning and electrified cars.
+export const BLEND = { alpha: 1, glow: 2, brightGlow: 3 };
+
 const BLENDING = {
-  1: () => gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA),
-  2: () => gl.blendFunc(gl.ONE_MINUS_CONSTANT_COLOR, gl.DST_COLOR),
-  3: () => gl.blendFunc(gl.ONE_MINUS_CONSTANT_COLOR, gl.DST_ALPHA),
+  [BLEND.alpha]: () => gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA),
+  [BLEND.glow]: () => gl.blendFunc(gl.ONE_MINUS_CONSTANT_COLOR, gl.DST_COLOR),
+  [BLEND.brightGlow]: () =>
+    gl.blendFunc(gl.ONE_MINUS_CONSTANT_COLOR, gl.DST_ALPHA),
 };
 
 const lightingOf = (model) => {

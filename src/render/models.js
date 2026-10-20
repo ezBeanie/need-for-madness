@@ -4,7 +4,7 @@
 import { interfaceResolution } from "../core/platform.js";
 import { parseModel } from "../data/modelFormat.js";
 import { readFloat, readInt } from "../data/values.js";
-import { gl, isPowerOf2 } from "./renderer.js";
+import { BLEND, gl, isPowerOf2 } from "./renderer.js";
 
 export const newModel = () => ({
   loaded: 0,
@@ -85,7 +85,7 @@ const applyModelDirectives = (model, directives) => {
       build.scaleX = readFloat(value);
     }
     if (command == "enableAlpha") {
-      model.alpha = 1;
+      model.alpha = BLEND.alpha;
     }
     if (command == "ownLight") {
       model.ownlight = true;
@@ -95,7 +95,7 @@ const applyModelDirectives = (model, directives) => {
     }
     if (command == "car") {
       model.iscar = 1;
-      model.alpha = 1;
+      model.alpha = BLEND.alpha;
     }
     if (command == "skid") {
       model.skid = readInt(value);

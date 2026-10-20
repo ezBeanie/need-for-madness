@@ -3,7 +3,7 @@
 import { carStats } from "../data/carStats.js";
 import { resetMatrix } from "./interpolation.js";
 import { images } from "../ui/images.js";
-import { gl, isPowerOf2 } from "./renderer.js";
+import { BLEND, gl, isPowerOf2 } from "./renderer.js";
 import {
   wheelDisk,
   wheelDisks,
@@ -146,7 +146,7 @@ const buildDisk = (disk, c, k) => {
   disk.ibuf = buffer(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(indices));
   disk.nt = 1;
   disk.mat = mat4.create();
-  disk.alpha = 1;
+  disk.alpha = BLEND.alpha;
   disk.texture = gl.createTexture();
   gl.bindTexture(gl.TEXTURE_2D, disk.texture);
   gl.texImage2D(
