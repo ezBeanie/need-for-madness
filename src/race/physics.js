@@ -36,7 +36,7 @@ import {
 import { raceEvents } from "./events.js";
 import { SKID, car, racers } from "./racers.js";
 import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
-import { pieceModels, pieces, track } from "./track.js";
+import { PIECE, pieceModels, pieces, track } from "./track.js";
 
 const drag = 0.05;
 const lonorm = [];
@@ -281,275 +281,7 @@ function driveCar(c) {
     Math.abs(2 * car[c].mat[10]);
   step.slopeContacts = 0;
   for (let o = 0; o < pieces.count; o++) {
-    let sandSlopeContacts = 0;
-    let flatContacts = 0;
-    if (
-      pieceModels[pieces.list[o].typ].intershad ||
-      pieceModels[pieces.list[o].typ].interact
-    ) {
-      if (
-        Math.abs(car[c].x - pieces.list[o].x) <
-          pieceModels[pieces.list[o].typ].colrad + carModels[type].colrad &&
-        Math.abs(car[c].y - pieces.list[o].y) <
-          pieceModels[pieces.list[o].typ].colrad + carModels[type].colrad &&
-        Math.abs(car[c].z - pieces.list[o].z) <
-          pieceModels[pieces.list[o].typ].colrad + carModels[type].colrad
-      ) {
-        pieceModels[pieces.list[o].typ].x = pieces.list[o].x;
-        pieceModels[pieces.list[o].typ].y = pieces.list[o].y;
-        pieceModels[pieces.list[o].typ].z = pieces.list[o].z;
-        pieceModels[pieces.list[o].typ].mat = pieces.list[o].mat;
-        let rad = pieceModels[pieces.list[o].typ];
-        let cancelbnd = false;
-        if (pieces.list[o].typ == 33 || pieces.list[o].typ == 34) {
-          cancelbnd = true;
-        }
-        if (
-          (pieces.list[o].typ == 46 || pieces.list[o].typ == 47) &&
-          car[c].y > 70
-        ) {
-          cancelbnd = true;
-        }
-        if (
-          (pieces.list[o].typ == 50 || pieces.list[o].typ == 48) &&
-          car[c].y > 140
-        ) {
-          cancelbnd = true;
-        }
-        if (pieces.list[o].typ == 49 && car[c].y > 280) {
-          cancelbnd = true;
-        }
-        if (pieces.list[o].typ == 51 && car[c].y > 310) {
-          cancelbnd = true;
-        }
-        if (pieces.list[o].typ == 40 && car[c].y > 100) {
-          cancelbnd = true;
-        }
-        let cancelpln = false;
-        if (pieces.list[o].typ == 1) {
-          cancelpln = true;
-        }
-        for (let k = 0; k < 4; k++) {
-          if (
-            Math.abs(step.wheelX[k] - pieces.list[o].x) < pieces.list[o].bx &&
-            Math.abs(step.wheelZ[k] - pieces.list[o].z) < pieces.list[o].bz &&
-            Math.abs(step.wheelY[k] - pieces.list[o].y) < pieces.list[o].by
-          ) {
-            for (let i = 0; i < rad.ni / 3; i++) {
-              const tri = triangleOf(rad, i);
-              // the wheel seen from the piece, a little higher for walls
-              const at = {
-                x: step.wheelX[k] - rad.x,
-                y: step.wheelY[k] + 7 - rad.y,
-                z: step.wheelZ[k] - rad.z,
-              };
-              if (Math.abs(tri.ny) < rad.walarc && !cancelbnd) {
-                let bncbth = false;
-                if (!rad.interact) {
-                  if (pieces.list[o].typ != 39) {
-                    let verlow = 10000;
-                    for (let j = 0; j < 3; j++) {
-                      if (tri.y[j] < verlow) {
-                        verlow = tri.y[j];
-                      }
-                    }
-                    for (let j = 0; j < 3; j++) {
-                      if (Math.abs(tri.y[j] - verlow) < 2) {
-                        tri.y[j] -= 100;
-                      }
-                    }
-                  } else {
-                    if (i == 43) {
-                      if (Math.abs(tri.nz) == 1) {
-                        tri.x[0] = -tri.x[1];
-                        tri.x[2] = -tri.x[1];
-                        for (let j = 0; j < 3; j++) {
-                          tri.z[j] *= 1;
-                        }
-                        tri.y[0] += 50;
-                        tri.y[1] = -10;
-                        tri.y[2] = -10;
-                      }
-                      if (Math.abs(tri.nx) == 1) {
-                        tri.z[0] = -tri.z[1];
-                        tri.z[2] = -tri.z[1];
-                        for (let j = 0; j < 3; j++) {
-                          tri.x[j] *= 1;
-                        }
-                        tri.y[0] += 50;
-                        tri.y[1] = -10;
-                        tri.y[2] = -10;
-                      }
-                      bncbth = true;
-                    }
-                    if (i == 44) {
-                      if (Math.abs(tri.nz) == 1) {
-                        tri.x[1] = -tri.x[0];
-                        for (let j = 0; j < 3; j++) {
-                          tri.z[j] *= 1;
-                        }
-                        tri.y[1] += 50;
-                        tri.y[2] += 50;
-                        tri.y[0] = -10;
-                      }
-                      if (Math.abs(tri.nx) == 1) {
-                        tri.z[1] = -tri.z[0];
-                        for (let j = 0; j < 3; j++) {
-                          tri.x[j] *= 1;
-                        }
-                        tri.y[1] += 50;
-                        tri.y[2] += 50;
-                        tri.y[0] = -10;
-                      }
-                      bncbth = true;
-                    }
-                  }
-                }
-                if (Math.abs(tri.nz) > Math.abs(tri.nx)) {
-                  if (overTriangle(tri.x, tri.y, at.x, at.y)) {
-                    let colz = pointOnTriangle(
-                      tri.y,
-                      tri.x,
-                      tri.z,
-                      step.wheelY[k],
-                      rad.y,
-                      step.wheelX[k],
-                      rad.x,
-                      rad.z,
-                    );
-                    if (
-                      pieces.list[o].bnd[0] != 1 &&
-                      tri.nz > 0 &&
-                      step.wheelZ[k] < colz + step.reachZ &&
-                      step.wheelZ[k] > colz + step.reachZ - rad.bndmax &&
-                      (racers[c].scz[k] <= 1.2 || bncbth)
-                    ) {
-                      step.hitWall = true;
-                      bounceOffWallFacingPlusZ(k, colz, c, type, rad, o, step);
-                    }
-                    if (
-                      pieces.list[o].bnd[1] != 1 &&
-                      tri.nz < 0 &&
-                      step.wheelZ[k] > colz - step.reachZ &&
-                      step.wheelZ[k] < colz - step.reachZ + rad.bndmax &&
-                      (racers[c].scz[k] >= -1.2 || bncbth)
-                    ) {
-                      step.hitWall = true;
-                      bounceOffWallFacingMinusZ(k, colz, c, type, rad, o, step);
-                    }
-                  }
-                } else {
-                  if (overTriangle(tri.y, tri.z, at.y, at.z)) {
-                    let colx = pointOnTriangle(
-                      tri.z,
-                      tri.y,
-                      tri.x,
-                      step.wheelZ[k],
-                      rad.z,
-                      step.wheelY[k],
-                      rad.y,
-                      rad.x,
-                    );
-                    if (
-                      pieces.list[o].bnd[2] != 1 &&
-                      tri.nx > 0 &&
-                      step.wheelX[k] < colx + step.reachX &&
-                      step.wheelX[k] > colx + step.reachX - rad.bndmax &&
-                      (racers[c].scx[k] <= 1.2 || bncbth)
-                    ) {
-                      step.hitWall = true;
-                      bounceOffWallFacingPlusX(k, colx, c, type, rad, o, step);
-                    }
-                    if (
-                      pieces.list[o].bnd[3] != 1 &&
-                      tri.nx < 0 &&
-                      step.wheelX[k] > colx - step.reachX &&
-                      step.wheelX[k] < colx - step.reachX + rad.bndmax &&
-                      (racers[c].scx[k] >= -1.2 || bncbth)
-                    ) {
-                      step.hitWall = true;
-                      bounceOffWallFacingMinusX(k, colx, c, type, rad, o, step);
-                    }
-                  }
-                }
-              }
-              if (pieces.list[o].typ == 26) {
-                tri.ny = Math.abs(tri.ny);
-              }
-              if (tri.ny > 0.4 && !cancelpln) {
-                if (overTriangle(tri.x, tri.z, at.x, at.z)) {
-                  let coly = pointOnTriangle(
-                    tri.z,
-                    tri.x,
-                    tri.y,
-                    step.wheelZ[k],
-                    rad.z,
-                    step.wheelX[k],
-                    rad.x,
-                    rad.y,
-                  );
-                  if (Math.abs(tri.ny) == 1) {
-                    if (
-                      step.wheelY[k] < coly - 0.05 &&
-                      step.wheelY[k] > coly - 20
-                    ) {
-                      flatContacts++;
-                      landOnFlat(c, k, type, coly, step);
-                    }
-                  } else {
-                    let colx = pointOnTriangle(
-                      tri.z,
-                      tri.y,
-                      tri.x,
-                      step.wheelZ[k],
-                      rad.z,
-                      step.wheelY[k],
-                      rad.y,
-                      rad.x,
-                    );
-                    let colz = pointOnTriangle(
-                      tri.y,
-                      tri.x,
-                      tri.z,
-                      step.wheelY[k],
-                      rad.y,
-                      step.wheelX[k],
-                      rad.x,
-                      rad.z,
-                    );
-                    if (step.wheelY[k] < coly && step.wheelY[k] > coly - 20) {
-                      if (step.surface == DUST.sand) {
-                        sandSlopeContacts++;
-                      } else {
-                        step.slopeContacts++;
-                      }
-                      landOnSlope(
-                        tri,
-                        c,
-                        k,
-                        type,
-                        o,
-                        coly,
-                        colz,
-                        colx,
-                        i,
-                        step,
-                      );
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    }
-    if (sandSlopeContacts == 4) {
-      racers[c].mtouch = true;
-    }
-    if (flatContacts == 4) {
-      step.wheelsOnGround = 4;
-    }
+    meetPiece(o, c, type, step);
   }
   if (step.slopeContacts == 4) {
     racers[c].mtouch = true;
@@ -1637,6 +1369,247 @@ function driveCar(c) {
   }
 }
 
+function meetPiece(o, c, type, step) {
+  const piece = pieces.list[o];
+  const rad = pieceModels[piece.typ];
+  let sandSlopeContacts = 0;
+  let flatContacts = 0;
+  if (rad.intershad || rad.interact) {
+    if (
+      Math.abs(car[c].x - piece.x) < rad.colrad + carModels[type].colrad &&
+      Math.abs(car[c].y - piece.y) < rad.colrad + carModels[type].colrad &&
+      Math.abs(car[c].z - piece.z) < rad.colrad + carModels[type].colrad
+    ) {
+      rad.x = piece.x;
+      rad.y = piece.y;
+      rad.z = piece.z;
+      rad.mat = piece.mat;
+      const passesWalls = passesWallsOf(piece.typ, car[c].y);
+      const passesGround = piece.typ == PIECE.froad;
+      for (let k = 0; k < 4; k++) {
+        if (
+          Math.abs(step.wheelX[k] - piece.x) < piece.bx &&
+          Math.abs(step.wheelZ[k] - piece.z) < piece.bz &&
+          Math.abs(step.wheelY[k] - piece.y) < piece.by
+        ) {
+          for (let i = 0; i < rad.ni / 3; i++) {
+            const tri = triangleOf(rad, i);
+            // the wheel seen from the piece, a little higher for walls
+            const at = {
+              x: step.wheelX[k] - rad.x,
+              y: step.wheelY[k] + 7 - rad.y,
+              z: step.wheelZ[k] - rad.z,
+            };
+            if (Math.abs(tri.ny) < rad.walarc && !passesWalls) {
+              const atAnySpeed =
+                !rad.interact && reshapeWall(tri, piece.typ, i);
+              bounceOffWalls(c, k, type, o, rad, tri, at, atAnySpeed, step);
+            }
+            if (piece.typ == PIECE.halfpipe) {
+              tri.ny = Math.abs(tri.ny);
+            }
+            if (tri.ny > 0.4 && !passesGround) {
+              if (overTriangle(tri.x, tri.z, at.x, at.z)) {
+                let coly = pointOnTriangle(
+                  tri.z,
+                  tri.x,
+                  tri.y,
+                  step.wheelZ[k],
+                  rad.z,
+                  step.wheelX[k],
+                  rad.x,
+                  rad.y,
+                );
+                if (Math.abs(tri.ny) == 1) {
+                  if (
+                    step.wheelY[k] < coly - 0.05 &&
+                    step.wheelY[k] > coly - 20
+                  ) {
+                    flatContacts++;
+                    landOnFlat(c, k, type, coly, step);
+                  }
+                } else {
+                  let colx = pointOnTriangle(
+                    tri.z,
+                    tri.y,
+                    tri.x,
+                    step.wheelZ[k],
+                    rad.z,
+                    step.wheelY[k],
+                    rad.y,
+                    rad.x,
+                  );
+                  let colz = pointOnTriangle(
+                    tri.y,
+                    tri.x,
+                    tri.z,
+                    step.wheelY[k],
+                    rad.y,
+                    step.wheelX[k],
+                    rad.x,
+                    rad.z,
+                  );
+                  if (step.wheelY[k] < coly && step.wheelY[k] > coly - 20) {
+                    if (step.surface == DUST.sand) {
+                      sandSlopeContacts++;
+                    } else {
+                      step.slopeContacts++;
+                    }
+                    landOnSlope(tri, c, k, type, o, coly, colz, colx, i, step);
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  if (sandSlopeContacts == 4) {
+    racers[c].mtouch = true;
+  }
+  if (flatContacts == 4) {
+    step.wheelsOnGround = 4;
+  }
+}
+
+// Whether wheels pass through the piece's walls: the sideoffs' always, the rolls' and the
+// launchpad's once the car is high enough to be on top of them.
+function passesWallsOf(typ, carY) {
+  return (
+    typ == PIECE.sideoff ||
+    typ == PIECE.bsideoff ||
+    ((typ == PIECE.roll1 || typ == PIECE.roll2) && carY > 70) ||
+    ((typ == PIECE.roll5 || typ == PIECE.roll3) && carY > 140) ||
+    (typ == PIECE.roll4 && carY > 280) ||
+    (typ == PIECE.roll6 && carY > 310) ||
+    (typ == PIECE.launchpad && carY > 100)
+  );
+}
+
+// Reshapes a wall triangle of a solid piece before the wheels meet it: most walls reach
+// 100 further down so wheels cannot slip under them, and two tside triangles become steep
+// ramps. Returns whether those ramps bounce wheels whatever their speed.
+function reshapeWall(tri, typ, i) {
+  if (typ != PIECE.tside) {
+    let verlow = 10000;
+    for (let j = 0; j < 3; j++) {
+      if (tri.y[j] < verlow) {
+        verlow = tri.y[j];
+      }
+    }
+    for (let j = 0; j < 3; j++) {
+      if (Math.abs(tri.y[j] - verlow) < 2) {
+        tri.y[j] -= 100;
+      }
+    }
+    return false;
+  }
+  if (i == 43) {
+    if (Math.abs(tri.nz) == 1) {
+      tri.x[0] = -tri.x[1];
+      tri.x[2] = -tri.x[1];
+      tri.y[0] += 50;
+      tri.y[1] = -10;
+      tri.y[2] = -10;
+    }
+    if (Math.abs(tri.nx) == 1) {
+      tri.z[0] = -tri.z[1];
+      tri.z[2] = -tri.z[1];
+      tri.y[0] += 50;
+      tri.y[1] = -10;
+      tri.y[2] = -10;
+    }
+    return true;
+  }
+  if (i == 44) {
+    if (Math.abs(tri.nz) == 1) {
+      tri.x[1] = -tri.x[0];
+      tri.y[1] += 50;
+      tri.y[2] += 50;
+      tri.y[0] = -10;
+    }
+    if (Math.abs(tri.nx) == 1) {
+      tri.z[1] = -tri.z[0];
+      tri.y[1] += 50;
+      tri.y[2] += 50;
+      tri.y[0] = -10;
+    }
+    return true;
+  }
+  return false;
+}
+
+function bounceOffWalls(c, k, type, o, rad, tri, at, atAnySpeed, step) {
+  if (Math.abs(tri.nz) > Math.abs(tri.nx)) {
+    if (overTriangle(tri.x, tri.y, at.x, at.y)) {
+      let colz = pointOnTriangle(
+        tri.y,
+        tri.x,
+        tri.z,
+        step.wheelY[k],
+        rad.y,
+        step.wheelX[k],
+        rad.x,
+        rad.z,
+      );
+      if (
+        pieces.list[o].bnd[0] != 1 &&
+        tri.nz > 0 &&
+        step.wheelZ[k] < colz + step.reachZ &&
+        step.wheelZ[k] > colz + step.reachZ - rad.bndmax &&
+        (racers[c].scz[k] <= 1.2 || atAnySpeed)
+      ) {
+        step.hitWall = true;
+        bounceOffWallFacingPlusZ(k, colz, c, type, rad, o, step);
+      }
+      if (
+        pieces.list[o].bnd[1] != 1 &&
+        tri.nz < 0 &&
+        step.wheelZ[k] > colz - step.reachZ &&
+        step.wheelZ[k] < colz - step.reachZ + rad.bndmax &&
+        (racers[c].scz[k] >= -1.2 || atAnySpeed)
+      ) {
+        step.hitWall = true;
+        bounceOffWallFacingMinusZ(k, colz, c, type, rad, o, step);
+      }
+    }
+  } else {
+    if (overTriangle(tri.y, tri.z, at.y, at.z)) {
+      let colx = pointOnTriangle(
+        tri.z,
+        tri.y,
+        tri.x,
+        step.wheelZ[k],
+        rad.z,
+        step.wheelY[k],
+        rad.y,
+        rad.x,
+      );
+      if (
+        pieces.list[o].bnd[2] != 1 &&
+        tri.nx > 0 &&
+        step.wheelX[k] < colx + step.reachX &&
+        step.wheelX[k] > colx + step.reachX - rad.bndmax &&
+        (racers[c].scx[k] <= 1.2 || atAnySpeed)
+      ) {
+        step.hitWall = true;
+        bounceOffWallFacingPlusX(k, colx, c, type, rad, o, step);
+      }
+      if (
+        pieces.list[o].bnd[3] != 1 &&
+        tri.nx < 0 &&
+        step.wheelX[k] > colx - step.reachX &&
+        step.wheelX[k] < colx - step.reachX + rad.bndmax &&
+        (racers[c].scx[k] >= -1.2 || atAnySpeed)
+      ) {
+        step.hitWall = true;
+        bounceOffWallFacingMinusX(k, colx, c, type, rad, o, step);
+      }
+    }
+  }
+}
+
 function landOnFlat(c, k, type, coly, step) {
   racers[c].wtouch = true;
   racers[c].gtouch = true;
@@ -1707,7 +1680,7 @@ function landOnSlope(tri, c, k, type, o, coly, colz, colx, i, step) {
     if (racers[c].scy[k] < 0) {
       racers[c].scy[k] += Math.abs(racers[c].scy[k] * bounce);
     }
-    if (pieces.list[o].typ == 39) {
+    if (pieces.list[o].typ == PIECE.tside) {
       for (let ka = 0; ka < 4; ka++) {
         if (Math.abs(tri.nz) > Math.abs(tri.nx)) {
           if (tri.nz > 0) {
@@ -1782,6 +1755,18 @@ function landOnSlope(tri, c, k, type, o, coly, colz, colx, i, step) {
   step.axleOnGround[Math.floor(k * 0.5)] = tri.ny;
 }
 
+// Whether the AI remembers a hit wall to steer away from it: not rises, not tsides (but
+// on stage 13), not froads on stage 16 and, for walls along z, not slides on stage 14.
+function aiAvoidsWall(typ, alongZ) {
+  return (
+    typ != PIECE.uprise &&
+    typ != PIECE.riseroad &&
+    (typ != PIECE.tside || track.stage == 13) &&
+    (!alongZ || typ != PIECE.slide10 || track.stage != 14) &&
+    (typ != PIECE.froad || track.stage != 16)
+  );
+}
+
 function bounceOffWallFacingPlusZ(k, colz, c, type, rad, o, step) {
   for (let j = 0; j < 4; j++) {
     if (k != j) {
@@ -1816,13 +1801,7 @@ function bounceOffWallFacingPlusZ(k, colz, c, type, rad, o, step) {
   }
   racers[c].skid = SKID.takeSpeedFromMotion;
   racers[c].uwall = true;
-  if (
-    pieces.list[o].typ != 35 &&
-    pieces.list[o].typ != 36 &&
-    (pieces.list[o].typ != 39 || track.stage == 13) &&
-    (pieces.list[o].typ != 20 || track.stage != 14) &&
-    (pieces.list[o].typ != 1 || track.stage != 16)
-  ) {
+  if (aiAvoidsWall(pieces.list[o].typ, true)) {
     racers[c].wall = o;
   }
 }
@@ -1861,13 +1840,7 @@ function bounceOffWallFacingMinusZ(k, colz, c, type, rad, o, step) {
   }
   racers[c].skid = SKID.takeSpeedFromMotion;
   racers[c].uwall = true;
-  if (
-    pieces.list[o].typ != 35 &&
-    pieces.list[o].typ != 36 &&
-    (pieces.list[o].typ != 39 || track.stage == 13) &&
-    (pieces.list[o].typ != 20 || track.stage != 14) &&
-    (pieces.list[o].typ != 1 || track.stage != 16)
-  ) {
+  if (aiAvoidsWall(pieces.list[o].typ, true)) {
     racers[c].wall = o;
   }
 }
@@ -1906,12 +1879,7 @@ function bounceOffWallFacingPlusX(k, colx, c, type, rad, o, step) {
   }
   racers[c].skid = SKID.takeSpeedFromMotion;
   racers[c].uwall = true;
-  if (
-    pieces.list[o].typ != 35 &&
-    pieces.list[o].typ != 36 &&
-    (pieces.list[o].typ != 39 || track.stage == 13) &&
-    (pieces.list[o].typ != 1 || track.stage != 16)
-  ) {
+  if (aiAvoidsWall(pieces.list[o].typ, false)) {
     racers[c].wall = o;
   }
 }
@@ -1950,12 +1918,7 @@ function bounceOffWallFacingMinusX(k, colx, c, type, rad, o, step) {
   }
   racers[c].skid = SKID.takeSpeedFromMotion;
   racers[c].uwall = true;
-  if (
-    pieces.list[o].typ != 35 &&
-    pieces.list[o].typ != 36 &&
-    (pieces.list[o].typ != 39 || track.stage == 13) &&
-    (pieces.list[o].typ != 1 || track.stage != 16)
-  ) {
+  if (aiAvoidsWall(pieces.list[o].typ, false)) {
     racers[c].wall = o;
   }
 }

@@ -6,7 +6,7 @@ import { MAX_CARS, MODE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { CAR, carStats } from "../data/carStats.js";
 import { car, racers } from "./racers.js";
-import { pieceModels, pieces, track } from "./track.js";
+import { PIECE, pieceModels, pieces, track } from "./track.js";
 
 // path points marked "pr" in the stage file lie on ramps (see pathType)
 const RAMP_POINT = -2;
@@ -1666,10 +1666,10 @@ function bullyAsElKingOnStage16(c, pnt) {
     let pyclos = -10;
     for (let i = 0; i < track.n; i++) {
       if (
-        pieces.list[track.obi[i]].typ == 24 ||
-        pieces.list[track.obi[i]].typ == 25 ||
-        pieces.list[track.obi[i]].typ == 43 ||
-        pieces.list[track.obi[i]].typ == 45
+        pieces.list[track.obi[i]].typ == PIECE.offramp ||
+        pieces.list[track.obi[i]].typ == PIECE.sofframp ||
+        pieces.list[track.obi[i]].typ == PIECE.offhill ||
+        pieces.list[track.obi[i]].typ == PIECE.uphill
       ) {
         if (
           distanceSquaredXZ(

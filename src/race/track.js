@@ -58,6 +58,29 @@ class Track {
 
 export const track = new Track();
 
+// The piece types the game logic tells apart, by their model file (see loading/assets.js).
+export const PIECE = {
+  froad: 1,
+  slide10: 20,
+  offramp: 24,
+  sofframp: 25,
+  halfpipe: 26,
+  sideoff: 33,
+  bsideoff: 34,
+  uprise: 35,
+  riseroad: 36,
+  tside: 39,
+  launchpad: 40,
+  offhill: 43,
+  uphill: 45,
+  roll1: 46,
+  roll2: 47,
+  roll3: 48,
+  roll4: 49,
+  roll5: 50,
+  roll6: 51,
+};
+
 // One model per piece type a stage can place.
 export const pieceModels = Array.from({ length: 66 }, newModel);
 
