@@ -34,7 +34,7 @@ import {
   sprks,
 } from "./effects.js";
 import { raceEvents } from "./events.js";
-import { SKID, car, racers } from "./racers.js";
+import { SKID, STUNT, car, racers } from "./racers.js";
 import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
 import { PIECE, pieceModels, pieces, track } from "./track.js";
 
@@ -96,7 +96,7 @@ export function inishmad() {
     racers[c].actr = false;
     racers[c].actu = false;
     racers[c].actd = false;
-    racers[c].loop = 0;
+    racers[c].stunt = STUNT.none;
     racers[c].ucomp = 0;
     racers[c].dcomp = 0;
     racers[c].lcomp = 0;
@@ -221,14 +221,14 @@ function driveCar(c) {
   // how the stunt keys push the car in the air
   const airPush = { x: 0, y: 0, z: 0 };
   if (racers[c].mtouch) {
-    racers[c].loop = 0;
+    racers[c].stunt = STUNT.none;
   }
   touchDownFromStunt(c);
   watchPlayerStuntKeys(c);
   startStuntWithHandbrake(c);
   startStunt(c);
   if (!racers[c].dest) {
-    if (racers[c].loop == 2) {
+    if (racers[c].stunt == STUNT.flying) {
       rotateInStunt(c, type, airPush, rollSign, flipSign, pitchedOver);
     } else {
       driveOnGround(c, type, pitchedOver);
@@ -539,193 +539,214 @@ function passFixHoops(c) {
 
 function trackStunt(c, type) {
   if (!racers[c].mtouch) {
-    if (racers[c].trcnt != 1) {
-      racers[c].trcnt = 1;
-      racers[c].lxz = car[c].xz;
-    }
-    if (racers[c].loop == 2 || racers[c].loop == -1) {
-      racers[c].travxy += (racers[c].rcomp - racers[c].lcomp) * tick.scale;
-      if (Math.abs(racers[c].travxy) > 135) {
-        racers[c].rtab = true;
+    countStuntInAir(c);
+  } else if (!racers[c].dest) {
+    if (!racers[c].capsized) {
+      if (racers[c].capcnt != 0) {
+        racers[c].capcnt = 0;
       }
-      racers[c].travzy += (racers[c].ucomp - racers[c].dcomp) * tick.scale;
-      if (racers[c].travzy > 135) {
-        racers[c].ftab = true;
-      }
-      if (racers[c].travzy < -135) {
-        racers[c].btab = true;
-      }
-    }
-    if (racers[c].lxz != car[c].xz) {
-      racers[c].travxz += racers[c].lxz - car[c].xz;
-      racers[c].lxz = car[c].xz;
-    }
-    if (tick.fraction >= tick.scale) {
-      if (racers[c].srfcnt < 10) {
-        if (racers[c].uwall) {
-          racers[c].surfer = true;
+      if (
+        racers[c].gtouch &&
+        tick.fraction >= tick.scale &&
+        racers[c].trcnt != 0
+      ) {
+        if (racers[c].trcnt == 9) {
+          rewardStunt(c);
         }
-        racers[c].srfcnt++;
+        if (racers[c].trcnt == 10) {
+          forgetStunt(c);
+        } else {
+          racers[c].trcnt++;
+        }
       }
+    } else {
+      if (racers[c].trcnt != 0) {
+        forgetStunt(c);
+      }
+      flipBackWhenCapsized(c, type);
+    }
+    if (racers[c].trcnt == 0 && racers[c].speed != 0) {
+      drainPower(c, type);
+    }
+  }
+}
+
+// Adds up how far the car rolls, flips and spins in the air, and whether it surfs a wall
+// on the way up.
+function countStuntInAir(c) {
+  if (racers[c].trcnt != 1) {
+    racers[c].trcnt = 1;
+    racers[c].lxz = car[c].xz;
+  }
+  if (
+    racers[c].stunt == STUNT.flying ||
+    racers[c].stunt == STUNT.touchingDown
+  ) {
+    racers[c].travxy += (racers[c].rcomp - racers[c].lcomp) * tick.scale;
+    if (Math.abs(racers[c].travxy) > 135) {
+      racers[c].rtab = true;
+    }
+    racers[c].travzy += (racers[c].ucomp - racers[c].dcomp) * tick.scale;
+    if (racers[c].travzy > 135) {
+      racers[c].ftab = true;
+    }
+    if (racers[c].travzy < -135) {
+      racers[c].btab = true;
+    }
+  }
+  if (racers[c].lxz != car[c].xz) {
+    racers[c].travxz += racers[c].lxz - car[c].xz;
+    racers[c].lxz = car[c].xz;
+  }
+  if (tick.fraction >= tick.scale) {
+    if (racers[c].srfcnt < 10) {
+      if (racers[c].uwall) {
+        racers[c].surfer = true;
+      }
+      racers[c].srfcnt++;
+    }
+  }
+}
+
+// Turns the stunt into power some ticks after landing it.
+function rewardStunt(c) {
+  racers[c].powerup = 0;
+  if (Math.abs(racers[c].travxy) > 90) {
+    racers[c].powerup += Math.abs(racers[c].travxy) / 24;
+  } else {
+    if (racers[c].rtab) {
+      racers[c].powerup += 30;
+    }
+  }
+  if (Math.abs(racers[c].travzy) > 90) {
+    racers[c].powerup += Math.abs(racers[c].travzy) / 18;
+  } else {
+    if (racers[c].ftab) {
+      racers[c].powerup += 40;
+    }
+    if (racers[c].btab) {
+      racers[c].powerup += 40;
+    }
+  }
+  if (Math.abs(racers[c].travxz) > 90) {
+    racers[c].powerup += Math.abs(racers[c].travxz) / 18;
+  }
+  if (racers[c].surfer) {
+    racers[c].powerup += 30;
+  }
+  racers[c].power += racers[c].powerup;
+  if (
+    c == game.player &&
+    racers[c].powerup > recording.bestPowerUp &&
+    recording.highlight <= HIGHLIGHT.stunt &&
+    (racers[c].powerup > 60 || track.stage == 1 || track.stage == 2)
+  ) {
+    recording.stuntCatchTicks = 43;
+    recording.bestPowerUp = racers[c].powerup;
+  }
+  if (racers[c].power > 98) {
+    racers[c].power = 98;
+    if (racers[c].powerup > 150) {
+      racers[c].xtpower = 200;
+    } else {
+      racers[c].xtpower = 100;
+    }
+  }
+}
+
+function forgetStunt(c) {
+  racers[c].travxy = 0;
+  racers[c].travzy = 0;
+  racers[c].travxz = 0;
+  racers[c].ftab = false;
+  racers[c].rtab = false;
+  racers[c].btab = false;
+  racers[c].trcnt = 0;
+  racers[c].srfcnt = 0;
+  racers[c].surfer = false;
+}
+
+// Rights a car lying still on its roof after a while; in the first races the player is
+// righted sooner, even while still sliding.
+function flipBackWhenCapsized(c, type) {
+  let flmat = 7,
+    capto = 30;
+  if (c == game.player) {
+    if (track.stage == 1 && game.unlocked == 1) {
+      flmat = 30;
+      capto = 10;
+    }
+    if (track.stage == 2 && game.unlocked == 2) {
+      flmat = 30;
+      capto = 10;
+    }
+    if (track.stage == 3 && game.unlocked == 3) {
+      flmat = 25;
+      capto = 15;
+    }
+    if (track.stage == 4 && game.unlocked == 4) {
+      flmat = 20;
+      capto = 20;
+    }
+    if (track.stage == 5 && game.unlocked == 5) {
+      flmat = 14;
+      capto = 25;
+    }
+  }
+  if (racers[c].capcnt == 0) {
+    let out = 0;
+    for (let i = 0; i < 4; i++) {
+      if (
+        Math.abs(racers[c].scz[i]) < flmat &&
+        Math.abs(racers[c].scx[i]) < flmat
+      ) {
+        out++;
+      }
+    }
+    if (out == 4) {
+      racers[c].capcnt = 1;
     }
   } else {
-    if (!racers[c].dest) {
-      if (!racers[c].capsized) {
-        if (racers[c].capcnt != 0) {
-          racers[c].capcnt = 0;
-        }
-        if (racers[c].gtouch && tick.fraction >= tick.scale) {
-          if (racers[c].trcnt != 0) {
-            if (racers[c].trcnt == 9) {
-              racers[c].powerup = 0;
-              if (Math.abs(racers[c].travxy) > 90) {
-                racers[c].powerup += Math.abs(racers[c].travxy) / 24;
-              } else {
-                if (racers[c].rtab) {
-                  racers[c].powerup += 30;
-                }
-              }
-              if (Math.abs(racers[c].travzy) > 90) {
-                racers[c].powerup += Math.abs(racers[c].travzy) / 18;
-              } else {
-                if (racers[c].ftab) {
-                  racers[c].powerup += 40;
-                }
-                if (racers[c].btab) {
-                  racers[c].powerup += 40;
-                }
-              }
-              if (Math.abs(racers[c].travxz) > 90) {
-                racers[c].powerup += Math.abs(racers[c].travxz) / 18;
-              }
-              if (racers[c].surfer) {
-                racers[c].powerup += 30;
-              }
-              racers[c].power += racers[c].powerup;
-              if (
-                c == game.player &&
-                racers[c].powerup > recording.bestPowerUp &&
-                recording.highlight <= HIGHLIGHT.stunt &&
-                (racers[c].powerup > 60 || track.stage == 1 || track.stage == 2)
-              ) {
-                recording.stuntCatchTicks = 43;
-                recording.bestPowerUp = racers[c].powerup;
-              }
-              if (racers[c].power > 98) {
-                racers[c].power = 98;
-                if (racers[c].powerup > 150) {
-                  racers[c].xtpower = 200;
-                } else {
-                  racers[c].xtpower = 100;
-                }
-              }
-            }
-            if (racers[c].trcnt == 10) {
-              racers[c].travxy = 0;
-              racers[c].travzy = 0;
-              racers[c].travxz = 0;
-              racers[c].ftab = false;
-              racers[c].rtab = false;
-              racers[c].btab = false;
-              racers[c].trcnt = 0;
-              racers[c].srfcnt = 0;
-              racers[c].surfer = false;
-            } else {
-              racers[c].trcnt++;
-            }
-          }
-        }
-      } else {
-        if (racers[c].trcnt != 0) {
-          racers[c].travxy = 0;
-          racers[c].travzy = 0;
-          racers[c].travxz = 0;
-          racers[c].ftab = false;
-          racers[c].rtab = false;
-          racers[c].btab = false;
-          racers[c].trcnt = 0;
-          racers[c].srfcnt = 0;
-          racers[c].surfer = false;
-        }
-        let flmat = 7,
-          capto = 30;
-        if (c == game.player) {
-          if (track.stage == 1 && game.unlocked == 1) {
-            flmat = 30;
-            capto = 10;
-          }
-          if (track.stage == 2 && game.unlocked == 2) {
-            flmat = 30;
-            capto = 10;
-          }
-          if (track.stage == 3 && game.unlocked == 3) {
-            flmat = 25;
-            capto = 15;
-          }
-          if (track.stage == 4 && game.unlocked == 4) {
-            flmat = 20;
-            capto = 20;
-          }
-          if (track.stage == 5 && game.unlocked == 5) {
-            flmat = 14;
-            capto = 25;
-          }
-        }
-        if (racers[c].capcnt == 0) {
-          let out = 0;
-          for (let i = 0; i < 4; i++) {
-            if (
-              Math.abs(racers[c].scz[i]) < flmat &&
-              Math.abs(racers[c].scx[i]) < flmat
-            ) {
-              out++;
-            }
-          }
-          if (out == 4) {
-            racers[c].capcnt = 1;
-          }
-        } else {
-          if (tick.fraction >= tick.scale) {
-            racers[c].capcnt++;
-            if (racers[c].capcnt == capto) {
-              racers[c].speed = 0;
-              car[c].y += carStats.flipy[type];
-              racers[c].pxy += 180;
-              car[c].xy += 180;
-              racers[c].capcnt = 0;
-            }
-          }
-        }
-      }
-      if (racers[c].trcnt == 0 && racers[c].speed != 0) {
-        let pfact = 1;
-        if (c == game.player) {
-          if (track.stage == 1 && game.unlocked == 1) {
-            pfact = 0.6;
-          }
-          if (track.stage == 2 && game.unlocked == 2) {
-            pfact = 0.7;
-          }
-          if (track.stage == 3 && game.unlocked == 3) {
-            pfact = 0.8;
-          }
-          if (track.stage == 4 && game.unlocked == 4) {
-            pfact = 0.9;
-          }
-        }
-        if (racers[c].xtpower == 0) {
-          if (racers[c].power > 0) {
-            racers[c].power -=
-              (racers[c].power * racers[c].power * racers[c].power * pfact) /
-              carStats.powerloss[type];
-          } else {
-            racers[c].power = 0;
-          }
-        } else {
-          racers[c].xtpower--;
-        }
+    if (tick.fraction >= tick.scale) {
+      racers[c].capcnt++;
+      if (racers[c].capcnt == capto) {
+        racers[c].speed = 0;
+        car[c].y += carStats.flipy[type];
+        racers[c].pxy += 180;
+        car[c].xy += 180;
+        racers[c].capcnt = 0;
       }
     }
+  }
+}
+
+// Power fades while driving without a stunt; the first races fade it slower for the player.
+function drainPower(c, type) {
+  let pfact = 1;
+  if (c == game.player) {
+    if (track.stage == 1 && game.unlocked == 1) {
+      pfact = 0.6;
+    }
+    if (track.stage == 2 && game.unlocked == 2) {
+      pfact = 0.7;
+    }
+    if (track.stage == 3 && game.unlocked == 3) {
+      pfact = 0.8;
+    }
+    if (track.stage == 4 && game.unlocked == 4) {
+      pfact = 0.9;
+    }
+  }
+  if (racers[c].xtpower == 0) {
+    if (racers[c].power > 0) {
+      racers[c].power -=
+        (racers[c].power * racers[c].power * racers[c].power * pfact) /
+        carStats.powerloss[type];
+    } else {
+      racers[c].power = 0;
+    }
+  } else {
+    racers[c].xtpower--;
   }
 }
 
@@ -2379,8 +2400,11 @@ function pieceUnder(c) {
 
 function touchDownFromStunt(c) {
   if (racers[c].wtouch) {
-    if (racers[c].loop == 2 || racers[c].loop == -1) {
-      racers[c].loop = -1;
+    if (
+      racers[c].stunt == STUNT.flying ||
+      racers[c].stunt == STUNT.touchingDown
+    ) {
+      racers[c].stunt = STUNT.touchingDown;
       if (racers[c].u.left) {
         racers[c].pl = true;
       }
@@ -2406,8 +2430,8 @@ function watchPlayerStuntKeys(c) {
     if (!racers[c].wtouch) {
       if (racers[c].u.up) {
         if (!racers[c].actu) {
-          if (racers[c].loop == 0) {
-            racers[c].loop = 1;
+          if (racers[c].stunt == STUNT.none) {
+            racers[c].stunt = STUNT.starting;
           }
         }
       } else {
@@ -2415,8 +2439,8 @@ function watchPlayerStuntKeys(c) {
       }
       if (racers[c].u.down) {
         if (!racers[c].actd) {
-          if (racers[c].loop == 0) {
-            racers[c].loop = 1;
+          if (racers[c].stunt == STUNT.none) {
+            racers[c].stunt = STUNT.starting;
           }
         }
       } else {
@@ -2424,8 +2448,8 @@ function watchPlayerStuntKeys(c) {
       }
       if (racers[c].u.left) {
         if (!racers[c].actl) {
-          if (racers[c].loop == 0) {
-            racers[c].loop = 1;
+          if (racers[c].stunt == STUNT.none) {
+            racers[c].stunt = STUNT.starting;
           }
         }
       } else {
@@ -2433,8 +2457,8 @@ function watchPlayerStuntKeys(c) {
       }
       if (racers[c].u.right) {
         if (!racers[c].actr) {
-          if (racers[c].loop == 0) {
-            racers[c].loop = 1;
+          if (racers[c].stunt == STUNT.none) {
+            racers[c].stunt = STUNT.starting;
           }
         }
       } else {
@@ -2453,8 +2477,8 @@ function startStuntWithHandbrake(c) {
   if (racers[c].u.handb) {
     if (!racers[c].pushed) {
       if (!racers[c].wtouch) {
-        if (racers[c].loop == 0) {
-          racers[c].loop = 1;
+        if (racers[c].stunt == STUNT.none) {
+          racers[c].stunt = STUNT.starting;
           racers[c].actl = false;
           racers[c].actr = false;
           racers[c].actu = false;
@@ -2472,7 +2496,7 @@ function startStuntWithHandbrake(c) {
 }
 
 function startStunt(c) {
-  if (racers[c].loop == 1) {
+  if (racers[c].stunt == STUNT.starting) {
     let avay =
       (racers[c].scy[0] +
         racers[c].scy[1] +
@@ -2482,7 +2506,7 @@ function startStunt(c) {
     for (let i = 0; i < 4; i++) {
       racers[c].scy[i] = avay;
     }
-    racers[c].loop = 2;
+    racers[c].stunt = STUNT.flying;
   }
 }
 
@@ -2737,7 +2761,7 @@ function driveOnGround(c, type, pitchedOver) {
       }
     }
   }
-  if (racers[c].loop == -1) {
+  if (racers[c].stunt == STUNT.touchingDown) {
     rotateAfterStunt(c, type, pitchedOver);
   }
 }

@@ -43,6 +43,10 @@ const newRacer = () => ({
 // the air) the speed is taken from how the car really moves.
 export const SKID = { gripping: 0, sliding: 1, takeSpeedFromMotion: 2 };
 
+// racer.stunt: where the car is in a stunt. A stunt starts when the stunt keys are pressed in
+// the air, and after the first wheel touches down the car keeps turning upright.
+export const STUNT = { none: 0, starting: 1, flying: 2, touchingDown: -1 };
+
 export const racers = Array.from({ length: MAX_CARS }, newRacer);
 
 const newCar = () => ({

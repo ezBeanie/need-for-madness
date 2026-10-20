@@ -24,7 +24,7 @@ import { CONFIRM, confirm } from "../input/confirm.js";
 import { pointer } from "../input/pointer.js";
 import { COUNTDOWN } from "../race/countdown.js";
 import { raceEvents } from "../race/events.js";
-import { car, racers } from "../race/racers.js";
+import { STUNT, car, racers } from "../race/racers.js";
 import {
   HIGHLIGHT,
   skipReplay,
@@ -1153,7 +1153,7 @@ const learnStunts = () => {
   const player = racers[game.player];
   if (stuntHint != 0) {
     if (
-      player.loop == 2 &&
+      player.stunt == STUNT.flying &&
       (Math.abs(player.travxy) > 110 || Math.abs(player.travzy) > 110)
     ) {
       stuntHint = 0;
