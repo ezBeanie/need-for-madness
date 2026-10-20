@@ -1633,7 +1633,7 @@ function landOnFlat(c, k, type, coly, step) {
     }
   }
   const bounce = groundBounce(c, type);
-  regn(2, k, Math.abs(racers[c].scy[k] * bounce), c);
+  regn(HIT.fromBelow, k, Math.abs(racers[c].scy[k] * bounce), c);
   if (racers[c].scy[k] < 0) {
     racers[c].scy[k] += Math.abs(racers[c].scy[k] * bounce);
   }
@@ -1794,7 +1794,7 @@ function bounceOffWallFacingPlusZ(
     }
   }
   const bounce = wallBounce(c, type, step);
-  regn(1, k, Math.abs(racers[c].scz[k] * bounce * damage), c);
+  regn(HIT.alongZ, k, Math.abs(racers[c].scz[k] * bounce * damage), c);
   if (racers[c].scz[k] <= 0) {
     racers[c].scz[k] += Math.abs(racers[c].scz[k] * bounce);
   }
@@ -1837,7 +1837,7 @@ function bounceOffWallFacingMinusZ(
     }
   }
   const bounce = wallBounce(c, type, step);
-  regn(1, k, -Math.abs(racers[c].scz[k] * bounce * damage), c);
+  regn(HIT.alongZ, k, -Math.abs(racers[c].scz[k] * bounce * damage), c);
   if (racers[c].scz[k] >= 0) {
     racers[c].scz[k] -= Math.abs(racers[c].scz[k] * bounce);
   }
@@ -1880,7 +1880,7 @@ function bounceOffWallFacingPlusX(
     }
   }
   const bounce = wallBounce(c, type, step);
-  regn(0, k, Math.abs(racers[c].scx[k] * bounce * damage), c);
+  regn(HIT.alongX, k, Math.abs(racers[c].scx[k] * bounce * damage), c);
   if (racers[c].scx[k] <= 0) {
     racers[c].scx[k] += Math.abs(racers[c].scx[k] * bounce);
   }
@@ -1923,7 +1923,7 @@ function bounceOffWallFacingMinusX(
     }
   }
   const bounce = wallBounce(c, type, step);
-  regn(0, k, -Math.abs(racers[c].scx[k] * bounce * damage), c);
+  regn(HIT.alongX, k, -Math.abs(racers[c].scx[k] * bounce * damage), c);
   if (racers[c].scx[k] >= 0) {
     racers[c].scx[k] -= Math.abs(racers[c].scx[k] * bounce);
   }
@@ -2015,7 +2015,7 @@ function bounceWheelsOffGround(c, type, step) {
       }
       step.wheelY[i] = 0;
       const bounce = groundBounce(c, type);
-      regn(2, i, Math.abs(racers[c].scy[i] * bounce), c);
+      regn(HIT.fromBelow, i, Math.abs(racers[c].scy[i] * bounce), c);
       if (racers[c].scy[i] < 0) {
         racers[c].scy[i] += Math.abs(racers[c].scy[i] * bounce);
       }
@@ -3024,8 +3024,28 @@ function nearestCorner(at, i, xat) {
 
 // Corner i of car c, the one dominating, crashes into corner j of car xc.
 function crashCorners(c, xc, i, j, at, xat) {
-  pushCornerAlong(c, xc, i, j, at, xat, racers[c].scx, racers[xc].scx, 0);
-  pushCornerAlong(c, xc, i, j, at, xat, racers[c].scz, racers[xc].scz, 1);
+  pushCornerAlong(
+    c,
+    xc,
+    i,
+    j,
+    at,
+    xat,
+    racers[c].scx,
+    racers[xc].scx,
+    HIT.alongX,
+  );
+  pushCornerAlong(
+    c,
+    xc,
+    i,
+    j,
+    at,
+    xat,
+    racers[c].scz,
+    racers[xc].scz,
+    HIT.alongZ,
+  );
   if (c == game.player) {
     racers[xc].lastcolido = 70;
   }
@@ -3061,7 +3081,7 @@ function pushCornerAlong(c, xc, i, j, at, xat, sc, xsc, hitSide) {
     sc[i] -= tm;
     regn(hitSide, i, -tm * carStats.moment[car[c].typ], c);
     racers[c].scy[i] += carStats.revlift[car[c].typ];
-    dentHitCar(c, xc, 2, j, carStats.revlift[car[c].typ] * 7);
+    dentHitCar(c, xc, HIT.fromBelow, j, carStats.revlift[car[c].typ] * 7);
     if (random.fx() > random.fx()) {
       sprks(
         car[c].typ,
@@ -3230,14 +3250,18 @@ export function paintDents(maxSteps) {
   }
   return steps;
 }
-export function regn(nr, k, mag, c) {
+// How a car is hit, for regn: along its x or z, from below (landing, or lifted by another
+// car), or onto its roof, which a hit from below turns into when the car lies on it.
+export const HIT = { alongX: 0, alongZ: 1, fromBelow: 2, onRoof: 3 };
+
+export function regn(hitSide, k, mag, c) {
   if (game.phase == PHASE.race) {
     mag *= carStats.dammult[car[c].typ];
   }
   if (Math.abs(mag) > 10) {
     if (game.phase == PHASE.race) {
       recording.tape.cars[c].hitAt[recording.tape.cars[c].hitCount] = 430;
-      recording.tape.cars[c].hitSide[recording.tape.cars[c].hitCount] = nr;
+      recording.tape.cars[c].hitSide[recording.tape.cars[c].hitCount] = hitSide;
       recording.tape.cars[c].hitPoint[recording.tape.cars[c].hitCount] = k;
       recording.tape.cars[c].hitMag[recording.tape.cars[c].hitCount] = mag;
       recording.tape.cars[c].hitMtouch[recording.tape.cars[c].hitCount] =
@@ -3252,9 +3276,9 @@ export function regn(nr, k, mag, c) {
     }
     let zsing = 0,
       xsing = 0;
-    let nr2stop = false;
-    if (nr == 2) {
-      nr2stop = true;
+    let keepsShape = false;
+    if (hitSide == HIT.fromBelow) {
+      keepsShape = true;
       let rzy = car[c].zy,
         rxy = car[c].xy;
       while (rzy < 360) {
@@ -3282,12 +3306,12 @@ export function regn(nr, k, mag, c) {
         xsing = 1;
       }
       if (xsing * zsing == 0 || racers[c].mtouch) {
-        nr2stop = false;
+        keepsShape = false;
       }
       if (xsing * zsing == -1) {
         if (racers[c].nbsq > 0) {
-          nr2stop = false;
-          nr = 3;
+          keepsShape = false;
+          hitSide = HIT.onRoof;
           racers[c].nbsq = 0;
         } else {
           racers[c].nbsq++;
@@ -3302,7 +3326,7 @@ export function regn(nr, k, mag, c) {
       }
     }
     let rad = racers[c].body;
-    if (!nr2stop) {
+    if (!keepsShape) {
       if (rad.iscar == 1) {
         rad.dvert = [];
         for (let i = 0; i < rad.ni; i++) {
@@ -3320,7 +3344,7 @@ export function regn(nr, k, mag, c) {
         let tmag = 0;
         let modpix = 0;
         if (
-          nr < 3 &&
+          hitSide < HIT.onRoof &&
           distanceSquaredXZ(
             car[c].keyx[k],
             rad.dvert[i * 3],
@@ -3329,17 +3353,17 @@ export function regn(nr, k, mag, c) {
           ) < carStats.clrad[car[c].typ]
         ) {
           tmag = (mag / 30) * random.sim();
-          if (nr == 0) {
+          if (hitSide == HIT.alongX) {
             rad.dvert[i * 3 + 2] -=
               tmag * sinDeg(car[c].xz) * cosDeg(car[c].zy);
             rad.dvert[i * 3] += tmag * cosDeg(car[c].xz) * cosDeg(car[c].xy);
           }
-          if (nr == 1) {
+          if (hitSide == HIT.alongZ) {
             rad.dvert[i * 3 + 2] +=
               tmag * cosDeg(car[c].xz) * cosDeg(car[c].zy);
             rad.dvert[i * 3] += tmag * sinDeg(car[c].xz) * cosDeg(car[c].xy);
           }
-          if (nr == 2) {
+          if (hitSide == HIT.fromBelow) {
             rad.dvert[i * 3 + 2] -= tmag * sinDeg(car[c].zy);
             rad.dvert[i * 3] += tmag * sinDeg(car[c].xy);
           }
@@ -3365,7 +3389,7 @@ export function regn(nr, k, mag, c) {
         // msquash by car index and type (msquash[c][typ]), which is never a number, so
         // only vertices above it ever do. With 20 cars that lookup crashed for car 19.
         if (
-          nr == 3 &&
+          hitSide == HIT.onRoof &&
           rad.dvert[i * 3 + 1] >
             carStats.flipy[car[c].typ] + racers[c].squash &&
           Math.abs(racers[c].squash) < carStats.msquash[car[c].typ]
@@ -3403,7 +3427,7 @@ export function regn(nr, k, mag, c) {
           dents.push({ model: rad, pixels, c, pxc, pyc, cmag, modpix });
         }
       }
-      if (nr == 3 && nsq > 0) {
+      if (hitSide == HIT.onRoof && nsq > 0) {
         racers[c].squash += tsq / nsq;
       }
       rad.damagedVertices = true;
