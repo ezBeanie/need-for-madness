@@ -2846,7 +2846,6 @@ function rotateAfterStunt(c, type, pitchedOver) {
 }
 
 function colide(c, xc) {
-  let pyclos;
   if (
     distanceSquared(
       car[c].x,
@@ -2864,32 +2863,18 @@ function colide(c, xc) {
       !racers[c].caught[xc] &&
       (racers[c].speed != 0 || racers[xc].speed != 0)
     ) {
-      if (
-        Math.abs(
-          racers[c].power * racers[c].speed * carStats.moment[car[c].typ],
-        ) !=
-        Math.abs(
-          racers[xc].power * racers[xc].speed * carStats.moment[car[xc].typ],
-        )
-      ) {
-        if (
-          Math.abs(
-            racers[c].power * racers[c].speed * carStats.moment[car[c].typ],
-          ) >
-          Math.abs(
-            racers[xc].power * racers[xc].speed * carStats.moment[car[xc].typ],
-          )
-        ) {
-          racers[c].dominate[xc] = true;
-        } else {
-          racers[c].dominate[xc] = false;
-        }
+      // the car with more momentum pushes the other, the heavier one on a tie
+      const momentum = Math.abs(
+        racers[c].power * racers[c].speed * carStats.moment[car[c].typ],
+      );
+      const xMomentum = Math.abs(
+        racers[xc].power * racers[xc].speed * carStats.moment[car[xc].typ],
+      );
+      if (momentum != xMomentum) {
+        racers[c].dominate[xc] = momentum > xMomentum;
       } else {
-        if (carStats.moment[car[c].typ] > carStats.moment[car[xc].typ]) {
-          racers[c].dominate[xc] = true;
-        } else {
-          racers[c].dominate[xc] = false;
-        }
+        racers[c].dominate[xc] =
+          carStats.moment[car[c].typ] > carStats.moment[car[xc].typ];
       }
       racers[c].caught[xc] = true;
     }
@@ -2900,35 +2885,8 @@ function colide(c, xc) {
     }
   }
   if (racers[c].dominate[xc]) {
-    // the corners of both cars, only needed when c pushes xc
-    let kx = [],
-      ky = [],
-      kz = [];
-    let xkx = [],
-      xky = [],
-      xkz = [];
-    for (let i = 0; i < 4; i++) {
-      kx[i] = car[c].x + car[c].keyx[i];
-      if (racers[c].capsized) {
-        ky[i] = car[c].y + carStats.flipy[car[c].typ] + racers[c].squash;
-      } else {
-        ky[i] = car[c].y + car[c].grat;
-      }
-      kz[i] = car[c].z + car[c].keyz[i];
-      xkx[i] = car[xc].x + car[xc].keyx[i];
-      if (racers[xc].capsized) {
-        xky[i] = car[xc].y + carStats.flipy[car[xc].typ] + racers[xc].squash;
-      } else {
-        xky[i] = car[xc].y + car[xc].grat;
-      }
-      xkz[i] = car[xc].z + car[xc].keyz[i];
-    }
-    rotatePoints(kx, ky, car[c].x, car[c].y, car[c].xy, 4);
-    rotatePoints(ky, kz, car[c].y, car[c].z, car[c].zy, 4);
-    rotatePoints(kx, kz, car[c].x, car[c].z, car[c].xz, 4);
-    rotatePoints(xkx, xky, car[xc].x, car[xc].y, car[xc].xy, 4);
-    rotatePoints(xky, xkz, car[xc].y, car[xc].z, car[xc].zy, 4);
-    rotatePoints(xkx, xkz, car[xc].x, car[xc].z, car[xc].xz, 4);
+    const at = cornersOf(c);
+    const xat = cornersOf(xc);
     let crad =
       ((racers[c].scz[0] -
         racers[xc].scz[0] +
@@ -2968,292 +2926,165 @@ function colide(c, xc) {
       let gotcol = false;
       for (let j = 0; j < 4; j++) {
         if (
-          distanceSquared(kx[i], xkx[j], ky[i], xky[j], kz[i], xkz[j]) <
+          distanceSquared(
+            at.x[i],
+            xat.x[j],
+            at.y[i],
+            xat.y[j],
+            at.z[i],
+            xat.z[j],
+          ) <
           (crad + arad) *
             (carStats.comprad[car[xc].typ] + carStats.comprad[car[c].typ])
         ) {
-          if (
-            Math.abs(racers[c].scx[i] * carStats.moment[car[c].typ]) >
-            Math.abs(racers[xc].scx[j] * carStats.moment[car[xc].typ])
-          ) {
-            let tm = racers[xc].scx[j] * carStats.revpush[car[c].typ];
-            if (tm > 30) {
-              tm = 30;
-            }
-            if (tm < -30) {
-              tm = -30;
-            }
-            let vctm = racers[c].scx[i] * carStats.push[car[c].typ];
-            if (vctm > 30) {
-              vctm = 30;
-            }
-            if (vctm < -30) {
-              vctm = -30;
-            }
-            racers[xc].scx[j] += vctm;
-            if (c == game.player) {
-              racers[xc].colidim = true;
-            }
-            regn(0, j, vctm * carStats.moment[car[c].typ], xc);
-            if (racers[xc].colidim) {
-              racers[xc].colidim = false;
-            }
-            racers[c].scx[i] -= tm;
-            regn(0, i, -tm * carStats.moment[car[c].typ], c);
-            racers[c].scy[i] += carStats.revlift[car[c].typ];
-            if (c == game.player) {
-              racers[xc].colidim = true;
-            }
-            regn(2, j, carStats.revlift[car[c].typ] * 7, xc);
-            if (racers[xc].colidim) {
-              racers[xc].colidim = false;
-            }
-            if (random.fx() > random.fx()) {
-              sprks(
-                car[c].typ,
-                (kx[i] + xkx[j]) / 2,
-                (ky[i] + xky[j]) / 2,
-                (kz[i] + xkz[j]) / 2,
-                (racers[xc].scx[j] + racers[c].scx[i]) / 4,
-                (racers[xc].scy[j] + racers[c].scy[i]) / 4,
-                (racers[xc].scz[j] + racers[c].scz[i]) / 4,
-                2,
-              );
-            }
-          }
-          if (
-            Math.abs(racers[c].scz[i] * carStats.moment[car[c].typ]) >
-            Math.abs(racers[xc].scz[j] * carStats.moment[car[xc].typ])
-          ) {
-            let tm = racers[xc].scz[j] * carStats.revpush[car[c].typ];
-            if (tm > 30) {
-              tm = 30;
-            }
-            if (tm < -30) {
-              tm = -30;
-            }
-            let vctm = racers[c].scz[i] * carStats.push[car[c].typ];
-            if (vctm > 30) {
-              vctm = 30;
-            }
-            if (vctm < -30) {
-              vctm = -30;
-            }
-            racers[xc].scz[j] += vctm;
-            if (c == game.player) {
-              racers[xc].colidim = true;
-            }
-            regn(1, j, vctm * carStats.moment[car[c].typ], xc);
-            if (racers[xc].colidim) {
-              racers[xc].colidim = false;
-            }
-            racers[c].scz[i] -= tm;
-            regn(1, i, -tm * carStats.moment[car[c].typ], c);
-            racers[c].scy[i] += carStats.revlift[car[c].typ];
-            if (c == game.player) {
-              racers[xc].colidim = true;
-            }
-            regn(2, j, carStats.revlift[car[c].typ] * 7, xc);
-            if (racers[xc].colidim) {
-              racers[xc].colidim = false;
-            }
-            if (random.fx() > random.fx()) {
-              sprks(
-                car[c].typ,
-                (kx[i] + xkx[j]) / 2,
-                (ky[i] + xky[j]) / 2,
-                (kz[i] + xkz[j]) / 2,
-                (racers[xc].scx[j] + racers[c].scx[i]) / 4,
-                (racers[xc].scy[j] + racers[c].scy[i]) / 4,
-                (racers[xc].scz[j] + racers[c].scz[i]) / 4,
-                2,
-              );
-            }
-          }
-          if (c == game.player) {
-            racers[xc].lastcolido = 70;
-          }
-          if (xc == game.player) {
-            racers[c].lastcolido = 70;
-          }
-          racers[xc].scy[j] += carStats.lift[car[c].typ];
+          crashCorners(c, xc, i, j, at, xat);
           gotcol = true;
         }
       }
-      if (!gotcol && racers[c].mtouch && racers[xc].mtouch) {
-        let intrsct = false;
-        let aro = Math.abs(
-          (xkx[1] - xkx[0]) * (xkz[2] - xkz[0]) -
-            (xkx[2] - xkx[0]) * (xkz[1] - xkz[0]),
-        );
-        let ar1 = Math.abs(
-          (xkx[0] - kx[i]) * (xkz[1] - kz[i]) -
-            (xkx[1] - kx[i]) * (xkz[0] - kz[i]),
-        );
-        let ar2 = Math.abs(
-          (xkx[1] - kx[i]) * (xkz[2] - kz[i]) -
-            (xkx[2] - kx[i]) * (xkz[1] - kz[i]),
-        );
-        let ar3 = Math.abs(
-          (xkx[2] - kx[i]) * (xkz[0] - kz[i]) -
-            (xkx[0] - kx[i]) * (xkz[2] - kz[i]),
-        );
-        if (ar1 + ar2 + ar3 < aro + 10) {
-          intrsct = true;
-        }
-        if (!intrsct) {
-          aro = Math.abs(
-            (xkx[1] - xkx[3]) * (xkz[2] - xkz[3]) -
-              (xkx[2] - xkx[3]) * (xkz[1] - xkz[3]),
-          );
-          ar1 = Math.abs(
-            (xkx[3] - kx[i]) * (xkz[1] - kz[i]) -
-              (xkx[1] - kx[i]) * (xkz[3] - kz[i]),
-          );
-          ar2 = Math.abs(
-            (xkx[1] - kx[i]) * (xkz[2] - kz[i]) -
-              (xkx[2] - kx[i]) * (xkz[1] - kz[i]),
-          );
-          ar3 = Math.abs(
-            (xkx[2] - kx[i]) * (xkz[3] - kz[i]) -
-              (xkx[3] - kx[i]) * (xkz[2] - kz[i]),
-          );
-          if (ar1 + ar2 + ar3 < aro + 10) {
-            intrsct = true;
-          }
-        }
-        if (intrsct) {
-          let j = 0;
-          let closj = distanceSquared(
-            kx[i],
-            xkx[0],
-            ky[i],
-            xky[0],
-            kz[i],
-            xkz[0],
-          );
-          for (let k = 1; k < 4; k++) {
-            pyclos = distanceSquared(
-              kx[i],
-              xkx[k],
-              ky[i],
-              xky[k],
-              kz[i],
-              xkz[k],
-            );
-            if (pyclos < closj) {
-              closj = pyclos;
-              j = k;
-            }
-          }
-          if (
-            Math.abs(racers[c].scx[i] * carStats.moment[car[c].typ]) >
-            Math.abs(racers[xc].scx[j] * carStats.moment[car[xc].typ])
-          ) {
-            let tm = racers[xc].scx[j] * carStats.revpush[car[c].typ];
-            if (tm > 30) {
-              tm = 30;
-            }
-            if (tm < -30) {
-              tm = -30;
-            }
-            let vctm = racers[c].scx[i] * carStats.push[car[c].typ];
-            if (vctm > 30) {
-              vctm = 30;
-            }
-            if (vctm < -30) {
-              vctm = -30;
-            }
-            racers[xc].scx[j] += vctm;
-            if (c == game.player) {
-              racers[xc].colidim = true;
-            }
-            regn(0, j, vctm * carStats.moment[car[c].typ], xc);
-            if (racers[xc].colidim) {
-              racers[xc].colidim = false;
-            }
-            racers[c].scx[i] -= tm;
-            regn(0, i, -tm * carStats.moment[car[c].typ], c);
-            racers[c].scy[i] += carStats.revlift[car[c].typ];
-            if (c == game.player) {
-              racers[xc].colidim = true;
-            }
-            regn(2, j, carStats.revlift[car[c].typ] * 7, xc);
-            if (racers[xc].colidim) {
-              racers[xc].colidim = false;
-            }
-            if (random.fx() > random.fx()) {
-              sprks(
-                car[c].typ,
-                (kx[i] + xkx[j]) / 2,
-                (ky[i] + xky[j]) / 2,
-                (kz[i] + xkz[j]) / 2,
-                (racers[xc].scx[j] + racers[c].scx[i]) / 4,
-                (racers[xc].scy[j] + racers[c].scy[i]) / 4,
-                (racers[xc].scz[j] + racers[c].scz[i]) / 4,
-                2,
-              );
-            }
-          }
-          if (
-            Math.abs(racers[c].scz[i] * carStats.moment[car[c].typ]) >
-            Math.abs(racers[xc].scz[j] * carStats.moment[car[xc].typ])
-          ) {
-            let tm = racers[xc].scz[j] * carStats.revpush[car[c].typ];
-            if (tm > 30) {
-              tm = 30;
-            }
-            if (tm < -30) {
-              tm = -30;
-            }
-            let vctm = racers[c].scz[i] * carStats.push[car[c].typ];
-            if (vctm > 30) {
-              vctm = 30;
-            }
-            if (vctm < -30) {
-              vctm = -30;
-            }
-            racers[xc].scz[j] += vctm;
-            if (c == game.player) {
-              racers[xc].colidim = true;
-            }
-            regn(1, j, vctm * carStats.moment[car[c].typ], xc);
-            if (racers[xc].colidim) {
-              racers[xc].colidim = false;
-            }
-            racers[c].scz[i] -= tm;
-            regn(1, i, -tm * carStats.moment[car[c].typ], c);
-            racers[c].scy[i] += carStats.revlift[car[c].typ];
-            if (c == game.player) {
-              racers[xc].colidim = true;
-            }
-            regn(2, j, carStats.revlift[car[c].typ] * 7, xc);
-            if (racers[xc].colidim) {
-              racers[xc].colidim = false;
-            }
-            if (random.fx() > random.fx()) {
-              sprks(
-                car[c].typ,
-                (kx[i] + xkx[j]) / 2,
-                (ky[i] + xky[j]) / 2,
-                (kz[i] + xkz[j]) / 2,
-                (racers[xc].scx[j] + racers[c].scx[i]) / 4,
-                (racers[xc].scy[j] + racers[c].scy[i]) / 4,
-                (racers[xc].scz[j] + racers[c].scz[i]) / 4,
-                2,
-              );
-            }
-          }
-          if (c == game.player) {
-            racers[xc].lastcolido = 70;
-          }
-          if (xc == game.player) {
-            racers[c].lastcolido = 70;
-          }
-          racers[xc].scy[j] += carStats.lift[car[c].typ];
-        }
+      // a corner that already sank into the other car, wherever its corners are
+      if (
+        !gotcol &&
+        racers[c].mtouch &&
+        racers[xc].mtouch &&
+        (overTriangleXZ(at, i, xat, 0, 1, 2) ||
+          overTriangleXZ(at, i, xat, 3, 1, 2))
+      ) {
+        crashCorners(c, xc, i, nearestCorner(at, i, xat), at, xat);
       }
     }
+  }
+}
+
+// The corners of a car, where it touches others.
+function cornersOf(c) {
+  const at = { x: [], y: [], z: [] };
+  for (let i = 0; i < 4; i++) {
+    at.x[i] = car[c].x + car[c].keyx[i];
+    if (racers[c].capsized) {
+      at.y[i] = car[c].y + carStats.flipy[car[c].typ] + racers[c].squash;
+    } else {
+      at.y[i] = car[c].y + car[c].grat;
+    }
+    at.z[i] = car[c].z + car[c].keyz[i];
+  }
+  rotatePoints(at.x, at.y, car[c].x, car[c].y, car[c].xy, 4);
+  rotatePoints(at.y, at.z, car[c].y, car[c].z, car[c].zy, 4);
+  rotatePoints(at.x, at.z, car[c].x, car[c].z, car[c].xz, 4);
+  return at;
+}
+
+// Whether corner i of one car lies, seen from above, in the triangle of corners a, b and d
+// of the other (with some slack).
+function overTriangleXZ(at, i, xat, a, b, d) {
+  const aro = Math.abs(
+    (xat.x[b] - xat.x[a]) * (xat.z[d] - xat.z[a]) -
+      (xat.x[d] - xat.x[a]) * (xat.z[b] - xat.z[a]),
+  );
+  const ar1 = Math.abs(
+    (xat.x[a] - at.x[i]) * (xat.z[b] - at.z[i]) -
+      (xat.x[b] - at.x[i]) * (xat.z[a] - at.z[i]),
+  );
+  const ar2 = Math.abs(
+    (xat.x[b] - at.x[i]) * (xat.z[d] - at.z[i]) -
+      (xat.x[d] - at.x[i]) * (xat.z[b] - at.z[i]),
+  );
+  const ar3 = Math.abs(
+    (xat.x[d] - at.x[i]) * (xat.z[a] - at.z[i]) -
+      (xat.x[a] - at.x[i]) * (xat.z[d] - at.z[i]),
+  );
+  return ar1 + ar2 + ar3 < aro + 10;
+}
+
+function nearestCorner(at, i, xat) {
+  let j = 0;
+  let closj = distanceSquared(
+    at.x[i],
+    xat.x[0],
+    at.y[i],
+    xat.y[0],
+    at.z[i],
+    xat.z[0],
+  );
+  for (let k = 1; k < 4; k++) {
+    const pyclos = distanceSquared(
+      at.x[i],
+      xat.x[k],
+      at.y[i],
+      xat.y[k],
+      at.z[i],
+      xat.z[k],
+    );
+    if (pyclos < closj) {
+      closj = pyclos;
+      j = k;
+    }
+  }
+  return j;
+}
+
+// Corner i of car c, the one dominating, crashes into corner j of car xc.
+function crashCorners(c, xc, i, j, at, xat) {
+  pushCornerAlong(c, xc, i, j, at, xat, racers[c].scx, racers[xc].scx, 0);
+  pushCornerAlong(c, xc, i, j, at, xat, racers[c].scz, racers[xc].scz, 1);
+  if (c == game.player) {
+    racers[xc].lastcolido = 70;
+  }
+  if (xc == game.player) {
+    racers[c].lastcolido = 70;
+  }
+  racers[xc].scy[j] += carStats.lift[car[c].typ];
+}
+
+// Along one axis (with the corner speeds sc and xsc), the corner moving harder pushes the
+// other away and is slowed and lifted itself; both cars dent.
+function pushCornerAlong(c, xc, i, j, at, xat, sc, xsc, hitSide) {
+  if (
+    Math.abs(sc[i] * carStats.moment[car[c].typ]) >
+    Math.abs(xsc[j] * carStats.moment[car[xc].typ])
+  ) {
+    let tm = xsc[j] * carStats.revpush[car[c].typ];
+    if (tm > 30) {
+      tm = 30;
+    }
+    if (tm < -30) {
+      tm = -30;
+    }
+    let vctm = sc[i] * carStats.push[car[c].typ];
+    if (vctm > 30) {
+      vctm = 30;
+    }
+    if (vctm < -30) {
+      vctm = -30;
+    }
+    xsc[j] += vctm;
+    dentHitCar(c, xc, hitSide, j, vctm * carStats.moment[car[c].typ]);
+    sc[i] -= tm;
+    regn(hitSide, i, -tm * carStats.moment[car[c].typ], c);
+    racers[c].scy[i] += carStats.revlift[car[c].typ];
+    dentHitCar(c, xc, 2, j, carStats.revlift[car[c].typ] * 7);
+    if (random.fx() > random.fx()) {
+      sprks(
+        car[c].typ,
+        (at.x[i] + xat.x[j]) / 2,
+        (at.y[i] + xat.y[j]) / 2,
+        (at.z[i] + xat.z[j]) / 2,
+        (racers[xc].scx[j] + racers[c].scx[i]) / 4,
+        (racers[xc].scy[j] + racers[c].scy[i]) / 4,
+        (racers[xc].scz[j] + racers[c].scz[i]) / 4,
+        2,
+      );
+    }
+  }
+}
+
+// Dents car xc, hit by car c; colidim lets regn sound the crash when the player hit it.
+function dentHitCar(c, xc, hitSide, j, mag) {
+  if (c == game.player) {
+    racers[xc].colidim = true;
+  }
+  regn(hitSide, j, mag, xc);
+  if (racers[xc].colidim) {
+    racers[xc].colidim = false;
   }
 }
 // Dents regn made, waiting to be scratched into their car's texture. In a pile-up that
