@@ -3260,13 +3260,7 @@ export function regn(hitSide, k, mag, c) {
   }
   if (Math.abs(mag) > 10) {
     if (game.phase == PHASE.race) {
-      recording.tape.cars[c].hitAt[recording.tape.cars[c].hitCount] = 430;
-      recording.tape.cars[c].hitSide[recording.tape.cars[c].hitCount] = hitSide;
-      recording.tape.cars[c].hitPoint[recording.tape.cars[c].hitCount] = k;
-      recording.tape.cars[c].hitMag[recording.tape.cars[c].hitCount] = mag;
-      recording.tape.cars[c].hitMtouch[recording.tape.cars[c].hitCount] =
-        racers[c].mtouch;
-      recording.tape.cars[c].hitCount++;
+      recordHit(c, hitSide, k, mag);
     }
     if (mag > 10) {
       mag -= 10;
@@ -3279,32 +3273,8 @@ export function regn(hitSide, k, mag, c) {
     let keepsShape = false;
     if (hitSide == HIT.fromBelow) {
       keepsShape = true;
-      let rzy = car[c].zy,
-        rxy = car[c].xy;
-      while (rzy < 360) {
-        rzy += 360;
-      }
-      while (rzy > 360) {
-        rzy -= 360;
-      }
-      if (rzy < 210 && rzy > 150) {
-        zsing = -1;
-      }
-      if (rzy > 330 || rzy < 30) {
-        zsing = 1;
-      }
-      while (rxy < 360) {
-        rxy += 360;
-      }
-      while (rxy > 360) {
-        rxy -= 360;
-      }
-      if (rxy < 210 && rxy > 150) {
-        xsing = -1;
-      }
-      if (rxy > 330 || rxy < 30) {
-        xsing = 1;
-      }
+      zsing = uprightness(car[c].zy);
+      xsing = uprightness(car[c].xy);
       if (xsing * zsing == 0 || racers[c].mtouch) {
         keepsShape = false;
       }
@@ -3325,115 +3295,146 @@ export function regn(hitSide, k, mag, c) {
         crashSound(mag, 0);
       }
     }
-    let rad = racers[c].body;
     if (!keepsShape) {
-      if (rad.iscar == 1) {
-        rad.dvert = [];
-        for (let i = 0; i < rad.ni; i++) {
-          rad.dvert[i * 3] = -rad.vrt[rad.tri[i * 3] * 3];
-          rad.dvert[i * 3 + 1] = rad.vrt[rad.tri[i * 3] * 3 + 1];
-          rad.dvert[i * 3 + 2] = rad.vrt[rad.tri[i * 3] * 3 + 2];
-        }
-        rad.iscar = 2;
-      }
-      let pixels = rad.damagePixels;
-      let pixelread = pixels != null;
-      let tsq = 0,
-        nsq = 0;
-      for (let i = 0; i < rad.ni; i++) {
-        let tmag = 0;
-        let modpix = 0;
-        if (
-          hitSide < HIT.onRoof &&
-          distanceSquaredXZ(
-            car[c].keyx[k],
-            rad.dvert[i * 3],
-            car[c].keyz[k],
-            rad.dvert[i * 3 + 2],
-          ) < carStats.clrad[car[c].typ]
-        ) {
-          tmag = (mag / 30) * random.sim();
-          if (hitSide == HIT.alongX) {
-            rad.dvert[i * 3 + 2] -=
-              tmag * sinDeg(car[c].xz) * cosDeg(car[c].zy);
-            rad.dvert[i * 3] += tmag * cosDeg(car[c].xz) * cosDeg(car[c].xy);
-          }
-          if (hitSide == HIT.alongZ) {
-            rad.dvert[i * 3 + 2] +=
-              tmag * cosDeg(car[c].xz) * cosDeg(car[c].zy);
-            rad.dvert[i * 3] += tmag * sinDeg(car[c].xz) * cosDeg(car[c].xy);
-          }
-          if (hitSide == HIT.fromBelow) {
-            rad.dvert[i * 3 + 2] -= tmag * sinDeg(car[c].zy);
-            rad.dvert[i * 3] += tmag * sinDeg(car[c].xy);
-          }
-          if (Math.abs(tmag) > 0.1) {
-            if (random.fx() > 0.91) {
-              if (game.phase != PHASE.replayRewind) {
-                chipaway(
-                  c,
-                  rad.dvert[i * 3],
-                  rad.dvert[i * 3 + 1],
-                  rad.dvert[i * 3 + 2],
-                  tmag,
-                );
-              }
-            }
-          }
-          if (game.phase == PHASE.race) {
-            racers[c].hitmag += Math.abs(tmag) * 0.667;
-          }
-          modpix = 1;
-        }
-        // The original also let vertices near the roof's height count, but it looked up
-        // msquash by car index and type (msquash[c][typ]), which is never a number, so
-        // only vertices above it ever do. With 20 cars that lookup crashed for car 19.
-        if (
-          hitSide == HIT.onRoof &&
-          rad.dvert[i * 3 + 1] >
-            carStats.flipy[car[c].typ] + racers[c].squash &&
-          Math.abs(racers[c].squash) < carStats.msquash[car[c].typ]
-        ) {
-          tmag = (mag / 15) * random.sim();
-          rad.dvert[i * 3 + 1] -= tmag;
-          tsq -= tmag;
-          nsq++;
-          if (Math.abs(tmag) > 0.1) {
-            if (random.fx() > 0.91) {
-              if (game.phase != PHASE.replayRewind) {
-                chipaway(
-                  c,
-                  rad.dvert[i * 3],
-                  rad.dvert[i * 3 + 1],
-                  rad.dvert[i * 3 + 2],
-                  tmag,
-                );
-              }
-            }
-          }
-          if (game.phase == PHASE.race) {
-            racers[c].hitmag += Math.abs(tmag) * 0.667;
-          }
-          modpix = 2;
-        }
-        if (pixelread && modpix) {
-          let pxc = Math.round(rad.tex[rad.tri[i * 3 + 2] * 2] * 256);
-          let pyc = Math.round((1 - rad.tex[rad.tri[i * 3 + 2] * 2 + 1]) * 256);
-          let cmag =
-            Math.abs(tmag) *
-            11 *
-            carStats.dammult[car[c].typ] *
-            carStats.colrdammult[car[c].typ];
-          dents.push({ model: rad, pixels, c, pxc, pyc, cmag, modpix });
-        }
-      }
-      if (hitSide == HIT.onRoof && nsq > 0) {
-        racers[c].squash += tsq / nsq;
-      }
-      rad.damagedVertices = true;
-      rad.loaded = 2;
+      dentBody(c, racers[c].body, hitSide, k, mag);
     }
   }
+}
+
+// The hit is replayed from the tape in instant replays and highlights (see recording.js).
+function recordHit(c, hitSide, k, mag) {
+  recording.tape.cars[c].hitAt[recording.tape.cars[c].hitCount] = 430;
+  recording.tape.cars[c].hitSide[recording.tape.cars[c].hitCount] = hitSide;
+  recording.tape.cars[c].hitPoint[recording.tape.cars[c].hitCount] = k;
+  recording.tape.cars[c].hitMag[recording.tape.cars[c].hitCount] = mag;
+  recording.tape.cars[c].hitMtouch[recording.tape.cars[c].hitCount] =
+    racers[c].mtouch;
+  recording.tape.cars[c].hitCount++;
+}
+
+// 1 when an angle of the car is about level, -1 when it is about upside down, else 0.
+function uprightness(angle) {
+  while (angle < 360) {
+    angle += 360;
+  }
+  while (angle > 360) {
+    angle -= 360;
+  }
+  if (angle > 330 || angle < 30) {
+    return 1;
+  }
+  if (angle < 210 && angle > 150) {
+    return -1;
+  }
+  return 0;
+}
+
+// Moves the body's vertices near corner k (or its roof) by the hit, chipping bits off,
+// and queues the dents for its texture.
+function dentBody(c, rad, hitSide, k, mag) {
+  // the body's own copy of its vertices, mirrored, made on its first hit
+  if (rad.iscar == 1) {
+    rad.dvert = [];
+    for (let i = 0; i < rad.ni; i++) {
+      rad.dvert[i * 3] = -rad.vrt[rad.tri[i * 3] * 3];
+      rad.dvert[i * 3 + 1] = rad.vrt[rad.tri[i * 3] * 3 + 1];
+      rad.dvert[i * 3 + 2] = rad.vrt[rad.tri[i * 3] * 3 + 2];
+    }
+    rad.iscar = 2;
+  }
+  let pixels = rad.damagePixels;
+  let pixelread = pixels != null;
+  let tsq = 0,
+    nsq = 0;
+  for (let i = 0; i < rad.ni; i++) {
+    let tmag = 0;
+    let modpix = 0;
+    if (
+      hitSide < HIT.onRoof &&
+      distanceSquaredXZ(
+        car[c].keyx[k],
+        rad.dvert[i * 3],
+        car[c].keyz[k],
+        rad.dvert[i * 3 + 2],
+      ) < carStats.clrad[car[c].typ]
+    ) {
+      tmag = (mag / 30) * random.sim();
+      if (hitSide == HIT.alongX) {
+        rad.dvert[i * 3 + 2] -= tmag * sinDeg(car[c].xz) * cosDeg(car[c].zy);
+        rad.dvert[i * 3] += tmag * cosDeg(car[c].xz) * cosDeg(car[c].xy);
+      }
+      if (hitSide == HIT.alongZ) {
+        rad.dvert[i * 3 + 2] += tmag * cosDeg(car[c].xz) * cosDeg(car[c].zy);
+        rad.dvert[i * 3] += tmag * sinDeg(car[c].xz) * cosDeg(car[c].xy);
+      }
+      if (hitSide == HIT.fromBelow) {
+        rad.dvert[i * 3 + 2] -= tmag * sinDeg(car[c].zy);
+        rad.dvert[i * 3] += tmag * sinDeg(car[c].xy);
+      }
+      if (Math.abs(tmag) > 0.1) {
+        if (random.fx() > 0.91) {
+          if (game.phase != PHASE.replayRewind) {
+            chipaway(
+              c,
+              rad.dvert[i * 3],
+              rad.dvert[i * 3 + 1],
+              rad.dvert[i * 3 + 2],
+              tmag,
+            );
+          }
+        }
+      }
+      if (game.phase == PHASE.race) {
+        racers[c].hitmag += Math.abs(tmag) * 0.667;
+      }
+      modpix = 1;
+    }
+    // The original also let vertices near the roof's height count, but it looked up
+    // msquash by car index and type (msquash[c][typ]), which is never a number, so
+    // only vertices above it ever do. With 20 cars that lookup crashed for car 19.
+    if (
+      hitSide == HIT.onRoof &&
+      rad.dvert[i * 3 + 1] > carStats.flipy[car[c].typ] + racers[c].squash &&
+      Math.abs(racers[c].squash) < carStats.msquash[car[c].typ]
+    ) {
+      tmag = (mag / 15) * random.sim();
+      rad.dvert[i * 3 + 1] -= tmag;
+      tsq -= tmag;
+      nsq++;
+      if (Math.abs(tmag) > 0.1) {
+        if (random.fx() > 0.91) {
+          if (game.phase != PHASE.replayRewind) {
+            chipaway(
+              c,
+              rad.dvert[i * 3],
+              rad.dvert[i * 3 + 1],
+              rad.dvert[i * 3 + 2],
+              tmag,
+            );
+          }
+        }
+      }
+      if (game.phase == PHASE.race) {
+        racers[c].hitmag += Math.abs(tmag) * 0.667;
+      }
+      modpix = 2;
+    }
+    if (pixelread && modpix) {
+      let pxc = Math.round(rad.tex[rad.tri[i * 3 + 2] * 2] * 256);
+      let pyc = Math.round((1 - rad.tex[rad.tri[i * 3 + 2] * 2 + 1]) * 256);
+      let cmag =
+        Math.abs(tmag) *
+        11 *
+        carStats.dammult[car[c].typ] *
+        carStats.colrdammult[car[c].typ];
+      dents.push({ model: rad, pixels, c, pxc, pyc, cmag, modpix });
+    }
+  }
+  if (hitSide == HIT.onRoof && nsq > 0) {
+    racers[c].squash += tsq / nsq;
+  }
+  rad.damagedVertices = true;
+  rad.loaded = 2;
 }
 export function fixcar(c) {
   let rad = racers[c].body;
