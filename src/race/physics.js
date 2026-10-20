@@ -286,249 +286,9 @@ function driveCar(c) {
   if (step.slopeContacts == 4) {
     racers[c].mtouch = true;
   }
-  if (c == game.player) {
-    for (let i = 0; i < 2; i++) {
-      if (lonorm[i] != step.axleOnGround[i]) {
-        if (lonorm[i] > 0 && step.axleOnGround[i] > 0) {
-          if (Math.abs(lonorm[i] - step.axleOnGround[i]) > 0.015) {
-            bumpSound(
-              i,
-              Math.sqrt(avgSpeedX * avgSpeedX + avgSpeedZ * avgSpeedZ),
-              step.surface,
-            );
-          }
-        }
-        lonorm[i] = step.axleOnGround[i];
-      }
-    }
-  }
-  if (tick.fraction >= tick.scale) {
-    let allsparks = 0;
-    for (let k = 0; k < 4; k++) {
-      if (step.sparkKind[k] == 1) {
-        allsparks++;
-      }
-    }
-    if (allsparks != 4) {
-      for (let k = 0; k < 4; k++) {
-        if (step.sparkKind[k] == 1) {
-          sprks(
-            type,
-            step.wheelX[k],
-            step.wheelY[k],
-            step.wheelZ[k],
-            racers[c].scx[k],
-            racers[c].scy[k],
-            racers[c].scz[k],
-            1,
-          );
-        }
-        if (c == game.player && step.sparkKind[k]) {
-          groundScrapeSound(
-            step.sparkKind[k],
-            racers[c].scx[k],
-            racers[c].scy[k],
-            racers[c].scz[k],
-          );
-        }
-      }
-    } else {
-      let k = Math.floor(random.fx() * 4);
-      if (k == 4) {
-        k = 0;
-      }
-      sprks(
-        type,
-        (step.wheelX[k] + car[c].x) / 2,
-        step.wheelY[k],
-        (step.wheelZ[k] + car[c].z) / 2,
-        racers[c].scx[k],
-        racers[c].scy[k],
-        racers[c].scz[k],
-        1,
-      );
-      k = Math.floor(random.fx() * 4);
-      if (k == 4) {
-        k = 0;
-      }
-      sprks(
-        type,
-        (step.wheelX[k] + car[c].x) / 2,
-        step.wheelY[k],
-        (step.wheelZ[k] + car[c].z) / 2,
-        racers[c].scx[k],
-        racers[c].scy[k],
-        racers[c].scz[k],
-        1,
-      );
-      if (c == game.player) {
-        groundScrapeSound(
-          1,
-          racers[c].scx[k],
-          racers[c].scy[k],
-          racers[c].scz[k],
-        );
-      }
-    }
-  }
-  for (let k = 0; k < 4; k++) {
-    if (
-      step.wheelZ[k] < track.limb + step.reachZ &&
-      step.wheelZ[k] > track.limb + step.reachZ - 20
-    ) {
-      for (let j = 0; j < 4; j++) {
-        if (k != j) {
-          if (step.wheelZ[j] >= track.limb + step.reachZ) {
-            step.wheelZ[j] -= step.wheelZ[k] - (track.limb + step.reachZ);
-          }
-        }
-      }
-      step.wheelZ[k] = track.limb + step.reachZ;
-      if (tick.fraction >= tick.scale && step.wheelY[k] < 20) {
-        racers[c].crank[k]++;
-        if (racers[c].crank[k] > 2) {
-          sprks(
-            type,
-            step.wheelX[k],
-            step.wheelY[k],
-            step.wheelZ[k] - step.reachZ,
-            racers[c].scx[k],
-            racers[c].scy[k],
-            racers[c].scz[k],
-            2,
-          );
-          if (c == game.player) {
-            scrapeSound(racers[c].scx[k], racers[c].scy[k], racers[c].scz[k]);
-          }
-        }
-      }
-      const bounce = wallBounce(c, type, step);
-      regn(1, k, Math.abs(racers[c].scz[k] * bounce), c);
-      if (racers[c].scz[k] <= 0) {
-        racers[c].scz[k] += Math.abs(racers[c].scz[k] * bounce);
-      }
-      racers[c].skid = SKID.takeSpeedFromMotion;
-      step.hitWall = true;
-      racers[c].wall = track.limbo;
-    }
-    if (
-      step.wheelZ[k] > track.limt - step.reachZ &&
-      step.wheelZ[k] < track.limt - step.reachZ + 20
-    ) {
-      for (let j = 0; j < 4; j++) {
-        if (k != j) {
-          if (step.wheelZ[j] <= track.limt - step.reachZ) {
-            step.wheelZ[j] -= step.wheelZ[k] - (track.limt - step.reachZ);
-          }
-        }
-      }
-      step.wheelZ[k] = track.limt - step.reachZ;
-      if (tick.fraction >= tick.scale && step.wheelY[k] < 20) {
-        racers[c].crank[k]++;
-        if (racers[c].crank[k] > 2) {
-          sprks(
-            type,
-            step.wheelX[k],
-            step.wheelY[k],
-            step.wheelZ[k] + step.reachZ,
-            racers[c].scx[k],
-            racers[c].scy[k],
-            racers[c].scz[k],
-            2,
-          );
-          if (c == game.player) {
-            scrapeSound(racers[c].scx[k], racers[c].scy[k], racers[c].scz[k]);
-          }
-        }
-      }
-      const bounce = wallBounce(c, type, step);
-      regn(1, k, -Math.abs(racers[c].scz[k] * bounce), c);
-      if (racers[c].scz[k] >= 0) {
-        racers[c].scz[k] -= Math.abs(racers[c].scz[k] * bounce);
-      }
-      racers[c].skid = SKID.takeSpeedFromMotion;
-      step.hitWall = true;
-      racers[c].wall = track.limto;
-    }
-    if (
-      step.wheelX[k] < track.limr + step.reachX &&
-      step.wheelX[k] > track.limr + step.reachX - 20
-    ) {
-      for (let j = 0; j < 4; j++) {
-        if (k != j) {
-          if (step.wheelX[j] >= track.limr + step.reachX) {
-            step.wheelX[j] -= step.wheelX[k] - (track.limr + step.reachX);
-          }
-        }
-      }
-      step.wheelX[k] = track.limr + step.reachX;
-      if (tick.fraction >= tick.scale && step.wheelY[k] < 20) {
-        racers[c].crank[k]++;
-        if (racers[c].crank[k] > 2) {
-          sprks(
-            type,
-            step.wheelX[k] - step.reachX,
-            step.wheelY[k],
-            step.wheelZ[k],
-            racers[c].scx[k],
-            racers[c].scy[k],
-            racers[c].scz[k],
-            2,
-          );
-          if (c == game.player) {
-            scrapeSound(racers[c].scx[k], racers[c].scy[k], racers[c].scz[k]);
-          }
-        }
-      }
-      const bounce = wallBounce(c, type, step);
-      regn(0, k, Math.abs(racers[c].scx[k] * bounce), c);
-      if (racers[c].scx[k] <= 0) {
-        racers[c].scx[k] += Math.abs(racers[c].scx[k] * bounce);
-      }
-      racers[c].skid = SKID.takeSpeedFromMotion;
-      step.hitWall = true;
-      racers[c].wall = track.limro;
-    }
-    if (
-      step.wheelX[k] > track.liml - step.reachX &&
-      step.wheelX[k] < track.liml - step.reachX + 20
-    ) {
-      for (let j = 0; j < 4; j++) {
-        if (k != j) {
-          if (step.wheelX[j] <= track.liml - step.reachX) {
-            step.wheelX[j] -= step.wheelX[k] - (track.liml - step.reachX);
-          }
-        }
-      }
-      step.wheelX[k] = track.liml - step.reachX;
-      if (tick.fraction >= tick.scale && step.wheelY[k] < 20) {
-        racers[c].crank[k]++;
-        if (racers[c].crank[k] > 2) {
-          sprks(
-            type,
-            step.wheelX[k] + step.reachX,
-            step.wheelY[k],
-            step.wheelZ[k],
-            racers[c].scx[k],
-            racers[c].scy[k],
-            racers[c].scz[k],
-            2,
-          );
-          if (c == game.player) {
-            scrapeSound(racers[c].scx[k], racers[c].scy[k], racers[c].scz[k]);
-          }
-        }
-      }
-      const bounce = wallBounce(c, type, step);
-      regn(0, k, -Math.abs(racers[c].scx[k] * bounce), c);
-      if (racers[c].scx[k] >= 0) {
-        racers[c].scx[k] -= Math.abs(racers[c].scx[k] * bounce);
-      }
-      racers[c].skid = SKID.takeSpeedFromMotion;
-      step.hitWall = true;
-      racers[c].wall = track.limlo;
-    }
-  }
+  bumpOnAxles(c, step, avgSpeedX, avgSpeedZ);
+  throwScrapeSparks(c, type, step);
+  bounceOffStageLimits(c, type, step);
   if (tick.fraction >= tick.scale) {
     for (let i = 0; i < 4; i++) {
       // The original also had `if (crank[c][i] == lcrank[c][i]) crank[c][i][k] = 0;` here,
@@ -536,136 +296,9 @@ function driveCar(c) {
       racers[c].lcrank[i] = racers[c].crank[i];
     }
   }
-  let pitchTilt = 0,
-    otherPitchTilt = 0,
-    rollTilt = 0,
-    otherRollTilt = 0;
-  if (racers[c].scy[2] != racers[c].scy[0]) {
-    pitchTilt = tiltBetween(
-      c,
-      0,
-      2,
-      Math.abs(car[c].keyz[0]) + Math.abs(car[c].keyz[2]),
-      step,
-    );
-  }
-  if (racers[c].scy[3] != racers[c].scy[1]) {
-    otherPitchTilt = tiltBetween(
-      c,
-      1,
-      3,
-      Math.abs(car[c].keyz[1]) + Math.abs(car[c].keyz[3]),
-      step,
-    );
-  }
-  if (racers[c].scy[1] != racers[c].scy[0]) {
-    rollTilt = tiltBetween(
-      c,
-      0,
-      1,
-      Math.abs(car[c].keyx[0]) + Math.abs(car[c].keyx[1]),
-      step,
-    );
-  }
-  if (racers[c].scy[3] != racers[c].scy[2]) {
-    otherRollTilt = tiltBetween(
-      c,
-      2,
-      3,
-      Math.abs(car[c].keyx[2]) + Math.abs(car[c].keyx[3]),
-      step,
-    );
-  }
-  if (step.hitWall) {
-    let dxz = Math.abs(car[c].xz + 45);
-    while (dxz > 180) {
-      dxz -= 360;
-    }
-    if (Math.abs(dxz) > 90) {
-      racers[c].pmlt = 1;
-    } else {
-      racers[c].pmlt = -1;
-    }
-    dxz = Math.abs(car[c].xz - 45);
-    while (dxz > 180) {
-      dxz -= 360;
-    }
-    if (Math.abs(dxz) > 90) {
-      racers[c].nmlt = 1;
-    } else {
-      racers[c].nmlt = -1;
-    }
-  }
-  car[c].xz +=
-    racers[c].forca *
-    10 *
-    tick.scale *
-    (racers[c].scz[0] * racers[c].nmlt -
-      racers[c].scz[1] * racers[c].pmlt +
-      racers[c].scz[2] * racers[c].pmlt -
-      racers[c].scz[3] * racers[c].nmlt +
-      racers[c].scx[0] * racers[c].pmlt +
-      racers[c].scx[1] * racers[c].nmlt -
-      racers[c].scx[2] * racers[c].nmlt -
-      racers[c].scx[3] * racers[c].pmlt);
-  if (Math.abs(otherPitchTilt) > Math.abs(pitchTilt)) {
-    pitchTilt = otherPitchTilt;
-  }
-  if (Math.abs(otherRollTilt) > Math.abs(rollTilt)) {
-    rollTilt = otherRollTilt;
-  }
-  if (!pitchedOver) {
-    racers[c].pzy += pitchTilt * tick.scale;
-  } else {
-    racers[c].pzy -= pitchTilt * tick.scale;
-  }
-  if (!rolledOver) {
-    racers[c].pxy += rollTilt * tick.scale;
-  } else {
-    racers[c].pxy -= rollTilt * tick.scale;
-  }
-  if (step.wheelsOnGround == 4) {
-    let tat = 0;
-    while (racers[c].pzy < 360) {
-      racers[c].pzy += 360;
-      car[c].zy += 360;
-    }
-    while (racers[c].pzy > 360) {
-      racers[c].pzy -= 360;
-      car[c].zy -= 360;
-    }
-    if (racers[c].pzy < 190 && racers[c].pzy > 170) {
-      racers[c].pzy = 180;
-      car[c].zy = 180;
-      tat++;
-    }
-    if (racers[c].pzy > 350 || racers[c].pzy < 10) {
-      racers[c].pzy = 0;
-      car[c].zy = 0;
-      tat++;
-    }
-    while (racers[c].pxy < 360) {
-      racers[c].pxy += 360;
-      car[c].xy += 360;
-    }
-    while (racers[c].pxy > 360) {
-      racers[c].pxy -= 360;
-      car[c].xy -= 360;
-    }
-    if (racers[c].pxy < 190 && racers[c].pxy > 170) {
-      racers[c].pxy = 180;
-      car[c].xy = 180;
-      tat++;
-    }
-    if (racers[c].pxy > 350 || racers[c].pxy < 10) {
-      racers[c].pxy = 0;
-      car[c].xy = 0;
-      tat++;
-    }
-    if (tat == 2) {
-      racers[c].mtouch = true;
-    }
-  }
+  tiltWithWheels(c, pitchedOver, rolledOver, step);
+  turnFromWallHits(c, step);
+  settleLevel(c, step);
   if (tick.fraction >= tick.scale) {
     if (!racers[c].mtouch && racers[c].wtouch) {
       if (racers[c].cntouch == 10) {
@@ -677,258 +310,35 @@ function driveCar(c) {
       racers[c].cntouch = 0;
     }
   }
-  car[c].y =
-    (step.wheelY[0] + step.wheelY[1] + step.wheelY[2] + step.wheelY[3]) / 4 -
-    wheelDrop * cosDeg(racers[c].pzy) * cosDeg(racers[c].pxy) +
-    airPush.y * tick.scale;
-  car[c].x =
-    (step.wheelX[0] -
-      car[c].keyx[0] * cosDeg(car[c].xz) +
-      flipSign * car[c].keyz[0] * sinDeg(car[c].xz) +
-      step.wheelX[1] -
-      car[c].keyx[1] * cosDeg(car[c].xz) +
-      flipSign * car[c].keyz[1] * sinDeg(car[c].xz) +
-      step.wheelX[2] -
-      car[c].keyx[2] * cosDeg(car[c].xz) +
-      flipSign * car[c].keyz[2] * sinDeg(car[c].xz) +
-      step.wheelX[3] -
-      car[c].keyx[3] * cosDeg(car[c].xz) +
-      flipSign * car[c].keyz[3] * sinDeg(car[c].xz)) /
-      4 +
-    wheelDrop * sinDeg(racers[c].pxy) * cosDeg(car[c].xz) -
-    wheelDrop * sinDeg(racers[c].pzy) * sinDeg(car[c].xz) +
-    airPush.x * tick.scale;
-  car[c].z =
-    (step.wheelZ[0] -
-      flipSign * car[c].keyz[0] * cosDeg(car[c].xz) -
-      car[c].keyx[0] * sinDeg(car[c].xz) +
-      step.wheelZ[1] -
-      flipSign * car[c].keyz[1] * cosDeg(car[c].xz) -
-      car[c].keyx[1] * sinDeg(car[c].xz) +
-      step.wheelZ[2] -
-      flipSign * car[c].keyz[2] * cosDeg(car[c].xz) -
-      car[c].keyx[2] * sinDeg(car[c].xz) +
-      step.wheelZ[3] -
-      flipSign * car[c].keyz[3] * cosDeg(car[c].xz) -
-      car[c].keyx[3] * sinDeg(car[c].xz)) /
-      4 +
-    wheelDrop * sinDeg(racers[c].pxy) * sinDeg(car[c].xz) -
-    wheelDrop * sinDeg(racers[c].pzy) * cosDeg(car[c].xz) +
-    airPush.z * tick.scale;
-  if (Math.abs(racers[c].speed) > 10 || !racers[c].mtouch) {
-    if (Math.abs(racers[c].pxy - car[c].xy) >= 4 * tick.scale) {
-      if (racers[c].pxy > car[c].xy) {
-        car[c].xy += 2 * tick.scale + (racers[c].pxy - car[c].xy) / 2;
-      } else {
-        car[c].xy -= 2 * tick.scale + (car[c].xy - racers[c].pxy) / 2;
-      }
-    } else {
-      car[c].xy = racers[c].pxy;
-    }
-    if (Math.abs(racers[c].pzy - car[c].zy) >= 4 * tick.scale) {
-      if (racers[c].pzy > car[c].zy) {
-        car[c].zy += 2 * tick.scale + (racers[c].pzy - car[c].zy) / 2;
-      } else {
-        car[c].zy -= 2 * tick.scale + (car[c].zy - racers[c].pzy) / 2;
-      }
-    } else {
-      car[c].zy = racers[c].pzy;
-    }
-  }
-  if (racers[c].wtouch && !racers[c].capsized) {
-    let mtilt =
-      (racers[c].speed / carStats.swits[type][2]) *
-      14 *
-      (carStats.bounce[type] - 0.4);
-    if (racers[c].u.left && racers[c].tilt < mtilt && racers[c].tilt >= 0) {
-      racers[c].tilt += 0.4 * tick.scale;
-    } else {
-      if (racers[c].u.right && racers[c].tilt > -mtilt && racers[c].tilt <= 0) {
-        racers[c].tilt -= 0.4 * tick.scale;
-      } else {
-        if (Math.abs(racers[c].tilt) > 3 * (carStats.bounce[type] - 0.4)) {
-          if (racers[c].tilt > 0) {
-            racers[c].tilt -= 3 * (carStats.bounce[type] - 0.3);
-          } else {
-            racers[c].tilt += 3 * (carStats.bounce[type] - 0.3);
-          }
-        } else {
-          racers[c].tilt = 0;
-        }
-      }
-    }
-    car[c].xy += racers[c].tilt;
-    if (racers[c].gtouch) {
-      car[c].y -= (Math.abs(racers[c].tilt) / 30) * tick.scale;
-    }
-  } else {
-    if (racers[c].tilt != 0) {
-      racers[c].tilt = 0;
-    }
-  }
-  if (tick.fraction >= tick.scale) {
-    if (racers[c].mtouch && step.surface == DUST.sand) {
-      car[c].zy +=
-        ((random.sim() * 5 * racers[c].speed) / carStats.swits[type][2] -
-          (2.5 * racers[c].speed) / carStats.swits[type][2]) *
-        (carStats.bounce[type] - 0.3);
-      car[c].xy +=
-        ((random.sim() * 5 * racers[c].speed) / carStats.swits[type][2] -
-          (2.5 * racers[c].speed) / carStats.swits[type][2]) *
-        (carStats.bounce[type] - 0.3);
-    }
-    if (racers[c].wtouch && step.surface == DUST.ground) {
-      car[c].zy +=
-        ((random.sim() * 3.34 * racers[c].speed) / carStats.swits[type][2] -
-          (1.67 * racers[c].speed) / carStats.swits[type][2]) *
-        (carStats.bounce[type] - 0.3);
-      car[c].xy +=
-        ((random.sim() * 3.34 * racers[c].speed) / carStats.swits[type][2] -
-          (1.67 * racers[c].speed) / carStats.swits[type][2]) *
-        (carStats.bounce[type] - 0.3);
-    }
-  }
-  if (tick.fraction >= tick.scale) {
-    if (racers[c].hitmag >= carStats.maxmag[type]) {
-      if (recording.tape.cars[c].wastedAt == 700) {
-        recording.tape.cars[c].wastedAt = 430;
-        if (racers[c].lastcolido != 0) {
-          recording.tape.cars[c].playerHitTicks = racers[c].lastcolido;
-        }
-      }
-      if (racers[c].cntdest < 6) {
-        if (racers[c].embos == 0) {
-          racers[c].body.alpha = 1;
-          racers[c].embodir = Math.floor(random.fx() * 3);
-          if (racers[c].embodir == 3) {
-            racers[c].embodir = 0;
-          }
-          racers[c].embomag = 1.2 + random.fx() * 0.2;
-        }
-        if (racers[c].embos == 1) {
-          racers[c].body.alpha = 2;
-        }
-        racers[c].embos++;
-        if (racers[c].embos == 2) {
-          racers[c].embos = 0;
-          racers[c].cntdest++;
-        }
-      } else {
-        if (racers[c].cntdest == 6) {
-          racers[c].body.alpha = 1;
-          racers[c].embodir = 0;
-          chipburn(c);
-          racers[c].embos = 0;
-          racers[c].cntdest = 7;
-        }
-        firexp(
-          c,
-          avgSpeedX,
-          (racers[c].scy[0] +
-            racers[c].scy[1] +
-            racers[c].scy[2] +
-            racers[c].scy[3]) /
-            4,
-          avgSpeedZ,
-        );
-        if (racers[c].cntdest < 24) {
-          racers[c].embos++;
-          if (racers[c].embos == 5) {
-            burn(c);
-            racers[c].embos = 0;
-            racers[c].cntdest++;
-          }
-        }
-      }
-      if (racers[c].cntdest == 4) {
-        racers[c].dest = true;
-      }
-    }
-  }
-  let pnt = 0,
-    pyclos = 0;
-  let ic = 0;
+  placeOnWheels(c, wheelDrop, airPush, flipSign, step);
+  followTilt(c);
+  leanIntoTurns(c, type);
+  shakeOnRoughGround(c, type, step);
+  burnWhenWasted(c, type, avgSpeedX, avgSpeedZ);
+  const nearest = passCheckpoints(c);
+  reportCheckpoints(c);
+  racers[c].point = pathPointAhead(c, nearest);
   if (racers[c].nofocus) {
-    rollSign = 1;
-  } else {
-    rollSign = 7;
+    racers[c].nofocus = false;
   }
-  for (let i = 0; i < track.n; i++) {
-    if (track.typ[i] > 0) {
-      ic++;
-      if (track.typ[i] == 1) {
-        if (racers[c].clear == ic + racers[c].nlaps * track.nsp) {
-          rollSign = 1;
-        }
-        if (
-          Math.abs(car[c].z - track.z[i]) <
-            6 +
-              Math.abs(
-                racers[c].scz[0] +
-                  racers[c].scz[1] +
-                  racers[c].scz[2] +
-                  racers[c].scz[3],
-              ) /
-                4 &&
-          Math.abs(car[c].x - track.x[i]) < 70 &&
-          Math.abs(car[c].y - track.y[i] - 15) < 45
-        ) {
-          if (racers[c].clear == ic + racers[c].nlaps * track.nsp - 1) {
-            racers[c].clear = ic + racers[c].nlaps * track.nsp;
-            racers[c].pcleared = i;
-            racers[c].focus = -1;
-          }
-        }
-      }
-      if (track.typ[i] == 2) {
-        if (racers[c].clear == ic + racers[c].nlaps * track.nsp) {
-          rollSign = 1;
-        }
-        if (
-          Math.abs(car[c].x - track.x[i]) <
-            6 +
-              Math.abs(
-                racers[c].scx[0] +
-                  racers[c].scx[1] +
-                  racers[c].scx[2] +
-                  racers[c].scx[3],
-              ) /
-                4 &&
-          Math.abs(car[c].z - track.z[i]) < 70 &&
-          Math.abs(car[c].y - track.y[i] - 15) < 45
-        ) {
-          if (racers[c].clear == ic + racers[c].nlaps * track.nsp - 1) {
-            racers[c].clear = ic + racers[c].nlaps * track.nsp;
-            racers[c].pcleared = i;
-            racers[c].focus = -1;
-          }
-        }
-      }
-    }
-    if (
-      distanceSquaredXZ(
-        car[c].x / 10,
-        track.x[i] / 10,
-        car[c].z / 10,
-        track.z[i] / 10,
-      ) *
-        rollSign <
-        pyclos ||
-      pyclos == 0
-    ) {
-      pnt = i;
-      pyclos =
-        distanceSquaredXZ(
-          car[c].x / 10,
-          track.x[i] / 10,
-          car[c].z / 10,
-          track.z[i] / 10,
-        ) * rollSign;
-    }
+  passFixHoops(c);
+  trackStunt(c, type);
+  if (racers[c].uwall) {
+    racers[c].uwall = false;
   }
-  if (racers[c].clear == ic + racers[c].nlaps * track.nsp) {
-    racers[c].nlaps++;
+  if (
+    tick.fraction >= tick.scale &&
+    racers[c].lastcolido != 0 &&
+    !racers[c].dest
+  ) {
+    racers[c].lastcolido--;
   }
+  recordHowWasted(c);
+  countDownStuntHighlight(c);
+  orientBody(c);
+}
+
+function reportCheckpoints(c) {
   if (c == game.player) {
     raceEvents.oncheckpoint = racers[c].clear;
     while (raceEvents.oncheckpoint >= track.nsp) {
@@ -941,6 +351,9 @@ function driveCar(c) {
       raceEvents.onlastcheck = false;
     }
   }
+}
+
+function pathPointAhead(c, pnt) {
   if (racers[c].focus == -1) {
     if (c == game.player) {
       pnt += 2;
@@ -955,7 +368,7 @@ function driveCar(c) {
       ) {
         pnt = 33;
       }
-      ic = racers[c].pcleared + 1;
+      let ic = racers[c].pcleared + 1;
       if (ic >= track.n) {
         ic = 0;
       }
@@ -1046,10 +459,10 @@ function driveCar(c) {
       racers[c].missedcp = 0;
     }
   }
-  if (racers[c].nofocus) {
-    racers[c].nofocus = false;
-  }
-  racers[c].point = pnt;
+  return pnt;
+}
+
+function passFixHoops(c) {
   if (game.mode != MODE.switchCars) {
     if (!car[c].fcnt) {
       for (let i = 0; i < pieces.fixCount; i++) {
@@ -1122,6 +535,9 @@ function driveCar(c) {
       }
     }
   }
+}
+
+function trackStunt(c, type) {
   if (!racers[c].mtouch) {
     if (racers[c].trcnt != 1) {
       racers[c].trcnt = 1;
@@ -1311,16 +727,9 @@ function driveCar(c) {
       }
     }
   }
-  if (racers[c].uwall) {
-    racers[c].uwall = false;
-  }
-  if (
-    tick.fraction >= tick.scale &&
-    racers[c].lastcolido != 0 &&
-    !racers[c].dest
-  ) {
-    racers[c].lastcolido--;
-  }
+}
+
+function recordHowWasted(c) {
   if (racers[c].dest) {
     if (track.dested[c] == 0) {
       if (racers[c].lastcolido == 0) {
@@ -1334,6 +743,9 @@ function driveCar(c) {
       track.dested[c] = 0;
     }
   }
+}
+
+function countDownStuntHighlight(c) {
   if (
     c == game.player &&
     recording.stuntCatchTicks != 0 &&
@@ -1347,6 +759,9 @@ function driveCar(c) {
       }
     }
   }
+}
+
+function orientBody(c) {
   let xmt = [1, 0, 0];
   let ymt = [0, 1, 0];
   let zmt = [0, 0, 1];
@@ -1366,6 +781,548 @@ function driveCar(c) {
     car[c].mat[racers[c].embodir * 4] *= racers[c].embomag;
     car[c].mat[racers[c].embodir * 4 + 1] *= racers[c].embomag;
     car[c].mat[racers[c].embodir * 4 + 2] *= racers[c].embomag;
+  }
+}
+
+function tiltWithWheels(c, pitchedOver, rolledOver, step) {
+  let pitchTilt = 0,
+    otherPitchTilt = 0,
+    rollTilt = 0,
+    otherRollTilt = 0;
+  if (racers[c].scy[2] != racers[c].scy[0]) {
+    pitchTilt = tiltBetween(
+      c,
+      0,
+      2,
+      Math.abs(car[c].keyz[0]) + Math.abs(car[c].keyz[2]),
+      step,
+    );
+  }
+  if (racers[c].scy[3] != racers[c].scy[1]) {
+    otherPitchTilt = tiltBetween(
+      c,
+      1,
+      3,
+      Math.abs(car[c].keyz[1]) + Math.abs(car[c].keyz[3]),
+      step,
+    );
+  }
+  if (racers[c].scy[1] != racers[c].scy[0]) {
+    rollTilt = tiltBetween(
+      c,
+      0,
+      1,
+      Math.abs(car[c].keyx[0]) + Math.abs(car[c].keyx[1]),
+      step,
+    );
+  }
+  if (racers[c].scy[3] != racers[c].scy[2]) {
+    otherRollTilt = tiltBetween(
+      c,
+      2,
+      3,
+      Math.abs(car[c].keyx[2]) + Math.abs(car[c].keyx[3]),
+      step,
+    );
+  }
+  if (Math.abs(otherPitchTilt) > Math.abs(pitchTilt)) {
+    pitchTilt = otherPitchTilt;
+  }
+  if (Math.abs(otherRollTilt) > Math.abs(rollTilt)) {
+    rollTilt = otherRollTilt;
+  }
+  if (!pitchedOver) {
+    racers[c].pzy += pitchTilt * tick.scale;
+  } else {
+    racers[c].pzy -= pitchTilt * tick.scale;
+  }
+  if (!rolledOver) {
+    racers[c].pxy += rollTilt * tick.scale;
+  } else {
+    racers[c].pxy -= rollTilt * tick.scale;
+  }
+}
+
+function turnFromWallHits(c, step) {
+  if (step.hitWall) {
+    let dxz = Math.abs(car[c].xz + 45);
+    while (dxz > 180) {
+      dxz -= 360;
+    }
+    if (Math.abs(dxz) > 90) {
+      racers[c].pmlt = 1;
+    } else {
+      racers[c].pmlt = -1;
+    }
+    dxz = Math.abs(car[c].xz - 45);
+    while (dxz > 180) {
+      dxz -= 360;
+    }
+    if (Math.abs(dxz) > 90) {
+      racers[c].nmlt = 1;
+    } else {
+      racers[c].nmlt = -1;
+    }
+  }
+  car[c].xz +=
+    racers[c].forca *
+    10 *
+    tick.scale *
+    (racers[c].scz[0] * racers[c].nmlt -
+      racers[c].scz[1] * racers[c].pmlt +
+      racers[c].scz[2] * racers[c].pmlt -
+      racers[c].scz[3] * racers[c].nmlt +
+      racers[c].scx[0] * racers[c].pmlt +
+      racers[c].scx[1] * racers[c].nmlt -
+      racers[c].scx[2] * racers[c].nmlt -
+      racers[c].scx[3] * racers[c].pmlt);
+}
+
+function settleLevel(c, step) {
+  if (step.wheelsOnGround == 4) {
+    let tat = 0;
+    while (racers[c].pzy < 360) {
+      racers[c].pzy += 360;
+      car[c].zy += 360;
+    }
+    while (racers[c].pzy > 360) {
+      racers[c].pzy -= 360;
+      car[c].zy -= 360;
+    }
+    if (racers[c].pzy < 190 && racers[c].pzy > 170) {
+      racers[c].pzy = 180;
+      car[c].zy = 180;
+      tat++;
+    }
+    if (racers[c].pzy > 350 || racers[c].pzy < 10) {
+      racers[c].pzy = 0;
+      car[c].zy = 0;
+      tat++;
+    }
+    while (racers[c].pxy < 360) {
+      racers[c].pxy += 360;
+      car[c].xy += 360;
+    }
+    while (racers[c].pxy > 360) {
+      racers[c].pxy -= 360;
+      car[c].xy -= 360;
+    }
+    if (racers[c].pxy < 190 && racers[c].pxy > 170) {
+      racers[c].pxy = 180;
+      car[c].xy = 180;
+      tat++;
+    }
+    if (racers[c].pxy > 350 || racers[c].pxy < 10) {
+      racers[c].pxy = 0;
+      car[c].xy = 0;
+      tat++;
+    }
+    if (tat == 2) {
+      racers[c].mtouch = true;
+    }
+  }
+}
+
+function placeOnWheels(c, wheelDrop, airPush, flipSign, step) {
+  car[c].y =
+    (step.wheelY[0] + step.wheelY[1] + step.wheelY[2] + step.wheelY[3]) / 4 -
+    wheelDrop * cosDeg(racers[c].pzy) * cosDeg(racers[c].pxy) +
+    airPush.y * tick.scale;
+  car[c].x =
+    (step.wheelX[0] -
+      car[c].keyx[0] * cosDeg(car[c].xz) +
+      flipSign * car[c].keyz[0] * sinDeg(car[c].xz) +
+      step.wheelX[1] -
+      car[c].keyx[1] * cosDeg(car[c].xz) +
+      flipSign * car[c].keyz[1] * sinDeg(car[c].xz) +
+      step.wheelX[2] -
+      car[c].keyx[2] * cosDeg(car[c].xz) +
+      flipSign * car[c].keyz[2] * sinDeg(car[c].xz) +
+      step.wheelX[3] -
+      car[c].keyx[3] * cosDeg(car[c].xz) +
+      flipSign * car[c].keyz[3] * sinDeg(car[c].xz)) /
+      4 +
+    wheelDrop * sinDeg(racers[c].pxy) * cosDeg(car[c].xz) -
+    wheelDrop * sinDeg(racers[c].pzy) * sinDeg(car[c].xz) +
+    airPush.x * tick.scale;
+  car[c].z =
+    (step.wheelZ[0] -
+      flipSign * car[c].keyz[0] * cosDeg(car[c].xz) -
+      car[c].keyx[0] * sinDeg(car[c].xz) +
+      step.wheelZ[1] -
+      flipSign * car[c].keyz[1] * cosDeg(car[c].xz) -
+      car[c].keyx[1] * sinDeg(car[c].xz) +
+      step.wheelZ[2] -
+      flipSign * car[c].keyz[2] * cosDeg(car[c].xz) -
+      car[c].keyx[2] * sinDeg(car[c].xz) +
+      step.wheelZ[3] -
+      flipSign * car[c].keyz[3] * cosDeg(car[c].xz) -
+      car[c].keyx[3] * sinDeg(car[c].xz)) /
+      4 +
+    wheelDrop * sinDeg(racers[c].pxy) * sinDeg(car[c].xz) -
+    wheelDrop * sinDeg(racers[c].pzy) * cosDeg(car[c].xz) +
+    airPush.z * tick.scale;
+}
+
+function followTilt(c) {
+  if (Math.abs(racers[c].speed) > 10 || !racers[c].mtouch) {
+    if (Math.abs(racers[c].pxy - car[c].xy) >= 4 * tick.scale) {
+      if (racers[c].pxy > car[c].xy) {
+        car[c].xy += 2 * tick.scale + (racers[c].pxy - car[c].xy) / 2;
+      } else {
+        car[c].xy -= 2 * tick.scale + (car[c].xy - racers[c].pxy) / 2;
+      }
+    } else {
+      car[c].xy = racers[c].pxy;
+    }
+    if (Math.abs(racers[c].pzy - car[c].zy) >= 4 * tick.scale) {
+      if (racers[c].pzy > car[c].zy) {
+        car[c].zy += 2 * tick.scale + (racers[c].pzy - car[c].zy) / 2;
+      } else {
+        car[c].zy -= 2 * tick.scale + (car[c].zy - racers[c].pzy) / 2;
+      }
+    } else {
+      car[c].zy = racers[c].pzy;
+    }
+  }
+}
+
+function leanIntoTurns(c, type) {
+  if (racers[c].wtouch && !racers[c].capsized) {
+    let mtilt =
+      (racers[c].speed / carStats.swits[type][2]) *
+      14 *
+      (carStats.bounce[type] - 0.4);
+    if (racers[c].u.left && racers[c].tilt < mtilt && racers[c].tilt >= 0) {
+      racers[c].tilt += 0.4 * tick.scale;
+    } else {
+      if (racers[c].u.right && racers[c].tilt > -mtilt && racers[c].tilt <= 0) {
+        racers[c].tilt -= 0.4 * tick.scale;
+      } else {
+        if (Math.abs(racers[c].tilt) > 3 * (carStats.bounce[type] - 0.4)) {
+          if (racers[c].tilt > 0) {
+            racers[c].tilt -= 3 * (carStats.bounce[type] - 0.3);
+          } else {
+            racers[c].tilt += 3 * (carStats.bounce[type] - 0.3);
+          }
+        } else {
+          racers[c].tilt = 0;
+        }
+      }
+    }
+    car[c].xy += racers[c].tilt;
+    if (racers[c].gtouch) {
+      car[c].y -= (Math.abs(racers[c].tilt) / 30) * tick.scale;
+    }
+  } else {
+    if (racers[c].tilt != 0) {
+      racers[c].tilt = 0;
+    }
+  }
+}
+
+function shakeOnRoughGround(c, type, step) {
+  if (tick.fraction >= tick.scale) {
+    if (racers[c].mtouch && step.surface == DUST.sand) {
+      car[c].zy +=
+        ((random.sim() * 5 * racers[c].speed) / carStats.swits[type][2] -
+          (2.5 * racers[c].speed) / carStats.swits[type][2]) *
+        (carStats.bounce[type] - 0.3);
+      car[c].xy +=
+        ((random.sim() * 5 * racers[c].speed) / carStats.swits[type][2] -
+          (2.5 * racers[c].speed) / carStats.swits[type][2]) *
+        (carStats.bounce[type] - 0.3);
+    }
+    if (racers[c].wtouch && step.surface == DUST.ground) {
+      car[c].zy +=
+        ((random.sim() * 3.34 * racers[c].speed) / carStats.swits[type][2] -
+          (1.67 * racers[c].speed) / carStats.swits[type][2]) *
+        (carStats.bounce[type] - 0.3);
+      car[c].xy +=
+        ((random.sim() * 3.34 * racers[c].speed) / carStats.swits[type][2] -
+          (1.67 * racers[c].speed) / carStats.swits[type][2]) *
+        (carStats.bounce[type] - 0.3);
+    }
+  }
+}
+
+function burnWhenWasted(c, type, avgSpeedX, avgSpeedZ) {
+  if (tick.fraction >= tick.scale) {
+    if (racers[c].hitmag >= carStats.maxmag[type]) {
+      if (recording.tape.cars[c].wastedAt == 700) {
+        recording.tape.cars[c].wastedAt = 430;
+        if (racers[c].lastcolido != 0) {
+          recording.tape.cars[c].playerHitTicks = racers[c].lastcolido;
+        }
+      }
+      if (racers[c].cntdest < 6) {
+        if (racers[c].embos == 0) {
+          racers[c].body.alpha = 1;
+          racers[c].embodir = Math.floor(random.fx() * 3);
+          if (racers[c].embodir == 3) {
+            racers[c].embodir = 0;
+          }
+          racers[c].embomag = 1.2 + random.fx() * 0.2;
+        }
+        if (racers[c].embos == 1) {
+          racers[c].body.alpha = 2;
+        }
+        racers[c].embos++;
+        if (racers[c].embos == 2) {
+          racers[c].embos = 0;
+          racers[c].cntdest++;
+        }
+      } else {
+        if (racers[c].cntdest == 6) {
+          racers[c].body.alpha = 1;
+          racers[c].embodir = 0;
+          chipburn(c);
+          racers[c].embos = 0;
+          racers[c].cntdest = 7;
+        }
+        firexp(
+          c,
+          avgSpeedX,
+          (racers[c].scy[0] +
+            racers[c].scy[1] +
+            racers[c].scy[2] +
+            racers[c].scy[3]) /
+            4,
+          avgSpeedZ,
+        );
+        if (racers[c].cntdest < 24) {
+          racers[c].embos++;
+          if (racers[c].embos == 5) {
+            burn(c);
+            racers[c].embos = 0;
+            racers[c].cntdest++;
+          }
+        }
+      }
+      if (racers[c].cntdest == 4) {
+        racers[c].dest = true;
+      }
+    }
+  }
+}
+
+// Clears the checkpoints the car drives through, counts its laps and returns the path
+// point nearest to it. Points before the checkpoint it cleared last count as 7 times as
+// far, so the nearest is one ahead, unless the car lost its way (nofocus).
+function passCheckpoints(c) {
+  let pnt = 0,
+    pyclos = 0;
+  let ic = 0;
+  let weight;
+  if (racers[c].nofocus) {
+    weight = 1;
+  } else {
+    weight = 7;
+  }
+  for (let i = 0; i < track.n; i++) {
+    if (track.typ[i] > 0) {
+      ic++;
+      if (track.typ[i] == 1) {
+        if (racers[c].clear == ic + racers[c].nlaps * track.nsp) {
+          weight = 1;
+        }
+        if (
+          Math.abs(car[c].z - track.z[i]) <
+            6 +
+              Math.abs(
+                racers[c].scz[0] +
+                  racers[c].scz[1] +
+                  racers[c].scz[2] +
+                  racers[c].scz[3],
+              ) /
+                4 &&
+          Math.abs(car[c].x - track.x[i]) < 70 &&
+          Math.abs(car[c].y - track.y[i] - 15) < 45
+        ) {
+          if (racers[c].clear == ic + racers[c].nlaps * track.nsp - 1) {
+            racers[c].clear = ic + racers[c].nlaps * track.nsp;
+            racers[c].pcleared = i;
+            racers[c].focus = -1;
+          }
+        }
+      }
+      if (track.typ[i] == 2) {
+        if (racers[c].clear == ic + racers[c].nlaps * track.nsp) {
+          weight = 1;
+        }
+        if (
+          Math.abs(car[c].x - track.x[i]) <
+            6 +
+              Math.abs(
+                racers[c].scx[0] +
+                  racers[c].scx[1] +
+                  racers[c].scx[2] +
+                  racers[c].scx[3],
+              ) /
+                4 &&
+          Math.abs(car[c].z - track.z[i]) < 70 &&
+          Math.abs(car[c].y - track.y[i] - 15) < 45
+        ) {
+          if (racers[c].clear == ic + racers[c].nlaps * track.nsp - 1) {
+            racers[c].clear = ic + racers[c].nlaps * track.nsp;
+            racers[c].pcleared = i;
+            racers[c].focus = -1;
+          }
+        }
+      }
+    }
+    if (
+      distanceSquaredXZ(
+        car[c].x / 10,
+        track.x[i] / 10,
+        car[c].z / 10,
+        track.z[i] / 10,
+      ) *
+        weight <
+        pyclos ||
+      pyclos == 0
+    ) {
+      pnt = i;
+      pyclos =
+        distanceSquaredXZ(
+          car[c].x / 10,
+          track.x[i] / 10,
+          car[c].z / 10,
+          track.z[i] / 10,
+        ) * weight;
+    }
+  }
+  if (racers[c].clear == ic + racers[c].nlaps * track.nsp) {
+    racers[c].nlaps++;
+  }
+  return pnt;
+}
+
+function bumpOnAxles(c, step, avgSpeedX, avgSpeedZ) {
+  if (c == game.player) {
+    for (let i = 0; i < 2; i++) {
+      if (lonorm[i] != step.axleOnGround[i]) {
+        if (lonorm[i] > 0 && step.axleOnGround[i] > 0) {
+          if (Math.abs(lonorm[i] - step.axleOnGround[i]) > 0.015) {
+            bumpSound(
+              i,
+              Math.sqrt(avgSpeedX * avgSpeedX + avgSpeedZ * avgSpeedZ),
+              step.surface,
+            );
+          }
+        }
+        lonorm[i] = step.axleOnGround[i];
+      }
+    }
+  }
+}
+
+function throwScrapeSparks(c, type, step) {
+  if (tick.fraction >= tick.scale) {
+    let allsparks = 0;
+    for (let k = 0; k < 4; k++) {
+      if (step.sparkKind[k] == 1) {
+        allsparks++;
+      }
+    }
+    if (allsparks != 4) {
+      for (let k = 0; k < 4; k++) {
+        if (step.sparkKind[k] == 1) {
+          sprks(
+            type,
+            step.wheelX[k],
+            step.wheelY[k],
+            step.wheelZ[k],
+            racers[c].scx[k],
+            racers[c].scy[k],
+            racers[c].scz[k],
+            1,
+          );
+        }
+        if (c == game.player && step.sparkKind[k]) {
+          groundScrapeSound(
+            step.sparkKind[k],
+            racers[c].scx[k],
+            racers[c].scy[k],
+            racers[c].scz[k],
+          );
+        }
+      }
+    } else {
+      let k = Math.floor(random.fx() * 4);
+      if (k == 4) {
+        k = 0;
+      }
+      sprks(
+        type,
+        (step.wheelX[k] + car[c].x) / 2,
+        step.wheelY[k],
+        (step.wheelZ[k] + car[c].z) / 2,
+        racers[c].scx[k],
+        racers[c].scy[k],
+        racers[c].scz[k],
+        1,
+      );
+      k = Math.floor(random.fx() * 4);
+      if (k == 4) {
+        k = 0;
+      }
+      sprks(
+        type,
+        (step.wheelX[k] + car[c].x) / 2,
+        step.wheelY[k],
+        (step.wheelZ[k] + car[c].z) / 2,
+        racers[c].scx[k],
+        racers[c].scy[k],
+        racers[c].scz[k],
+        1,
+      );
+      if (c == game.player) {
+        groundScrapeSound(
+          1,
+          racers[c].scx[k],
+          racers[c].scy[k],
+          racers[c].scz[k],
+        );
+      }
+    }
+  }
+}
+
+function bounceOffStageLimits(c, type, step) {
+  for (let k = 0; k < 4; k++) {
+    if (
+      step.wheelZ[k] < track.limb + step.reachZ &&
+      step.wheelZ[k] > track.limb + step.reachZ - 20
+    ) {
+      bounceOffWallFacingPlusZ(c, k, type, track.limb, 1, true, step);
+      step.hitWall = true;
+      racers[c].wall = track.limbo;
+    }
+    if (
+      step.wheelZ[k] > track.limt - step.reachZ &&
+      step.wheelZ[k] < track.limt - step.reachZ + 20
+    ) {
+      bounceOffWallFacingMinusZ(c, k, type, track.limt, 1, true, step);
+      step.hitWall = true;
+      racers[c].wall = track.limto;
+    }
+    if (
+      step.wheelX[k] < track.limr + step.reachX &&
+      step.wheelX[k] > track.limr + step.reachX - 20
+    ) {
+      bounceOffWallFacingPlusX(c, k, type, track.limr, 1, true, step);
+      step.hitWall = true;
+      racers[c].wall = track.limro;
+    }
+    if (
+      step.wheelX[k] > track.liml - step.reachX &&
+      step.wheelX[k] < track.liml - step.reachX + 20
+    ) {
+      bounceOffWallFacingMinusX(c, k, type, track.liml, 1, true, step);
+      step.hitWall = true;
+      racers[c].wall = track.limlo;
+    }
   }
 }
 
@@ -1561,7 +1518,8 @@ function bounceOffWalls(c, k, type, o, rad, tri, at, atAnySpeed, step) {
         (racers[c].scz[k] <= 1.2 || atAnySpeed)
       ) {
         step.hitWall = true;
-        bounceOffWallFacingPlusZ(k, colz, c, type, rad, o, step);
+        bounceOffWallFacingPlusZ(c, k, type, colz, rad.dam, false, step);
+        hitPieceWall(c, o, true);
       }
       if (
         pieces.list[o].bnd[1] != 1 &&
@@ -1571,7 +1529,8 @@ function bounceOffWalls(c, k, type, o, rad, tri, at, atAnySpeed, step) {
         (racers[c].scz[k] >= -1.2 || atAnySpeed)
       ) {
         step.hitWall = true;
-        bounceOffWallFacingMinusZ(k, colz, c, type, rad, o, step);
+        bounceOffWallFacingMinusZ(c, k, type, colz, rad.dam, false, step);
+        hitPieceWall(c, o, true);
       }
     }
   } else {
@@ -1594,7 +1553,8 @@ function bounceOffWalls(c, k, type, o, rad, tri, at, atAnySpeed, step) {
         (racers[c].scx[k] <= 1.2 || atAnySpeed)
       ) {
         step.hitWall = true;
-        bounceOffWallFacingPlusX(k, colx, c, type, rad, o, step);
+        bounceOffWallFacingPlusX(c, k, type, colx, rad.dam, false, step);
+        hitPieceWall(c, o, false);
       }
       if (
         pieces.list[o].bnd[3] != 1 &&
@@ -1604,7 +1564,8 @@ function bounceOffWalls(c, k, type, o, rad, tri, at, atAnySpeed, step) {
         (racers[c].scx[k] >= -1.2 || atAnySpeed)
       ) {
         step.hitWall = true;
-        bounceOffWallFacingMinusX(k, colx, c, type, rad, o, step);
+        bounceOffWallFacingMinusX(c, k, type, colx, rad.dam, false, step);
+        hitPieceWall(c, o, false);
       }
     }
   }
@@ -1767,16 +1728,33 @@ function aiAvoidsWall(typ, alongZ) {
   );
 }
 
-function bounceOffWallFacingPlusZ(k, colz, c, type, rad, o, step) {
+// A piece's wall, unlike the stage limits, can make a jump count as surfing and is one
+// the AI may remember to steer away from.
+function hitPieceWall(c, o, alongZ) {
+  racers[c].uwall = true;
+  if (aiAvoidsWall(pieces.list[o].typ, alongZ)) {
+    racers[c].wall = o;
+  }
+}
+
+function bounceOffWallFacingPlusZ(
+  c,
+  k,
+  type,
+  wallAt,
+  damage,
+  lowSparksOnly,
+  step,
+) {
   for (let j = 0; j < 4; j++) {
     if (k != j) {
-      if (step.wheelZ[j] >= colz + step.reachZ) {
-        step.wheelZ[j] -= step.wheelZ[k] - (colz + step.reachZ);
+      if (step.wheelZ[j] >= wallAt + step.reachZ) {
+        step.wheelZ[j] -= step.wheelZ[k] - (wallAt + step.reachZ);
       }
     }
   }
-  step.wheelZ[k] = colz + step.reachZ;
-  if (tick.fraction >= tick.scale) {
+  step.wheelZ[k] = wallAt + step.reachZ;
+  if (tick.fraction >= tick.scale && (!lowSparksOnly || step.wheelY[k] < 20)) {
     racers[c].crank[k]++;
     if (racers[c].crank[k] > 2) {
       sprks(
@@ -1795,27 +1773,31 @@ function bounceOffWallFacingPlusZ(k, colz, c, type, rad, o, step) {
     }
   }
   const bounce = wallBounce(c, type, step);
-  regn(1, k, Math.abs(racers[c].scz[k] * bounce * rad.dam), c);
+  regn(1, k, Math.abs(racers[c].scz[k] * bounce * damage), c);
   if (racers[c].scz[k] <= 0) {
     racers[c].scz[k] += Math.abs(racers[c].scz[k] * bounce);
   }
   racers[c].skid = SKID.takeSpeedFromMotion;
-  racers[c].uwall = true;
-  if (aiAvoidsWall(pieces.list[o].typ, true)) {
-    racers[c].wall = o;
-  }
 }
 
-function bounceOffWallFacingMinusZ(k, colz, c, type, rad, o, step) {
+function bounceOffWallFacingMinusZ(
+  c,
+  k,
+  type,
+  wallAt,
+  damage,
+  lowSparksOnly,
+  step,
+) {
   for (let j = 0; j < 4; j++) {
     if (k != j) {
-      if (step.wheelZ[j] <= colz - step.reachZ) {
-        step.wheelZ[j] -= step.wheelZ[k] - (colz - step.reachZ);
+      if (step.wheelZ[j] <= wallAt - step.reachZ) {
+        step.wheelZ[j] -= step.wheelZ[k] - (wallAt - step.reachZ);
       }
     }
   }
-  step.wheelZ[k] = colz - step.reachZ;
-  if (tick.fraction >= tick.scale) {
+  step.wheelZ[k] = wallAt - step.reachZ;
+  if (tick.fraction >= tick.scale && (!lowSparksOnly || step.wheelY[k] < 20)) {
     racers[c].crank[k]++;
     if (racers[c].crank[k] > 2) {
       sprks(
@@ -1834,27 +1816,31 @@ function bounceOffWallFacingMinusZ(k, colz, c, type, rad, o, step) {
     }
   }
   const bounce = wallBounce(c, type, step);
-  regn(1, k, -Math.abs(racers[c].scz[k] * bounce * rad.dam), c);
+  regn(1, k, -Math.abs(racers[c].scz[k] * bounce * damage), c);
   if (racers[c].scz[k] >= 0) {
     racers[c].scz[k] -= Math.abs(racers[c].scz[k] * bounce);
   }
   racers[c].skid = SKID.takeSpeedFromMotion;
-  racers[c].uwall = true;
-  if (aiAvoidsWall(pieces.list[o].typ, true)) {
-    racers[c].wall = o;
-  }
 }
 
-function bounceOffWallFacingPlusX(k, colx, c, type, rad, o, step) {
+function bounceOffWallFacingPlusX(
+  c,
+  k,
+  type,
+  wallAt,
+  damage,
+  lowSparksOnly,
+  step,
+) {
   for (let j = 0; j < 4; j++) {
     if (k != j) {
-      if (step.wheelX[j] >= colx + step.reachX) {
-        step.wheelX[j] -= step.wheelX[k] - (colx + step.reachX);
+      if (step.wheelX[j] >= wallAt + step.reachX) {
+        step.wheelX[j] -= step.wheelX[k] - (wallAt + step.reachX);
       }
     }
   }
-  step.wheelX[k] = colx + step.reachX;
-  if (tick.fraction >= tick.scale) {
+  step.wheelX[k] = wallAt + step.reachX;
+  if (tick.fraction >= tick.scale && (!lowSparksOnly || step.wheelY[k] < 20)) {
     racers[c].crank[k]++;
     if (racers[c].crank[k] > 2) {
       sprks(
@@ -1873,27 +1859,31 @@ function bounceOffWallFacingPlusX(k, colx, c, type, rad, o, step) {
     }
   }
   const bounce = wallBounce(c, type, step);
-  regn(0, k, Math.abs(racers[c].scx[k] * bounce * rad.dam), c);
+  regn(0, k, Math.abs(racers[c].scx[k] * bounce * damage), c);
   if (racers[c].scx[k] <= 0) {
     racers[c].scx[k] += Math.abs(racers[c].scx[k] * bounce);
   }
   racers[c].skid = SKID.takeSpeedFromMotion;
-  racers[c].uwall = true;
-  if (aiAvoidsWall(pieces.list[o].typ, false)) {
-    racers[c].wall = o;
-  }
 }
 
-function bounceOffWallFacingMinusX(k, colx, c, type, rad, o, step) {
+function bounceOffWallFacingMinusX(
+  c,
+  k,
+  type,
+  wallAt,
+  damage,
+  lowSparksOnly,
+  step,
+) {
   for (let j = 0; j < 4; j++) {
     if (k != j) {
-      if (step.wheelX[j] <= colx - step.reachX) {
-        step.wheelX[j] -= step.wheelX[k] - (colx - step.reachX);
+      if (step.wheelX[j] <= wallAt - step.reachX) {
+        step.wheelX[j] -= step.wheelX[k] - (wallAt - step.reachX);
       }
     }
   }
-  step.wheelX[k] = colx - step.reachX;
-  if (tick.fraction >= tick.scale) {
+  step.wheelX[k] = wallAt - step.reachX;
+  if (tick.fraction >= tick.scale && (!lowSparksOnly || step.wheelY[k] < 20)) {
     racers[c].crank[k]++;
     if (racers[c].crank[k] > 2) {
       sprks(
@@ -1912,15 +1902,11 @@ function bounceOffWallFacingMinusX(k, colx, c, type, rad, o, step) {
     }
   }
   const bounce = wallBounce(c, type, step);
-  regn(0, k, -Math.abs(racers[c].scx[k] * bounce * rad.dam), c);
+  regn(0, k, -Math.abs(racers[c].scx[k] * bounce * damage), c);
   if (racers[c].scx[k] >= 0) {
     racers[c].scx[k] -= Math.abs(racers[c].scx[k] * bounce);
   }
   racers[c].skid = SKID.takeSpeedFromMotion;
-  racers[c].uwall = true;
-  if (aiAvoidsWall(pieces.list[o].typ, false)) {
-    racers[c].wall = o;
-  }
 }
 
 function placeWheelPoints(c, wheelDrop, step) {
