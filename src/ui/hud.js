@@ -909,14 +909,18 @@ const drawStanding = () => {
     position == 0 ? "st" : position == 1 ? "nd" : position == 2 ? "rd" : "th";
   rd.letterSpacing = "1px";
   rd.font = "" + 15 * (view.scaleY + view.scaleX) + "px junk";
-  rd.fillText(
-    "" + (position + 1),
-    (157 + phoneShift) * view.scale,
-    56 * view.scale,
-  );
+  const place = "" + (position + 1);
+  rd.fillText(place, (157 + phoneShift) * view.scale, 56 * view.scale);
+  // the original raced at most seven cars; a tens digit pushes the suffix along
+  const tensWidth =
+    place.length > 1 ? rd.measureText(place.slice(0, -1)).width : 0;
   rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
   rd.fillStyle = "#000000";
-  rd.fillText(suffix, (176 + phoneShift) * view.scale, 55 * view.scale);
+  rd.fillText(
+    suffix,
+    (176 + phoneShift) * view.scale + tensWidth,
+    55 * view.scale,
+  );
 };
 
 // The button that switches the arrow between the track and the cars.

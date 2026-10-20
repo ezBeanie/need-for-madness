@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, test, vi } from "vitest";
+import { canvasCalls } from "./harness/browserStubs.js";
 import { autopilot, openStageSelect, startRace } from "./harness/race.js";
 import { PHASE } from "../src/core/state.js";
 
@@ -97,4 +98,27 @@ test("the 20th car can be hit on its roof", async () => {
   for (let point = 0; point < 4; point++) {
     expect(() => ctx.regn(3, point, 30, 19)).not.toThrow();
   }
+});
+
+test("a two-digit position pushes its suffix past the tens digit", async () => {
+  const { ctx, step } = await startRace({ stage: 1, car: 5, cars: 20 });
+  // standing still at the start, the player soon falls behind ten cars
+  for (let frame = 0; frame < 400 && ctx.track.pos[0] < 9; frame++) {
+    step();
+  }
+  expect(ctx.track.pos[0]).toBeGreaterThanOrEqual(9);
+  const texts = [];
+  canvasCalls.listener = (name, args, call) => {
+    if (name === "fillText") {
+      texts.push(args);
+    }
+    return call();
+  };
+  step();
+  canvasCalls.listener = null;
+  const place = String(ctx.track.pos[0] + 1);
+  const number = texts.find(([text]) => text === place);
+  const suffix = texts.find(([text]) => text === "th");
+  // as far as after one digit (19), plus the tens digit (the stub measures 8 a character)
+  expect(suffix[1] - number[1]).toBeCloseTo(19 * ctx.view.scale + 8);
 });
