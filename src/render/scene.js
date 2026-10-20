@@ -26,8 +26,9 @@ export const timeTube = newParticleModel();
 export const carTextures = [];
 
 // The models of the world and the menus, loaded with the game data (see loadAssets).
-export const ground = newModel();
-export const sky = newModel();
+// (in the classic look the ground has no outlines and the sky is bands, as in the original)
+export const ground = { ...newModel(), noOutline: true };
+export const sky = { ...newModel(), classicSky: true };
 // a wheel's disc, and the tread close up and far away, shaped per car type (createWheels)
 export const wheelDisk = newModel();
 export const wheelTread = newParticleModel();

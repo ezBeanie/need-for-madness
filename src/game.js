@@ -13,7 +13,8 @@ import { updateEngineSound } from "./audio/engineSound.js";
 import { installKeyboard } from "./input/keyboard.js";
 import { installPointer } from "./input/pointer.js";
 import { interpolation } from "./render/interpolation.js";
-import { canvas3D, gl } from "./render/renderer.js";
+import { canvas3D, fitCanvas3D } from "./render/renderer.js";
+import { loadLook } from "./render/look.js";
 import { canvas2D, view } from "./ui/view.js";
 import { startProjection, turnView } from "./render/camera.js";
 import { moveCamera } from "./render/cameraMoves.js";
@@ -169,14 +170,16 @@ const fitToWindow = () => {
   view.scaleY = view.height / 720;
   view.scale = (view.scaleX + view.scaleY) / 2;
   view.widescreenShift = (view.width / view.height - 1.777) * 76;
+  canvas2D.width = view.width;
+  canvas2D.height = view.height;
   for (const canvas of [canvas3D, canvas2D]) {
-    canvas.width = view.width;
-    canvas.height = view.height;
     canvas.style.width = "" + view.width + "px";
     canvas.style.height = "" + view.height + "px";
   }
-  gl.viewport(0, 0, view.width, view.height);
+  fitCanvas3D();
 };
+
+loadLook();
 
 // time not run as logic ticks yet, and when the last frame came
 let pendingMs = 0;

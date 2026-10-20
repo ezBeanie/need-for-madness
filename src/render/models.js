@@ -198,6 +198,9 @@ const buildGeometry = (
     const uv = triangles[i * 3 + 2] * 2;
     uvs.push(texcoords[uv], 1 - texcoords[uv + 1]);
   }
+  // for the classic look's faces and outlines (see renderer.js)
+  model.positions = positions;
+  model.uvs = uvs;
   model.vbuf = uploadBuffer(gl.ARRAY_BUFFER, new Float32Array(positions));
   if (!model.ownlight && !model.ownshade) {
     model.nbuf = uploadBuffer(gl.ARRAY_BUFFER, new Float32Array(vertexNormals));

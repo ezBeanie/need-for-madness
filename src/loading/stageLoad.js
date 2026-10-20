@@ -17,7 +17,7 @@ import {
   groundTexture,
   skyTexture,
 } from "../render/generated.js";
-import { setWorld } from "../render/renderer.js";
+import { setClassicSky, setWorld } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 
 export const STAGE_LOAD = {
@@ -315,6 +315,7 @@ const addWall = (x, z, degrees) => {
 const prepareStage = () => {
   setUpField();
   skyTexture(skyColor, scene.fog, cloudColor, cloudType);
+  setClassicSky(skyColor);
   for (let i = 0; i < 3; i++) {
     scene.glassColor[i] = Math.round((skyColor[i] * 2 + 70) / 3);
   }

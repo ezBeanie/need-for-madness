@@ -7,6 +7,8 @@ import { nextRaceSize } from "../race/field.js";
 import { racers } from "../race/racers.js";
 import { startTimeRewind } from "../race/recording.js";
 import { CAMERA, camera } from "../render/camera.js";
+import { toggleLook } from "../render/look.js";
+import { fitCanvas3D } from "../render/renderer.js";
 import { buttons } from "../ui/widgets.js";
 import { pressConfirm } from "./confirm.js";
 
@@ -87,5 +89,9 @@ export function onKey(action, pressed) {
   }
   if (!pressed && action == "raceCars" && game.phase == PHASE.stageSelect) {
     nextRaceSize();
+  }
+  if (!pressed && action == "toggleLook") {
+    toggleLook();
+    fitCanvas3D();
   }
 }

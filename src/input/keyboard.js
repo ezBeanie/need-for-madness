@@ -20,6 +20,7 @@ const ACTIONS = {
   78: "muteSound", // N
   77: "muteMusic", // M
   67: "raceCars", // C: how many cars race, in the stage select
+  76: "toggleLook", // L: the modern or the classic look (see render/look.js)
 };
 
 export const actionFor = (keyCode) => ACTIONS[keyCode];

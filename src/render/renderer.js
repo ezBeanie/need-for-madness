@@ -1,10 +1,26 @@
 // WebGL: the 3D canvas, the shader programs and drawing models and particles.
 
+import { view } from "../ui/view.js";
 import { drawCamera, drawMatrix, placeModel } from "./interpolation.js";
+import { LOOK, look } from "./look.js";
 
 export const canvas3D = document.querySelector("#canvas3D");
 export const gl =
   canvas3D.getContext("webgl") || canvas3D.getContext("experimental-webgl");
+
+// the original drew into 800 x 450 pixels
+const CLASSIC_HEIGHT = 450;
+
+// Sizes the 3D canvas's pixels for the look; on screen it always fills the window.
+export const fitCanvas3D = () => {
+  const classic = look.current == LOOK.classic;
+  canvas3D.height = classic ? CLASSIC_HEIGHT : view.height;
+  canvas3D.width = classic
+    ? Math.round(CLASSIC_HEIGHT * view.aspect)
+    : view.width;
+  canvas3D.style.imageRendering = classic ? "pixelated" : "";
+  gl.viewport(0, 0, canvas3D.width, canvas3D.height);
+};
 
 export const isPowerOf2 = (value) => (value & (value - 1)) == 0;
 
@@ -185,6 +201,8 @@ export const setWorld = (
     return (color + color * tint[i]) * 0.76;
   });
   const fog = fogDeclarations(fogTint, 100, fogDistance);
+  classicWorld = { fog, tint, fogTint, sky: classicWorld?.sky ?? [0, 0, 0] };
+  classicPrograms = null;
   const textured = ["vertexPosition", "textureCoord"];
   const texturedUniforms = ["projectionMatrix", "modelViewMatrix", "uSampler"];
   programs[COLORED] = programInfo(
@@ -212,6 +230,253 @@ export const setWorld = (
     textured,
     texturedUniforms,
   );
+};
+
+// The classic look (see look.js). Its programs are made when it is first drawn, so a stage
+// loads as before: the stage's fog and tint (setWorld), then the programs.
+let classicWorld = null;
+let classicPrograms = null;
+
+// The original's light: from straight above, a face's brightness is how flat it lies plus
+// 0.3, between 0.6 and 1. Its fog came in bands, 16 of them.
+const CLASSIC_LIGHT = "clamp(abs(normal.y) + 0.3, 0.6, 1.0)";
+const STEPPED_FOG = "floor(fogAmount * 16.0) / 16.0";
+
+// The stage's sky colour (0..255), for the classic sky.
+export const setClassicSky = (color) => {
+  classicWorld = { ...classicWorld, sky: color };
+  classicPrograms = null;
+};
+
+// The original's sky: bands from the fog colour at the horizon up to the sky's colour.
+const classicSkyShaders = (fogTint, skyTint) => ({
+  vertex:
+    "attribute vec4 aVertexPosition; uniform mat4 uModelViewMatrix; uniform mat4 uProjectionMatrix; " +
+    "varying highp vec3 v_posf; void main(void) { " +
+    "gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition; " +
+    "v_posf = (uModelViewMatrix * aVertexPosition).xyz; }",
+  fragment:
+    "precision mediump float; varying highp vec3 v_posf; void main(void) { " +
+    "float up = clamp(normalize(v_posf).y * 3.0, 0.0, 1.0); " +
+    `gl_FragColor = vec4(mix(${glslVec3(fogTint)}, ${glslVec3(skyTint)}, ${"floor(up * 16.0) / 16.0"}), 1.0); }`,
+});
+
+const classicShaders = (fog, tint, shaded, derivatives) => ({
+  vertex:
+    "attribute vec4 aVertexPosition; attribute vec2 aTextureCoord; uniform mat4 uModelViewMatrix; " +
+    "uniform mat4 uProjectionMatrix; varying highp vec2 vTextureCoord; varying highp vec3 v_posf; " +
+    "void main(void) { gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition; " +
+    "vTextureCoord = aTextureCoord; v_posf = (uModelViewMatrix * aVertexPosition).xyz; }",
+  fragment:
+    (derivatives ? "#extension GL_OES_standard_derivatives : enable\n" : "") +
+    "precision mediump float; varying highp vec2 vTextureCoord; varying highp vec3 v_posf; " +
+    `uniform sampler2D uSampler; ${fog} void main(void) { ${FOG_AMOUNT}` +
+    // the face's normal from how the position changes across it: flat, also when dented
+    (shaded && derivatives
+      ? "highp vec3 normal = normalize(cross(dFdx(v_posf), dFdy(v_posf))); " +
+        `float light = ${CLASSIC_LIGHT}; `
+      : "float light = 1.0; ") +
+    // every corner of a face samples its middle, a little blurred: one colour a face
+    "highp vec4 texel = texture2D(uSampler, vTextureCoord, 2.0); " +
+    `highp vec4 color = vec4(texel.rgb * light * ${glslVec3(tint.map((t) => 1 + t))}, texel.a); ` +
+    `gl_FragColor = mix(color, u_fogColor, ${STEPPED_FOG}); }`,
+});
+
+const outlineShaders = (fog) => ({
+  vertex:
+    "attribute vec4 aVertexPosition; uniform mat4 uModelViewMatrix; uniform mat4 uProjectionMatrix; " +
+    "varying highp vec3 v_posf; void main(void) { " +
+    "gl_Position = uProjectionMatrix * uModelViewMatrix * aVertexPosition; " +
+    "v_posf = (uModelViewMatrix * aVertexPosition).xyz; }",
+  fragment:
+    `precision mediump float; varying highp vec3 v_posf; ${fog} void main(void) { ${FOG_AMOUNT}` +
+    `gl_FragColor = mix(vec4(0.0, 0.0, 0.0, 1.0), u_fogColor, ${STEPPED_FOG}); }`,
+});
+
+const makeClassicPrograms = () => {
+  const derivatives = !!gl.getExtension("OES_standard_derivatives");
+  const { fog, tint, fogTint, sky } = classicWorld;
+  const skyTint = sky.map((c, i) => (c / 255) * (1 + tint[i]) * 0.76);
+  const textured = ["vertexPosition", "textureCoord"];
+  const uniforms = ["projectionMatrix", "modelViewMatrix", "uSampler"];
+  return {
+    shaded: programInfo(
+      classicShaders(fog, tint, true, derivatives),
+      textured,
+      uniforms,
+    ),
+    bright: programInfo(
+      classicShaders(fog, tint, false, derivatives),
+      textured,
+      uniforms,
+    ),
+    outline: programInfo(
+      outlineShaders(fog),
+      ["vertexPosition"],
+      ["projectionMatrix", "modelViewMatrix"],
+    ),
+    sky: programInfo(
+      classicSkyShaders(fogTint, skyTint),
+      ["vertexPosition"],
+      ["projectionMatrix", "modelViewMatrix"],
+    ),
+  };
+};
+
+// For the classic look, made from what the model was built from (models.js): each corner
+// gets the texture coordinate of its face's middle, and the outlines are the faces' edges,
+// leaving out those between two faces in one plane (a quad's diagonal, say).
+const classicBuffers = (model) => {
+  model.classicReady = true;
+  if (!model.positions) {
+    return;
+  }
+  const { positions, uvs } = model;
+  const faces = positions.length / 9;
+  const middles = new Float32Array(uvs.length);
+  const normals = [];
+  for (let f = 0; f < faces; f++) {
+    for (let axis = 0; axis < 2; axis++) {
+      const middle =
+        (uvs[f * 6 + axis] + uvs[f * 6 + 2 + axis] + uvs[f * 6 + 4 + axis]) / 3;
+      for (let corner = 0; corner < 3; corner++) {
+        middles[f * 6 + corner * 2 + axis] = middle;
+      }
+    }
+    const p = (corner, axis) => positions[f * 9 + corner * 3 + axis];
+    const ux = p(1, 0) - p(0, 0);
+    const uy = p(1, 1) - p(0, 1);
+    const uz = p(1, 2) - p(0, 2);
+    const vx = p(2, 0) - p(0, 0);
+    const vy = p(2, 1) - p(0, 1);
+    const vz = p(2, 2) - p(0, 2);
+    const nx = uy * vz - uz * vy;
+    const ny = uz * vx - ux * vz;
+    const nz = ux * vy - uy * vx;
+    const length = Math.hypot(nx, ny, nz) || 1;
+    normals.push([nx / length, ny / length, nz / length]);
+  }
+  const key = (i) =>
+    `${positions[i * 3].toFixed(2)},${positions[i * 3 + 1].toFixed(2)},${positions[i * 3 + 2].toFixed(2)}`;
+  const edges = new Map();
+  for (let f = 0; f < faces; f++) {
+    for (let corner = 0; corner < 3; corner++) {
+      const a = f * 3 + corner;
+      const b = f * 3 + ((corner + 1) % 3);
+      const [ka, kb] = [key(a), key(b)].sort();
+      const id = `${ka}|${kb}`;
+      const edge = edges.get(id) ?? { a, b, faces: [] };
+      edge.faces.push(f);
+      edges.set(id, edge);
+    }
+  }
+  const lines = [];
+  for (const edge of edges.values()) {
+    if (edge.faces.length == 2) {
+      const [n, m] = edge.faces.map((f) => normals[f]);
+      if (n[0] * m[0] + n[1] * m[1] + n[2] * m[2] > 0.999) {
+        continue;
+      }
+    }
+    lines.push(edge.a, edge.b);
+  }
+  model.middlesBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ARRAY_BUFFER, model.middlesBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, middles, gl.STATIC_DRAW);
+  model.outlineCount = lines.length;
+  model.outlineBuffer = gl.createBuffer();
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.outlineBuffer);
+  gl.bufferData(
+    gl.ELEMENT_ARRAY_BUFFER,
+    new Uint16Array(lines),
+    gl.STATIC_DRAW,
+  );
+};
+
+const bindModelTexture = (model, uSampler) => {
+  gl.activeTexture(gl.TEXTURE0);
+  if (model.tgn) {
+    gl.bindTexture(gl.TEXTURE_2D, textureGroups[model.tgn - 1].texture);
+  } else {
+    gl.bindTexture(
+      gl.TEXTURE_2D,
+      model.nt == 1 ? model.texture : model.texture[model.ont],
+    );
+  }
+  gl.uniform1i(uSampler, 0);
+};
+
+const drawClassicSky = (model) => {
+  const { program, attribLocations, uniformLocations } = classicPrograms.sky;
+  placeModel(model);
+  bindAttribute(attribLocations.vertexPosition, model.vbuf, 3);
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.ibuf);
+  gl.useProgram(program);
+  gl.uniformMatrix4fv(
+    uniformLocations.projectionMatrix,
+    false,
+    drawCamera.projection,
+  );
+  gl.uniformMatrix4fv(uniformLocations.modelViewMatrix, false, drawMatrix);
+  gl.drawElements(gl.TRIANGLES, model.ni, gl.UNSIGNED_SHORT, 0);
+};
+
+const drawClassicModel = (model) => {
+  classicPrograms ??= makeClassicPrograms();
+  if (model.classicSky) {
+    drawClassicSky(model);
+    return;
+  }
+  if (!model.classicReady) {
+    classicBuffers(model);
+  }
+  // see-through models but cars (shadows, dust, trees, fences, fire) are shaped by their
+  // texture's transparency, so they keep it whole and get no outlines
+  const flat = !model.alpha || model.iscar;
+  const lighting = lightingOf(model);
+  const { program, attribLocations, uniformLocations } =
+    lighting == LIT || lighting == OWN_SHADE
+      ? classicPrograms.shaded
+      : classicPrograms.bright;
+  placeModel(model);
+  bindAttribute(attribLocations.vertexPosition, model.vbuf, 3);
+  bindAttribute(
+    attribLocations.textureCoord,
+    (flat && model.middlesBuffer) || model.tbuf,
+    2,
+  );
+  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.ibuf);
+  gl.useProgram(program);
+  gl.uniformMatrix4fv(
+    uniformLocations.projectionMatrix,
+    false,
+    drawCamera.projection,
+  );
+  gl.uniformMatrix4fv(uniformLocations.modelViewMatrix, false, drawMatrix);
+  bindModelTexture(model, uniformLocations.uSampler);
+  // the faces a little behind their outlines
+  gl.enable(gl.POLYGON_OFFSET_FILL);
+  gl.polygonOffset(1, 1);
+  gl.drawElements(gl.TRIANGLES, model.ni, gl.UNSIGNED_SHORT, 0);
+  gl.disable(gl.POLYGON_OFFSET_FILL);
+  if (flat && model.outlineCount && !model.noOutline) {
+    const outline = classicPrograms.outline;
+    gl.disableVertexAttribArray(attribLocations.textureCoord);
+    bindAttribute(outline.attribLocations.vertexPosition, model.vbuf, 3);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, model.outlineBuffer);
+    gl.useProgram(outline.program);
+    gl.uniformMatrix4fv(
+      outline.uniformLocations.projectionMatrix,
+      false,
+      drawCamera.projection,
+    );
+    gl.uniformMatrix4fv(
+      outline.uniformLocations.modelViewMatrix,
+      false,
+      drawMatrix,
+    );
+    gl.drawElements(gl.LINES, model.outlineCount, gl.UNSIGNED_SHORT, 0);
+  }
 };
 
 // model.alpha: how a model blends in (0 not at all). The glows (the blend colour stays
@@ -285,6 +550,13 @@ export const drawModel = (model) => {
     gl.enable(gl.BLEND);
     BLENDING[model.alpha]?.();
   }
+  if (look.current == LOOK.classic) {
+    drawClassicModel(model);
+    if (model.alpha) {
+      gl.disable(gl.BLEND);
+    }
+    return;
+  }
   const lighting = lightingOf(model);
   const { program, attribLocations, uniformLocations } = programs[lighting];
   placeModel(model);
@@ -310,16 +582,7 @@ export const drawModel = (model) => {
   if (lighting == LIT) {
     gl.uniformMatrix4fv(uniformLocations.normalMatrix, false, normalMatrix);
   }
-  gl.activeTexture(gl.TEXTURE0);
-  if (model.tgn) {
-    gl.bindTexture(gl.TEXTURE_2D, textureGroups[model.tgn - 1].texture);
-  } else {
-    gl.bindTexture(
-      gl.TEXTURE_2D,
-      model.nt == 1 ? model.texture : model.texture[model.ont],
-    );
-  }
-  gl.uniform1i(uniformLocations.uSampler, 0);
+  bindModelTexture(model, uniformLocations.uSampler);
   gl.drawElements(gl.TRIANGLES, model.ni, gl.UNSIGNED_SHORT, 0);
   if (model.alpha) {
     gl.disable(gl.BLEND);
