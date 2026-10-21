@@ -52,7 +52,7 @@ const length2 = (a, b, axes) =>
 
 // The light's measure of a polygon: its first three corners' distances multiplied; the
 // same over the ground (projf) divided by this is how flat it lies.
-const deltaf = (points) => {
+export const deltaf = (points) => {
   let d = 1;
   for (let i = 0; i < 3; i++) {
     for (let j = 0; j < 3; j++) {

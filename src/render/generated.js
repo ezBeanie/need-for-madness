@@ -3,7 +3,7 @@
 
 import { random } from "../core/random.js";
 import { game } from "../core/state.js";
-import { fixcar } from "../race/physics.js";
+import { bodyDamage, fixcar } from "../race/physics.js";
 import { car, racers } from "../race/racers.js";
 import { hslToRgb, rgbToHsl } from "../ui/color.js";
 import { images } from "../ui/images.js";
@@ -144,6 +144,7 @@ export function raceCarTextures() {
       }
     }
     racers[c].body = model;
+    bodyDamage.repair?.(c);
     if (shared) {
       racers[c].body = {
         ...model,

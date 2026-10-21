@@ -3365,7 +3365,12 @@ function dentBody(c, rad, hitSide, k, mag) {
   }
   rad.damagedVertices = true;
   rad.loaded = 2;
+  bodyDamage.dent?.(c, hitSide, k, mag);
 }
+
+// Told of every dent and repair of a car's body: the classic look dents its own models
+// of the cars (see classic/damage.js). Only seen, so the simulation is the same.
+export const bodyDamage = { dent: null, repair: null };
 
 // A pile-up dents tens of thousands of vertices in a tick, hence what stays the same for
 // every vertex is looked up once.
@@ -3455,6 +3460,7 @@ function chipAndScratch(c, rad, i, tmag, modpix, spots) {
   }
 }
 export function fixcar(c) {
+  bodyDamage.repair?.(c);
   let rad = racers[c].body;
   rad.alpha = BLEND.alpha;
   rad.dvert = [];

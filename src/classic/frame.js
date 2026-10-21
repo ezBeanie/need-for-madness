@@ -11,7 +11,9 @@ import { fetchText } from "../render/models.js";
 import { canvas3D } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 import { PIECE_FILES } from "../loading/assets.js";
+import { bodyDamage } from "../race/physics.js";
 import { flushBatch, startBatch } from "./batch.js";
+import { dentClassic } from "./damage.js";
 import { effectObjects } from "./effects.js";
 import { CAR_FILES } from "./cars.js";
 import { drawObject, setView, tintModel } from "./draw.js";
@@ -210,6 +212,16 @@ const drawInOrder = (objects) => {
     );
   }
   flushBatch(medium.w, medium.h);
+};
+
+// the cars' classic models follow the physics' dents; a repaired car gets a fresh copy
+bodyDamage.dent = (c, hitSide, k, mag) => {
+  if (carModels[c]) {
+    dentClassic(carModels[c].rad, c, hitSide, k, mag);
+  }
+};
+bodyDamage.repair = (c) => {
+  carModels[c] = undefined;
 };
 
 // one of car c's colours (of its body, not its wheels), for its chips
