@@ -317,6 +317,10 @@ export const drawClassicStage = (count) => {
   medium.trk = 0;
 };
 
+// How far below its middle the original's model of the car type touches the ground (its
+// grat, the original's units), 0 while it loads.
+export const classicGroundOf = (type) => models.get(CAR_FILES[type])?.grat ?? 0;
+
 // A car shown on its own (the car select, a car unlocked): over the modern backdrop its
 // shadow right below its wheels, in the classic menus on a floor at groundAt (our y) in
 // the original's menu shadow colour.

@@ -4,7 +4,7 @@
 // layers of their own; the classic 3D canvas goes between them once it is drawn.
 import { pointer } from "../input/pointer.js";
 import { canvas3D } from "../render/renderer.js";
-import { rd, view } from "../ui/view.js";
+import { canvas2D, rd, view } from "../ui/view.js";
 import { hsbToRgb, rgbToHsb } from "./color.js";
 
 export const WIDTH = 800;
@@ -78,6 +78,41 @@ export const presentScreen = () => {
   }
   rd.imageSmoothingEnabled = true;
 };
+
+// --- the race stood still, as the pause and the race end show it ---
+
+// The original processed its last race frame for these screens: the race is drawn once
+// more in the frame after this is asked for (see render), the HUD as the race left it.
+const frozen = { ...layer(), hud: layer(), wanted: false, pixels: null };
+
+export const freezeRace = () => {
+  const k = HEIGHT / view.height;
+  frozen.hud.g.clearRect(0, 0, WIDTH, HEIGHT);
+  frozen.hud.g.drawImage(
+    canvas2D,
+    WIDTH / 2 - (view.width * k) / 2,
+    0,
+    view.width * k,
+    HEIGHT,
+  );
+  frozen.wanted = true;
+  frozen.pixels = null;
+};
+
+export const frozenWanted = () => frozen.wanted;
+
+// With the race just drawn on the 3D canvas.
+export const captureFrozen = () => {
+  frozen.g.fillStyle = "#000000";
+  frozen.g.fillRect(0, 0, WIDTH, HEIGHT);
+  frozen.g.drawImage(canvas3D, WIDTH / 2 - canvas3D.width / 2, 0);
+  frozen.g.drawImage(frozen.hud.canvas, 0, 0);
+  frozen.pixels = frozen.g.getImageData(0, 0, WIDTH, HEIGHT);
+  frozen.wanted = false;
+};
+
+// The still race's pixels (800 x 450), null until it is drawn.
+export const frozenPixels = () => frozen.pixels;
 
 // --- the mouse, in the screen's pixels ---
 

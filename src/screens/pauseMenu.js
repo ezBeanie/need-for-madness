@@ -5,11 +5,14 @@ import {
   stopEngine,
   stopStageMusic,
 } from "../audio/audio.js";
+import { drawClassicPause, startClassicPause } from "../classic/pause.js";
 import { PHASE, game } from "../core/state.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { fixcar } from "../race/physics.js";
 import { racers } from "../race/racers.js";
 import { recording, startReplay } from "../race/recording.js";
+import { interpolation } from "../render/interpolation.js";
+import { LOOK, look } from "../render/look.js";
 import { backdropHue, cssRgb, hslToRgb } from "../ui/color.js";
 import { hud } from "../ui/hud.js";
 import { images } from "../ui/images.js";
@@ -51,8 +54,9 @@ const BUTTON_COLORS = [
 
 // a replay needs this many recorded ticks
 const REPLAY_MIN_TICKS = 430;
-// how long "Not enough gameplay was recorded yet!" shows
+// how long "Not enough gameplay was recorded yet!" shows (the original's message longer)
 const TOO_SHORT_TICKS = 30;
+const CLASSIC_TOO_SHORT_TICKS = 150;
 // the frame before the instant replay starts
 const REPLAY_STARTS = 1;
 
@@ -61,8 +65,16 @@ let tooShortTicks = 0;
 // when the race resumes
 let musicPlayingForReplay = false;
 
+// the tick the classic pause was last shown: when it opens anew it takes the race's
+// picture again (also after an instant replay)
+let classicTick = -2;
+
 export function pauseMenuTick() {
   stopEngine();
+  if (look.current == LOOK.classic) {
+    classicPauseTick();
+    return;
+  }
   rd.clearRect(0, 0, view.width, view.height);
   const hue = backdropHue();
   drawBackdrop(hue);
@@ -92,6 +104,30 @@ export function pauseMenuTick() {
   }
   pulseButtons();
 }
+
+const classicPauseTick = () => {
+  if (classicTick != interpolation.tick - 1) {
+    startClassicPause();
+  }
+  classicTick = interpolation.tick;
+  if (hud.replayStartsIn == REPLAY_STARTS) {
+    startReplay();
+  }
+  const { chosen, selected } = drawClassicPause(
+    pauseMenu.selected,
+    tooShortTicks > 0,
+  );
+  pauseMenu.selected = selected;
+  if (tooShortTicks) {
+    tooShortTicks--;
+  }
+  if (hud.replayStartsIn) {
+    hud.replayStartsIn--;
+  }
+  if (chosen != -1) {
+    choose(chosen);
+  }
+};
 
 const drawBackdrop = (hue) => {
   rd.fillStyle = cssRgb(hslToRgb(hue, 0.3, 0.2));
@@ -153,7 +189,10 @@ const choose = (entry) => {
       musicPlayingForReplay = true;
       tooShortTicks = 0;
     } else {
-      tooShortTicks = TOO_SHORT_TICKS;
+      tooShortTicks =
+        look.current == LOOK.classic
+          ? CLASSIC_TOO_SHORT_TICKS
+          : TOO_SHORT_TICKS;
     }
   }
   if (entry == INSTRUCTIONS) {

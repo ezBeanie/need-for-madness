@@ -21,7 +21,12 @@ import { camera } from "./camera.js";
 import { attachTo, interpolation, placeCamera } from "./interpolation.js";
 import { LOOK, look } from "./look.js";
 import { CLASSIC_FLOOR } from "../classic/carSelect.js";
-import { presentScreen } from "../classic/screen.js";
+import { CLASSIC_UNLOCKED_FLOOR } from "../classic/raceEnd.js";
+import {
+  captureFrozen,
+  frozenWanted,
+  presentScreen,
+} from "../classic/screen.js";
 import { drawModel, drawParticle, gl } from "./renderer.js";
 import {
   carModels,
@@ -81,6 +86,14 @@ export function render() {
   }
   if (game.phase == PHASE.raceEnd && menu.animation == UNLOCKED_CAR_SHOWN) {
     drawWhenDue(drawUnlockedCar);
+  }
+  // the race stood still for the classic pause or race end
+  if (look.current == LOOK.classic && frozenWanted()) {
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    gl.disable(gl.DEPTH_TEST);
+    drawClassicRace();
+    captureFrozen();
   }
   // a classic menu's screen, with the 3D just drawn in its middle
   presentScreen();
@@ -336,6 +349,11 @@ const drawStageSelect = () => {
 };
 
 const drawUnlockedCar = () => {
+  // the classic look's race end has its picture behind (see classic/raceEnd.js)
+  if (look.current == LOOK.classic) {
+    drawShowcaseCar(CLASSIC_UNLOCKED_FLOOR);
+    return;
+  }
   drawParticle(stageBackdrop);
   startDepth();
   drawShowcaseCar();

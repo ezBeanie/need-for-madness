@@ -2,6 +2,13 @@
 // last stage), and back to the menus.
 
 import { stopStageMusic } from "../audio/audio.js";
+import { CAR_FILES } from "../classic/cars.js";
+import { classicGroundOf } from "../classic/frame.js";
+import {
+  UNLOCKED_CAR_Y,
+  drawClassicRaceEnd,
+  startClassicRaceEnd,
+} from "../classic/raceEnd.js";
 import { interfaceResolution } from "../core/platform.js";
 import { random } from "../core/random.js";
 import { PHASE, game } from "../core/state.js";
@@ -10,6 +17,8 @@ import { CONFIRM, confirm } from "../input/confirm.js";
 import { raceEvents } from "../race/events.js";
 import { fixcar } from "../race/physics.js";
 import { track } from "../race/track.js";
+import { interpolation } from "../render/interpolation.js";
+import { LOOK, look } from "../render/look.js";
 import {
   carModels,
   colorStageBackdrop,
@@ -276,8 +285,44 @@ const fadeIn = () => {
   }
 };
 
+// the tick the classic race end was last shown: when it opens it takes the race's picture
+let classicTick = -2;
+
+// The classic race end works the race's picture first, then fades in at once; it waits
+// for continue.
+const classicRaceEnd = () => {
+  if (classicTick != interpolation.tick - 1) {
+    startClassicRaceEnd();
+  }
+  classicTick = interpolation.tick;
+  const { done, chosen } = drawClassicRaceEnd({
+    won: raceEvents.winner,
+    stage: track.stage,
+    name: track.name,
+    unlocks: unlocksStage(),
+    finished: track.stage == 17,
+    car:
+      menu.animation == UNLOCKED_CAR_SHOWN
+        ? carStats.names[game.carTypes[0]]
+        : null,
+    practice: game.carCount == 1,
+  });
+  if (done && menu.animation < FADED_IN) {
+    menu.animation = FADED_IN - 1;
+    fadeIn();
+  }
+  if (chosen) {
+    stopStageMusic();
+    leaveRaceEnd();
+  }
+};
+
 // Every tick of the race end screen.
 export const raceEndScreen = () => {
+  if (look.current == LOOK.classic) {
+    classicRaceEnd();
+    return;
+  }
   rd.clearRect(0, 0, view.width, view.height);
   if (menu.animation == UNLOCKED_CAR_SHOWN) {
     rd.globalAlpha = 0.1;
@@ -319,6 +364,10 @@ const leaveRaceEnd = () => {
 
 // The unlocked car turns in front of the stage backdrop, rocking its nose up and down.
 export function unlockedCarTick() {
+  if (menu.animation == UNLOCKED_CAR_SHOWN && look.current == LOOK.classic) {
+    classicUnlockedCarTick();
+    return;
+  }
   if (menu.animation == UNLOCKED_CAR_SHOWN) {
     startProjection();
     camera.x = 0;
@@ -370,3 +419,42 @@ export function unlockedCarTick() {
     menu.redraw = true;
   }
 }
+
+// The classic look's unlocked car, as the original's: its camera 2.5 up and 100 before the
+// car, looking straight ahead with the original's wider view; the car turning.
+const classicUnlockedCarTick = () => {
+  camera.matrix = mat4.create();
+  mat4.perspective(
+    camera.matrix,
+    2 * Math.atan(225 / 400),
+    view.aspect,
+    0.1,
+    7000,
+  );
+  camera.x = 0;
+  camera.y = 2.5;
+  camera.z = -5;
+  camera.yaw = 180;
+  camera.pitch = 0;
+  turnView();
+  const type = game.carTypes[0];
+  const body = carModels[type];
+  // where the original had it, its middle that high (down) and its wheels grat below
+  const grat = classicGroundOf(type);
+  const y = UNLOCKED_CAR_Y[CAR_FILES[type]] ?? 390 - grat;
+  body.x = 0;
+  body.y =
+    (250 - (y + grat)) / 10 +
+    carStats.wly[type][1] +
+    1.5 * carStats.wlh[type][1];
+  body.z = 100;
+  body.ont = 0;
+  body.wzy = (body.wzy ?? 0) - 10;
+  if (body.wzy < -30) {
+    body.wzy += 30;
+  }
+  showcase.spin = (showcase.spin + 5) % 360;
+  showcase.pitch = 0;
+  poseShowcaseCar(type);
+  menu.redraw = true;
+};

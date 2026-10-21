@@ -180,3 +180,37 @@ test("in the classic look a race shows the original's HUD", async () => {
   // its labels are pictures
   expect(classic).not.toContain("Lap");
 });
+
+test("in the classic look the car select and the stage select are the original's screens", async () => {
+  const texts = (step, ticks) => {
+    const drawn = [];
+    canvasCalls.listener = (name, args, call) => {
+      if (name === "fillText") {
+        drawn.push(args[0]);
+      }
+      return call();
+    };
+    for (let i = 0; i < ticks; i++) {
+      step();
+    }
+    canvasCalls.listener = null;
+    return drawn;
+  };
+  {
+    const { ctx, step, key } = await openCarSelect();
+    key(76, true);
+    key(76, false);
+    // the strengths show once the smoke has blown through
+    const drawn = texts(step, 60);
+    expect(drawn).toContain(ctx.carStats.names[ctx.game.carTypes[0]]);
+    expect(drawn).toContain("Top Speed:");
+  }
+  {
+    const { ctx, step, key } = await openStageSelect({ stage: 3, car: 5 });
+    key(76, true);
+    key(76, false);
+    const drawn = texts(step, 5);
+    expect(drawn).toContain("Stage 3  >");
+    expect(drawn).toContain(`| ${ctx.track.name} |`);
+  }
+});
