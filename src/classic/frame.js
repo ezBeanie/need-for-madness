@@ -255,7 +255,7 @@ const drawInOrder = (objects) => {
         // (matrix[13]: where the car is drawn, between ticks, relative to the camera)
         groundY: object.shadowBelow
           ? matrix[13] - object.ground
-          : -drawCamera.y,
+          : (object.groundAt ?? 0) - drawCamera.y,
       }),
     );
   }
@@ -316,13 +316,17 @@ export const drawClassicStage = (count) => {
   medium.trk = 0;
 };
 
-// A car shown on its own (the car select, a car unlocked), over the modern backdrop.
-export const drawClassicCar = (instance, type) => {
+// A car shown on its own (the car select, a car unlocked): over the modern backdrop its
+// shadow right below its wheels, in the classic menus on a floor at groundAt (our y) in
+// the original's menu shadow colour.
+export const drawClassicCar = (instance, type, groundAt = null) => {
   startFrame();
   const object = carObject(game.carCount, instance, type);
   if (object) {
-    // shown in the air: its shadow right below its wheels
-    object.shadowBelow = true;
+    object.shadowBelow = groundAt === null;
+    object.groundAt = groundAt;
   }
+  medium.menuShadow = groundAt === null ? null : [87, 85, 57];
   drawInOrder(object ? [object] : []);
+  medium.menuShadow = null;
 };

@@ -2,16 +2,22 @@
 // around them. Cars of later stages stay locked until those stages are won.
 
 import { pauseMenuMusic } from "../audio/audio.js";
+import {
+  drawClassicCarSelect,
+  smokeAgain,
+  startClassicCarSelect,
+} from "../classic/carSelect.js";
 import { random } from "../core/random.js";
 import { MODE, PHASE, game } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
-import { carStats } from "../data/carStats.js";
+import { CAR, carStats } from "../data/carStats.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
 import { racers } from "../race/racers.js";
 import { track } from "../race/track.js";
-import { camera, startProjection } from "../render/camera.js";
-import { resetMatrix } from "../render/interpolation.js";
+import { camera, startProjection, turnView } from "../render/camera.js";
+import { interpolation, resetMatrix } from "../render/interpolation.js";
+import { LOOK, look } from "../render/look.js";
 import {
   carModels,
   carShadows,
@@ -84,6 +90,10 @@ const newSpin = (puff) => {
 };
 
 export function carSelectTick() {
+  if (look.current == LOOK.classic) {
+    classicTick();
+    return;
+  }
   startProjection();
   camera.x = 0;
   camera.y = 0;
@@ -577,6 +587,95 @@ const drawStart = (right) => {
   if (confirm.state == CONFIRM.pressed) {
     practise();
   }
+};
+
+// The classic look's car select, as the original's: its camera 26.6 above the floor the
+// car stands on and 100 before it, looking down 10 degrees with its wider view. A new car
+// flies up somersaulting for 10 ticks and the next drops in for 10, 10 above its place.
+const classic = { lastTick: -2, flip: 0, to: SWITCH.next, height: 0 };
+// where the original's car stands (34 above its 0)
+const CLASSIC_STAND = 28.4;
+
+const classicTick = () => {
+  if (classic.lastTick != interpolation.tick - 1) {
+    startClassicCarSelect();
+    classic.flip = 0;
+    classic.height = 0;
+    showcase.pitch = 0;
+  }
+  classic.lastTick = interpolation.tick;
+  // back in the modern look the car hovers
+  showcase.motion = SHOWCASE.hovering;
+  camera.matrix = mat4.create();
+  mat4.perspective(
+    camera.matrix,
+    2 * Math.atan(225 / 400),
+    view.aspect,
+    0.1,
+    7000,
+  );
+  camera.x = 0;
+  camera.y = 55;
+  camera.z = -5;
+  camera.yaw = 180;
+  camera.pitch = 10;
+  turnView();
+  if (classic.flip > 10) {
+    classic.height += 10;
+    showcase.pitch += classic.to == SWITCH.next ? 20 : -20;
+  } else if (classic.flip > 0) {
+    if (classic.flip == 10) {
+      switchingTo = classic.to;
+      switchCar();
+      classic.height = 110;
+      showcase.pitch = 0;
+    }
+    classic.height -= 10;
+  } else {
+    classic.height = 0;
+    showcase.spin = (showcase.spin + 5) % 360;
+  }
+  if (classic.flip > 0) {
+    classic.flip--;
+  }
+  const type = game.carTypes[0];
+  const body = carModels[type];
+  const ground = carStats.wly[type][1] + 1.5 * carStats.wlh[type][1];
+  body.x = 0;
+  body.y = CLASSIC_STAND + ground + classic.height;
+  // (the original shows its biggest car a little farther away)
+  body.z = type == CAR.masheen ? 100 : 95;
+  body.ont = 0;
+  body.wzy = (body.wzy ?? 0) - 10;
+  if (body.wzy < -30) {
+    body.wzy += 30;
+  }
+  poseShowcaseCar(type);
+  const locked = unlockingStage(type);
+  if (!locked) {
+    lastSelected = type;
+  }
+  const chosen = drawClassicCarSelect({
+    name: carStats.names[type],
+    strengths: strengths(type).map(([, filled]) => filled),
+    lockedUntil: locked,
+    first: type == FIRST_CAR,
+    last: type == LAST_CAR,
+    shown: classic.flip == 0,
+  });
+  if ((chosen == "next" || chosen == "back") && classic.flip == 0) {
+    classic.to = chosen == "next" ? SWITCH.next : SWITCH.previous;
+    classic.flip = 20;
+    smokeAgain();
+  }
+  if (chosen == "continue") {
+    if (game.unlocked == 1) {
+      practise();
+    } else {
+      openStageSelect();
+    }
+  }
+  menu.redraw = true;
 };
 
 const openStageSelect = () => {

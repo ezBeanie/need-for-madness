@@ -180,6 +180,8 @@ const fitToWindow = () => {
 };
 
 loadLook();
+// (the window may already be the size the canvases start with)
+fitCanvas3D();
 
 // time not run as logic ticks yet, and when the last frame came
 let pendingMs = 0;

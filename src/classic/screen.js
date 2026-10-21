@@ -118,13 +118,19 @@ const clamp = (v) => Math.min(255, Math.max(0, Math.trunc(v)));
 // how the original made each picture ready (its loadimages)
 const PROCESS = {
   plain: () => {},
-  // loadBimage: every pixel in one hue and saturation, keeping its brightness
-  // (mode 0 leaves the background, the first pixel, as it is)
+  // loadBimage: every pixel in one hue and saturation, keeping its brightness (mode 0
+  // leaves the background, the first pixel, as it is; mode 4 is smokeypix's smoke)
   tinted: (px, mode) => {
-    const hue = mode == 3 ? 0.13 : 0.12;
+    const hue = { 3: 0.13, 4: 0.11 }[mode] ?? 0.12;
+    const keepsBackground = mode == 0 || mode == 4;
     const [r0, g0, b0] = [px[0], px[1], px[2]];
     for (let i = 0; i < px.length; i += 4) {
-      if (mode != 0 || px[i] != r0 || px[i + 1] != g0 || px[i + 2] != b0) {
+      if (
+        !keepsBackground ||
+        px[i] != r0 ||
+        px[i + 1] != g0 ||
+        px[i + 2] != b0
+      ) {
         const [, , brightness] = rgbToHsb(px[i], px[i + 1], px[i + 2]);
         [px[i], px[i + 1], px[i + 2]] = hsbToRgb(hue, 0.45, brightness);
         px[i + 3] = 255;

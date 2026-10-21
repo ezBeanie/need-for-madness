@@ -14,10 +14,13 @@ const CLASSIC_HEIGHT = 450;
 // Sizes the 3D canvas's pixels for the look; on screen it always fills the window.
 export const fitCanvas3D = () => {
   const classic = look.current == LOOK.classic;
-  canvas3D.height = classic ? CLASSIC_HEIGHT : view.height;
-  canvas3D.width = classic
-    ? Math.round(CLASSIC_HEIGHT * view.aspect)
-    : view.width;
+  const height = classic ? CLASSIC_HEIGHT : view.height;
+  const width = classic ? Math.round(CLASSIC_HEIGHT * view.aspect) : view.width;
+  if (canvas3D.width == width && canvas3D.height == height) {
+    return;
+  }
+  canvas3D.height = height;
+  canvas3D.width = width;
   canvas3D.style.imageRendering = classic ? "pixelated" : "";
   gl.viewport(0, 0, canvas3D.width, canvas3D.height);
 };

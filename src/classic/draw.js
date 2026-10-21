@@ -597,13 +597,9 @@ const drawShadow = (rad, matrix, groundY) => {
     if (n < 3 || off0 == n || off1 == n || off2 == n || off3 == n) {
       continue;
     }
-    const ground = medium.crgrnd;
-    fog(
-      Math.trunc(ground[0] / 1.5),
-      Math.trunc(ground[1] / 1.5),
-      Math.trunc(ground[2] / 1.5),
-      poly.av ?? 0,
-    );
+    const [r, g, b] =
+      medium.menuShadow ?? medium.crgrnd.map((v) => Math.trunc(v / 1.5));
+    fog(r, g, b, poly.av ?? 0);
     fillPolygon(SX, SY, n, color[0], color[1], color[2]);
   }
 };

@@ -38,6 +38,8 @@ export const medium = {
   adv: 500,
   // 0 in races; 2 for the stage select's preview: no fog, nothing too far
   trk: 0,
+  // the shadows' colour in the menus (the original's car select), null: the ground's
+  menuShadow: null,
   // counts the frames drawn, and the logic tick they show
   frame: 0,
   tick: 0,

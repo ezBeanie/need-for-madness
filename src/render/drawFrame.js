@@ -20,6 +20,7 @@ import { stageSelect } from "../screens/stageSelect.js";
 import { camera } from "./camera.js";
 import { attachTo, interpolation, placeCamera } from "./interpolation.js";
 import { LOOK, look } from "./look.js";
+import { CLASSIC_FLOOR } from "../classic/carSelect.js";
 import { presentScreen } from "../classic/screen.js";
 import { drawModel, drawParticle, gl } from "./renderer.js";
 import {
@@ -88,7 +89,10 @@ export function render() {
 const drawWhenDue = (drawScene) => {
   if (menu.redraw || drawnPhase == game.phase) {
     drawnPhase = game.phase;
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    // the classic menus show their pictures through it
+    const seeThrough =
+      look.current == LOOK.classic && !RACE_PHASES.includes(game.phase);
+    gl.clearColor(0.0, 0.0, 0.0, seeThrough ? 0.0 : 1.0);
     gl.clearDepth(1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     // the background first, behind everything
@@ -166,10 +170,10 @@ const drawWheeledCar = (type, parent, wheels, body, near) => {
   });
 };
 
-const drawShowcaseCar = () => {
+const drawShowcaseCar = (classicFloor = null) => {
   const type = game.carTypes[0];
   if (look.current == LOOK.classic) {
-    drawClassicCar(carModels[type], type);
+    drawClassicCar(carModels[type], type, classicFloor);
     return;
   }
   drawWheeledCar(
@@ -288,6 +292,11 @@ const drawRace = () => {
 };
 
 const drawCarSelect = () => {
+  // the classic look's car select has its pictures behind (see classic/carSelect.js)
+  if (look.current == LOOK.classic) {
+    drawShowcaseCar(CLASSIC_FLOOR);
+    return;
+  }
   drawModel(menuBackdrop);
   menuSmoke.forEach((puff, i) => {
     placeAt(dustSprite, puff);
