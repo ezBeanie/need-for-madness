@@ -208,15 +208,19 @@ const drawInOrder = (objects) => {
     .filter((o) => lastDist.get(o.key))
     .sort((a, b) => lastDist.get(b.key) - lastDist.get(a.key));
   for (const object of [...unseen, ...seen]) {
+    const matrix = object.place();
     lastDist.set(
       object.key,
-      drawObject(object.rad, object.place(), {
+      drawObject(object.rad, matrix, {
         wxz: object.car?.wxz ?? 0,
         wzy: object.car?.wzy ?? 0,
         nextCheckpoint: object.nextCheckpoint,
         ground: object.ground ?? null,
         // the ground, relative to the camera
-        groundY: (object.shadowAt ?? 0) - drawCamera.y,
+        // (matrix[13]: where the car is drawn, between ticks, relative to the camera)
+        groundY: object.shadowBelow
+          ? matrix[13] - object.ground
+          : -drawCamera.y,
       }),
     );
   }
@@ -258,7 +262,7 @@ export const drawClassicCar = (instance, type) => {
   const object = carObject(game.carCount, instance, type);
   if (object) {
     // shown in the air: its shadow right below its wheels
-    object.shadowAt = instance.y - object.ground;
+    object.shadowBelow = true;
   }
   drawInOrder(object ? [object] : []);
 };
