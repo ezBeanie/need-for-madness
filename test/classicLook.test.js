@@ -97,7 +97,7 @@ test("a hit dents the classic car model and fades its polygons, as the original 
   ctx.tintModel(rad, () => 0.5);
   const before = JSON.stringify(rad.polys.map((p) => p.points));
   for (let i = 0; i < 6; i++) {
-    ctx.dentClassic(rad, 0, ctx.HIT.alongX, 0, 300);
+    ctx.dentClassic(rad, ctx.hitOn(0, ctx.HIT.alongX, 0, 300));
   }
   expect(JSON.stringify(rad.polys.map((p) => p.points))).not.toBe(before);
   const faded = rad.polys.filter((p) => p.bfase > 40);

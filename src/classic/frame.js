@@ -18,7 +18,7 @@ import { scene } from "../render/scene.js";
 import { PIECE_FILES } from "../loading/assets.js";
 import { bodyDamage } from "../race/physics.js";
 import { flushBatch, startBatch } from "./batch.js";
-import { dentClassic } from "./damage.js";
+import { dentClassic, hitOn } from "./damage.js";
 import { electrify, fixBubble, fixStep, startFixing } from "./fixing.js";
 import { effectObjects } from "./effects.js";
 import { CAR_FILES } from "./cars.js";
@@ -208,7 +208,11 @@ const wreckAndFix = (c, rad, type) => {
 const carObject = (c, instance, type) => {
   const file = CAR_FILES[type];
   if (carModels[c]?.file != file && models.has(file)) {
-    carModels[c] = { file, rad: structuredClone(models.get(file)) };
+    const rad = structuredClone(models.get(file));
+    for (const hit of c < game.carCount ? (hits[c] ?? []) : []) {
+      dentClassic(rad, hit);
+    }
+    carModels[c] = { file, rad };
   }
   const rad = carModels[c]?.rad;
   return (
@@ -259,12 +263,18 @@ const drawInOrder = (objects) => {
 };
 
 // the cars' classic models follow the physics' dents; a repaired car gets a fresh copy
+// The hits since each car was last fixed: a car's model made later (the look switched
+// mid-race) is dented with them all.
+const hits = [];
 bodyDamage.dent = (c, hitSide, k, mag) => {
+  const hit = hitOn(c, hitSide, k, mag);
+  (hits[c] ??= []).push(hit);
   if (carModels[c]) {
-    dentClassic(carModels[c].rad, c, hitSide, k, mag);
+    dentClassic(carModels[c].rad, hit);
   }
 };
 bodyDamage.repair = (c) => {
+  hits[c] = [];
   carModels[c] = undefined;
 };
 

@@ -50,21 +50,33 @@ const fade = (poly, by) => {
 
 const isWheel = (poly) => poly.master || poly.wz != 0 || poly.wx != 0;
 
-// Dents car c's classic model as our physics dented its body: hit along hitSide at
-// corner k with mag (see dentNearCorner and crushRoof). The model's corners are in the
+// A hit on car c as our physics dents its body (see dentNearCorner and crushRoof): along
+// hitSide at corner k with mag, and how the car lay then, so it can be dented later too.
+export const hitOn = (c, hitSide, k, mag) => ({
+  hitSide,
+  k,
+  mag,
+  type: car[c].typ,
+  keyX: car[c].keyx[k],
+  keyZ: car[c].keyz[k],
+  xz: car[c].xz,
+  xy: car[c].xy,
+  zy: car[c].zy,
+  squash: racers[c].squash,
+});
+
+// Dents a car's classic model with a hit (see hitOn). The model's corners are in the
 // original's units; ours, as the modern body has them, are (-x/10, -y/10, z/10).
-export const dentClassic = (rad, c, hitSide, k, mag) => {
-  const type = car[c].typ;
-  const keyX = car[c].keyx[k];
-  const keyZ = car[c].keyz[k];
+export const dentClassic = (rad, hit) => {
+  const { hitSide, mag, type, keyX, keyZ } = hit;
   const reach = carStats.clrad[type];
-  const sinXZ = sinDeg(car[c].xz);
-  const cosXZ = cosDeg(car[c].xz);
-  const sinXY = sinDeg(car[c].xy);
-  const cosXY = cosDeg(car[c].xy);
-  const sinZY = sinDeg(car[c].zy);
-  const cosZY = cosDeg(car[c].zy);
-  const roof = carStats.flipy[type] + racers[c].squash;
+  const sinXZ = sinDeg(hit.xz);
+  const cosXZ = cosDeg(hit.xz);
+  const sinXY = sinDeg(hit.xy);
+  const cosXY = cosDeg(hit.xy);
+  const sinZY = sinDeg(hit.zy);
+  const cosZY = cosDeg(hit.zy);
+  const roof = carStats.flipy[type] + hit.squash;
   for (const poly of rad.polys) {
     if (isWheel(poly)) {
       continue;
@@ -75,7 +87,7 @@ export const dentClassic = (rad, c, hitSide, k, mag) => {
       const y = -p[1] / 10;
       const z = p[2] / 10;
       if (hitSide == HIT.onRoof) {
-        if (y > roof && Math.abs(racers[c].squash) < carStats.msquash[type]) {
+        if (y > roof && Math.abs(hit.squash) < carStats.msquash[type]) {
           const tmag = (mag / 15) * random();
           p[1] += 10 * tmag;
           deepest = Math.max(deepest, Math.abs(10 * tmag));
