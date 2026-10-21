@@ -2,7 +2,7 @@
 // (see draw.js) onto a canvas of its own, 450 pixels high, where the modern look's 3D
 // canvas is. The game logic, the camera and the HUD stay the same.
 import { game } from "../core/state.js";
-import { CAR } from "../data/carStats.js";
+import { CAR, carStats } from "../data/carStats.js";
 import { raceEvents } from "../race/events.js";
 import { car } from "../race/racers.js";
 import { pieceModels, pieces, track } from "../race/track.js";
@@ -195,6 +195,8 @@ const carObject = (c, instance, type) => {
       rad: carModels[c].rad,
       place: () => matrixOf(instance),
       car: instance,
+      // how far below the car its wheels touch the ground, as our physics has it
+      ground: carStats.wly[type][1] + 1.5 * carStats.wlh[type][1],
     }
   );
 };
@@ -212,6 +214,7 @@ const drawInOrder = (objects) => {
         wxz: object.car?.wxz ?? 0,
         wzy: object.car?.wzy ?? 0,
         nextCheckpoint: object.nextCheckpoint,
+        ground: object.ground ?? null,
         // the ground, relative to the camera
         groundY: -drawCamera.y,
       }),

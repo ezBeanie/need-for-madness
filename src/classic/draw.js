@@ -112,7 +112,7 @@ const SY = new Float64Array(MAX_CORNERS);
 const placeCorner = (i, px, py, pz, matrix, groundY) => {
   // the original's axes into ours, ten times smaller
   const mx = -px / 10;
-  const my = -py / 10;
+  const my = -py / 10 + lift;
   const mz = pz / 10;
   placeSeen(
     i,
@@ -143,6 +143,10 @@ const placeSeen = (i, wx, wy, wz) => {
 
 // Places a polygon's corners, a wheel's turned with the wheel: spinning about its axle
 // (wzy) and steering about its pivot (wxz), in the model. Returns how many.
+// how far the object being drawn is lifted in its model, in our units: an original car
+// sits with its own wheels on our ground (see drawObject)
+let lift = 0;
+
 // the wheels' turns of the object being drawn (see turnWheels)
 const wheels = {
   spin: 0,
@@ -555,9 +559,11 @@ const drawShadow = (rad, matrix, groundY) => {
 export const drawObject = (
   rad,
   matrix,
-  { wxz = 0, wzy = 0, nextCheckpoint = false, groundY = 0 } = {},
+  { wxz = 0, wzy = 0, nextCheckpoint = false, groundY = 0, ground = null } = {},
 ) => {
   turnWheels(wxz, wzy);
+  // a car: its wheels' bottom (grat, the original's units, down) where ours is (ground)
+  lift = ground === null ? 0 : rad.grat / 10 - ground;
   placeCorner(0, 0, 0, 0, matrix);
   const maxR = rad.maxR;
   const n = X1[0];
