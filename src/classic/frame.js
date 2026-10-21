@@ -4,9 +4,14 @@
 import { game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { raceEvents } from "../race/events.js";
-import { car } from "../race/racers.js";
+import { car, racers } from "../race/racers.js";
 import { pieceModels, pieces, track } from "../race/track.js";
-import { drawCamera, drawMatrix, placeModel } from "../render/interpolation.js";
+import {
+  drawCamera,
+  drawMatrix,
+  interpolation,
+  placeModel,
+} from "../render/interpolation.js";
 import { fetchText } from "../render/models.js";
 import { canvas3D } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
@@ -14,6 +19,7 @@ import { PIECE_FILES } from "../loading/assets.js";
 import { bodyDamage } from "../race/physics.js";
 import { flushBatch, startBatch } from "./batch.js";
 import { dentClassic } from "./damage.js";
+import { electrify, fixBubble, fixStep, startFixing } from "./fixing.js";
 import { effectObjects } from "./effects.js";
 import { CAR_FILES } from "./cars.js";
 import { drawObject, setView, tintModel } from "./draw.js";
@@ -142,12 +148,14 @@ const startFrame = () => {
     Math.PI;
   medium.flicker = !medium.flicker;
   medium.frame++;
+  medium.tick = interpolation.tick;
   medium.lastCheck = raceEvents.onlastcheck;
 };
 
 // The stage's first count pieces; nextCheckpoint picks the checkpoints that flash.
 const pieceObjects = (count, nextCheckpoint) => {
   const objects = [];
+  const hoops = new Set(pieces.fixes.slice(0, pieces.fixCount));
   for (let i = 0; i < count; i++) {
     const piece = pieces.list[i];
     const file = PIECE_FILES[piece.typ];
@@ -158,10 +166,42 @@ const pieceObjects = (count, nextCheckpoint) => {
         rad,
         place: () => matrixOf(piece),
         nextCheckpoint: piece.iscp != 0 && nextCheckpoint(piece),
+        // electricity arcs across the fix hoops
+        beforePolygons: hoops.has(i)
+          ? (matrix) => electrify(hoopStates(piece), matrix, i)
+          : null,
       });
     }
   }
   return objects;
+};
+
+// each fix hoop's electricity
+const hoopState = new WeakMap();
+const hoopStates = (piece) => {
+  if (!hoopState.has(piece)) {
+    hoopState.set(piece, {});
+  }
+  return hoopState.get(piece);
+};
+
+// A race car's model goes up in flames when the car is wrecked (the original's
+// distruct: all but its wheels), and turns blue in a bubble while it is fixed.
+const wreckAndFix = (c, rad, type) => {
+  if (!rad.wrecked && racers[c].hitmag >= carStats.maxmag[type]) {
+    rad.wrecked = true;
+    for (const poly of rad.polys) {
+      if (poly.wz == 0 || poly.gr == -17 || poly.gr == -16) {
+        poly.embos = 1;
+      }
+    }
+  }
+  if (car[c].fcnt >= 5) {
+    const step = fixStep(car[c].fcnt);
+    startFixing(rad, step);
+    return (matrix) => fixBubble(rad, matrix, step, c);
+  }
+  return null;
 };
 
 // Car c's own copy of its model (the order its polygons are drawn in is its own).
@@ -170,12 +210,14 @@ const carObject = (c, instance, type) => {
   if (carModels[c]?.file != file && models.has(file)) {
     carModels[c] = { file, rad: structuredClone(models.get(file)) };
   }
+  const rad = carModels[c]?.rad;
   return (
-    carModels[c] && {
+    rad && {
       key: instance,
-      rad: carModels[c].rad,
+      rad,
       place: () => matrixOf(instance),
       car: instance,
+      beforePolygons: c < game.carCount ? wreckAndFix(c, rad, type) : null,
       // how far below the car its wheels touch the ground, as our physics has it
       ground: carStats.wly[type][1] + 1.5 * carStats.wlh[type][1],
     }
@@ -202,6 +244,8 @@ const drawInOrder = (objects) => {
         wxz: object.car?.wxz ?? 0,
         wzy: object.car?.wzy ?? 0,
         nextCheckpoint: object.nextCheckpoint,
+        angles: object.car,
+        beforePolygons: object.beforePolygons,
         ground: object.ground ?? null,
         // the ground, relative to the camera
         // (matrix[13]: where the car is drawn, between ticks, relative to the camera)

@@ -43,7 +43,28 @@ export const tintModel = (rad, randomness) => {
     poly.oc = color;
     poly.hsb = rgbToHsb(...c);
     poly.deltaf = deltaf(poly.points);
+    poly.typ = flattestAxis(poly.points);
+    poly.id = rad.polys.indexOf(poly);
   }
+};
+
+// The axis a polygon's second edge spans least along (1 x, 2 y, 3 z): it swells along
+// it when its car is wrecked (the original's deltafntyp).
+const flattestAxis = (points) => {
+  const [dx, dy, dz] = [0, 1, 2].map((k) =>
+    Math.abs(points[2][k] - points[1][k]),
+  );
+  let typ = 0;
+  if (dy <= dx && dy <= dz) {
+    typ = 2;
+  }
+  if (dx <= dy && dx <= dz) {
+    typ = 1;
+  }
+  if (dz <= dx && dz <= dy) {
+    typ = 3;
+  }
+  return typ;
 };
 
 const length2 = (a, b, axes) =>
@@ -109,7 +130,7 @@ const SY = new Float64Array(MAX_CORNERS);
 // Puts corner i of a polygon at (mx, my, mz) in the model (the original's units and
 // axes), placed with a modern model matrix relative to the camera; with a groundY, pressed
 // onto the ground there (a shadow).
-const placeCorner = (i, px, py, pz, matrix, groundY) => {
+export const placeCorner = (i, px, py, pz, matrix, groundY) => {
   // the original's axes into ours, ten times smaller
   const mx = -px / 10;
   const my = -py / 10 + lift;
@@ -173,6 +194,18 @@ const placePoly = (poly, matrix, groundY) => {
   const { spin, steer, spinCos, spinSin, steerCos, steerSin } = wheels;
   for (let i = 0; i < points.length; i++) {
     let [px, py, pz] = points[i];
+    // a wrecked car's polygon swells along its flattest axis (see wreck)
+    if (poly.bloat) {
+      if (poly.typ == 1) {
+        px *= poly.bloat;
+      }
+      if (poly.typ == 2) {
+        py *= poly.bloat;
+      }
+      if (poly.typ == 3) {
+        pz *= poly.bloat;
+      }
+    }
     if (turns) {
       if (poly.wz != 0 && spin != 0) {
         const dy = py - poly.wy;
@@ -410,6 +443,10 @@ const drawPoly = (poly, n, noline, size) => {
   if (poly.glass == 2 && (!race || av > 6700)) {
     return;
   }
+  // a car being fixed flickers: most of its polygons drop out each tick
+  if (poly.flx && tickRandom(poly.id ?? 0, 50) > 0.3) {
+    return;
+  }
   const facingAway = facesAway(n);
   if (
     (poly.gr == -14 || poly.gr == -15 || poly.gr == -12) &&
@@ -486,7 +523,24 @@ const drawPoly = (poly, n, noline, size) => {
   if (!race && poly.gr == -10) {
     far = false;
   }
-  if (!far) {
+  if (!far && poly.flx) {
+    // a car being fixed flashes its outlines light blue, then black (see fixing.js)
+    if (poly.flx == 2) {
+      drawPolygon(SX, SY, n, 0, 0, 0);
+    } else {
+      const g = poly.flx == 1 ? 223 : 255;
+      const b = poly.flx == 1 ? 255 : 223;
+      drawPolygon(
+        SX,
+        SY,
+        n,
+        0,
+        Math.min(255, Math.max(0, Math.trunc(g + g * (medium.snap[1] / 100)))),
+        Math.min(255, Math.max(0, Math.trunc(b + b * (medium.snap[2] / 100)))),
+      );
+      poly.flx = 2;
+    }
+  } else if (!far) {
     if (!poly.solo) {
       if (medium.lightson && poly.light != 0) {
         const half = (v) => Math.min(255, Math.max(0, Math.trunc(v / 2)));
@@ -554,12 +608,145 @@ const drawShadow = (rad, matrix, groundY) => {
   }
 };
 
+// randomness that stays the same through a logic tick: the original flickered about as
+// often as its frames came, the modern look draws many frames a tick
+export const tickRandom = (a, b) => {
+  let h =
+    Math.imul(medium.tick ^ 0x9e3779b9, 0x85ebca6b) ^
+    Math.imul(a + 1, 0xc2b2ae35);
+  h = Math.imul(h ^ (h >>> 13) ^ Math.imul(b + 7, 0x27d4eb2f), 0x165667b1);
+  h ^= h >>> 16;
+  return (h >>> 0) / 4294967296;
+};
+
+const clamp = (v) => Math.min(255, Math.max(0, Math.trunc(v)));
+
+// A wrecked car's polygon (the original's embos, from Plane.d), counting up a step each
+// tick: first it flashes white and swells, greys, and from step 16 on it burns, two
+// flickering flame triangles over two of its corners, until the car is fixed.
+const wreck = (poly, index, matrix, angles) => {
+  const r = (k) => tickRandom(index, k);
+  const step = poly.embos;
+  const points = poly.points;
+  const n = points.length;
+  if (step <= 11 && r(0) > 0.5 && poly.glass != 1) {
+    for (let j = 0; j < n; j++) {
+      const [px, py, pz] = points[j];
+      placeCorner(
+        j,
+        px + (15 - r(1 + j * 3) * 30),
+        py + (15 - r(2 + j * 3) * 30),
+        pz + (15 - r(3 + j * 3) * 30),
+        matrix,
+      );
+      SX[j] = xs(X[j], Z[j]);
+      SY[j] = ys(Y[j], Z[j]);
+    }
+    fillPolygon(SX, SY, n, 230, 230, 230);
+  }
+  let bloat = 1;
+  const hsb = poly.hsb;
+  if (step <= 4) {
+    bloat = 1 + r(90) / 5;
+  } else if (step <= 7) {
+    bloat = 1 + r(90) / 4;
+  } else if (step <= 9) {
+    bloat = 1 + r(90) / 3;
+    hsb[2] = Math.min(hsb[2], 0.7);
+  } else if (step <= 10) {
+    bloat = 1 + r(90) / 2;
+    hsb[2] = Math.min(hsb[2], 0.6);
+  } else if (step <= 12) {
+    bloat = 1 + r(90);
+    hsb[2] = Math.min(hsb[2], 0.5);
+  }
+  if (step == 13) {
+    hsb[1] = 0.2;
+    hsb[2] = 0.4;
+  }
+  if (step == 16 && poly.pa === undefined) {
+    poly.pa = Math.floor(r(91) * n);
+    poly.pb = (poly.pa + 1 + Math.floor(r(92) * (n - 1))) % n;
+  }
+  if (step >= 16 && poly.pa !== undefined) {
+    // flames lean up, whichever way up the car lies
+    const upright = (angle) => {
+      let a = Math.abs(angle);
+      while (a > 270) {
+        a -= 360;
+      }
+      return Math.abs(a) > 90 ? -1 : 1;
+    };
+    const up = upright(angles?.zy ?? 0) * upright(angles?.xy ?? 0);
+    const a = points[poly.pa];
+    const b = [...points[poly.pb]];
+    while (Math.abs(a[0] - b[0]) > 100) {
+      b[0] += b[0] > a[0] ? -30 : 30;
+    }
+    while (Math.abs(a[2] - b[2]) > 100) {
+      b[2] += b[2] > a[2] ? -30 : 30;
+    }
+    const sideX = (Math.abs(a[0] - b[0]) / 3) * (0.5 - r(93));
+    const sideZ = (Math.abs(a[2] - b[2]) / 3) * (0.5 - r(94));
+    const high =
+      ((Math.abs(a[0] - b[0]) + Math.abs(a[2] - b[2])) / 1.5) *
+      (r(95) / 2 + 0.5);
+    const { snap } = medium;
+    for (const [height, color] of [
+      [
+        high,
+        [
+          255 + 255 * (snap[0] / 400),
+          169 + 169 * (snap[1] / 300),
+          89 + 89 * (snap[2] / 200),
+        ],
+      ],
+      [
+        high * 0.8,
+        [
+          255 + 255 * (snap[0] / 400),
+          207 + 207 * (snap[1] / 300),
+          136 + 136 * (snap[2] / 200),
+        ],
+      ],
+    ]) {
+      placeCorner(0, a[0], a[1], a[2], matrix);
+      placeCorner(1, b[0], b[1], b[2], matrix);
+      placeCorner(
+        2,
+        (a[0] + b[0]) / 2 + sideX,
+        (a[1] + b[1]) / 2 - up * height,
+        (a[2] + b[2]) / 2 + sideZ,
+        matrix,
+      );
+      for (let j = 0; j < 3; j++) {
+        SX[j] = xs(X[j], Z[j]);
+        SY[j] = ys(Y[j], Z[j]);
+      }
+      fillPolygon(SX, SY, 3, ...color.map(clamp));
+    }
+  }
+  poly.bloat = bloat;
+  if (poly.embosTick != medium.tick) {
+    poly.embosTick = medium.tick;
+    poly.embos = step == 70 ? 16 : step + 1;
+  }
+};
+
 // An object (ContO.d): skipped when off screen or too far, else its polygons from the
 // farthest. Returns how far it is for ordering the next frame (0: not drawn).
 export const drawObject = (
   rad,
   matrix,
-  { wxz = 0, wzy = 0, nextCheckpoint = false, groundY = 0, ground = null } = {},
+  {
+    wxz = 0,
+    wzy = 0,
+    nextCheckpoint = false,
+    groundY = 0,
+    ground = null,
+    angles = null,
+    beforePolygons = null,
+  } = {},
 ) => {
   turnWheels(wxz, wzy);
   // a car: its wheels' bottom (grat, the original's units, down) where ours is (ground)
@@ -590,6 +777,9 @@ export const drawObject = (
   if (rad.shadow && depth < 2000) {
     drawShadow(rad, matrix, groundY);
   }
+  // drawn before its polygons: the fix hoop's electricity, the bubble round a car being
+  // fixed
+  beforePolygons?.(matrix);
   if (nextCheckpoint) {
     size = -1;
   }
@@ -619,6 +809,9 @@ export const drawObject = (
   }
   for (const i of order) {
     const poly = polys[i];
+    if (poly.embos) {
+      wreck(poly, i, matrix, angles);
+    }
     let corners = placePoly(poly, matrix);
     // a tyre seen from afar has no hole for its rim
     if (poly.master == 1 && (poly.av ?? 0) > 1500) {

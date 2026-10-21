@@ -38,8 +38,9 @@ export const medium = {
   adv: 500,
   // 0 in races; 2 for the stage select's preview: no fog, nothing too far
   trk: 0,
-  // counts the frames drawn
+  // counts the frames drawn, and the logic tick they show
   frame: 0,
+  tick: 0,
 };
 
 const clamp255 = (v) => Math.min(255, Math.max(0, v));

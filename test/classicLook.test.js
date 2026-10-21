@@ -107,3 +107,48 @@ test("a hit dents the classic car model and fades its polygons, as the original 
     true,
   );
 });
+
+test("in the classic look a wrecked car burns and a car being fixed shows its bubble", async () => {
+  const { ctx, step, key } = await startRace({ stage: 1, car: 5 });
+  key(76, true);
+  key(76, false);
+  // how many vertices of the classic batch have a colour that test likes (r, g, b)
+  const colored = (likes, frames = 1) => {
+    let found = 0;
+    glCalls.listener = (name, args) => {
+      if (name === "bufferData" && args[1] instanceof Float32Array) {
+        const words = new Uint32Array(
+          args[1].buffer,
+          args[1].byteOffset,
+          args[1].length,
+        );
+        for (let i = 2; i < words.length; i += 3) {
+          const w = words[i];
+          if (likes(w & 255, (w >> 8) & 255, (w >> 16) & 255)) {
+            found++;
+          }
+        }
+      }
+    };
+    for (let i = 0; i < frames; i++) {
+      step();
+    }
+    glCalls.listener = null;
+    return found;
+  };
+  const bubble = (r, g, b) => r > 180 && g > 225 && b > 240;
+  const flame = (r, g, b) =>
+    r == 255 && g > 160 && g < 215 && b > 75 && b < 145;
+  colored(() => false, 5);
+  expect(colored(bubble)).toBe(0);
+  ctx.car[0].fcnt = 20;
+  expect(colored(bubble)).toBeGreaterThan(0);
+  colored(() => false, 20);
+  for (let i = 0; i < 8; i++) {
+    ctx.regn(i % 2, i % 4, 300, 0);
+  }
+  expect(colored(flame)).toBe(0);
+  ctx.racers[0].hitmag = 9999;
+  // flames from the wreck's sixteenth tick on
+  expect(colored(flame, 25)).toBeGreaterThan(0);
+});
