@@ -87,3 +87,23 @@ test("the classic look draws sparks and dust the original's way", async () => {
   ctx.dustup(0, 0, 0, car.x, car.y, car.z, 40, 40, 1, 0, false);
   expect(vertices()).toBeGreaterThan(before);
 });
+
+test("a hit dents the classic car model and fades its polygons, as the original did", async () => {
+  const { ctx } = await startRace({ stage: 1, car: 5 });
+  const { readFileSync } = await import("node:fs");
+  const rad = ctx.parseRad(
+    readFileSync("public/data/classic/maxrevenge.rad", "utf8"),
+  );
+  ctx.tintModel(rad, () => 0.5);
+  const before = JSON.stringify(rad.polys.map((p) => p.points));
+  for (let i = 0; i < 6; i++) {
+    ctx.dentClassic(rad, 0, ctx.HIT.alongX, 0, 300);
+  }
+  expect(JSON.stringify(rad.polys.map((p) => p.points))).not.toBe(before);
+  const faded = rad.polys.filter((p) => p.bfase > 40);
+  expect(faded.length).toBeGreaterThan(0);
+  // brown: the original's hue for badly dented polygons
+  expect(faded.every((p) => p.nocol || p.glass == 1 || p.hsb[0] < 0.08)).toBe(
+    true,
+  );
+});
