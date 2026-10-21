@@ -391,6 +391,18 @@ const drawPoly = (poly, n, noline, size) => {
   if (off0 == n || off1 == n || off2 == n || off3 == n) {
     return;
   }
+  // the stage select's preview (trk 1) leaves out what reaches out of its frame, the
+  // original's 670 x 400 in the middle
+  if (
+    medium.trk == 1 &&
+    (behind ||
+      minX < medium.w / 2 - 335 ||
+      maxX > medium.w / 2 + 335 ||
+      minY < 25 ||
+      maxY > 425)
+  ) {
+    return;
+  }
   // far (b in the original): no black outline, and the far light; models of stone
   // (noline) and polygons reaching behind the camera always count as far
   let far = noline || behind != 0;
@@ -505,6 +517,10 @@ const drawPoly = (poly, n, noline, size) => {
     }
   }
   let [r, g, b] = hsbToRgb(poly.hsb[0], poly.hsb[1], poly.hsb[2] * light);
+  // the stage select's preview is all in a pale sepia
+  if (medium.trk == 1) {
+    [r, g, b] = hsbToRgb(0.15, 0.3, rgbToHsb(...poly.oc)[2] * light);
+  }
   if (
     medium.lightson &&
     (poly.light != 0 || ((poly.gr == -11 || poly.gr == -12) && size == -1))
@@ -744,6 +760,10 @@ export const drawObject = (
     beforePolygons = null,
   } = {},
 ) => {
+  // the stage select's preview leaves out the decoration
+  if (rad.decor && medium.trk == 1) {
+    return 0;
+  }
   turnWheels(wxz, wzy);
   // a car: its wheels' bottom (grat, the original's units, down) where ours is (ground)
   lift = ground === null ? 0 : rad.grat / 10 - ground;

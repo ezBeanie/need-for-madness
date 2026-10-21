@@ -312,12 +312,16 @@ const drawCarSelect = () => {
 
 // The stage up to its last path piece and its addons, without the walls.
 const drawStageSelect = () => {
-  drawParticle(stageBackdrop);
-  startDepth();
+  // the classic look's stage select has its pictures behind (see classic/stageSelect.js)
+  const classic = look.current == LOOK.classic;
+  if (!classic) {
+    drawParticle(stageBackdrop);
+    startDepth();
+  }
   if (stageSelect.hiddenTicks) {
     return;
   }
-  if (look.current == LOOK.classic) {
+  if (classic) {
     drawClassicStage(track.obi[track.n - 1] + track.addons);
     return;
   }

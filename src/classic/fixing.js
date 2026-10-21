@@ -60,17 +60,23 @@ export const electrify = (state, matrix, hoop) => {
     shape.forEach(([x, y], k) => placeCorner(k, x, y, 0, matrix));
     if (onScreen()) {
       const blue = tinted(255, 2, 500);
+      // (orange in the stage select's sepia preview)
+      const preview = medium.trk == 1;
       fillPolygon(
         SX,
         SY,
         8,
-        Math.trunc(
-          (tinted(160, 0, 500) * 2 + 214 * (arc.age - 1)) / (arc.age + 1),
-        ),
-        Math.trunc(
-          (tinted(238, 1, 500) * 2 + 236 * (arc.age - 1)) / (arc.age + 1),
-        ),
-        blue,
+        preview
+          ? 255
+          : Math.trunc(
+              (tinted(160, 0, 500) * 2 + 214 * (arc.age - 1)) / (arc.age + 1),
+            ),
+        preview
+          ? 128
+          : Math.trunc(
+              (tinted(238, 1, 500) * 2 + 236 * (arc.age - 1)) / (arc.age + 1),
+            ),
+        preview ? 0 : blue,
       );
       if (Z[0] < 4000) {
         drawPolygon(SX, SY, 8, tinted(150, 0, 500), tinted(227, 1, 500), blue);

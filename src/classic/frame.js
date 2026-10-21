@@ -308,10 +308,11 @@ export const drawClassicRace = () => {
   drawInOrder(objects);
 };
 
-// The stage select's turning preview of the stage, every checkpoint flashing.
+// The stage select's turning preview of the stage, every checkpoint flashing, in the
+// original's sepia (trk 1) over its pictures.
 export const drawClassicStage = (count) => {
   startFrame();
-  medium.trk = 2;
+  medium.trk = 1;
   drawInOrder(pieceObjects(count, () => true));
   medium.trk = 0;
 };

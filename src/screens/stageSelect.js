@@ -7,6 +7,11 @@ import {
   pauseMenuMusic,
   playStageMusic,
 } from "../audio/audio.js";
+import {
+  drawClassicLoading,
+  drawClassicLocked,
+  drawClassicStageSelect,
+} from "../classic/stageSelect.js";
 import { cosDeg, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
 import { MODE, PHASE, game } from "../core/state.js";
@@ -28,6 +33,7 @@ import {
   startProjection,
   turnView,
 } from "../render/camera.js";
+import { LOOK, look } from "../render/look.js";
 import { setWorld } from "../render/renderer.js";
 import { colorStageBackdrop, scene, stageBackdrop } from "../render/scene.js";
 import { backdropHue, cssRgb, hslToRgb, rgbToHsl } from "../ui/color.js";
@@ -96,8 +102,14 @@ const colorBackdrop = () => {
 };
 
 export function stageSelectTick() {
-  startProjection();
-  camera.y = height + 100;
+  const classic = look.current == LOOK.classic;
+  if (classic) {
+    classicProjection();
+  } else {
+    startProjection();
+  }
+  // (the original's camera came 75 lower)
+  camera.y = height + (classic ? 25 : 100);
   camera.x = lookAtX - 1700 * sinDeg(camera.yaw);
   camera.z = lookAtZ + 1700 * cosDeg(camera.yaw);
   if (height > FALL_TO) {
@@ -125,6 +137,30 @@ export function stageSelectTick() {
   drawStageSelect();
   menu.redraw = true;
 }
+
+// The classic look's wider view, as the original's (its focus 400), and its slow zoom in
+// and out while the camera follows the path, to a new goal between 0.35 and 1.65 of it
+// whenever it gets there.
+const zoom = { now: 1, goal: 1 };
+
+const classicProjection = () => {
+  if (height > FALL_TO) {
+    zoom.now = 1;
+    zoom.goal = 1;
+  } else if (Math.abs(zoom.now - zoom.goal) > 0.005) {
+    zoom.now += zoom.now < zoom.goal ? 0.005 : -0.005;
+  } else {
+    zoom.goal = 0.35 + random.fx() * 1.3;
+  }
+  camera.matrix = mat4.create();
+  mat4.perspective(
+    camera.matrix,
+    2 * Math.atan(225 / (400 * zoom.now)),
+    view.aspect,
+    0.1,
+    7000,
+  );
+};
 
 const fall = () => {
   if (height == FALL_FROM) {
@@ -183,7 +219,10 @@ export function stageLoadingTick() {
     loadingFade = 0.2;
     stageLoad.progress = STAGE_LOAD.screenShown;
   }
-  if (stageLoad.after == AFTER_LOAD.nextStage) {
+  if (look.current == LOOK.classic) {
+    // the original shows its title only when loading for the stage select
+    drawClassicLoading(stageLoad.after != AFTER_LOAD.race);
+  } else if (stageLoad.after == AFTER_LOAD.nextStage) {
     rd.drawImage(pictureLeft, 0, 0);
   } else {
     drawLoadingScreen();
@@ -240,6 +279,10 @@ const openStageSelect = () => {
 };
 
 function drawStageSelect() {
+  if (look.current == LOOK.classic) {
+    drawClassic();
+    return;
+  }
   rd.clearRect(0, 0, view.width, view.height);
   if (stageSelect.hiddenTicks && !showingTip) {
     drawHiddenStage();
@@ -265,6 +308,81 @@ function drawStageSelect() {
   }
   drawMusicToggle();
 }
+
+// The classic look's stage select: the original's, with this game's own choices as its
+// rounded buttons. A locked stage shows its screen for 100 ticks, or until left.
+const drawClassic = () => {
+  const input = racers[0].u;
+  if (stageSelect.hiddenTicks) {
+    if (stageLoad.progress == STAGE_LOAD.requested) {
+      stageLoad.after = AFTER_LOAD.nextStage;
+      game.phase = PHASE.stageLoading;
+      return;
+    }
+    stageSelect.hiddenTicks++;
+    const over = drawClassicLocked(game.unlocked, stageSelect.hiddenTicks);
+    if (over || input.left || confirm.state == CONFIRM.pressed) {
+      if (confirm.state == CONFIRM.pressed) {
+        confirm.state = CONFIRM.used;
+      }
+      input.left = false;
+      stageSelect.hiddenTicks = 0;
+    }
+    return;
+  }
+  const buttons = [["cars", ` ${game.raceCars} Cars  [C] `, 75, 30]];
+  if (track.tips.length) {
+    buttons.push(["tip", showingTip ? " Okay " : " Tip ", 75, 392]);
+  } else if (track.stage == 1 || track.stage == 2) {
+    buttons.push(["practice", " Practice ", 220, 392]);
+  }
+  if (track.stage != game.unlocked && track.stage >= FIRST_SWITCH_STAGE) {
+    buttons.push(["switch", " Play Switch ", 480, 392]);
+  }
+  const chosen = drawClassicStageSelect({
+    title:
+      track.stage != LAST_STAGE ? `Stage ${track.stage}  >` : "Final Stage  >",
+    name: track.name,
+    first: track.stage == FIRST_STAGE,
+    last: track.stage == LAST_STAGE,
+    buttons,
+    tip: showingTip ? track.tips : null,
+  });
+  if (input.right || chosen == "next") {
+    if (track.stage < LAST_STAGE) {
+      showNextStage();
+    }
+    input.right = false;
+  }
+  if (input.left || chosen == "back") {
+    if (track.stage > FIRST_STAGE) {
+      showStage(track.stage - 1);
+    }
+    input.left = false;
+  }
+  if (chosen == "exit") {
+    backToCarSelect();
+  }
+  if (chosen == "cars") {
+    nextRaceSize();
+  }
+  if (chosen == "tip") {
+    showingTip = !showingTip;
+  }
+  if (chosen == "practice") {
+    practise();
+  }
+  if (chosen == "switch") {
+    playSwitch();
+  }
+  if (chosen == "continue" || confirm.state == CONFIRM.pressed) {
+    confirm.state = CONFIRM.used;
+    play();
+  }
+  if (track.stage == LAST_STAGE) {
+    loadConfetti();
+  }
+};
 
 // "Stage Locked" with a blinking lock for 30 frames, or the next stage's name while it
 // starts loading.
@@ -580,10 +698,14 @@ const drawPracticeButton = (colors) => {
       pulsing: false,
     })
   ) {
-    game.carCount = 1;
-    pauseMenuMusic();
-    flashIntoRace();
+    practise();
   }
+};
+
+const practise = () => {
+  game.carCount = 1;
+  pauseMenuMusic();
+  flashIntoRace();
 };
 
 const drawPlaySwitchButton = (colors) => {
@@ -604,11 +726,15 @@ const drawPlaySwitchButton = (colors) => {
       pulsing: true,
     })
   ) {
-    applyFieldSize();
-    game.mode = MODE.switchCars;
-    pauseMenuMusic();
-    flashIntoRace();
+    playSwitch();
   }
+};
+
+const playSwitch = () => {
+  applyFieldSize();
+  game.mode = MODE.switchCars;
+  pauseMenuMusic();
+  flashIntoRace();
 };
 
 // The hue of the stage's tint itself (not turned around), for the PLAY button's flash.

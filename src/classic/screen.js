@@ -175,6 +175,11 @@ const PROCESS = {
       px[i + 3] = 255;
     }
   },
+  // trackbg's flash: the stage select's picture (loadBimage mode 3), dodged
+  flash: (px) => {
+    PROCESS.tinted(px, 3);
+    PROCESS.bright(px);
+  },
   // loadude: the green screen behind a figure turns into a black shadow
   keyed: (px) => {
     for (let i = 0; i < px.length; i += 4) {

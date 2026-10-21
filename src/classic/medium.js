@@ -36,7 +36,7 @@ export const medium = {
   lightson: false,
   // shown at most this far (the original's detail setting "adv")
   adv: 500,
-  // 0 in races; 2 for the stage select's preview: no fog, nothing too far
+  // 0 in races; 1 for the stage select's preview: sepia, no fog, nothing out of its frame
   trk: 0,
   // the shadows' colour in the menus (the original's car select), null: the ground's
   menuShadow: null,
