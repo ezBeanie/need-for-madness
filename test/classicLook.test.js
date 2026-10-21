@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { glCalls } from "./harness/browserStubs.js";
+import { canvasCalls, glCalls } from "./harness/browserStubs.js";
 import { openCarSelect, openStageSelect, startRace } from "./harness/race.js";
 
 test("L switches a race to the original game's look and back", async () => {
@@ -151,4 +151,32 @@ test("in the classic look a wrecked car burns and a car being fixed shows its bu
   ctx.racers[0].hitmag = 9999;
   // flames from the wreck's sixteenth tick on
   expect(colored(flame, 25)).toBeGreaterThan(0);
+});
+
+test("in the classic look a race shows the original's HUD", async () => {
+  const { ctx, step, key } = await startRace({ stage: 1, car: 5 });
+  for (let i = 0; i < 300 && ctx.raceEvents.countdown > 0; i++) {
+    step();
+  }
+  const texts = () => {
+    const drawn = [];
+    canvasCalls.listener = (name, args, call) => {
+      if (name === "fillText") {
+        drawn.push(args[0]);
+      }
+      return call();
+    };
+    step();
+    canvasCalls.listener = null;
+    return drawn;
+  };
+  // the modern laps read 1/3, the original's 1 / 3
+  const laps = `1 / ${ctx.track.nlaps}`;
+  expect(texts()).toContain(`1/${ctx.track.nlaps}`);
+  key(76, true);
+  key(76, false);
+  const classic = texts();
+  expect(classic).toContain(laps);
+  // its labels are pictures
+  expect(classic).not.toContain("Lap");
 });

@@ -14,6 +14,11 @@ import {
   rotatePoints as rotate,
   sinDeg as msin,
 } from "../core/math.js";
+import {
+  drawClassicCountdown,
+  drawClassicMeters,
+  drawClassicStanding,
+} from "../classic/hud.js";
 import { isPhone } from "../core/platform.js";
 import { random } from "../core/random.js";
 import { MAX_CARS, MODE, PHASE, game } from "../core/state.js";
@@ -33,6 +38,7 @@ import {
 } from "../race/recording.js";
 import { track } from "../race/track.js";
 import { CAMERA, camera, faceCamera } from "../render/camera.js";
+import { LOOK, look } from "../render/look.js";
 import { newParticleModel } from "../render/models.js";
 import { gl } from "../render/renderer.js";
 import { scene, timeTube } from "../render/scene.js";
@@ -882,6 +888,16 @@ const drawTrackWarnings = () => {
 
 // Top left: lap, wasted opponents and the position.
 const drawStanding = () => {
+  if (look.current == LOOK.classic) {
+    drawClassicStanding(
+      racers[game.player].nlaps + 1,
+      track.nlaps,
+      track.wasted,
+      game.carCount - 1,
+      track.pos[game.player] + 1,
+    );
+    return;
+  }
   rd.letterSpacing = "1px";
   rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
   rd.textBaseline = "middle";
@@ -955,6 +971,15 @@ const drawArrowButton = () => {
 // Top right: the damage meter (yellow to red, blinking when nearly wasted) and the power
 // meter (blinking while stunt praise is shown).
 const drawMeters = () => {
+  if (look.current == LOOK.classic) {
+    drawClassicMeters(
+      racers[game.player].hitmag / carStats.maxmag[car[game.player].typ],
+      racers[game.player].power,
+      raceEvents.stuntTicks < 45 && blink.on,
+      once(),
+    );
+    return;
+  }
   const metersX =
     view.width / view.height < 1.3
       ? view.width - 200 * view.scale
@@ -1140,7 +1165,10 @@ const drawCountdown = () => {
     );
     rd.globalAlpha = 1;
   }
-  if (countdownNumberTicks != 0) {
+  if (countdownNumberTicks != 0 && look.current == LOOK.classic) {
+    drawClassicCountdown(countdownNumber);
+    countdownNumberTicks--;
+  } else if (countdownNumberTicks != 0) {
     drawCenteredText(
       100,
       countdownNumber != 0 ? "" + countdownNumber : "Go!",
