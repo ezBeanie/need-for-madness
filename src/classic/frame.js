@@ -12,6 +12,7 @@ import { canvas3D } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 import { PIECE_FILES } from "../loading/assets.js";
 import { flushBatch, startBatch } from "./batch.js";
+import { effectObjects } from "./effects.js";
 import { CAR_FILES } from "./cars.js";
 import { drawObject, setView, tintModel } from "./draw.js";
 import { drawSkyAndGround, medium, setStageLook } from "./medium.js";
@@ -179,13 +180,19 @@ const carObject = (c, instance, type) => {
   );
 };
 
-// The objects, those not seen last frame first, then the farthest first.
+// The objects, those not seen last frame first, then the farthest first; effects know
+// how far they are now and draw themselves.
 const drawInOrder = (objects) => {
-  const unseen = objects.filter((o) => !lastDist.get(o.key));
+  const distOf = (o) => o.dist ?? lastDist.get(o.key);
+  const unseen = objects.filter((o) => !distOf(o));
   const seen = objects
-    .filter((o) => lastDist.get(o.key))
-    .sort((a, b) => lastDist.get(b.key) - lastDist.get(a.key));
+    .filter((o) => distOf(o))
+    .sort((a, b) => distOf(b) - distOf(a));
   for (const object of [...unseen, ...seen]) {
+    if (object.draw) {
+      object.draw();
+      continue;
+    }
     const matrix = object.place();
     lastDist.set(
       object.key,
@@ -203,6 +210,14 @@ const drawInOrder = (objects) => {
     );
   }
   flushBatch(medium.w, medium.h);
+};
+
+// one of car c's colours (of its body, not its wheels), for its chips
+const chipColors = seeded(3);
+const colorOfCar = (c) => {
+  const body = carModels[c]?.rad.polys.filter((p) => !p.master && !p.wz) ?? [];
+  const poly = body[Math.floor(chipColors() * body.length)];
+  return poly?.c ?? [128, 128, 128];
 };
 
 export const drawClassicRace = () => {
@@ -223,6 +238,7 @@ export const drawClassicRace = () => {
       objects.push(object);
     }
   }
+  objects.push(...effectObjects(colorOfCar));
   drawInOrder(objects);
 };
 

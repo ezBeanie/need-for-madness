@@ -61,3 +61,29 @@ test("the car select and the stage select show the original game's models too", 
     expect(vertices).toBeGreaterThan(100);
   }
 });
+
+test("the classic look draws sparks and dust the original's way", async () => {
+  const { ctx, step, key } = await startRace({ stage: 1, car: 5 });
+  key(76, true);
+  key(76, false);
+  for (let i = 0; i < 5; i++) {
+    step();
+  }
+  const vertices = () => {
+    let count = 0;
+    glCalls.listener = (name, args) => {
+      if (name === "drawArrays") {
+        count = Math.max(count, args[2]);
+      }
+    };
+    ctx.render();
+    glCalls.listener = null;
+    return count;
+  };
+  const before = vertices();
+  // a spark and a dust cloud right in front of the camera
+  const car = ctx.car[0];
+  ctx.sprks(car.typ, car.x, car.y, car.z, 30, 0, 30, 0);
+  ctx.dustup(0, 0, 0, car.x, car.y, car.z, 40, 40, 1, 0, false);
+  expect(vertices()).toBeGreaterThan(before);
+});

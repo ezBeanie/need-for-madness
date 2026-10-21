@@ -178,6 +178,8 @@ export function chipaway(c, x, y, z, size) {
   }
   chip.ni = 3;
   chip.nt = 1;
+  // its corners, for the classic look (which draws chips itself)
+  chip.corners = vertices;
   const shade = random.fx();
   if (shade > 0.334) {
     chip.ownshade = true;

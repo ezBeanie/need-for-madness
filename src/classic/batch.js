@@ -20,7 +20,7 @@ const reserve = (vertices) => {
 };
 
 // little-endian RGBA bytes, as the shader reads them
-const pack = (r, g, b) => (255 << 24) | (b << 16) | (g << 8) | r;
+const pack = (r, g, b, a = 255) => (a << 24) | (b << 16) | (g << 8) | r;
 
 const vertex = (x, y, color) => {
   const at = count * WORDS_PER_VERTEX;
@@ -35,8 +35,8 @@ export const startBatch = () => {
 };
 
 // A polygon, as a fan from its first corner (the original's polygons are convex).
-export const fillPolygon = (xs, ys, n, r, g, b) => {
-  const color = pack(r, g, b);
+export const fillPolygon = (xs, ys, n, r, g, b, alpha = 255) => {
+  const color = pack(r, g, b, alpha);
   reserve((n - 2) * 3);
   for (let i = 1; i < n - 1; i++) {
     vertex(xs[0], ys[0], color);
@@ -118,6 +118,11 @@ export const drawPolygon = (xs, ys, n, r, g, b) => {
   }
 };
 
+// A line one pixel wide (the original's drawLine).
+export const drawLine = (x0, y0, x1, y1, r, g, b) => {
+  drawPolygon([x0, x1], [y0, y1], 2, r, g, b);
+};
+
 export const fillRect = (x, y, w, h, r, g, b) => {
   fillPolygon([x, x + w, x + w, x], [y, y, y + h, y + h], 4, r, g, b);
 };
@@ -164,7 +169,9 @@ export const flushBatch = (w, h) => {
   program ??= makeProgram();
   buffer ??= gl.createBuffer();
   gl.disable(gl.DEPTH_TEST);
-  gl.disable(gl.BLEND);
+  // see-through only where the original made it so (dust); everything else is opaque
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
   gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
   gl.bufferData(
     gl.ARRAY_BUFFER,
@@ -178,4 +185,5 @@ export const flushBatch = (w, h) => {
   gl.enableVertexAttribArray(program.color);
   gl.vertexAttribPointer(program.color, 4, gl.UNSIGNED_BYTE, true, 12, 8);
   gl.drawArrays(gl.TRIANGLES, 0, count);
+  gl.disable(gl.BLEND);
 };

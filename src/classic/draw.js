@@ -128,7 +128,7 @@ export const placeOrig = (i, rx, ry, rz) => {
 };
 
 // Corner i at (wx, wy, wz) in our units relative to the camera.
-const placeSeen = (i, wx, wy, wz) => {
+export const placeSeen = (i, wx, wy, wz) => {
   const right =
     (view.right[0] * wx + view.right[1] * wy + view.right[2] * wz) * 10;
   GX[i] = wx * 10;
