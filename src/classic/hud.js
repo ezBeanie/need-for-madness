@@ -24,6 +24,10 @@ const FILES = [
   "1c",
   "2c",
   "3c",
+  "youwon",
+  "youlost",
+  "yourwasted",
+  "youwastedem",
 ];
 
 const originals = new Map();
@@ -178,6 +182,14 @@ export const drawClassicMeters = (damage, power, powerFlash, tick) => {
     color = [128, 244, 244];
   }
   bar(662, 31, power, color);
+};
+
+// The race's end: "You Won!", "You Lost!", "You're Wasted!" or "You Wasted'em!".
+export const drawClassicOutcome = (name) => {
+  const image = picture(name);
+  if (image) {
+    draw(name, view.width / 2 - (image.width * scale()) / 2, 70);
+  }
 };
 
 // 3, 2, 1 and go, in the middle.

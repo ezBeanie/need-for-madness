@@ -16,6 +16,7 @@ import {
 } from "../core/math.js";
 import {
   drawClassicCountdown,
+  drawClassicOutcome,
   drawClassicMeters,
   drawClassicStanding,
 } from "../classic/hud.js";
@@ -659,10 +660,19 @@ const pressTouchControls = () => {
 
 // Is the race over? Says so (all cars wasted, the player's car wasted, someone finished)
 // and stops the race.
+// The race's end in big letters: the original's pictures in the classic look.
+const drawOutcome = (text, picture) => {
+  if (look.current == LOOK.classic) {
+    drawClassicOutcome(picture);
+  } else {
+    drawCenteredText(132, text, 0, 0, 0, TEXT.title);
+  }
+};
+
 const raceOutcome = () => {
   let over = false;
   if (track.wasted == game.carCount - 1 && game.carCount != 1) {
-    drawCenteredText(132, "You Wasted'em!", 0, 0, 0, TEXT.title);
+    drawOutcome("You Wasted'em!", "youwastedem");
     drawBlinking(192, "You Won, all cars have been wasted!", 0, 128, 255);
     if (!track.haltall) {
       playSound(33, 1);
@@ -673,7 +683,7 @@ const raceOutcome = () => {
   }
   if (!over) {
     if (racers[game.player].dest && raceEvents.playerWreckTicks == 16) {
-      drawCenteredText(132, "You're Wasted!", 0, 0, 0, TEXT.title);
+      drawOutcome("You're Wasted!", "yourwasted");
       over = true;
       raceEvents.winner = false;
     }
@@ -691,14 +701,14 @@ const raceOutcome = () => {
     for (let i = 0; i < game.carCount; i++) {
       if (track.clear[i] == track.nlaps * track.nsp && track.pos[i] == 0) {
         if (i == game.player) {
-          drawCenteredText(132, "You Won!", 0, 0, 0, TEXT.title);
+          drawOutcome("You Won!", "youwon");
           drawBlinking(192, "You finished first, nice job!", 0, 128, 255);
           raceEvents.winner = true;
           if (!track.haltall) {
             playSound(32, 1);
           }
         } else {
-          drawCenteredText(132, "You Lost!", 0, 0, 0, TEXT.title);
+          drawOutcome("You Lost!", "youlost");
           drawBlinking(
             192,
             "" +
@@ -1459,7 +1469,7 @@ const announceEvents = () => {
   }
   if (raceEvents.checkpointsAnnounced != player.clear && player.clear != 0) {
     if (!messageImportant) {
-      message = "Check Point";
+      message = look.current == LOOK.classic ? "Checkpoint!" : "Check Point";
       raceEvents.messageTicks = 15;
     }
     raceEvents.checkpointsAnnounced = player.clear;
@@ -1938,6 +1948,10 @@ const turnArrowTowards = (heading) => {
   }
 };
 
+// the outline is one of the original's pixels in the classic look
+const arrowOutline = () =>
+  look.current == LOOK.classic ? view.height / 450 : 2.6 * view.scale;
+
 const projectArrow = (xs, ys, zs) => {
   for (let i = 0; i < 7; i++) {
     xs[i] = projectX(xs[i], zs[i]) * 1.6 * view.scale;
@@ -1987,7 +2001,7 @@ const drawTrackArrow = (xs, ys, missed) => {
     g = 0;
   }
   rd.strokeStyle = "rgb(" + r + "," + g + "," + b + ")";
-  rd.lineWidth = 2.6 * view.scale;
+  rd.lineWidth = arrowOutline();
   strokePolygon(xs, ys, 7);
   rd.globalAlpha = 1;
 };
@@ -1996,7 +2010,7 @@ const drawCarArrow = (xs, ys) => {
   rd.fillStyle = "rgb(" + 159 + "," + 207 + "," + 255 + ")";
   fillPolygon(xs, ys, 7);
   rd.strokeStyle = "rgb(" + 120 + "," + 114 + "," + 255 + ")";
-  rd.lineWidth = 2.6 * view.scale;
+  rd.lineWidth = arrowOutline();
   strokePolygon(xs, ys, 7);
 };
 
