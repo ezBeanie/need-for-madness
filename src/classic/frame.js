@@ -2,7 +2,7 @@
 // (see draw.js) onto a canvas of its own, 450 pixels high, where the modern look's 3D
 // canvas is. The game logic, the camera and the HUD stay the same.
 import { game } from "../core/state.js";
-import { CAR, carStats } from "../data/carStats.js";
+import { carStats } from "../data/carStats.js";
 import { raceEvents } from "../race/events.js";
 import { car } from "../race/racers.js";
 import { pieceModels, pieces, track } from "../race/track.js";
@@ -12,34 +12,12 @@ import { canvas3D } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 import { PIECE_FILES } from "../loading/assets.js";
 import { flushBatch, startBatch } from "./batch.js";
+import { CAR_FILES } from "./cars.js";
 import { drawObject, setView, tintModel } from "./draw.js";
 import { drawSkyAndGround, medium, setStageLook } from "./medium.js";
 import { drawScenery, newScenery } from "./scenery.js";
 import { parseRad } from "./rad.js";
 
-// the original's model of each car type; the three cars the original never had stand in
-// as the closest of its own until they get classic models of their own
-const CAR_FILES = {
-  [CAR.tornadoShark]: "2000tornados",
-  [CAR.formula7]: "formula7",
-  [CAR.wowCaninaro]: "canyenaro",
-  [CAR.laVitaCrab]: "lescrab",
-  [CAR.nimi]: "nimi",
-  [CAR.maxRevenge]: "maxrevenge",
-  [CAR.leadOxide]: "leadoxide",
-  [CAR.tragdor]: "drifter",
-  [CAR.koolKat]: "koolkat",
-  [CAR.iceCream]: "nimi",
-  [CAR.drifterX]: "drifter",
-  [CAR.shadowRider]: "audir8",
-  [CAR.swordOfJustice]: "policecops",
-  [CAR.highRider]: "mustang",
-  [CAR.elKing]: "king",
-  [CAR.mightyEight]: "audir8",
-  [CAR.masheen]: "masheen",
-  [CAR.radicalOne]: "radicalone",
-  [CAR.drMonstaa]: "drmonster",
-};
 // pieces the original has under another name
 const PIECE_STAND_INS = { takeoffb: "takeoff" };
 

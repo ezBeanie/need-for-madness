@@ -62,65 +62,65 @@ export const parseRad = (text) => {
   let gwgr = 0;
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
-    if (rad.polys.length < 210) {
-      if (line.startsWith("<p>")) {
-        inPoly = true;
-        points = [];
-        gr = 0;
-        fs = 0;
-        light = 0;
-        if (!stoneSolo) {
-          solo = false;
-        }
+    // (the original read at most 210 polygons; none of its own models has more, the
+    // ones made for cars it never had do)
+    if (line.startsWith("<p>")) {
+      inPoly = true;
+      points = [];
+      gr = 0;
+      fs = 0;
+      light = 0;
+      if (!stoneSolo) {
+        solo = false;
       }
-      if (inPoly) {
-        if (line.startsWith("gr(")) {
-          gr = valueOf(line, "gr", 0);
-        }
-        if (line.startsWith("fs(")) {
-          fs = valueOf(line, "fs", 0);
-        }
-        if (line.startsWith("c(")) {
-          glass = 0;
-          color = [0, 1, 2].map((n) => valueOf(line, "c", n));
-        }
-        if (line.startsWith("glass")) {
-          glass = 1;
-        }
-        if (line.startsWith("gshadow")) {
-          glass = 2;
-        }
-        if (line.startsWith("light")) {
-          light = 1;
-        }
-        if (line.startsWith("lightB")) {
-          light = 2;
-        }
-        if (line.startsWith("noOutline")) {
-          solo = true;
-        }
-        if (line.startsWith("p(")) {
-          const x = Math.trunc(valueOf(line, "p", 0) * div * iwid * scale[0]);
-          const y = Math.trunc(valueOf(line, "p", 1) * div * scale[1]);
-          const z = Math.trunc(valueOf(line, "p", 2) * div * scale[2]);
-          rad.maxR = Math.max(rad.maxR, Math.trunc(Math.hypot(x, y, z)));
-          points.push([x, y, z]);
-        }
+    }
+    if (inPoly) {
+      if (line.startsWith("gr(")) {
+        gr = valueOf(line, "gr", 0);
       }
-      if (line.startsWith("</p>")) {
-        rad.polys.push(
-          newPoly(points, color, {
-            glass,
-            gr,
-            fs,
-            light,
-            solo,
-            road,
-            disline: rad.disline,
-          }),
-        );
-        inPoly = false;
+      if (line.startsWith("fs(")) {
+        fs = valueOf(line, "fs", 0);
       }
+      if (line.startsWith("c(")) {
+        glass = 0;
+        color = [0, 1, 2].map((n) => valueOf(line, "c", n));
+      }
+      if (line.startsWith("glass")) {
+        glass = 1;
+      }
+      if (line.startsWith("gshadow")) {
+        glass = 2;
+      }
+      if (line.startsWith("light")) {
+        light = 1;
+      }
+      if (line.startsWith("lightB")) {
+        light = 2;
+      }
+      if (line.startsWith("noOutline")) {
+        solo = true;
+      }
+      if (line.startsWith("p(")) {
+        const x = Math.trunc(valueOf(line, "p", 0) * div * iwid * scale[0]);
+        const y = Math.trunc(valueOf(line, "p", 1) * div * scale[1]);
+        const z = Math.trunc(valueOf(line, "p", 2) * div * scale[2]);
+        rad.maxR = Math.max(rad.maxR, Math.trunc(Math.hypot(x, y, z)));
+        points.push([x, y, z]);
+      }
+    }
+    if (line.startsWith("</p>")) {
+      rad.polys.push(
+        newPoly(points, color, {
+          glass,
+          gr,
+          fs,
+          light,
+          solo,
+          road,
+          disline: rad.disline,
+        }),
+      );
+      inPoly = false;
     }
     if (line.startsWith("rims(")) {
       setRims(wheels, ...[0, 1, 2, 3, 4].map((n) => valueOf(line, "rims", n)));
