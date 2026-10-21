@@ -1,6 +1,6 @@
 import { expect, test } from "vitest";
 import { glCalls } from "./harness/browserStubs.js";
-import { startRace } from "./harness/race.js";
+import { openCarSelect, openStageSelect, startRace } from "./harness/race.js";
 
 test("L switches a race to the original game's look and back", async () => {
   const { ctx, step, key } = await startRace({ stage: 1, car: 5 });
@@ -36,4 +36,28 @@ test("L switches a race to the original game's look and back", async () => {
   pressL();
   expect(ctx.look.current).toBe(ctx.LOOK.modern);
   expect(classicVertices()).toBe(0);
+});
+
+test("the car select and the stage select show the original game's models too", async () => {
+  for (const open of [
+    () => openCarSelect(),
+    () => openStageSelect({ stage: 3, car: 5 }),
+  ]) {
+    const { ctx, step, key } = await open();
+    key(76, true);
+    key(76, false);
+    expect(ctx.look.current).toBe(ctx.LOOK.classic);
+    // menus are drawn again only when something moves: the biggest draw over a while
+    let vertices = 0;
+    glCalls.listener = (name, args) => {
+      if (name === "drawArrays") {
+        vertices = Math.max(vertices, args[2]);
+      }
+    };
+    for (let i = 0; i < 40; i++) {
+      step();
+    }
+    glCalls.listener = null;
+    expect(vertices).toBeGreaterThan(100);
+  }
 });

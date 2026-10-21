@@ -36,6 +36,8 @@ export const medium = {
   lightson: false,
   // shown at most this far (the original's detail setting "adv")
   adv: 500,
+  // 0 in races; 2 for the stage select's preview: no fog, nothing too far
+  trk: 0,
 };
 
 const clamp255 = (v) => Math.min(255, Math.max(0, v));

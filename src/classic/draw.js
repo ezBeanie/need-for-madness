@@ -83,6 +83,9 @@ export const setView = (matrix) => {
   };
   view.right = unit(row(0));
   view.up = unit(row(1));
+  // the projection's focal length in pixels, so the classic look frames as the modern
+  // one does (the original's 400 is a field of view a little wider than the race's 55°)
+  medium.focus = (Math.hypot(...row(1)) * medium.h) / 2;
   view.back = row(3).map((x) => -x);
   view.level = unit([-view.back[0], 0, -view.back[2]]);
 };
@@ -90,13 +93,13 @@ export const setView = (matrix) => {
 // The corners of the polygon being drawn, where the original's camera sees them: x1/z1
 // after the camera's heading only, y0 before its pitch, x/y/z after both; gx/gz over the
 // ground (for the light). Filled for one polygon at a time, so a frame allocates nothing.
-const MAX_CORNERS = 32;
+const MAX_CORNERS = 64;
 const X1 = new Float64Array(MAX_CORNERS);
 const Z1 = new Float64Array(MAX_CORNERS);
 const Y0 = new Float64Array(MAX_CORNERS);
-const X = new Float64Array(MAX_CORNERS);
-const Y = new Float64Array(MAX_CORNERS);
-const Z = new Float64Array(MAX_CORNERS);
+export const X = new Float64Array(MAX_CORNERS);
+export const Y = new Float64Array(MAX_CORNERS);
+export const Z = new Float64Array(MAX_CORNERS);
 const GX = new Float64Array(MAX_CORNERS);
 const GZ = new Float64Array(MAX_CORNERS);
 // on screen
@@ -111,10 +114,21 @@ const placeCorner = (i, px, py, pz, matrix, groundY) => {
   const mx = -px / 10;
   const my = -py / 10;
   const mz = pz / 10;
-  const wx = matrix[0] * mx + matrix[4] * my + matrix[8] * mz + matrix[12];
-  const wy =
-    groundY ?? matrix[1] * mx + matrix[5] * my + matrix[9] * mz + matrix[13];
-  const wz = matrix[2] * mx + matrix[6] * my + matrix[10] * mz + matrix[14];
+  placeSeen(
+    i,
+    matrix[0] * mx + matrix[4] * my + matrix[8] * mz + matrix[12],
+    groundY ?? matrix[1] * mx + matrix[5] * my + matrix[9] * mz + matrix[13],
+    matrix[2] * mx + matrix[6] * my + matrix[10] * mz + matrix[14],
+  );
+};
+
+// Corner i at (rx, ry, rz) from the camera in the original's units and axes.
+export const placeOrig = (i, rx, ry, rz) => {
+  placeSeen(i, -rx / 10, -ry / 10, rz / 10);
+};
+
+// Corner i at (wx, wy, wz) in our units relative to the camera.
+const placeSeen = (i, wx, wy, wz) => {
   const right =
     (view.right[0] * wx + view.right[1] * wy + view.right[2] * wz) * 10;
   GX[i] = wx * 10;
@@ -333,7 +347,8 @@ const drawPoly = (poly, n, noline, size) => {
     ),
   );
   poly.av = av;
-  if (av > medium.fade[poly.disline] || av == 0) {
+  const race = medium.trk == 0;
+  if (race && (av > medium.fade[poly.disline] || av == 0)) {
     return;
   }
   if (side == -111 && av > 4500 && !poly.road) {
@@ -351,19 +366,23 @@ const drawPoly = (poly, n, noline, size) => {
   if (poly.master == 2 && av > 1500) {
     return;
   }
+  // (the stage select's preview, trk 2, shows them all)
+  const preview = medium.trk == 2 || medium.trk == 3;
   if (
     (poly.gr == -11 || poly.gr == -14 || poly.gr == -15 || poly.gr == -12) &&
-    av > 11000
+    av > 11000 &&
+    !preview
   ) {
     return;
   }
-  if (poly.glass == 2 && av > 6700) {
+  if (poly.glass == 2 && (!race || av > 6700)) {
     return;
   }
   const facingAway = facesAway(n);
   if (
     (poly.gr == -14 || poly.gr == -15 || poly.gr == -12) &&
-    (facingAway || side == -111)
+    (facingAway || side == -111) &&
+    !preview
   ) {
     return;
   }
@@ -389,7 +408,7 @@ const drawPoly = (poly, n, noline, size) => {
     if (poly.gr == -4) {
       light = 0.74;
     }
-    if (poly.gr != -7 && facingAway) {
+    if (poly.gr != -7 && race && facingAway) {
       light = 0.32;
     }
     if (poly.gr == -8 || poly.gr == -14 || poly.gr == -15) {
@@ -423,10 +442,12 @@ const drawPoly = (poly, n, noline, size) => {
   ) {
     [r, g, b] = poly.oc.map((v) => Math.min(255, Math.max(0, v)));
   }
-  fog(r, g, b, av);
-  [r, g, b] = color;
+  if (race) {
+    fog(r, g, b, av);
+    [r, g, b] = color;
+  }
   fillPolygon(SX, SY, n, r, g, b, poly.master == 1 && n == 20);
-  if (poly.gr == -10) {
+  if (!race && poly.gr == -10) {
     far = false;
   }
   if (!far) {
@@ -445,7 +466,7 @@ const drawPoly = (poly, n, noline, size) => {
         drawPolygon(SX, SY, n, 0, 0, 0);
       }
     }
-  } else if (poly.road && av <= 3000 && medium.fade[0] > 4000) {
+  } else if (poly.road && av <= 3000 && race && medium.fade[0] > 4000) {
     drawPolygon(
       SX,
       SY,
@@ -456,7 +477,7 @@ const drawPoly = (poly, n, noline, size) => {
     );
   }
   // the checkpoints' frames, the next one's flashing brighter
-  if (poly.gr == -10 || poly.gr == -18) {
+  if (race && (poly.gr == -10 || poly.gr == -18)) {
     // (the decompiled source multiplies by (int)1.6, which is 1)
     const bright = poly.gr == -10 && size == -1 && medium.flicker ? 1.6 : 1;
     const c = poly.c.map((v) => Math.min(255, Math.trunc(v * bright)));
@@ -516,8 +537,8 @@ export const drawObject = (
       xs(n + maxR * 2, depth) > 0 &&
       xs(n - maxR * 2, depth) < medium.w &&
       depth > -maxR &&
-      depth < medium.fade[rad.disline] + maxR &&
-      size > rad.disp
+      (depth < medium.fade[rad.disline] + maxR || medium.trk != 0) &&
+      (size > rad.disp || medium.trk != 0)
     )
   ) {
     return 0;

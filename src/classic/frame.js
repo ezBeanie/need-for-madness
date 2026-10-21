@@ -5,7 +5,7 @@ import { game } from "../core/state.js";
 import { CAR } from "../data/carStats.js";
 import { raceEvents } from "../race/events.js";
 import { car } from "../race/racers.js";
-import { pieces } from "../race/track.js";
+import { pieceModels, pieces, track } from "../race/track.js";
 import { drawCamera, drawMatrix, placeModel } from "../render/interpolation.js";
 import { fetchText } from "../render/models.js";
 import { canvas3D } from "../render/renderer.js";
@@ -14,6 +14,7 @@ import { PIECE_FILES } from "../loading/assets.js";
 import { flushBatch, startBatch } from "./batch.js";
 import { drawObject, setView, tintModel } from "./draw.js";
 import { drawSkyAndGround, medium, setStageLook } from "./medium.js";
+import { drawScenery, newScenery } from "./scenery.js";
 import { parseRad } from "./rad.js";
 
 // the original's model of each car type; the three cars the original never had stand in
@@ -72,8 +73,7 @@ const seeded = (seed) => () => {
   return seed / 2147483647;
 };
 
-const tintForStage = () => {
-  const colors = scene.colors;
+const tintForStage = (colors) => {
   setStageLook({
     snap: colors.snap,
     sky: colors.sky,
@@ -87,6 +87,30 @@ const tintForStage = () => {
   for (const rad of models.values()) {
     tintModel(rad, randomness);
   }
+  // the stage's bounds and roads, in the original's units
+  const xBounds = [-10 * track.liml, -10 * track.limr];
+  const zBounds = [10 * track.limb, 10 * track.limt];
+  const roads = [];
+  for (let i = 0; i < pieces.count; i++) {
+    const piece = pieces.list[i];
+    if (pieceModels[piece.typ].skid != -1) {
+      roads.push({
+        x: -10 * piece.x,
+        z: 10 * piece.z,
+        radx: 10 * piece.bx,
+        radz: 10 * piece.bz,
+      });
+    }
+  }
+  newScenery({
+    minX: Math.min(...xBounds),
+    maxX: Math.max(...xBounds),
+    minZ: Math.min(...zBounds),
+    maxZ: Math.max(...zBounds),
+    seed: pieces.count,
+    roads,
+    randomness: seeded(pieces.count * 31 + 7),
+  });
   carModels.length = 0;
   tintedFor = colors;
 };
@@ -109,14 +133,25 @@ const matrixOf = (instance) => {
   return Float32Array.from(drawMatrix);
 };
 
-export const drawClassicRace = () => {
+// before any stage: the original's own colours
+const NO_STAGE = {
+  snap: [0, 0, 0],
+  sky: [170, 220, 255],
+  ground: [205, 200, 200],
+  fog: [255, 220, 220],
+  clouds: [210, 210, 210],
+  distance: 3750,
+};
+
+// Starts a frame: the models (loaded on the first), the stage's colours, the camera.
+const startFrame = () => {
   if (!loading) {
     loadModels();
   }
   fitScreen();
   startBatch();
-  if (tintedFor !== scene.colors) {
-    tintForStage();
+  if (tintedFor !== (scene.colors ?? NO_STAGE)) {
+    tintForStage(scene.colors ?? NO_STAGE);
   }
   setView(drawCamera.projection);
   // the camera, in the original's units: its height decides the ground's bands
@@ -126,9 +161,12 @@ export const drawClassicRace = () => {
     Math.PI;
   medium.flicker = !medium.flicker;
   medium.lastCheck = raceEvents.onlastcheck;
-  drawSkyAndGround();
+};
+
+// The stage's first count pieces; nextCheckpoint picks the checkpoints that flash.
+const pieceObjects = (count, nextCheckpoint) => {
   const objects = [];
-  for (let i = 0; i < pieces.count; i++) {
+  for (let i = 0; i < count; i++) {
     const piece = pieces.list[i];
     const file = PIECE_FILES[piece.typ];
     const rad = models.get(PIECE_STAND_INS[file] ?? file);
@@ -137,25 +175,31 @@ export const drawClassicRace = () => {
         key: piece,
         rad,
         place: () => matrixOf(piece),
-        nextCheckpoint:
-          piece.iscp != 0 && raceEvents.oncheckpoint + 1 == piece.iscp,
+        nextCheckpoint: piece.iscp != 0 && nextCheckpoint(piece),
       });
     }
   }
-  for (let c = 0; c < game.carCount; c++) {
-    const file = CAR_FILES[car[c].typ];
-    if (carModels[c]?.file != file && models.has(file)) {
-      carModels[c] = { file, rad: structuredClone(models.get(file)) };
-    }
-    if (carModels[c]) {
-      objects.push({
-        key: car[c],
-        rad: carModels[c].rad,
-        place: () => matrixOf(car[c]),
-        car: car[c],
-      });
-    }
+  return objects;
+};
+
+// Car c's own copy of its model (the order its polygons are drawn in is its own).
+const carObject = (c, instance, type) => {
+  const file = CAR_FILES[type];
+  if (carModels[c]?.file != file && models.has(file)) {
+    carModels[c] = { file, rad: structuredClone(models.get(file)) };
   }
+  return (
+    carModels[c] && {
+      key: instance,
+      rad: carModels[c].rad,
+      place: () => matrixOf(instance),
+      car: instance,
+    }
+  );
+};
+
+// The objects, those not seen last frame first, then the farthest first.
+const drawInOrder = (objects) => {
   const unseen = objects.filter((o) => !lastDist.get(o.key));
   const seen = objects
     .filter((o) => lastDist.get(o.key))
@@ -173,4 +217,40 @@ export const drawClassicRace = () => {
     );
   }
   flushBatch(medium.w, medium.h);
+};
+
+export const drawClassicRace = () => {
+  startFrame();
+  drawSkyAndGround();
+  drawScenery({
+    x: -10 * drawCamera.x,
+    y: 250 - 10 * drawCamera.y,
+    z: 10 * drawCamera.z,
+  });
+  const objects = pieceObjects(
+    pieces.count,
+    (piece) => raceEvents.oncheckpoint + 1 == piece.iscp,
+  );
+  for (let c = 0; c < game.carCount; c++) {
+    const object = carObject(c, car[c], car[c].typ);
+    if (object) {
+      objects.push(object);
+    }
+  }
+  drawInOrder(objects);
+};
+
+// The stage select's turning preview of the stage, every checkpoint flashing.
+export const drawClassicStage = (count) => {
+  startFrame();
+  medium.trk = 2;
+  drawInOrder(pieceObjects(count, () => true));
+  medium.trk = 0;
+};
+
+// A car shown on its own (the car select, a car unlocked), over the modern backdrop.
+export const drawClassicCar = (instance, type) => {
+  startFrame();
+  const object = carObject(game.carCount, instance, type);
+  drawInOrder(object ? [object] : []);
 };

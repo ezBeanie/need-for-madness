@@ -2,7 +2,11 @@
 // switch screen), the car select, the stage select and the car a stage unlocked. A scene
 // is drawn once a logic tick has moved it (menu.redraw), then every frame of its phase.
 
-import { drawClassicRace } from "../classic/frame.js";
+import {
+  drawClassicCar,
+  drawClassicRace,
+  drawClassicStage,
+} from "../classic/frame.js";
 import { random } from "../core/random.js";
 import { MODE, PHASE, RACE_PHASES, game } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
@@ -161,6 +165,10 @@ const drawWheeledCar = (type, parent, wheels, body, near) => {
 
 const drawShowcaseCar = () => {
   const type = game.carTypes[0];
+  if (look.current == LOOK.classic) {
+    drawClassicCar(carModels[type], type);
+    return;
+  }
   drawWheeledCar(
     type,
     carModels[type],
@@ -284,7 +292,9 @@ const drawCarSelect = () => {
     drawModel(dustSprite);
   });
   startDepth();
-  drawModel(carShadows[game.carTypes[0]]);
+  if (look.current != LOOK.classic) {
+    drawModel(carShadows[game.carTypes[0]]);
+  }
   drawShowcaseCar();
 };
 
@@ -293,6 +303,10 @@ const drawStageSelect = () => {
   drawParticle(stageBackdrop);
   startDepth();
   if (stageSelect.hiddenTicks) {
+    return;
+  }
+  if (look.current == LOOK.classic) {
+    drawClassicStage(track.obi[track.n - 1] + track.addons);
     return;
   }
   for (let i = 0; i < track.obi[track.n - 1] + track.addons; i++) {
