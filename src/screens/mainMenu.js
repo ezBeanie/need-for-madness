@@ -2,12 +2,14 @@
 // buttons wait for PLAY. Also the question whether to reset the game.
 
 import { pauseMenuMusic, playMenuMusic } from "../audio/audio.js";
+import { OPTION, classicMainMenu } from "../classic/mainMenu.js";
 import { PHASE, game } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { lookForGamepads } from "../input/gamepad.js";
 import { racers } from "../race/racers.js";
 import { track } from "../race/track.js";
+import { LOOK, look } from "../render/look.js";
 import { setWorld } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 import { images } from "../ui/images.js";
@@ -62,6 +64,10 @@ let subtitle = -1;
 let subtitleWait = 0;
 
 export function mainMenuTick() {
+  if (look.current == LOOK.classic) {
+    classicTick();
+    return;
+  }
   rd.fillStyle = "#000000";
   rd.fillRect(0, 0, view.width, view.height);
   if (menu.animation == OPENED) {
@@ -195,11 +201,7 @@ const drawButtons = ({ right }) => {
       pulsing: false,
     })
   ) {
-    pauseMenuMusic();
-    instructions.fromMainMenu = true;
-    instructions.page = PAGE.welcome;
-    insano.talkTicks = TALK_TICKS;
-    game.phase = PHASE.instructions;
+    openInstructions();
   }
   if (
     drawButton({
@@ -270,6 +272,36 @@ const animate = () => {
   } else {
     menu.animation++;
   }
+};
+
+// The original's menu waits for a choice, also where this one would go on by itself; back
+// in the modern look its buttons wait too.
+const classicTick = () => {
+  if (menu.animation == OPENED) {
+    playMenuMusic();
+  }
+  menu.animation = WAITING;
+  menu.continuesToCarSelect = false;
+  introFrame = INTRO_FRAMES;
+  const chosen = classicMainMenu(menu.resetOffered);
+  if (chosen == OPTION.play) {
+    openCarSelect();
+  }
+  if (chosen == OPTION.instructions) {
+    openInstructions();
+  }
+  if (chosen == OPTION.reset) {
+    insano.talkTicks = TALK_TICKS;
+    game.phase = PHASE.resetQuestion;
+  }
+};
+
+const openInstructions = () => {
+  pauseMenuMusic();
+  instructions.fromMainMenu = true;
+  instructions.page = PAGE.welcome;
+  insano.talkTicks = TALK_TICKS;
+  game.phase = PHASE.instructions;
 };
 
 const openCarSelect = () => {

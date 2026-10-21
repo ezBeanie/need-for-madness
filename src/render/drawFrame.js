@@ -20,6 +20,7 @@ import { stageSelect } from "../screens/stageSelect.js";
 import { camera } from "./camera.js";
 import { attachTo, interpolation, placeCamera } from "./interpolation.js";
 import { LOOK, look } from "./look.js";
+import { presentScreen } from "../classic/screen.js";
 import { drawModel, drawParticle, gl } from "./renderer.js";
 import {
   carModels,
@@ -80,6 +81,8 @@ export function render() {
   if (game.phase == PHASE.raceEnd && menu.animation == UNLOCKED_CAR_SHOWN) {
     drawWhenDue(drawUnlockedCar);
   }
+  // a classic menu's screen, with the 3D just drawn in its middle
+  presentScreen();
 }
 
 const drawWhenDue = (drawScene) => {
