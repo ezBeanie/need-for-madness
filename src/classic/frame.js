@@ -216,7 +216,7 @@ const drawInOrder = (objects) => {
         nextCheckpoint: object.nextCheckpoint,
         ground: object.ground ?? null,
         // the ground, relative to the camera
-        groundY: -drawCamera.y,
+        groundY: (object.shadowAt ?? 0) - drawCamera.y,
       }),
     );
   }
@@ -256,5 +256,9 @@ export const drawClassicStage = (count) => {
 export const drawClassicCar = (instance, type) => {
   startFrame();
   const object = carObject(game.carCount, instance, type);
+  if (object) {
+    // shown in the air: its shadow right below its wheels
+    object.shadowAt = instance.y - object.ground;
+  }
   drawInOrder(object ? [object] : []);
 };
