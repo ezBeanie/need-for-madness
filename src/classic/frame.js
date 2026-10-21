@@ -160,6 +160,7 @@ const startFrame = () => {
     (Math.asin(Math.max(-1, Math.min(1, -drawCamera.projection[7]))) * 180) /
     Math.PI;
   medium.flicker = !medium.flicker;
+  medium.frame++;
   medium.lastCheck = raceEvents.onlastcheck;
 };
 

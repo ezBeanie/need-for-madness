@@ -34,64 +34,60 @@ export const startBatch = () => {
   count = 0;
 };
 
-const cross = (xs, ys, a, b, c) =>
-  (xs[b] - xs[a]) * (ys[c] - ys[a]) - (ys[b] - ys[a]) * (xs[c] - xs[a]);
-
-const inside = (xs, ys, a, b, c, p, orientation) =>
-  // strictly: the tyre's side runs twice through the corners where it cuts to its hole
-  cross(xs, ys, a, b, p) * orientation > 0 &&
-  cross(xs, ys, b, c, p) * orientation > 0 &&
-  cross(xs, ys, c, a, p) * orientation > 0;
-
-// A polygon, as a fan from its first corner; one with a hole (a tyre's side, cut to the
-// hole for its rim) is cut ear by ear instead.
-export const fillPolygon = (xs, ys, n, r, g, b, holed = false) => {
+// A polygon, as a fan from its first corner (the original's polygons are convex).
+export const fillPolygon = (xs, ys, n, r, g, b) => {
   const color = pack(r, g, b);
-  reserve(n * 3);
-  if (!holed) {
-    for (let i = 1; i < n - 1; i++) {
-      vertex(xs[0], ys[0], color);
-      vertex(xs[i], ys[i], color);
-      vertex(xs[i + 1], ys[i + 1], color);
+  reserve((n - 2) * 3);
+  for (let i = 1; i < n - 1; i++) {
+    vertex(xs[0], ys[0], color);
+    vertex(xs[i], ys[i], color);
+    vertex(xs[i + 1], ys[i + 1], color);
+  }
+};
+
+// A tyre's side: the original's polygon runs round the tyre (corners 0 to 11), cuts in to
+// the rim and round it (12 to 17) and back out, which Java fills as a ring with a hole.
+// Here the ring is stitched from the two circles in the order of their angles.
+export const fillTyre = (xs, ys, r, g, b) => {
+  const color = pack(r, g, b);
+  let cx = 0;
+  let cy = 0;
+  for (let i = 12; i < 18; i++) {
+    cx += xs[i] / 6;
+    cy += ys[i] / 6;
+  }
+  const circle = (from, count) => {
+    const corners = [];
+    for (let i = from; i < from + count; i++) {
+      corners.push({ i, angle: Math.atan2(ys[i] - cy, xs[i] - cx) });
     }
-    return;
-  }
-  let area = 0;
-  for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n;
-    area += xs[i] * ys[j] - xs[j] * ys[i];
-  }
-  const orientation = Math.sign(area) || 1;
-  const left = Array.from({ length: n }, (_, i) => i);
-  let guard = n * n;
-  while (left.length > 3 && guard-- > 0) {
-    for (let k = 0; k < left.length; k++) {
-      const a = left[(k + left.length - 1) % left.length];
-      const c = left[k];
-      const d = left[(k + 1) % left.length];
-      if (cross(xs, ys, a, c, d) * orientation <= 0) {
-        continue;
-      }
-      const ear = left.every(
-        (p) =>
-          p == a ||
-          p == c ||
-          p == d ||
-          !inside(xs, ys, a, c, d, p, orientation),
-      );
-      if (ear) {
-        vertex(xs[a], ys[a], color);
-        vertex(xs[c], ys[c], color);
-        vertex(xs[d], ys[d], color);
-        left.splice(k, 1);
-        break;
-      }
+    return corners.sort((p, q) => p.angle - q.angle);
+  };
+  const outer = circle(0, 12);
+  const inner = circle(12, 6);
+  reserve((outer.length + inner.length) * 3);
+  let o = 0;
+  let k = 0;
+  const angleOf = (ring, n) =>
+    ring[n % ring.length].angle + (n >= ring.length ? 2 * Math.PI : 0);
+  while (o < outer.length || k < inner.length) {
+    const a = outer[o % outer.length].i;
+    const c = inner[k % inner.length].i;
+    // advance the circle whose next corner comes first
+    const advanceOuter =
+      k >= inner.length ||
+      (o < outer.length && angleOf(outer, o + 1) < angleOf(inner, k + 1));
+    const next = advanceOuter
+      ? outer[(o + 1) % outer.length].i
+      : inner[(k + 1) % inner.length].i;
+    vertex(xs[a], ys[a], color);
+    vertex(xs[c], ys[c], color);
+    vertex(xs[next], ys[next], color);
+    if (advanceOuter) {
+      o++;
+    } else {
+      k++;
     }
-  }
-  if (left.length == 3) {
-    vertex(xs[left[0]], ys[left[0]], color);
-    vertex(xs[left[1]], ys[left[1]], color);
-    vertex(xs[left[2]], ys[left[2]], color);
   }
 };
 
