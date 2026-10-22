@@ -263,7 +263,8 @@ export const picture = (file, process = "plain", mode = 0) => {
   const canvas = document.createElement("canvas");
   canvas.width = image.width;
   canvas.height = image.height;
-  const g = canvas.getContext("2d");
+  // (the car select reads its pictures' pixels again for the smoke)
+  const g = canvas.getContext("2d", { willReadFrequently: true });
   g.drawImage(image, 0, 0);
   if (process != "plain") {
     const data = g.getImageData(0, 0, image.width, image.height);
