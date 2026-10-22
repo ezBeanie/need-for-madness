@@ -4,6 +4,7 @@
 import { CLASSIC_FILES, CLASSIC_SOUNDS } from "../classic/sounds.js";
 import { isIos } from "../core/platform.js";
 import { LOOK, look } from "../render/look.js";
+import { fetchText } from "../render/models.js";
 
 export const audio = { muteMusic: false, muteSound: false };
 
@@ -93,7 +94,11 @@ const classicTrack = (file) => {
     },
   };
   if (context) {
-    musicLoops ??= fetch("data/classic/music/loops.json").then((r) => r.json());
+    musicLoops ??= new Promise((resolve) =>
+      fetchText("data/classic/music/loops.json", (text) =>
+        resolve(JSON.parse(text)),
+      ),
+    );
     loadBuffer(
       context,
       `data/classic/music/${file}.mp3`,
