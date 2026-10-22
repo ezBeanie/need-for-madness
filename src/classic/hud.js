@@ -140,10 +140,105 @@ export const drawClassicStanding = (lap, laps, wasted, rivals, place) => {
   if (place <= 8) {
     draw(`${place}`, fromLeft(110), 28);
   } else {
-    // the original's pictures end at 8th: further places in its colours
-    bold(13);
-    rd.fillStyle = snapped([0, 0, 100]);
-    rd.fillText(`${place}th`, fromLeft(112), 42 * scale());
+    drawFurtherPlace(place);
+  }
+};
+
+// The original's places end at 8th (it raced 8 cars). Further ones are put together from
+// its own pictures: their digits (the 9 is its 6 upside down) and the "th" of its 4th, on
+// its grey; the 0 it never had is drawn in their style (b blue, # black).
+const DIGIT_WIDTH = 15;
+const DIGIT_STEP = 12;
+const ZERO = [
+  "        #bbb#",
+  "      #bb##bb",
+  "     bb#  #bb",
+  "    bb#    bb",
+  "    bb    #b#",
+  "   #b#    bb",
+  "   bb     bb",
+  "  #bb    #b#",
+  "  bb     bb",
+  " #bb    #bb",
+  " bb#   #bb",
+  " #bb##bb#",
+  "  #bbb#",
+];
+
+const drawZero = (g) => {
+  ZERO.forEach((row, y) => {
+    [...row].forEach((pixel, x) => {
+      if (pixel != " ") {
+        g.fillStyle = pixel == "b" ? "rgb(0,80,159)" : "rgb(0,0,0)";
+        g.fillRect(x, y + 1, 1, 1);
+      }
+    });
+  });
+};
+
+const composePlace = (place) => {
+  const digits = `${place}`.split("").map(Number);
+  const canvas = document.createElement("canvas");
+  canvas.width = DIGIT_STEP * (digits.length - 1) + DIGIT_WIDTH + 18;
+  canvas.height = 17;
+  const g = canvas.getContext("2d");
+  g.fillStyle = "rgb(192,192,192)";
+  g.fillRect(0, 0, canvas.width, canvas.height);
+  // the pictures' grey keeps what lies under it where they overlap
+  g.globalCompositeOperation = "darken";
+  digits.forEach((digit, i) => {
+    const glyph = document.createElement("canvas");
+    glyph.width = DIGIT_WIDTH;
+    glyph.height = 17;
+    const gg = glyph.getContext("2d");
+    gg.fillStyle = "rgb(192,192,192)";
+    gg.fillRect(0, 0, DIGIT_WIDTH, 17);
+    if (digit == 0) {
+      drawZero(gg);
+    } else {
+      if (digit == 9) {
+        gg.translate(DIGIT_WIDTH, 15);
+        gg.rotate(Math.PI);
+      }
+      const source = originals.get(digit == 9 ? "6" : `${digit}`);
+      gg.drawImage(source, 0, 0, DIGIT_WIDTH, 17, 0, 0, DIGIT_WIDTH, 17);
+      gg.setTransform(1, 0, 0, 1, 0, 0);
+    }
+    g.drawImage(glyph, DIGIT_STEP * i, 0);
+  });
+  g.drawImage(
+    originals.get("4"),
+    15,
+    0,
+    18,
+    17,
+    DIGIT_STEP * (digits.length - 1) + DIGIT_WIDTH,
+    0,
+    18,
+    17,
+  );
+  return canvas;
+};
+
+const drawFurtherPlace = (place) => {
+  const key = `place${place}`;
+  // (loads the pictures and lets go of those tinted for another stage)
+  picture("1");
+  if (
+    !tinted.has(key) &&
+    ["1", "2", "4", "6", "8"].every((n) => originals.has(n))
+  ) {
+    tinted.set(key, tint(composePlace(place)));
+  }
+  const image = tinted.get(key);
+  if (image) {
+    rd.drawImage(
+      image,
+      fromLeft(110),
+      28 * scale(),
+      image.width * scale(),
+      image.height * scale(),
+    );
   }
 };
 
