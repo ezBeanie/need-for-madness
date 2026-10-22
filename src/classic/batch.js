@@ -30,6 +30,13 @@ const vertex = (x, y, color) => {
   count++;
 };
 
+// how wide a pixel of the original is on the canvas (1 at its 450 rows)
+let pixel = 1;
+
+export const setPixelSize = (size) => {
+  pixel = size;
+};
+
 export const startBatch = () => {
   count = 0;
 };
@@ -91,7 +98,7 @@ export const fillTyre = (xs, ys, r, g, b) => {
   }
 };
 
-// A polygon's outline, each edge a strip one pixel wide.
+// A polygon's outline, each edge a strip one of the original's pixels wide.
 export const drawPolygon = (xs, ys, n, r, g, b) => {
   const color = pack(r, g, b);
   reserve(n * 6);
@@ -101,10 +108,11 @@ export const drawPolygon = (xs, ys, n, r, g, b) => {
     const dy = ys[j] - ys[i];
     const length = Math.hypot(dx, dy) || 1;
     // half a pixel to each side, and half a pixel past each end
-    const nx = (-dy / length) * 0.5;
-    const ny = (dx / length) * 0.5;
-    const ex = (dx / length) * 0.5;
-    const ey = (dy / length) * 0.5;
+    const half = pixel / 2;
+    const nx = (-dy / length) * half;
+    const ny = (dx / length) * half;
+    const ex = (dx / length) * half;
+    const ey = (dy / length) * half;
     const ax = xs[i] - ex;
     const ay = ys[i] - ey;
     const bx = xs[j] + ex;

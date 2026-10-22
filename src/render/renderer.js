@@ -13,7 +13,8 @@ const CLASSIC_HEIGHT = 450;
 
 // Sizes the 3D canvas's pixels for the look; on screen it always fills the window.
 export const fitCanvas3D = () => {
-  const classic = look.current == LOOK.classic;
+  // the classic look in the original's few pixels, unless sharp
+  const classic = look.current == LOOK.classic && !look.sharp;
   const height = classic ? CLASSIC_HEIGHT : view.height;
   const width = classic ? Math.round(CLASSIC_HEIGHT * view.aspect) : view.width;
   if (canvas3D.width == width && canvas3D.height == height) {

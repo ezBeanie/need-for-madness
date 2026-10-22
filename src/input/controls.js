@@ -12,7 +12,7 @@ import { nextRaceSize } from "../race/field.js";
 import { racers } from "../race/racers.js";
 import { startTimeRewind } from "../race/recording.js";
 import { CAMERA, camera } from "../render/camera.js";
-import { toggleLook } from "../render/look.js";
+import { toggleLook, toggleSharp } from "../render/look.js";
 import { fitCanvas3D } from "../render/renderer.js";
 import { buttons } from "../ui/widgets.js";
 import { pressConfirm } from "./confirm.js";
@@ -99,5 +99,9 @@ export function onKey(action, pressed) {
     toggleLook();
     fitCanvas3D();
     switchMusicLook();
+  }
+  if (!pressed && action == "toggleSharp") {
+    toggleSharp();
+    fitCanvas3D();
   }
 }

@@ -885,7 +885,9 @@ p(35,3,-109)
 
 //rims([color],size,depth)
 
-rims(211,222,254,19,-20)
+// (the original's rims are 211,222,254: light dishes over the whole wheel near by, which
+// it draws dark from afar; this game keeps them dark, as the wheels are mostly seen)
+rims(70,74,88,19,-20)
 
 // wheeels:
 //w(cx,cy,cz,rotates,w,h)

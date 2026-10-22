@@ -5,14 +5,21 @@ import { loadSetting, saveSetting } from "../core/storage.js";
 
 export const LOOK = { modern: 0, classic: 1 };
 
-export const look = { current: LOOK.modern };
+// sharp: the classic look in the window's pixels instead of the original's 450 rows
+export const look = { current: LOOK.modern, sharp: false };
 
 export const loadLook = () => {
   look.current =
     loadSetting("look") == LOOK.classic ? LOOK.classic : LOOK.modern;
+  look.sharp = loadSetting("classicSharp") == 1;
 };
 
 export const toggleLook = () => {
   look.current = look.current == LOOK.classic ? LOOK.modern : LOOK.classic;
   saveSetting("look", look.current);
+};
+
+export const toggleSharp = () => {
+  look.sharp = !look.sharp;
+  saveSetting("classicSharp", look.sharp ? 1 : 0);
 };

@@ -17,7 +17,7 @@ import { canvas3D } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 import { PIECE_FILES } from "../loading/assets.js";
 import { bodyDamage } from "../race/physics.js";
-import { flushBatch, startBatch } from "./batch.js";
+import { flushBatch, setPixelSize, startBatch } from "./batch.js";
 import { dentClassic, hitOn } from "./damage.js";
 import { electrify, fixBubble, fixStep, startFixing } from "./fixing.js";
 import { effectObjects } from "./effects.js";
@@ -108,6 +108,7 @@ const fitScreen = () => {
   medium.h = canvas3D.height;
   medium.cx = medium.w / 2;
   medium.cy = medium.h / 2;
+  setPixelSize(medium.h / 450);
 };
 
 // how far each object was last frame: the original draws the farthest first by that

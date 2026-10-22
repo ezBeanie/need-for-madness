@@ -4,6 +4,7 @@
 // layers of their own; the classic 3D canvas goes between them once it is drawn.
 import { pointer } from "../input/pointer.js";
 import { interpolation } from "../render/interpolation.js";
+import { look } from "../render/look.js";
 import { canvas3D } from "../render/renderer.js";
 import { canvas2D, rd, view } from "../ui/view.js";
 import { hsbToRgb, rgbToHsb } from "./color.js";
@@ -66,13 +67,17 @@ export const presentScreen = () => {
     rd.beginPath();
     rd.rect(x + 65 * scale, y + 25 * scale, 670 * scale, 400 * scale);
     rd.clip();
+    // (450 of the screen's rows high, however many pixels it has)
+    const width = (canvas3D.width * HEIGHT) / canvas3D.height;
+    rd.imageSmoothingEnabled = look.sharp;
     rd.drawImage(
       canvas3D,
-      x + (WIDTH / 2 - canvas3D.width / 2) * scale,
+      x + (WIDTH / 2 - width / 2) * scale,
       y,
-      canvas3D.width * scale,
-      canvas3D.height * scale,
+      width * scale,
+      HEIGHT * scale,
     );
+    rd.imageSmoothingEnabled = false;
     rd.restore();
     rd.drawImage(over.canvas, x, y, WIDTH * scale, HEIGHT * scale);
   }
@@ -105,7 +110,8 @@ export const frozenWanted = () => frozen.wanted;
 export const captureFrozen = () => {
   frozen.g.fillStyle = "#000000";
   frozen.g.fillRect(0, 0, WIDTH, HEIGHT);
-  frozen.g.drawImage(canvas3D, WIDTH / 2 - canvas3D.width / 2, 0);
+  const width = (canvas3D.width * HEIGHT) / canvas3D.height;
+  frozen.g.drawImage(canvas3D, WIDTH / 2 - width / 2, 0, width, HEIGHT);
   frozen.g.drawImage(frozen.hud.canvas, 0, 0);
   frozen.pixels = frozen.g.getImageData(0, 0, WIDTH, HEIGHT);
   frozen.wanted = false;

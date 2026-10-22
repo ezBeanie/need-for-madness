@@ -392,14 +392,15 @@ const drawPoly = (poly, n, noline, size) => {
     return;
   }
   // the stage select's preview (trk 1) leaves out what reaches out of its frame, the
-  // original's 670 x 400 in the middle
+  // original's 670 x 400 in the middle (of its 450 rows)
+  const pixel = medium.h / 450;
   if (
     medium.trk == 1 &&
     (behind ||
-      minX < medium.w / 2 - 335 ||
-      maxX > medium.w / 2 + 335 ||
-      minY < 25 ||
-      maxY > 425)
+      minX < medium.w / 2 - 335 * pixel ||
+      maxX > medium.w / 2 + 335 * pixel ||
+      minY < 25 * pixel ||
+      maxY > 425 * pixel)
   ) {
     return;
   }
