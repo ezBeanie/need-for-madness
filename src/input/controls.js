@@ -1,6 +1,11 @@
 // What the keys do (which key is which action: see keyboard.js).
 
-import { audio, stopEngine, stopStageMusic } from "../audio/audio.js";
+import {
+  audio,
+  stopEngine,
+  stopStageMusic,
+  switchMusicLook,
+} from "../audio/audio.js";
 import { PHASE, game } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
 import { nextRaceSize } from "../race/field.js";
@@ -93,5 +98,6 @@ export function onKey(action, pressed) {
   if (!pressed && action == "toggleLook") {
     toggleLook();
     fitCanvas3D();
+    switchMusicLook();
   }
 }

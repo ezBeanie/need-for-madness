@@ -2,12 +2,20 @@
 // the revs flutter while the wheels slip, and in the air the engine revs up and down by
 // itself.
 
+import { classicEngineTick, resetClassicEngine } from "../classic/sounds.js";
 import { random } from "../core/random.js";
 import { game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { raceEvents } from "../race/events.js";
 import { SKID, racers } from "../race/racers.js";
-import { engine, startEngine } from "./audio.js";
+import { LOOK, look } from "../render/look.js";
+import {
+  engine,
+  loopClassicSound,
+  startEngine,
+  stopClassicLoops,
+  stopEngine,
+} from "./audio.js";
 import { coolDownCarSounds } from "./carSounds.js";
 
 // where the volume and pitch head; 1 is the engine sample as it is
@@ -38,9 +46,29 @@ let limiterTicks = 10;
 export const resetEngineSound = () => {
   revs = REV.start;
   targetPitch = 1;
+  resetClassicEngine();
+};
+
+// The classic look's engine is the original's (see classic/sounds.js).
+const updateClassicEngine = () => {
+  if (engine.started) {
+    stopEngine();
+  }
+  if (raceEvents.raceOverTicks) {
+    stopClassicLoops();
+  } else {
+    const type = game.carTypes[game.player];
+    classicEngineTick(racers[game.player], type, loopClassicSound);
+  }
+  coolDownCarSounds();
 };
 
 export function updateEngineSound() {
+  if (look.current == LOOK.classic) {
+    updateClassicEngine();
+    return;
+  }
+  stopClassicLoops();
   if (!engine.started) {
     if (!raceEvents.raceOverTicks) {
       startEngine(game.carTypes[game.player], true);
