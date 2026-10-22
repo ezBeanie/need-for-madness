@@ -53,8 +53,6 @@ const TOP = 261;
 const ROW = 30;
 
 const state = {
-  // the pattern's two copies, one above the other
-  patternY: [0, -400],
   // Insano's fade (0 to 399) and shake
   fade: 0,
   shake: 0,
@@ -67,16 +65,42 @@ const state = {
   shaded: false,
 };
 
-// mainbg(1): the pattern (its holes letting the orange through) scrolls down 8 pixels a
-// frame.
-export const drawMenuBackground = () => {
-  fill(65, 25, 670, 400, [255, 176, 67]);
+// mainbg: a pattern (its holes letting the colour under it through) scrolling down over
+// a colour, 8 pixels a frame over orange in the menus (mode 1), 2 over khaki in the
+// instructions (mode 2), where it gives way to a light blue on their last page.
+const BACKGROUNDS = {
+  1: { color: [255, 176, 67], speed: 8 },
+  2: { color: [188, 170, 122], speed: 2 },
+};
+const background = { mode: 0, y: [0, -400], blue: 0.2 };
+
+export const drawMenuBackground = (mode = 1, turnsBlue = false) => {
+  if (mode != background.mode) {
+    background.mode = mode;
+    background.y = [0, -400];
+    background.blue = 0.2;
+  }
+  let color = BACKGROUNDS[mode].color;
+  if (turnsBlue) {
+    const f = background.blue;
+    color = [
+      Math.trunc(176 * f + 191 * (1 - f)),
+      Math.trunc(202 * f + 184 * (1 - f)),
+      Math.trunc(255 * f + 124 * (1 - f)),
+    ];
+    background.blue = Math.min(0.85, background.blue + 0.025);
+  } else {
+    background.blue = 0.2;
+  }
+  fill(65, 25, 670, 400, color);
   const pattern = picture("bgmain.jpg", "tinted", 2);
   for (let k = 0; k < 2; k++) {
-    draw(pattern, 65, 25 + state.patternY[k]);
-    state.patternY[k] += 8;
-    if (state.patternY[k] >= 400) {
-      state.patternY[k] = -400;
+    if (!turnsBlue) {
+      draw(pattern, 65, 25 + background.y[k]);
+    }
+    background.y[k] += BACKGROUNDS[mode].speed;
+    if (background.y[k] >= 400) {
+      background.y[k] = -400;
     }
   }
   drawFrame();

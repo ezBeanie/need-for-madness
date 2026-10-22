@@ -2,6 +2,7 @@
 // buttons wait for PLAY. Also the question whether to reset the game.
 
 import { pauseMenuMusic, playMenuMusic } from "../audio/audio.js";
+import { drawClassicResetQuestion } from "../classic/instructions.js";
 import { OPTION, classicMainMenu } from "../classic/mainMenu.js";
 import { PHASE, game } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
@@ -9,6 +10,7 @@ import { CONFIRM, confirm } from "../input/confirm.js";
 import { lookForGamepads } from "../input/gamepad.js";
 import { racers } from "../race/racers.js";
 import { track } from "../race/track.js";
+import { interpolation } from "../render/interpolation.js";
 import { LOOK, look } from "../render/look.js";
 import { setWorld } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
@@ -321,7 +323,23 @@ const openCarSelect = () => {
   game.phase = PHASE.carSelect;
 };
 
+// the tick the classic reset question was last shown
+let classicQuestionTick = -2;
+
 export function resetQuestionTick() {
+  if (look.current == LOOK.classic) {
+    const answer = drawClassicResetQuestion(
+      classicQuestionTick != interpolation.tick - 1,
+    );
+    classicQuestionTick = interpolation.tick;
+    if (answer == "reset") {
+      resetGame();
+    }
+    if (answer == "cancel") {
+      game.phase = PHASE.mainMenu;
+    }
+    return;
+  }
   rd.fillStyle = "#000000";
   rd.fillRect(0, 0, view.width, view.height);
   drawMenuBackground();
@@ -348,13 +366,7 @@ export function resetQuestionTick() {
       pulsing: false,
     })
   ) {
-    game.unlocked = 1;
-    track.stage = game.unlocked;
-    saveSetting("unlocked", game.unlocked);
-    game.carTypes[0] = 5;
-    saveSetting("carsel", game.carTypes[0]);
-    menu.resetOffered = false;
-    game.phase = PHASE.mainMenu;
+    resetGame();
   }
   if (
     drawBlueButton({
@@ -372,3 +384,13 @@ export function resetQuestionTick() {
     game.phase = PHASE.mainMenu;
   }
 }
+
+const resetGame = () => {
+  game.unlocked = 1;
+  track.stage = game.unlocked;
+  saveSetting("unlocked", game.unlocked);
+  game.carTypes[0] = 5;
+  saveSetting("carsel", game.carTypes[0]);
+  menu.resetOffered = false;
+  game.phase = PHASE.mainMenu;
+};

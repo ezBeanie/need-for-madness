@@ -2,10 +2,16 @@
 // main menu or from the pause menu.
 
 import { playMenuMusic } from "../audio/audio.js";
+import {
+  drawClassicInstructions,
+  startClassicInstructions,
+} from "../classic/instructions.js";
 import { isPhone } from "../core/platform.js";
 import { PHASE, game } from "../core/state.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { pointer } from "../input/pointer.js";
+import { interpolation } from "../render/interpolation.js";
+import { LOOK, look } from "../render/look.js";
 import { backdropHue, cssRgb, hslToRgb } from "../ui/color.js";
 import { images } from "../ui/images.js";
 import {
@@ -46,7 +52,20 @@ export const PAGE = {
 // how long Insano talks after the page changes
 export const TALK_TICKS = 250;
 
+// the tick the classic instructions were last shown: they open on their first page
+let classicTick = -2;
+
 export function instructionsTick() {
+  if (look.current == LOOK.classic) {
+    if (classicTick != interpolation.tick - 1) {
+      startClassicInstructions();
+    }
+    classicTick = interpolation.tick;
+    if (drawClassicInstructions(MUSIC_CREDITS)) {
+      close();
+    }
+    return;
+  }
   rd.fillStyle = "#000000";
   rd.fillRect(0, 0, view.width, view.height);
   if (instructions.fromMainMenu) {
@@ -287,20 +306,40 @@ const drawKeyboard = (scale, top) => {
   }
 };
 
+// the music's credits, on two pages (a title and its lines each)
+const MUSIC_CREDITS = [
+  [
+    "Music Credits",
+    "Interface and Game Menus: Neon Nox - Shift",
+    "Stage 1: Alpharisc - Video Disco",
+    "Stage 2: Sferro & Tommy '86 - We Been 'Round",
+    "Stage 3: Jeremiah Kane - All or Nothing",
+    "Stage 4: Wolf and Raven - Cyber Samurai",
+    "Stage 5: Bestrack - Burn the Night",
+    "Stage 6: Midnight Fury - Arcade Hero",
+    "Stage 7: DEADLIFE - Punished Survivor",
+    "Stage 8: Jeremiah Kane - Street Warriors (feat. FAVORIT89)",
+  ],
+  [
+    "Music Credits",
+    "Stage 9: DEADLIFE - We Are One & The Same",
+    "Stage 10: Wice - Star Fighter",
+    "Stage 11: Neon Nox - The Stash",
+    "Stage 12: Neon Nox vs Powernerd - Dopamine",
+    "Stage 13: Dreamhour - Small Town Vengeance",
+    "Stage 14: LazerHawk - King of The Streets",
+    "Stage 15: Jeremiah Kane - Vampirevania",
+    "Stage 16: Jeremiah Kane - SPECTER",
+    "Stage 17: Midnight Danger - Radio Hell",
+  ],
+];
+
+// a page's lines in the speech bubble, 40 apart from its top
+const creditLines = (page) => page.map((line, i) => [36 + 40 * i, line]);
+
 const drawCredits = (scale, top) => {
   startBubbleText(scale);
-  writeBubbleLines(scale, top, [
-    [36, "Music Credits"],
-    [76, "Interface and Game Menus: Neon Nox - Shift"],
-    [116, "Stage 1: Alpharisc - Video Disco"],
-    [156, "Stage 2: Sferro & Tommy '86 - We Been 'Round"],
-    [196, "Stage 3: Jeremiah Kane - All or Nothing"],
-    [236, "Stage 4: Wolf and Raven - Cyber Samurai"],
-    [276, "Stage 5: Bestrack - Burn the Night"],
-    [316, "Stage 6: Midnight Fury - Arcade Hero"],
-    [356, "Stage 7: DEADLIFE - Punished Survivor"],
-    [396, "Stage 8: Jeremiah Kane - Street Warriors (feat. FAVORIT89)"],
-  ]);
+  writeBubbleLines(scale, top, creditLines(MUSIC_CREDITS[0]));
   if (
     drawBlueButton({
       id: 1,
@@ -325,18 +364,7 @@ const drawCredits = (scale, top) => {
 
 const drawMoreCredits = (scale, top) => {
   startBubbleText(scale);
-  writeBubbleLines(scale, top, [
-    [36, "Music Credits"],
-    [76, "Stage 9: DEADLIFE - We Are One & The Same"],
-    [116, "Stage 10: Wice - Star Fighter"],
-    [156, "Stage 11: Neon Nox - The Stash"],
-    [196, "Stage 12: Neon Nox vs Powernerd - Dopamine"],
-    [236, "Stage 13: Dreamhour - Small Town Vengeance"],
-    [276, "Stage 14: LazerHawk - King of The Streets"],
-    [316, "Stage 15: Jeremiah Kane - Vampirevania"],
-    [356, "Stage 16: Jeremiah Kane - SPECTER"],
-    [396, "Stage 17: Midnight Danger - Radio Hell"],
-  ]);
+  writeBubbleLines(scale, top, creditLines(MUSIC_CREDITS[1]));
   if (confirmed()) {
     instructions.page = PAGE.coach;
     talk();
