@@ -59,64 +59,86 @@ const isConvex = (xs, ys, n) => {
   return true;
 };
 
-const inside = (xs, ys, a, b, c, p) => {
-  const ab = turn(xs, ys, a, b, p);
-  const bc = turn(xs, ys, b, c, p);
-  const ca = turn(xs, ys, c, a, p);
-  return (ab >= 0 && bc >= 0 && ca >= 0) || (ab <= 0 && bc <= 0 && ca <= 0);
-};
+// Where the edge from corner i to corner j is at height y.
+const xAt = (xs, ys, i, j, y) =>
+  xs[i] + ((xs[j] - xs[i]) * (y - ys[i])) / (ys[j] - ys[i]);
 
-// The corners of a polygon cut into triangles, ear by ear (a corner that turns the
-// polygon's way, with no other corner in its triangle); null if it cannot be (it crosses
-// itself).
-const ears = (xs, ys, n) => {
-  let area = 0;
+// A polygon filled as Java fills it, by the even-odd rule (a hole where it runs round
+// twice, a slit into it covering nothing): in bands between the heights of its corners
+// and crossings, each band's pieces between its edges in pairs.
+const fillEvenOdd = (xs, ys, n, color) => {
+  const levels = [];
   for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n;
-    area += xs[i] * ys[j] - xs[j] * ys[i];
+    levels.push(ys[i]);
   }
-  const way = Math.sign(area);
-  const left = Array.from({ length: n }, (_, i) => i);
-  const triangles = [];
-  while (left.length > 3) {
-    let cut = false;
-    for (let k = 0; k < left.length && !cut; k++) {
-      const a = left[(k + left.length - 1) % left.length];
-      const b = left[k];
-      const c = left[(k + 1) % left.length];
-      if (Math.sign(turn(xs, ys, a, b, c)) != way) {
+  // where edges cross each other
+  for (let i = 0; i < n; i++) {
+    const i2 = (i + 1) % n;
+    for (let j = i + 2; j < n; j++) {
+      const j2 = (j + 1) % n;
+      if (j2 == i) {
         continue;
       }
+      const dx1 = xs[i2] - xs[i];
+      const dy1 = ys[i2] - ys[i];
+      const dx2 = xs[j2] - xs[j];
+      const dy2 = ys[j2] - ys[j];
+      const d = dx1 * dy2 - dy1 * dx2;
+      if (d == 0) {
+        continue;
+      }
+      const t = ((xs[j] - xs[i]) * dy2 - (ys[j] - ys[i]) * dx2) / d;
+      const u = ((xs[j] - xs[i]) * dy1 - (ys[j] - ys[i]) * dx1) / d;
+      if (t > 0 && t < 1 && u > 0 && u < 1) {
+        levels.push(ys[i] + t * dy1);
+      }
+    }
+  }
+  levels.sort((p, q) => p - q);
+  const crossing = [];
+  for (let k = 0; k < levels.length - 1; k++) {
+    const top = levels[k];
+    const bottom = levels[k + 1];
+    if (bottom - top < 1e-6) {
+      continue;
+    }
+    const middle = (top + bottom) / 2;
+    crossing.length = 0;
+    for (let i = 0; i < n; i++) {
+      const j = (i + 1) % n;
       if (
-        left.some(
-          (p) => p != a && p != b && p != c && inside(xs, ys, a, b, c, p),
-        )
+        (ys[i] <= top && ys[j] >= bottom) ||
+        (ys[j] <= top && ys[i] >= bottom)
       ) {
-        continue;
+        crossing.push({
+          top: xAt(xs, ys, i, j, top),
+          bottom: xAt(xs, ys, i, j, bottom),
+          middle: xAt(xs, ys, i, j, middle),
+        });
       }
-      triangles.push(a, b, c);
-      left.splice(k, 1);
-      cut = true;
     }
-    if (!cut) {
-      return null;
+    crossing.sort((p, q) => p.middle - q.middle);
+    reserve(crossing.length * 3);
+    for (let e = 0; e + 1 < crossing.length; e += 2) {
+      const l = crossing[e];
+      const r = crossing[e + 1];
+      vertex(l.top, top, color);
+      vertex(r.top, top, color);
+      vertex(r.bottom, bottom, color);
+      vertex(l.top, top, color);
+      vertex(r.bottom, bottom, color);
+      vertex(l.bottom, bottom, color);
     }
   }
-  triangles.push(...left);
-  return triangles;
 };
 
 // A polygon: a fan from its first corner when it is convex (nearly all the original's
-// polygons are); else cut into triangles, filling only its shape as Java did (a wheel
-// arch, a zigzag).
+// polygons are), else filled by the even-odd rule as Java did (a wheel arch, a zigzag, a
+// tyre round its rim).
 export const fillPolygon = (xs, ys, n, r, g, b, alpha = 255) => {
   const color = pack(r, g, b, alpha);
-  const triangles = n > 3 && !isConvex(xs, ys, n) ? ears(xs, ys, n) : null;
-  if (triangles) {
-    reserve(triangles.length);
-    for (const i of triangles) {
-      vertex(xs[i], ys[i], color);
-    }
+  if (n > 3 && !isConvex(xs, ys, n)) {
+    fillEvenOdd(xs, ys, n, color);
     return;
   }
   reserve((n - 2) * 3);
@@ -124,52 +146,6 @@ export const fillPolygon = (xs, ys, n, r, g, b, alpha = 255) => {
     vertex(xs[0], ys[0], color);
     vertex(xs[i], ys[i], color);
     vertex(xs[i + 1], ys[i + 1], color);
-  }
-};
-
-// A tyre's side: the original's polygon runs round the tyre (corners 0 to 11), cuts in to
-// the rim and round it (12 to 17) and back out, which Java fills as a ring with a hole.
-// Here the ring is stitched from the two circles in the order of their angles.
-export const fillTyre = (xs, ys, r, g, b) => {
-  const color = pack(r, g, b);
-  let cx = 0;
-  let cy = 0;
-  for (let i = 12; i < 18; i++) {
-    cx += xs[i] / 6;
-    cy += ys[i] / 6;
-  }
-  const circle = (from, count) => {
-    const corners = [];
-    for (let i = from; i < from + count; i++) {
-      corners.push({ i, angle: Math.atan2(ys[i] - cy, xs[i] - cx) });
-    }
-    return corners.sort((p, q) => p.angle - q.angle);
-  };
-  const outer = circle(0, 12);
-  const inner = circle(12, 6);
-  reserve((outer.length + inner.length) * 3);
-  let o = 0;
-  let k = 0;
-  const angleOf = (ring, n) =>
-    ring[n % ring.length].angle + (n >= ring.length ? 2 * Math.PI : 0);
-  while (o < outer.length || k < inner.length) {
-    const a = outer[o % outer.length].i;
-    const c = inner[k % inner.length].i;
-    // advance the circle whose next corner comes first
-    const advanceOuter =
-      k >= inner.length ||
-      (o < outer.length && angleOf(outer, o + 1) < angleOf(inner, k + 1));
-    const next = advanceOuter
-      ? outer[(o + 1) % outer.length].i
-      : inner[(k + 1) % inner.length].i;
-    vertex(xs[a], ys[a], color);
-    vertex(xs[c], ys[c], color);
-    vertex(xs[next], ys[next], color);
-    if (advanceOuter) {
-      o++;
-    } else {
-      k++;
-    }
   }
 };
 

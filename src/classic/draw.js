@@ -1,7 +1,7 @@
 // Draws models the way the original Java game did (its ContO.d and Plane.d): no depth
 // buffer, the farthest object first and each object's farthest polygon first, every
 // polygon in one colour lit from above, fogged in bands, and outlined when near.
-import { drawPolygon, fillPolygon, fillTyre } from "./batch.js";
+import { drawPolygon, fillPolygon } from "./batch.js";
 import { hsbToRgb, rgbToHsb } from "./color.js";
 import { cosDeg, medium, sinDeg, xs, ys } from "./medium.js";
 
@@ -532,11 +532,7 @@ const drawPoly = (poly, n, noline, size) => {
     fog(r, g, b, av);
     [r, g, b] = color;
   }
-  if (poly.master == 1 && n == 20) {
-    fillTyre(SX, SY, r, g, b);
-  } else {
-    fillPolygon(SX, SY, n, r, g, b);
-  }
+  fillPolygon(SX, SY, n, r, g, b);
   if (!race && poly.gr == -10) {
     far = false;
   }
