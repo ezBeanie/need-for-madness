@@ -1,7 +1,8 @@
 // Translates a car the original Java game never had into its model format (.rad), for the
-// classic look: our model's triangles, each in the average colour of its texture, merged
-// where they lie in one plane in about one colour, and the original's wheels where ours
-// are. Runs in Chromium (it decodes the PNG textures) against the dev server.
+// classic look: our model's triangles, each in the average colour of its texture brought
+// down to a palette of ten, merged where they lie in about one plane in one colour, and
+// the original's wheels where ours are. Runs in Chromium (it decodes the PNG textures)
+// against the dev server.
 // usage: node tools/classic/carToRad.mjs http://localhost:5173 7:tragdor 9:icecream ...
 import { writeFileSync } from "node:fs";
 import { chromium } from "@playwright/test";
@@ -61,9 +62,23 @@ const translate = async ({ index }) => {
     return v.map((x) => x / l);
   };
   const t = model.triangles;
+  // corners at one place are one corner, so neighbours share their edges
+  const weld = new Map();
+  const welded = (i) => {
+    const key = corner(i)
+      .map((v) => Math.round(v))
+      .join(",");
+    if (!weld.has(key)) {
+      weld.set(key, i);
+    }
+    return weld.get(key);
+  };
   let polygons = [];
   for (let f = 0; f < t.length / 9; f++) {
-    const loop = [t[f * 9], t[f * 9 + 3], t[f * 9 + 6]];
+    const loop = [t[f * 9], t[f * 9 + 3], t[f * 9 + 6]].map(welded);
+    if (new Set(loop).size < 3) {
+      continue;
+    }
     const uvs = [t[f * 9 + 2], t[f * 9 + 5], t[f * 9 + 8]].map((k) => [
       model.texcoords[k * 2],
       model.texcoords[k * 2 + 1],
@@ -93,24 +108,46 @@ const translate = async ({ index }) => {
     }
     polygons.push({ loop, color, area, normal: unit(normal) });
   }
-  // merge neighbours in one plane and about one colour while the polygon stays convex
-  const convex = (loop, normal) => {
-    let sign = 0;
-    for (let i = 0; i < loop.length; i++) {
-      const a = corner(loop[i]);
-      const b = corner(loop[(i + 1) % loop.length]);
-      const c = corner(loop[(i + 2) % loop.length]);
-      const turn = cross(sub(b, a), sub(c, b));
-      const d = turn[0] * normal[0] + turn[1] * normal[1] + turn[2] * normal[2];
-      if (Math.abs(d) > 1e-6) {
-        if (sign != 0 && Math.sign(d) != sign) {
-          return false;
-        }
-        sign = Math.sign(d);
+  // the original's cars have a handful of colours: the texture's averages brought down
+  // to a palette (k-means, from colours spread over the brightness)
+  const PALETTE = 10;
+  const brightness = (c) => c[0] + c[1] + c[2];
+  const byBrightness = [...polygons].sort(
+    (p, q) => brightness(p.color) - brightness(q.color),
+  );
+  let palette = Array.from({ length: PALETTE }, (_, k) => [
+    ...byBrightness[Math.floor(((k + 0.5) / PALETTE) * byBrightness.length)]
+      .color,
+  ]);
+  const nearest = (c) => {
+    let best = 0;
+    let bestD = Infinity;
+    palette.forEach((p, k) => {
+      const d = (p[0] - c[0]) ** 2 + (p[1] - c[1]) ** 2 + (p[2] - c[2]) ** 2;
+      if (d < bestD) {
+        bestD = d;
+        best = k;
       }
-    }
-    return true;
+    });
+    return best;
   };
+  for (let round = 0; round < 12; round++) {
+    const sums = palette.map(() => [0, 0, 0, 0]);
+    for (const p of polygons) {
+      const k = nearest(p.color);
+      p.color.forEach((v, i) => (sums[k][i] += v * p.area));
+      sums[k][3] += p.area;
+    }
+    palette = sums.map((sum, k) =>
+      sum[3] ? sum.slice(0, 3).map((v) => v / sum[3]) : palette[k],
+    );
+  }
+  for (const p of polygons) {
+    p.color = palette[nearest(p.color)];
+  }
+  // merge neighbours in about one plane and of one colour, as long as the polygon stays
+  // simple (the classic look fills polygons that are not convex as Java did)
+  const simple = (loop) => new Set(loop).size == loop.length;
   const joined = (p, q) => {
     for (let i = 0; i < p.loop.length; i++) {
       const a = p.loop[i];
@@ -140,25 +177,20 @@ const translate = async ({ index }) => {
           p.normal[0] * q.normal[0] +
             p.normal[1] * q.normal[1] +
             p.normal[2] * q.normal[2] >
-          0.995;
-        const close =
-          Math.abs(p.color[0] - q.color[0]) +
-            Math.abs(p.color[1] - q.color[1]) +
-            Math.abs(p.color[2] - q.color[2]) <
-          60;
-        if (!flat || !close) {
+          0.985;
+        if (!flat || p.color != q.color) {
           continue;
         }
         const loop = joined(p, q);
-        if (loop && loop.length <= 16 && convex(loop, p.normal)) {
+        if (loop && loop.length <= 40 && simple(loop)) {
           const area = p.area + q.area;
           polygons[i] = {
             loop,
             area,
-            normal: p.normal,
-            color: p.color.map(
-              (c, k) => (c * p.area + q.color[k] * q.area) / area,
+            normal: unit(
+              p.normal.map((v, k) => v * p.area + q.normal[k] * q.area),
             ),
+            color: p.color,
           };
           polygons.splice(j, 1);
           merged = true;
@@ -210,7 +242,8 @@ for (const car of cars) {
       "</p>",
       "",
     ]),
-    "rims(140,140,140,20,4)",
+    // rims about two thirds of the tyre (the rear's), as the original's cars have them
+    `rims(140,140,140,${Math.round(0.85 * 11.95 * wheels.h[1])},4)`,
     "gwgr(30)",
     wheel(0, -1),
     wheel(0, 1),
