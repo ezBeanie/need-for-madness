@@ -41,9 +41,84 @@ export const startBatch = () => {
   count = 0;
 };
 
-// A polygon, as a fan from its first corner (the original's polygons are convex).
+// Twice the signed area of a triangle: which way it turns.
+const turn = (xs, ys, a, b, c) =>
+  (xs[b] - xs[a]) * (ys[c] - ys[b]) - (ys[b] - ys[a]) * (xs[c] - xs[b]);
+
+const isConvex = (xs, ys, n) => {
+  let sign = 0;
+  for (let i = 0; i < n; i++) {
+    const t = turn(xs, ys, i, (i + 1) % n, (i + 2) % n);
+    if (t != 0) {
+      if (sign != 0 && Math.sign(t) != sign) {
+        return false;
+      }
+      sign = Math.sign(t);
+    }
+  }
+  return true;
+};
+
+const inside = (xs, ys, a, b, c, p) => {
+  const ab = turn(xs, ys, a, b, p);
+  const bc = turn(xs, ys, b, c, p);
+  const ca = turn(xs, ys, c, a, p);
+  return (ab >= 0 && bc >= 0 && ca >= 0) || (ab <= 0 && bc <= 0 && ca <= 0);
+};
+
+// The corners of a polygon cut into triangles, ear by ear (a corner that turns the
+// polygon's way, with no other corner in its triangle); null if it cannot be (it crosses
+// itself).
+const ears = (xs, ys, n) => {
+  let area = 0;
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    area += xs[i] * ys[j] - xs[j] * ys[i];
+  }
+  const way = Math.sign(area);
+  const left = Array.from({ length: n }, (_, i) => i);
+  const triangles = [];
+  while (left.length > 3) {
+    let cut = false;
+    for (let k = 0; k < left.length && !cut; k++) {
+      const a = left[(k + left.length - 1) % left.length];
+      const b = left[k];
+      const c = left[(k + 1) % left.length];
+      if (Math.sign(turn(xs, ys, a, b, c)) != way) {
+        continue;
+      }
+      if (
+        left.some(
+          (p) => p != a && p != b && p != c && inside(xs, ys, a, b, c, p),
+        )
+      ) {
+        continue;
+      }
+      triangles.push(a, b, c);
+      left.splice(k, 1);
+      cut = true;
+    }
+    if (!cut) {
+      return null;
+    }
+  }
+  triangles.push(...left);
+  return triangles;
+};
+
+// A polygon: a fan from its first corner when it is convex (nearly all the original's
+// polygons are); else cut into triangles, filling only its shape as Java did (a wheel
+// arch, a zigzag).
 export const fillPolygon = (xs, ys, n, r, g, b, alpha = 255) => {
   const color = pack(r, g, b, alpha);
+  const triangles = n > 3 && !isConvex(xs, ys, n) ? ears(xs, ys, n) : null;
+  if (triangles) {
+    reserve(triangles.length);
+    for (const i of triangles) {
+      vertex(xs[i], ys[i], color);
+    }
+    return;
+  }
   reserve((n - 2) * 3);
   for (let i = 1; i < n - 1; i++) {
     vertex(xs[0], ys[0], color);
