@@ -99,18 +99,8 @@ export function carSelectTick() {
   camera.y = 0;
   camera.z = 0;
   camera.yaw = 0;
-  camera.pitch = -8;
-  menuBackdrop.x = 0;
-  menuBackdrop.y = 14;
-  menuBackdrop.z = -99;
-  menuBackdrop.mat = resetMatrix(menuBackdrop.mat);
-  mat4.rotate(
-    menuBackdrop.mat,
-    menuBackdrop.mat,
-    camera.pitch * (Math.PI / 180),
-    [-1, 0, 0],
-  );
-  menuSmoke.forEach(driftSmoke);
+  camera.pitch = PITCH;
+  placeBackdrop();
   moveShowcase();
   const type = game.carTypes[0];
   const body = carModels[type];
@@ -135,6 +125,25 @@ export function carSelectTick() {
   drawCarSelect();
   menu.redraw = true;
 }
+
+// the modern look's camera looks down this much
+const PITCH = -8;
+
+// The backdrop facing the camera and its smoke drifting, also while the classic look
+// shows the car select: the look can change before the next tick.
+const placeBackdrop = () => {
+  menuBackdrop.x = 0;
+  menuBackdrop.y = 14;
+  menuBackdrop.z = -99;
+  menuBackdrop.mat = resetMatrix(menuBackdrop.mat);
+  mat4.rotate(
+    menuBackdrop.mat,
+    menuBackdrop.mat,
+    PITCH * (Math.PI / 180),
+    [-1, 0, 0],
+  );
+  menuSmoke.forEach(driftSmoke);
+};
 
 // The puffs drift in the backdrop's plane and turn back at its edges, spinning anew.
 const driftSmoke = (puff) => {
@@ -604,6 +613,7 @@ const classicTick = () => {
     showcase.pitch = 0;
   }
   classic.lastTick = interpolation.tick;
+  placeBackdrop();
   // back in the modern look the car hovers, from the bottom of its hover
   showcase.motion = SHOWCASE.hovering;
   showcase.height = -21;
