@@ -16,8 +16,11 @@ import {
 } from "../core/math.js";
 import {
   drawClassicCountdown,
+  drawClassicHighlight,
+  drawClassicInsano,
   drawClassicOutcome,
   drawClassicMeters,
+  drawClassicReplayLabel,
   drawClassicStanding,
 } from "../classic/hud.js";
 import { isPhone } from "../core/platform.js";
@@ -210,6 +213,10 @@ const insanoFace = (ticks) => {
 };
 
 const drawInsanoAside = (face) => {
+  if (look.current == LOOK.classic) {
+    drawClassicInsano(face);
+    return;
+  }
   rd.globalAlpha = 0.6;
   rd.drawImage(
     images.insano[face],
@@ -1599,14 +1606,24 @@ const replayButton = (text, faceBottom, shadowBottom) =>
 // to the race.
 export function drawReplayOverlay() {
   rd.clearRect(0, 0, view.width, view.height);
+  // the original's flickering "Replay >>"; Enter or a click goes back
+  if (look.current == LOOK.classic) {
+    drawClassicReplayLabel();
+    if (pointer.down) {
+      pointer.down = false;
+      hud.replayStartsIn = 2;
+    }
+  }
   rd.letterSpacing = "1px";
   rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
   rd.textAlign = "left";
   rd.textBaseline = "middle";
   rd.fillStyle = "rgb(0,32,64)";
-  rd.fillText("REPLAY", 20 * view.scaleX, 35 * view.scaleY);
-  if (replayButton("Exit ", "#01EAFF", "#016D77")) {
-    hud.replayStartsIn = 2;
+  if (look.current != LOOK.classic) {
+    rd.fillText("REPLAY", 20 * view.scaleX, 35 * view.scaleY);
+    if (replayButton("Exit ", "#01EAFF", "#016D77")) {
+      hud.replayStartsIn = 2;
+    }
   }
   if (confirm.state == CONFIRM.pressed) {
     hud.replayStartsIn = 2;
@@ -1709,27 +1726,30 @@ const tourCars = ({ rests, flights, holdFrom }) => {
   playOrHold(recording.held % 30 == 0);
 };
 
+// What the highlight shows, under its title: in the classic look as the original's
+// (flickering while it starts).
+const caption = (text) => {
+  if (look.current == LOOK.classic) {
+    drawClassicHighlight(text, recording.frame < 50);
+  } else {
+    drawCenteredText(90, text, 0, 32, 64, TEXT.label);
+  }
+};
+
 const showHighlight = () => {
   const car = recording.highlightCar;
   const other = recording.otherCar;
   switch (recording.highlight) {
     case HIGHLIGHT.stunt:
-      drawCenteredText(
-        90,
-        track.stage > 2 ? "Stunts!" : "Best Stunt!",
-        0,
-        32,
-        64,
-        TEXT.label,
-      );
+      caption(track.stage > 2 ? "Stunts!" : "Best Stunt!");
       holdAtPeak(stuntFlashes);
       break;
     case HIGHLIGHT.wasted:
-      drawCenteredText(90, "Wasted!", 0, 32, 64, TEXT.label);
+      caption("Wasted!");
       holdAtPeak(wastedFlashes);
       break;
     case HIGHLIGHT.wastedThemAll:
-      drawCenteredText(90, "You Wasted'em!", 0, 32, 64, TEXT.label);
+      caption("You Wasted'em!");
       if (recording.held == 13 || recording.held == 16) {
         flash();
       }
@@ -1740,7 +1760,7 @@ const showHighlight = () => {
       });
       break;
     case HIGHLIGHT.closeWin:
-      drawCenteredText(90, "Close Finish!", 0, 32, 64, TEXT.label);
+      caption("Close Finish!");
       tourCars({
         rests: [car, other, car, other],
         flights: [
@@ -1752,14 +1772,7 @@ const showHighlight = () => {
       });
       break;
     case HIGHLIGHT.closeLoss:
-      drawCenteredText(
-        90,
-        "Close Finish!  Almost got it!",
-        0,
-        32,
-        64,
-        TEXT.label,
-      );
+      caption("Close Finish!  Almost got it!");
       tourCars({
         rests: [car, other, car, other, car],
         flights: [
@@ -1783,6 +1796,23 @@ const toRaceEnd = () => {
 // follows. On the very first stage a tap skips it.
 export function drawHighlightOverlay() {
   rd.clearRect(0, 0, view.width, view.height);
+  // the original's title is a picture, and it goes on with Enter or a click
+  if (look.current == LOOK.classic) {
+    showHighlight();
+    if (
+      (highlightPlays == 2 && recording.frame == 427) ||
+      confirm.state == CONFIRM.pressed ||
+      pointer.down
+    ) {
+      confirm.state = CONFIRM.used;
+      pointer.down = false;
+      toRaceEnd();
+    }
+    if (recording.frame >= 428) {
+      darken(0.7);
+    }
+    return;
+  }
   rd.letterSpacing = "1px";
   rd.font = "" + 24 * (view.scaleY + view.scaleX) + "px junk";
   rd.textAlign = "center";

@@ -5,6 +5,7 @@
 // kept right, the middle in the middle.
 import { rd, view } from "../ui/view.js";
 import { medium } from "./medium.js";
+import { picture as plainPicture } from "./screen.js";
 
 const FILES = [
   "damage",
@@ -203,4 +204,60 @@ export const drawClassicMessage = (y, text, r, g, b) => {
   rd.textAlign = "center";
   rd.fillStyle = snapped([r, g, b]);
   rd.fillText(text, view.width / 2, y * view.scaleY);
+};
+
+// flickers once a tick
+let flicker = false;
+
+// The instant replay: "Replay >>" flickering at the top (the original's replyn).
+export const drawClassicReplayLabel = () => {
+  bold(13);
+  rd.textAlign = "center";
+  rd.fillStyle = flicker ? snapped([0, 0, 0]) : snapped([0, 128, 255]);
+  rd.fillText(
+    flicker ? "Replay  > " : "Replay  >>",
+    view.width / 2,
+    30 * scale(),
+  );
+  flicker = !flicker;
+};
+
+// The highlight after a race (the original's levelhigh): its "Game Highlight" picture,
+// what it shows, flickering light blue while it starts, and how to go on.
+export const drawClassicHighlight = (caption, starting) => {
+  const title = plainPicture("gameh.gif");
+  if (title) {
+    rd.drawImage(
+      title,
+      fromMiddle(301),
+      20 * scale(),
+      title.width * scale(),
+      title.height * scale(),
+    );
+  }
+  bold(13);
+  rd.textAlign = "center";
+  rd.fillStyle = snapped(starting && flicker ? [106, 176, 255] : [16, 48, 96]);
+  rd.fillText(caption, view.width / 2, 60 * scale());
+  rd.fillStyle = snapped([0, 0, 0]);
+  rd.fillText("Press  [ Enter ]  to continue", view.width / 2, 380 * scale());
+  flicker = !flicker;
+};
+
+// Coach Insano beside a message (this game's switching cars and reversing time, which
+// the original never had): faint, as on the original's instruction pages, his mouth
+// moving with the face given (0 at rest).
+export const drawClassicInsano = (face) => {
+  const insano = plainPicture(`d${(face % 3) + 1}.png`);
+  if (insano) {
+    rd.globalAlpha = 0.6;
+    rd.drawImage(
+      insano,
+      fromMiddle(190),
+      10 * scale(),
+      insano.width * scale(),
+      insano.height * scale(),
+    );
+    rd.globalAlpha = 1;
+  }
 };
