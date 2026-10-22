@@ -604,8 +604,10 @@ const classicTick = () => {
     showcase.pitch = 0;
   }
   classic.lastTick = interpolation.tick;
-  // back in the modern look the car hovers
+  // back in the modern look the car hovers, from the bottom of its hover
   showcase.motion = SHOWCASE.hovering;
+  showcase.height = -21;
+  showcase.bob = -30;
   camera.matrix = mat4.create();
   mat4.perspective(
     camera.matrix,

@@ -3,6 +3,7 @@
 // with a 3D part (a car, a stage) draws what lies behind it and what lies over it on
 // layers of their own; the classic 3D canvas goes between them once it is drawn.
 import { pointer } from "../input/pointer.js";
+import { interpolation } from "../render/interpolation.js";
 import { canvas3D } from "../render/renderer.js";
 import { canvas2D, rd, view } from "../ui/view.js";
 import { hsbToRgb, rgbToHsb } from "./color.js";
@@ -19,8 +20,8 @@ const layer = () => {
 const behind = layer();
 const over = layer();
 
-// g: where the screen draws now; due: drawn this tick, not shown yet
-export const screen = { g: behind.g, with3D: false, due: false };
+// g: where the screen draws now; tick: the logic tick it was last drawn in
+export const screen = { g: behind.g, with3D: false, tick: -2 };
 
 // Starts a screen's picture for this tick: what it draws comes first, behind any 3D.
 export const startScreen = () => {
@@ -28,7 +29,7 @@ export const startScreen = () => {
   over.g.clearRect(0, 0, WIDTH, HEIGHT);
   screen.g = behind.g;
   screen.with3D = false;
-  screen.due = true;
+  screen.tick = interpolation.tick;
   readMouse();
 };
 
@@ -47,13 +48,12 @@ const fit = () => {
   };
 };
 
-// Shows the screen drawn this tick, after the 3D canvas was drawn (in the same frame, while
-// its picture is still there to copy).
+// Shows the screen while it is drawn, every frame, with the 3D canvas just drawn in it (in
+// the same frame, while its picture is still there to copy).
 export const presentScreen = () => {
-  if (!screen.due) {
+  if (interpolation.tick - screen.tick > 1) {
     return;
   }
-  screen.due = false;
   const { scale, x, y } = fit();
   rd.fillStyle = "#000000";
   rd.fillRect(0, 0, view.width, view.height);
