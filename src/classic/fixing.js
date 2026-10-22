@@ -28,9 +28,38 @@ const onScreen = () => {
   return up != 8 && down != 8 && left != 8 && right != 8;
 };
 
+// The hoop's place, upright: the original drew its electricity across the hoop without
+// the hoop's spin, level from side to side.
+const upright = (m) => {
+  const scale = Math.hypot(m[8], m[9], m[10]);
+  const axis = [m[8] / scale, m[9] / scale, m[10] / scale];
+  // level and across the hoop's axis
+  const across = Math.hypot(axis[2], axis[0]) || 1;
+  const side = [axis[2] / across, 0, -axis[0] / across];
+  return [
+    side[0] * scale,
+    0,
+    side[2] * scale,
+    0,
+    0,
+    scale,
+    0,
+    0,
+    axis[0] * scale,
+    axis[1] * scale,
+    axis[2] * scale,
+    0,
+    m[12],
+    m[13],
+    m[14],
+    1,
+  ];
+};
+
 // Four bands of electricity across a fix hoop, each living a few ticks before it jumps
-// somewhere else. state keeps them per hoop; matrix places the hoop.
-export const electrify = (state, matrix, hoop) => {
+// somewhere else. state keeps them per hoop; spun places the hoop.
+export const electrify = (state, spun, hoop) => {
+  const matrix = upright(spun);
   state.arcs ??= Array.from({ length: 4 }, () => ({
     age: 0,
     left: 0,
@@ -62,10 +91,7 @@ export const electrify = (state, matrix, hoop) => {
       const blue = tinted(255, 2, 500);
       // (orange in the stage select's sepia preview)
       const preview = medium.trk == 1;
-      fillPolygon(
-        SX,
-        SY,
-        8,
+      const color = [
         preview
           ? 255
           : Math.trunc(
@@ -77,7 +103,20 @@ export const electrify = (state, matrix, hoop) => {
               (tinted(238, 1, 500) * 2 + 236 * (arc.age - 1)) / (arc.age + 1),
             ),
         preview ? 0 : blue,
-      );
+      ];
+      // the band zigzags (Java filled it as it is): its three pieces, each one straight
+      for (const [a, b, c, d] of [
+        [0, 1, 6, 7],
+        [1, 2, 5, 6],
+        [2, 3, 4, 5],
+      ]) {
+        fillPolygon(
+          [SX[a], SX[b], SX[c], SX[d]],
+          [SY[a], SY[b], SY[c], SY[d]],
+          4,
+          ...color,
+        );
+      }
       if (Z[0] < 4000) {
         drawPolygon(SX, SY, 8, tinted(150, 0, 500), tinted(227, 1, 500), blue);
       }
