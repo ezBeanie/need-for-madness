@@ -123,11 +123,19 @@ const readStage = (text) => {
       // patches are made from how many
       if (OBJECTS.includes(entry.command)) {
         objects++;
-        if (entry.command != "set" || pathType(entry) !== null) {
+        if (
+          ["chk", "fix"].includes(entry.command) ||
+          (entry.command == "set" && pathType(entry) !== null)
+        ) {
           scene.colors.original.pathObjects = objects;
         }
       }
     }
+  }
+  if (original) {
+    // the stage select shows the original's stage up to its last object on the path, as
+    // it did (this game's own files say how many pieces follow their last path point)
+    track.addons = scene.colors.original.pathObjects - track.obi[track.n - 1];
   }
 };
 
