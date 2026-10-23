@@ -98,7 +98,7 @@ const readStage = (text) => {
   track.tips = [];
   const original = originalOf(track.stage) != 0;
   if (original) {
-    scene.colors.original = { commands: [], pathObjects: 0 };
+    scene.colors.original = { commands: [], pathObjects: 0, bounds: {} };
   }
   let objects = 0;
   for (const entry of parseStage(text)) {
@@ -106,6 +106,9 @@ const readStage = (text) => {
     if (original) {
       if (ORIGINAL_LOOK.includes(entry.command)) {
         scene.colors.original.commands.push(entry);
+      }
+      if (entry.command.startsWith("max")) {
+        scene.colors.original.bounds[entry.command] = entry.limit;
       }
       // the objects up to the last on the path (the original's notb): its ground's
       // patches are made from how many

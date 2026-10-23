@@ -278,7 +278,8 @@ export const newScenery = ({
   maxX,
   minZ,
   maxZ,
-  seed,
+  patchSeed,
+  mountainSeed,
   roads,
   randomness,
 }) => {
@@ -287,11 +288,11 @@ export const newScenery = ({
     maxX - minX,
     minZ,
     maxZ - minZ,
-    seed,
+    patchSeed,
     roads,
   );
   scenery.clouds = newClouds(minX, maxX, minZ, maxZ, randomness);
-  scenery.mountains = newMountains(minX, maxX, minZ, maxZ, seed * 7 + 83898);
+  scenery.mountains = newMountains(minX, maxX, minZ, maxZ, mountainSeed);
 };
 
 const offScreen = (n) => {

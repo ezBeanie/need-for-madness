@@ -60,6 +60,9 @@ export const fadeFrom = (n) => {
 // A stage's look, as its file sets it in the original's order: snap first, it tints the
 // rest.
 export const setStageLook = ({ snap, sky, ground, fog, clouds, fadefrom }) => {
+  // (as the original starts a stage; its own stages may change these)
+  medium.fogd = 7;
+  medium.lightson = false;
   medium.snap = [...snap];
   medium.osky = [...sky];
   medium.csky = sky.map(snapped);
@@ -87,6 +90,103 @@ export const setStageLook = ({ snap, sky, ground, fog, clouds, fadefrom }) => {
   fadeFrom(fadefrom);
 };
 fadeFrom(3000);
+
+// --- the original's own stages: their look exactly as its Medium set it ---
+
+// n tinted by the snap, in the original's float maths: (int)(n + n * (snap / 100f))
+const snapOf = (n, i) => {
+  const by = Math.fround(medium.snap[i] / 100);
+  return clamp255(Math.trunc(Math.fround(n + Math.fround(n * by))));
+};
+// ... or n plus its tint: n + (int)(n * (snap / 100f))
+const plusSnap = (n, i) => {
+  const by = Math.fround(medium.snap[i] / 100);
+  return clamp255(n + Math.trunc(Math.fround(n * by)));
+};
+
+const cloudsOfSky = () => {
+  medium.clds = medium.osky.map((s, i) =>
+    plusSnap(
+      Math.trunc((s * medium.cldd[3] + medium.cldd[i]) / (medium.cldd[3] + 1)),
+      i,
+    ),
+  );
+};
+
+const roadsideOfGround = () => {
+  medium.crgrnd = medium.cpol.map((p, i) =>
+    Math.trunc((p * 0.99 + medium.cgrnd[i]) / 2),
+  );
+};
+
+const clampTo = (v, low, high) => Math.min(high, Math.max(low, v));
+
+// The original's Medium setters, by the stage file's commands (see data/stageFormat.js).
+const ORIGINAL_SETTERS = {
+  snap: ({ r, g, b }) => {
+    medium.snap = [r, g, b];
+  },
+  sky: ({ r, g, b }) => {
+    medium.osky = [r, g, b];
+    cloudsOfSky();
+    medium.csky = medium.osky.map(snapOf);
+  },
+  clouds: ({ r, g, b, type, height }) => {
+    medium.cldd = [r, g, b, clampTo(type, 0, 10), clampTo(height, -1500, -500)];
+    cloudsOfSky();
+  },
+  ground: ({ r, g, b }) => {
+    medium.ogrnd = [r, g, b];
+    const [, , , mix] = medium.texture;
+    medium.cpol = medium.ogrnd.map((o, i) =>
+      plusSnap(Math.trunc((o * mix + medium.texture[i]) / (1 + mix)), i),
+    );
+    medium.cgrnd = medium.ogrnd.map(snapOf);
+    roadsideOfGround();
+  },
+  texture: ({ r, g, b, mix }) => {
+    const m = clampTo(mix, 20, 60);
+    medium.texture = [r, g, b, m];
+    medium.cpol = [r, g, b].map((c, i) =>
+      snapOf(Math.trunc((medium.ogrnd[i] * m + c) / (1 + m)), i),
+    );
+    roadsideOfGround();
+  },
+  polys: ({ r, g, b }) => {
+    medium.cpol = [r, g, b].map(snapOf);
+    roadsideOfGround();
+  },
+  fog: ({ r, g, b }) => {
+    medium.cfade = [r, g, b].map(snapOf);
+  },
+  density: ({ density }) => {
+    medium.fogd = clampTo((density + 1) * 2 - 1, 1, 30);
+  },
+  fadefrom: ({ distance }) => fadeFrom(distance),
+  lightson: () => {
+    medium.lightson = true;
+  },
+  mountains: ({ seed }) => {
+    medium.mountainSeed = seed;
+  },
+};
+
+// One of the original's stages: from the Medium it starts with, its file's commands in
+// their order (one setter reads what an earlier one set).
+export const setOriginalLook = (commands) => {
+  Object.assign(medium, {
+    snap: [0, 0, 0],
+    osky: [170, 220, 255],
+    ogrnd: [205, 200, 200],
+    texture: [0, 0, 0, 50],
+    cldd: [210, 210, 210, 1, -1000],
+    fogd: 7,
+    lightson: false,
+  });
+  for (const entry of commands) {
+    ORIGINAL_SETTERS[entry.command](entry);
+  }
+};
 
 export const sinDeg = (angle) => Math.sin(angle * (Math.PI / 180));
 export const cosDeg = (angle) => Math.cos(angle * (Math.PI / 180));

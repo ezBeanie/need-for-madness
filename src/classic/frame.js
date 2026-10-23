@@ -23,7 +23,12 @@ import { electrify, fixBubble, fixStep, startFixing } from "./fixing.js";
 import { effectObjects } from "./effects.js";
 import { CAR_FILES } from "./cars.js";
 import { drawObject, setView, tintModel } from "./draw.js";
-import { drawSkyAndGround, medium, setStageLook } from "./medium.js";
+import {
+  drawSkyAndGround,
+  medium,
+  setOriginalLook,
+  setStageLook,
+} from "./medium.js";
 import { drawScenery, newScenery } from "./scenery.js";
 import { parseRad } from "./rad.js";
 
@@ -60,16 +65,23 @@ const seeded = (seed) => () => {
   return seed / 2147483647;
 };
 
+// the cars the original raced, counted among its objects before the stage's
+const ORIGINAL_CARS = 7;
+
 const tintForStage = (colors) => {
-  setStageLook({
-    snap: colors.snap,
-    sky: colors.sky,
-    ground: colors.ground,
-    fog: colors.fog,
-    clouds: colors.clouds,
-    // the modern look sees farther; the original's fog starts at most at 8000
-    fadefrom: Math.min(8000, Math.round(colors.distance * 0.8)),
-  });
+  if (colors.original) {
+    setOriginalLook(colors.original.commands);
+  } else {
+    setStageLook({
+      snap: colors.snap,
+      sky: colors.sky,
+      ground: colors.ground,
+      fog: colors.fog,
+      clouds: colors.clouds,
+      // the modern look sees farther; the original's fog starts at most at 8000
+      fadefrom: Math.min(8000, Math.round(colors.distance * 0.8)),
+    });
+  }
   const randomness = seeded(7);
   for (const rad of models.values()) {
     tintModel(rad, randomness);
@@ -89,12 +101,15 @@ const tintForStage = (colors) => {
       });
     }
   }
+  const original = colors.original;
   newScenery({
-    minX: Math.min(...xBounds),
-    maxX: Math.max(...xBounds),
-    minZ: Math.min(...zBounds),
-    maxZ: Math.max(...zBounds),
-    seed: pieces.count,
+    // the original's own stages: their bounds and seeds as it took them
+    minX: original?.bounds.maxl ?? Math.min(...xBounds),
+    maxX: original?.bounds.maxr ?? Math.max(...xBounds),
+    minZ: original?.bounds.maxb ?? Math.min(...zBounds),
+    maxZ: original?.bounds.maxt ?? Math.max(...zBounds),
+    patchSeed: original ? ORIGINAL_CARS + original.pathObjects : pieces.count,
+    mountainSeed: original ? medium.mountainSeed : pieces.count * 7 + 83898,
     roads,
     randomness: seeded(pieces.count * 31 + 7),
   });
