@@ -6,7 +6,7 @@ import {
   stopStageMusic,
   switchMusicLook,
 } from "../audio/audio.js";
-import { PHASE, RACE_PHASES, game } from "../core/state.js";
+import { PHASE, game } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
 import { nextRaceSize } from "../race/field.js";
 import { racers } from "../race/racers.js";
@@ -22,23 +22,6 @@ const ARROW_BUTTON = 1;
 // as in the original; no button of the race has this id
 const REWIND_BUTTON = 11;
 
-// The 3D picture is shown mirrored (see render/renderer.js): in races the car's left is
-// the screen's right. Menus keep left and right.
-export const steeringSide = (side) => {
-  if (!RACE_PHASES.includes(game.phase)) {
-    return side;
-  }
-  return side == "left" ? "right" : "left";
-};
-
-// the steering keys held, by the screen's sides
-const held = { left: false, right: false };
-
-const steerByKeys = (input) => {
-  input[steeringSide("left")] = held.left;
-  input[steeringSide("right")] = held.right;
-};
-
 export function onKey(action, pressed) {
   const input = racers[game.player].u;
   if (action == "accelerate") {
@@ -48,12 +31,10 @@ export function onKey(action, pressed) {
     input.down = pressed;
   }
   if (action == "steerLeft") {
-    held.left = pressed;
-    steerByKeys(input);
+    input.left = pressed;
   }
   if (action == "steerRight") {
-    held.right = pressed;
-    steerByKeys(input);
+    input.right = pressed;
   }
   if (action == "handbrake") {
     input.handb = pressed;
@@ -90,12 +71,11 @@ export function onKey(action, pressed) {
       buttons.pressedByKey = 0;
     }
   }
-  // (the camera swings the world's way, which the mirrored picture turns round)
   if (action == "lookBackLeft") {
-    camera.lookBack = pressed ? 1 : 0;
+    camera.lookBack = pressed ? -1 : 0;
   }
   if (action == "lookBackRight") {
-    camera.lookBack = pressed ? -1 : 0;
+    camera.lookBack = pressed ? 1 : 0;
   }
   if (!pressed && action == "nextCamera" && game.phase == PHASE.race) {
     camera.mode++;

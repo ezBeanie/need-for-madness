@@ -539,11 +539,9 @@ const TOUCH = [
   { image: 3, x: 1150, y: 622, key: "accelerate" },
   { image: 2, x: 960, y: 662, key: "brake" },
 ];
-// (the picture is mirrored: the left control steers the car to its right, see
-// input/controls.js)
 const CONTROL_FOR = {
-  left: "right",
-  right: "left",
+  left: "left",
+  right: "right",
   accelerate: "up",
   brake: "down",
   handbrake: "handb",
@@ -1991,10 +1989,9 @@ const turnArrowTowards = (heading) => {
 const arrowOutline = () =>
   look.current == LOOK.classic ? view.height / 450 : 2.6 * view.scale;
 
-// (mirrored, as the 3D picture is: see render/renderer.js)
 const projectArrow = (xs, ys, zs) => {
   for (let i = 0; i < 7; i++) {
-    xs[i] = -projectX(xs[i], zs[i]) * 1.6 * view.scale;
+    xs[i] = projectX(xs[i], zs[i]) * 1.6 * view.scale;
     ys[i] = projectY(ys[i], zs[i]) * 1.6 * view.scale;
     xs[i] += 640 * view.scaleX;
     ys[i] += (360 + view.widescreenShift) * view.scaleY;

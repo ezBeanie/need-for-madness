@@ -15,7 +15,7 @@ import {
 import { fetchText } from "../render/models.js";
 import { canvas3D } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
-import { LETTERED_PIECES, PIECE_FILES } from "../loading/assets.js";
+import { PIECE_FILES } from "../loading/assets.js";
 import { bodyDamage } from "../race/physics.js";
 import { flushBatch, setPixelSize, startBatch } from "./batch.js";
 import { dentClassic, hitOn } from "./damage.js";
@@ -44,9 +44,7 @@ const loadModels = () => {
   ]);
   for (const file of files) {
     fetchText(`data/classic/${file}.rad`, (text) => {
-      const rad = parseRad(text);
-      rad.mirrored = LETTERED_PIECES.includes(file);
-      models.set(file, rad);
+      models.set(file, parseRad(text));
       carModels.length = 0;
       tintedFor = null;
     });

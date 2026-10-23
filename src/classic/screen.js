@@ -70,8 +70,8 @@ export const presentScreen = () => {
     // (450 of the screen's rows high, however many pixels it has)
     const width = (canvas3D.width * HEIGHT) / canvas3D.height;
     rd.imageSmoothingEnabled = look.sharp;
-    drawMirrored3D(
-      rd,
+    rd.drawImage(
+      canvas3D,
       x + (WIDTH / 2 - width / 2) * scale,
       y,
       width * scale,
@@ -82,15 +82,6 @@ export const presentScreen = () => {
     rd.drawImage(over.canvas, x, y, WIDTH * scale, HEIGHT * scale);
   }
   rd.imageSmoothingEnabled = true;
-};
-
-// The 3D canvas as the window shows it: mirrored (see render/renderer.js).
-const drawMirrored3D = (g, x, y, width, height) => {
-  g.save();
-  g.translate(x + width, y);
-  g.scale(-1, 1);
-  g.drawImage(canvas3D, 0, 0, width, height);
-  g.restore();
 };
 
 // --- the race stood still, as the pause and the race end show it ---
@@ -120,7 +111,7 @@ export const captureFrozen = () => {
   frozen.g.fillStyle = "#000000";
   frozen.g.fillRect(0, 0, WIDTH, HEIGHT);
   const width = (canvas3D.width * HEIGHT) / canvas3D.height;
-  drawMirrored3D(frozen.g, WIDTH / 2 - width / 2, 0, width, HEIGHT);
+  frozen.g.drawImage(canvas3D, WIDTH / 2 - width / 2, 0, width, HEIGHT);
   frozen.g.drawImage(frozen.hud.canvas, 0, 0);
   frozen.pixels = frozen.g.getImageData(0, 0, WIDTH, HEIGHT);
   frozen.wanted = false;

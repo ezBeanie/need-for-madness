@@ -5,7 +5,6 @@ import { game } from "../core/state.js";
 import { racers } from "../race/racers.js";
 import { camera } from "../render/camera.js";
 import { CONFIRM, confirm } from "./confirm.js";
-import { steeringSide } from "./controls.js";
 
 const BUTTON = {
   accelerate: 0,
@@ -90,14 +89,8 @@ const readGamepad = (pad, index) => {
   const down = tilted(1, false) || tilted(3, false);
   hold(pressed(BUTTON.accelerate) || up, (on) => (input.up = on));
   hold(pressed(BUTTON.brake) || down, (on) => (input.down = on));
-  hold(
-    pressed(BUTTON.steerLeft) || left,
-    (on) => (input[steeringSide("left")] = on),
-  );
-  hold(
-    pressed(BUTTON.steerRight) || right,
-    (on) => (input[steeringSide("right")] = on),
-  );
+  hold(pressed(BUTTON.steerLeft) || left, (on) => (input.left = on));
+  hold(pressed(BUTTON.steerRight) || right, (on) => (input.right = on));
   if (pad.buttons.length >= SHOULDER_BUTTONS) {
     hold(pressed(BUTTON.toggleArrow), (on) => {
       if (on && !arrowToggleHeld) {
@@ -106,9 +99,8 @@ const readGamepad = (pad, index) => {
       arrowToggleHeld = on;
     });
     hold(pressed(BUTTON.handbrake), (on) => (input.handb = on));
-    // (turned round, as the keys are: see input/controls.js)
-    hold(pressed(BUTTON.lookBackLeft), lookBack(1));
-    hold(pressed(BUTTON.lookBackRight), lookBack(-1));
+    hold(pressed(BUTTON.lookBackLeft), lookBack(-1));
+    hold(pressed(BUTTON.lookBackRight), lookBack(1));
   }
   let confirming = false;
   for (let b = BUTTON.firstConfirm; b < pad.buttons.length; b++) {

@@ -8,12 +8,6 @@ export const canvas3D = document.querySelector("#canvas3D");
 export const gl =
   canvas3D.getContext("webgl") || canvas3D.getContext("experimental-webgl");
 
-// This game's stages are the mirror image of the original Java game's (its HTML5 remake
-// turned their x round when loading them): the 3D picture is shown mirrored, so the
-// stages look as in the original, and in races the steering is turned round to match
-// (see input/controls.js).
-canvas3D.style.transform = "scaleX(-1)";
-
 // the original drew into 800 x 450 pixels
 const CLASSIC_HEIGHT = 450;
 

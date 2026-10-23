@@ -3,9 +3,7 @@ import { PHASE } from "../../src/core/state.js";
 import { recordCanvas, recordWebGL } from "./canvasRecorder.js";
 import { loadGame } from "./loadGame.js";
 
-// The keys for what the car does: in races the picture is mirrored, the right arrow
-// steers the car to its left (see src/input/controls.js).
-const KEY = { up: 38, down: 40, left: 39, right: 37, handb: 32 };
+const KEY = { up: 38, down: 40, left: 37, right: 39, handb: 32 };
 const NO_INPUT = {
   up: false,
   down: false,

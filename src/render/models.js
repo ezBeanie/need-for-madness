@@ -235,8 +235,7 @@ const loadTextures = (model, files) => {
   });
 };
 
-// mirrored: drawn the other way round across its x (its collision stays as it is)
-export const loadModel = (file, model, mirrored = false) => {
+export const loadModel = (file, model) => {
   model.loaded = 0;
   fetchText(file, (source) => {
     const parsed = parseModel(source);
@@ -280,14 +279,7 @@ export const loadModel = (file, model, mirrored = false) => {
       }
       model.vrt = vertices;
     }
-    buildGeometry(
-      model,
-      vertices,
-      normals,
-      texcoords,
-      triangles,
-      mirrored ? -build.flipX : build.flipX,
-    );
+    buildGeometry(model, vertices, normals, texcoords, triangles, build.flipX);
     model.loaded = 1;
     model.mat = mat4.create();
     loadTextures(model, build.textureFiles);
@@ -325,8 +317,7 @@ const timeTubeShift = (vertices, i, scale, colors) => {
   return atEnd == onEdge ? 4 : 0;
 };
 
-// mirrored: drawn the other way round across its x (see LETTERED_PIECES)
-export const loadParticleModel = (file, particle, mirrored = false) => {
+export const loadParticleModel = (file, particle) => {
   particle.loaded = 0;
   fetchText(file, (source) => {
     const { directives, vertices, triangles } = parseModel(source);
@@ -372,10 +363,7 @@ export const loadParticleModel = (file, particle, mirrored = false) => {
           vertices[i] *= scale;
         }
       }
-      const shown = mirrored
-        ? vertices.map((v, i) => (i % 3 == 0 ? -v : v))
-        : vertices;
-      particle.vbuf = uploadBuffer(gl.ARRAY_BUFFER, new Float32Array(shown));
+      particle.vbuf = uploadBuffer(gl.ARRAY_BUFFER, new Float32Array(vertices));
       const vertexColors = [];
       for (let i = 0; i < vertices.length / 3; i++) {
         let shift = 0;
