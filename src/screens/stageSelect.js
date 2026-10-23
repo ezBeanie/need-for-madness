@@ -2,6 +2,12 @@
 // jagged border with the stage's name and buttons. Also the screen while a stage loads.
 
 import {
+  LAST_STAGE,
+  STAGE_COUNT,
+  originalOf,
+  stageLabel,
+} from "../data/stages.js";
+import {
   isEngineLoaded,
   loadEngine,
   pauseMenuMusic,
@@ -9,7 +15,6 @@ import {
 } from "../audio/audio.js";
 import {
   drawClassicLoading,
-  drawClassicLocked,
   drawClassicStageSelect,
 } from "../classic/stageSelect.js";
 import { cosDeg, sinDeg } from "../core/math.js";
@@ -62,12 +67,11 @@ import { menu } from "./menuState.js";
 import { loadConfetti } from "./raceEnd.js";
 
 export const stageSelect = {
-  // the stage is hidden while another one loads or "Stage Locked" shows
+  // the stage is hidden while another one starts loading
   hiddenTicks: 0,
 };
 
 const FIRST_STAGE = 1;
-const LAST_STAGE = 17;
 // the stage whose guidance arrow is switched off
 const NO_ARROW_STAGE = 16;
 // from here on, won stages can also be played in switch mode
@@ -257,7 +261,7 @@ const drawLoadingScreen = () => {
   // the very first race does not tell which stage it is
   const text =
     stageLoad.after == AFTER_LOAD.stageSelect
-      ? "Loading Stage " + track.stage + ""
+      ? "Loading " + stageLabel(track.stage)
       : "Loading Stage...";
   rd.strokeText(text, 640 * view.scaleX, 330 * view.scaleY);
   rd.fillStyle = "#C1E3FF";
@@ -310,24 +314,12 @@ function drawStageSelect() {
 }
 
 // The classic look's stage select: the original's, with this game's own choices as its
-// rounded buttons. A locked stage shows its screen for 100 ticks, or until left.
+// rounded buttons.
 const drawClassic = () => {
   const input = racers[0].u;
   if (stageSelect.hiddenTicks) {
-    if (stageLoad.progress == STAGE_LOAD.requested) {
-      stageLoad.after = AFTER_LOAD.nextStage;
-      game.phase = PHASE.stageLoading;
-      return;
-    }
-    stageSelect.hiddenTicks++;
-    const over = drawClassicLocked(game.unlocked, stageSelect.hiddenTicks);
-    if (over || input.left || confirm.state == CONFIRM.pressed) {
-      if (confirm.state == CONFIRM.pressed) {
-        confirm.state = CONFIRM.used;
-      }
-      input.left = false;
-      stageSelect.hiddenTicks = 0;
-    }
+    stageLoad.after = AFTER_LOAD.nextStage;
+    game.phase = PHASE.stageLoading;
     return;
   }
   const buttons = [["cars", ` ${game.raceCars} Cars  [C] `, 75, 30]];
@@ -336,27 +328,26 @@ const drawClassic = () => {
   } else if (track.stage == 1 || track.stage == 2) {
     buttons.push(["practice", " Practice ", 220, 392]);
   }
-  if (track.stage != game.unlocked && track.stage >= FIRST_SWITCH_STAGE) {
+  if (switchOffered()) {
     buttons.push(["switch", " Play Switch ", 480, 392]);
   }
   const chosen = drawClassicStageSelect({
-    title:
-      track.stage != LAST_STAGE ? `Stage ${track.stage}  >` : "Final Stage  >",
+    title: `${stageTitle()}  >`,
     name: track.name,
     first: track.stage == FIRST_STAGE,
-    last: track.stage == LAST_STAGE,
+    last: track.stage == STAGE_COUNT,
     buttons,
     tip: showingTip ? track.tips : null,
   });
   if (input.right || chosen == "next") {
-    if (track.stage < LAST_STAGE) {
+    if (track.stage < STAGE_COUNT) {
       showNextStage();
     }
     input.right = false;
   }
   if (input.left || chosen == "back") {
     if (track.stage > FIRST_STAGE) {
-      showStage(track.stage - 1);
+      showPreviousStage();
     }
     input.left = false;
   }
@@ -384,8 +375,7 @@ const drawClassic = () => {
   }
 };
 
-// "Stage Locked" with a blinking lock for 30 frames, or the next stage's name while it
-// starts loading.
+// The next stage's name while it starts loading.
 const drawHiddenStage = () => {
   rd.globalAlpha = 0.5;
   rd.fillStyle = "#9FD3FF";
@@ -396,30 +386,11 @@ const drawHiddenStage = () => {
   rd.textAlign = "center";
   rd.textBaseline = "middle";
   rd.fillStyle = "#00284A";
-  if (stageLoad.progress == STAGE_LOAD.requested) {
-    rd.fillText(
-      "Loading Stage " + track.stage + "",
-      640 * view.scaleX,
-      330 * view.scaleY,
-    );
-    return;
-  }
-  rd.fillText("Stage Locked", 640 * view.scaleX, 380 * view.scaleY);
-  if (blink.on || stageSelect.hiddenTicks > 10) {
-    rd.drawImage(
-      images.locked,
-      640 * view.scaleX - 29 * view.scaleY,
-      250 * view.scaleY,
-      58 * view.scaleY,
-      72 * view.scaleY,
-    );
-  }
-  blink.on = !blink.on;
-  stageSelect.hiddenTicks++;
-  if (stageSelect.hiddenTicks == 30) {
-    stageSelect.hiddenTicks = 0;
-    blink.on = false;
-  }
+  rd.fillText(
+    "Loading " + stageLabel(track.stage),
+    640 * view.scaleX,
+    330 * view.scaleY,
+  );
 };
 
 // Insano in the bottom left corner, thinking of his tip and mumbling now and then.
@@ -500,8 +471,7 @@ const drawTitles = (hue) => {
   rd.textAlign = "center";
   rd.textBaseline = "middle";
   rd.lineWidth = 10 * view.scale;
-  const title =
-    track.stage != LAST_STAGE ? "Stage " + track.stage : "Final Stage";
+  const title = stageTitle();
   rd.strokeText(title, 640 * view.scaleX, 120 * view.scaleY);
   rd.fillStyle = cssRgb(hslToRgb(hue - 0.05, 1, 0.6));
   rd.fillText(title, 640 * view.scaleX, 120 * view.scaleY);
@@ -525,27 +495,44 @@ const showStage = (stage) => {
   stageSelect.hiddenTicks = 1;
 };
 
-// The next stage, unless it is still locked.
+// The next stage; after the last of this game's stages won, the original's first.
 const showNextStage = () => {
-  if (track.stage != game.unlocked) {
+  if (originalOf(track.stage) || track.stage < game.unlocked) {
     showStage(track.stage + 1);
   } else {
-    stageSelect.hiddenTicks = 1;
+    showStage(LAST_STAGE + 1);
   }
 };
+
+const showPreviousStage = () => {
+  if (track.stage == LAST_STAGE + 1) {
+    showStage(Math.min(game.unlocked, LAST_STAGE));
+  } else {
+    showStage(track.stage - 1);
+  }
+};
+
+const stageTitle = () =>
+  track.stage == LAST_STAGE ? "Final Stage" : stageLabel(track.stage);
+
+// Won stages of this game's own can also be played in switch mode.
+const switchOffered = () =>
+  track.stage != game.unlocked &&
+  track.stage >= FIRST_SWITCH_STAGE &&
+  track.stage <= LAST_STAGE;
 
 const drawControls = (hue) => {
   const colors = buttonColors(hue);
   const input = racers[0].u;
   if (input.right) {
-    if (track.stage < LAST_STAGE) {
+    if (track.stage < STAGE_COUNT) {
       showNextStage();
     }
     input.right = false;
   }
   if (input.left) {
     if (track.stage > FIRST_STAGE) {
-      showStage(track.stage - 1);
+      showPreviousStage();
     }
     input.left = false;
   }
@@ -598,10 +585,10 @@ const drawControls = (hue) => {
       image: images.buttons[3],
     })
   ) {
-    showStage(track.stage - 1);
+    showPreviousStage();
   }
   if (
-    track.stage < LAST_STAGE &&
+    track.stage < STAGE_COUNT &&
     browseButton({
       id: 2,
       x: view.width - 190 * view.scale,
@@ -620,7 +607,7 @@ const drawControls = (hue) => {
       drawPracticeButton(colors);
     }
   }
-  if (track.stage != game.unlocked && track.stage >= FIRST_SWITCH_STAGE) {
+  if (switchOffered()) {
     drawPlaySwitchButton(colors);
   }
   drawPlayButton(hue);

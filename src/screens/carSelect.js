@@ -1,6 +1,7 @@
 // The car select: the cars turn one by one in front of drifting smoke, with their strengths
 // around them. Cars of later stages stay locked until those stages are won.
 
+import { LAST_STAGE } from "../data/stages.js";
 import { CAR_TEXTURE } from "../render/generated.js";
 import { pauseMenuMusic } from "../audio/audio.js";
 import {
@@ -42,7 +43,6 @@ import { SHOWCASE, poseShowcaseCar, showcase } from "./showcase.js";
 
 const FIRST_CAR = 0;
 const LAST_CAR = 18;
-const LAST_STAGE = 17;
 // the cars from here on are unlocked by winning stages
 const FIRST_LOCKED_CAR = 11;
 // the stage a new player practises on

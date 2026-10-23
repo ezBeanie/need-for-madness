@@ -1,6 +1,7 @@
 // Loading the game: the saved settings, then models, textures, images and sounds, one batch
 // per tick, while a loading bar fills.
 
+import { LAST_STAGE } from "../data/stages.js";
 import { loadSound } from "../audio/audio.js";
 import { interfaceResolution, isPhone } from "../core/platform.js";
 import { random } from "../core/random.js";
@@ -39,7 +40,6 @@ import { drawSlantedBar } from "../ui/widgets.js";
 import { loading } from "./progress.js";
 
 const CAR_TYPES = 19;
-const LAST_STAGE = 17;
 const SOUNDS = 43;
 // the texture groups with files (renderer.js keeps one more)
 const TEXTURE_GROUPS = 19;

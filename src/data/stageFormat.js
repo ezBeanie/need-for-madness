@@ -31,11 +31,38 @@ const COMMANDS = {
     ["g", int],
     ["b", int],
   ],
+  // (the original's stages: type is how cloudy, 0 to 10, and height how high)
   clouds: [
     ["r", int],
     ["g", int],
     ["b", int],
     ["type", int],
+    ["height", int],
+  ],
+  // only in the original's stages (see data/stages.js): the colour its ground's patches
+  // mix in, and how little (texture); their colour outright (polys); how thick its fog
+  // is; from where; its mountains' seed; its lights on at night; a pile of rocks
+  texture: [
+    ["r", int],
+    ["g", int],
+    ["b", int],
+    ["mix", int],
+  ],
+  polys: [
+    ["r", int],
+    ["g", int],
+    ["b", int],
+  ],
+  density: [["density", int]],
+  fadefrom: [["distance", int]],
+  mountains: [["seed", int]],
+  lightson: [],
+  pile: [
+    ["seed", int],
+    ["width", int],
+    ["height", int],
+    ["x", int],
+    ["z", int],
   ],
   ground: [
     ["r", int],

@@ -1,6 +1,7 @@
 // The race end: the result, what got unlocked (a stage, maybe a car, confetti after the
 // last stage), and back to the menus.
 
+import { stageLabel } from "../data/stages.js";
 import { CAR_TEXTURE } from "../render/generated.js";
 import { stopStageMusic } from "../audio/audio.js";
 import { CAR_FILES } from "../classic/cars.js";
@@ -151,9 +152,8 @@ const drawResult = () => {
   rd.font = "" + 18 * (view.scaleY + view.scaleX) + "px junk";
   rd.fillStyle = "#FFA627";
   rd.fillText(
-    (raceEvents.winner ? "You won at stage " : "You lost at stage ") +
-      track.stage +
-      "",
+    (raceEvents.winner ? "You won at " : "You lost at ") +
+      stageLabel(track.stage).replace("Stage", "stage"),
     640 * view.scaleX,
     190 * view.scaleY,
   );
@@ -299,6 +299,7 @@ const classicRaceEnd = () => {
   const { done, chosen } = drawClassicRaceEnd({
     won: raceEvents.winner,
     stage: track.stage,
+    label: stageLabel(track.stage),
     name: track.name,
     unlocks: unlocksStage(),
     finished: track.stage == 17,

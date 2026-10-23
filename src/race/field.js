@@ -1,5 +1,6 @@
 // The field of a race: the opponents for the stage and their places on the start grid.
 
+import { LAST_STAGE, levelOf, originalOf } from "../data/stages.js";
 import { random } from "../core/random.js";
 import { MAX_CARS, RACE_SIZES, game } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
@@ -13,7 +14,6 @@ import { resetRecording } from "./recording.js";
 import { track } from "./track.js";
 
 const CAR_TYPES = 19;
-const LAST_STAGE = 17;
 // the original's field; beyond it there are not enough car types to have no twins
 const ORIGINAL_FIELD = 7;
 
@@ -122,7 +122,8 @@ function chooseOpponents(stage) {
   }
   let randomUpTo = game.carCount;
   const boss = stageBoss(stage);
-  if (game.carTypes[0] != boss && stage != LAST_STAGE) {
+  // (the original's stages unlock no car)
+  if (!originalOf(stage) && game.carTypes[0] != boss && stage != LAST_STAGE) {
     game.carTypes[game.carCount - 1] = boss;
     randomUpTo = game.carCount - 1;
   }
@@ -147,11 +148,12 @@ function chooseOpponents(stage) {
 // has not unlocked yet, and no twins (in the original's field, or until 50 tries failed).
 const pickOpponent = (i, stage) => {
   const newStage = game.unlocked == stage;
+  const level = levelOf(stage);
   let tries = 0;
   let ok = false;
   while (!ok) {
     tries++;
-    let type = Math.floor(random.sim() * (28 + 10 * (stage / 17)));
+    let type = Math.floor(random.sim() * (28 + 10 * (level / 17)));
     if (type >= CAR_TYPES) {
       type -= CAR_TYPES;
     }
@@ -165,7 +167,7 @@ const pickOpponent = (i, stage) => {
       }
     }
     if ((stage != 15 && stage != 16) || !newStage) {
-      let dropOut = ((18 - type) / 18) * (stage / 16);
+      let dropOut = ((18 - type) / 18) * (level / 16);
       dropOut = Math.min(dropOut, stage == LAST_STAGE ? 0.5 : 0.8);
       if (dropOut > random.sim()) {
         ok = false;

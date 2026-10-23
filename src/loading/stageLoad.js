@@ -7,6 +7,7 @@ import {
   pathType,
   valueOf,
 } from "../data/stageFormat.js";
+import { originalOf, stageFile } from "../data/stages.js";
 import { setUpField } from "../race/field.js";
 import { effects } from "../race/effects.js";
 import { pieceModels, pieces, track } from "../race/track.js";
@@ -51,7 +52,7 @@ const WALL_SPACING = 480;
 export function loadStage() {
   stageLoad.progress = STAGE_LOAD.loading;
   const request = new XMLHttpRequest();
-  request.open("GET", "data/stages/" + track.stage + ".txt", true);
+  request.open("GET", stageFile(track.stage), true);
   request.onreadystatechange = () => {
     if (
       request.readyState === 4 &&
@@ -95,10 +96,46 @@ const readStage = (text) => {
   scene.light[2] = 0;
   bounds = null;
   track.tips = [];
+  const original = originalOf(track.stage) != 0;
+  if (original) {
+    scene.colors.original = { commands: [], pathObjects: 0 };
+  }
+  let objects = 0;
   for (const entry of parseStage(text)) {
     COMMANDS[entry.command]?.(entry, (field) => valueOf(entry, field));
+    if (original) {
+      if (ORIGINAL_LOOK.includes(entry.command)) {
+        scene.colors.original.commands.push(entry);
+      }
+      // the objects up to the last on the path (the original's notb): its ground's
+      // patches are made from how many
+      if (OBJECTS.includes(entry.command)) {
+        objects++;
+        if (entry.command != "set" || pathType(entry) !== null) {
+          scene.colors.original.pathObjects = objects;
+        }
+      }
+    }
   }
 };
+
+// what the classic look takes from the original's stages as their files say it, in
+// their order (see classic/medium.js)
+const ORIGINAL_LOOK = [
+  "snap",
+  "sky",
+  "ground",
+  "polys",
+  "fog",
+  "texture",
+  "clouds",
+  "density",
+  "fadefrom",
+  "lightson",
+  "mountains",
+];
+// the commands that make one of the original's objects
+const OBJECTS = ["set", "chk", "fix", "pile"];
 
 const COMMANDS = {
   name: (e) => {
@@ -133,6 +170,10 @@ const COMMANDS = {
     cloudColor[1] = v("g");
     cloudColor[2] = v("b");
     cloudType = v("type");
+    if (originalOf(track.stage)) {
+      // the original's 0 to 10 of cloudiness as one of this game's three skies
+      cloudType = Math.min(2, Math.round(cloudType / 4));
+    }
     scene.colors.clouds = [...cloudColor];
   },
   ground: (e, v) => {
@@ -168,6 +209,11 @@ const COMMANDS = {
   distfog: (e, v) => {
     scene.fogDistance = v("distance");
     scene.colors.distance = v("distance");
+  },
+  // the original's stages: how far its fog starts, as how far this game's ends
+  fadefrom: (e, v) => {
+    scene.fogDistance = Math.min(8000, v("distance")) / 0.8;
+    scene.colors.distance = scene.fogDistance;
   },
   bnd: (e, v) => {
     bounds = [v("a"), v("b"), v("c"), v("d")];

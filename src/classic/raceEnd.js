@@ -191,12 +191,13 @@ const drawGameFinished = () => {
   centred(350, "Now get up and dance!", flicker(BLUE, [228, 240, 255]));
 };
 
-// The screen for a tick: { won, stage, name, unlocks (the next stage), finished (the
+// The screen for a tick: { won, stage, label ("Stage 3"), name, unlocks (the next stage), finished (the
 // last stage was won), car (the name of the car unlocked, or null), practice }. Returns
 // { done: the picture is worked, chosen: continue was chosen }.
 export const drawClassicRaceEnd = ({
   won,
   stage,
+  label,
   name,
   unlocks,
   finished,
@@ -214,14 +215,14 @@ export const drawClassicRaceEnd = ({
     return { done: false, chosen: false };
   }
   font(11);
-  const at = ` ${stage}!`;
+  const at = ` ${label}!`;
   if (won) {
     draw(picture("congrad.gif"), 265, 87);
-    centred(137, `You Won!  At Stage${at}`, [255, 161, 85]);
+    centred(137, `You Won!  At${at}`, [255, 161, 85]);
     centred(154, name, [255, 115, 0]);
   } else {
     draw(picture("gameov.gif"), 315, 117);
-    centred(167, `You Lost!  At Stage${at}`, [255, 161, 85]);
+    centred(167, `You Lost!  At${at}`, [255, 161, 85]);
     centred(184, name, [255, 115, 0]);
   }
   if (unlocks && finished) {

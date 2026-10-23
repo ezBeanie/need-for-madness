@@ -38,6 +38,17 @@ render stage14 stage24.zip 8000 230 125
 render stage15 stage25.zip 8000 220 125
 render stage16 stage26.zip 8000 261 125
 render stage17 party.zip 7600 400 125
+# the original's Need for Madness 1 stages, 1 to 10
+render nfm1-stage1 stage1.zip 8400 240 135
+render nfm1-stage2 stage2.zip 9000 190 145
+render nfm1-stage3 stage3.zip 8500 170 145
+render nfm1-stage4 stage4.zip 7500 205 125
+render nfm1-stage5 stage5.zip 7900 170 125
+render nfm1-stage6 stage6.zip 7900 370 125
+render nfm1-stage7 stage7.zip 7500 205 125
+render nfm1-stage8 stage8.zip 7900 230 125
+render nfm1-stage9 stage9.zip 7900 180 125
+render nfm1-stage10 stage10.zip 8100 280 145
 # the loops, in seconds: where playing goes back to, and from where
 {
   printf "{\n"

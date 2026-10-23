@@ -1,6 +1,7 @@
 // Music (one menu track, one track per stage), sound effects and the looping engine sound.
 // Browsers only play audio after the player touched the page: see unlockAudio.
 
+import { musicOf } from "../data/stages.js";
 import { CLASSIC_FILES, CLASSIC_SOUNDS } from "../classic/sounds.js";
 import { isIos } from "../core/platform.js";
 import { LOOK, look } from "../render/look.js";
@@ -117,10 +118,8 @@ const classicTrack = (file) => {
   return track;
 };
 
-const newTrack = (file) =>
-  look.current == LOOK.classic
-    ? classicTrack(file)
-    : new Audio(`data/music/${file}.mp3`);
+const newTrack = (file, classic = look.current == LOOK.classic) =>
+  classic ? classicTrack(file) : new Audio(`data/music/${file}.mp3`);
 
 // the menus' track in the look
 const menuFile = () => (look.current == LOOK.classic ? "interface" : "shift");
@@ -155,14 +154,22 @@ export const pauseMenuMusic = () => {
   }
 };
 
-// the stage's track in the look
-const stageFile = (stage) => `${look.current}:stage${stage}`;
+// the stage's track in the look (the original's stages have their own in both)
+const stageFile = (stage) =>
+  `${musicOf(stage).classic ? LOOK.classic : look.current}:stage${stage}`;
+
+// (the stage a track was for, from its stageFile)
+const stageOfFile = (file) => Number(file.split(":stage")[1]);
 
 export const playStageMusic = (stage) => {
   try {
     if (stageMusic.file != stageFile(stage)) {
       stageMusic.track?.pause();
-      stageMusic.track = newTrack(`stage${stage}`);
+      const music = musicOf(stage);
+      stageMusic.track = newTrack(
+        music.file,
+        music.classic || look.current == LOOK.classic,
+      );
       stageMusic.track.volume = 1;
       stageMusic.track.loop = true;
       stageMusic.file = stageFile(stage);
@@ -191,7 +198,7 @@ export const stopStageMusic = () => {
 
 export const resumeStageMusic = () => {
   // the look changed meanwhile: the stage's track in it, from its start
-  const stage = stageMusic.file?.split(":stage")[1];
+  const stage = stageMusic.file && stageOfFile(stageMusic.file);
   if (stageMusic.state == 2 && stageMusic.file != stageFile(stage)) {
     playStageMusic(stage);
     return;
@@ -210,7 +217,7 @@ export const switchMusicLook = () => {
     playMenuMusic();
   }
   if (stageMusic.state == 1) {
-    playStageMusic(stageMusic.file.split(":stage")[1]);
+    playStageMusic(stageOfFile(stageMusic.file));
   }
 };
 

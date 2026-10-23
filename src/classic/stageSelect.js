@@ -131,32 +131,6 @@ export const drawClassicStageSelect = ({
 
 // cantgo: the next stage stays shut behind bars until this one is won, for 100 frames.
 // Returns whether the screen is over.
-export const drawClassicLocked = (stage, ticks) => {
-  startScreen();
-  drawTrackBackground();
-  drawTitle();
-  font(13);
-  centred(
-    130,
-    `This stage will be unlocked when stage ${stage} is complete!`,
-    [177, 177, 177],
-  );
-  const gate = picture("pgate.gif");
-  for (let i = 0; i < 9; i++) {
-    draw(gate, 277 + i * 30, 215);
-  }
-  font(12);
-  centred(
-    185,
-    `[ Stage ${stage + 1} Locked ]`,
-    state.blink ? [255, 128, 0] : [255, 0, 0],
-  );
-  state.blink = !state.blink;
-  const back = imageButton("back.gif", 370, 345);
-  releaseButtons();
-  return back || ticks >= 100;
-};
-
 // loadingstage: the track picture still, the frame, and a box saying to wait.
 export const drawClassicLoading = (showTitle) => {
   startScreen();
