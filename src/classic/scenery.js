@@ -1,20 +1,10 @@
 // The original game's scenery around a stage (its Medium): patches on the ground,
 // clouds and mountain ranges, made when a stage loads and drawn behind everything else.
 // Clouds and mountains are far away: they move with the camera at 1/20 and 1/30.
+import { javaRandom } from "../core/javaRandom.js";
 import { fillPolygon } from "./batch.js";
 import { X, Y, Z, placeOrig } from "./draw.js";
 import { medium, xs, ys } from "./medium.js";
-
-// java.util.Random, which the original made its scenery with
-const javaRandom = (seed) => {
-  const MASK = (1n << 48n) - 1n;
-  let state = (BigInt(Math.trunc(seed)) ^ 0x5deece66dn) & MASK;
-  const next = (bits) => {
-    state = (state * 0x5deece66dn + 0xbn) & MASK;
-    return Number(state >> BigInt(48 - bits));
-  };
-  return () => (next(26) * 2 ** 27 + next(27)) / 2 ** 53;
-};
 
 const scenery = { patches: [], clouds: [], mountains: [] };
 

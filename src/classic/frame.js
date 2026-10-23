@@ -30,7 +30,7 @@ import {
   setStageLook,
 } from "./medium.js";
 import { drawScenery, newScenery } from "./scenery.js";
-import { parseRad } from "./rad.js";
+import { parseRad, pileRad } from "./rad.js";
 
 // pieces the original has under another name
 const PIECE_STAND_INS = { takeoffb: "takeoff" };
@@ -58,6 +58,8 @@ const loadModels = () => {
 
 // the stage the models are tinted for
 let tintedFor = null;
+// the models of the stage's rock piles, by piece
+const pileRads = new Map();
 
 // a fixed sequence for the original's random rock colours, the same on every load
 const seeded = (seed) => () => {
@@ -85,6 +87,16 @@ const tintForStage = (colors) => {
   const randomness = seeded(7);
   for (const rad of models.values()) {
     tintModel(rad, randomness);
+  }
+  // the rock piles in the stage's colours, as the original made them while loading it
+  pileRads.clear();
+  for (let i = 0; i < pieces.count; i++) {
+    const piece = pieces.list[i];
+    if (piece.pile) {
+      const rad = pileRad(piece.pile, medium.cpol, medium.cgrnd);
+      tintModel(rad, randomness);
+      pileRads.set(piece, rad);
+    }
   }
   // the stage's bounds and roads, in the original's units
   const xBounds = [-10 * track.liml, -10 * track.limr];
@@ -175,7 +187,9 @@ const pieceObjects = (count, nextCheckpoint) => {
   for (let i = 0; i < count; i++) {
     const piece = pieces.list[i];
     const file = PIECE_FILES[piece.typ];
-    const rad = models.get(PIECE_STAND_INS[file] ?? file);
+    const rad = piece.pile
+      ? pileRads.get(piece)
+      : models.get(PIECE_STAND_INS[file] ?? file);
     if (rad) {
       objects.push({
         key: piece,

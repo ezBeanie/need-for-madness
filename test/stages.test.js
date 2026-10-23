@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { expect, test } from "vitest";
+import { makePile, pileColor } from "../src/data/pile.js";
 import { parseStage } from "../src/data/stageFormat.js";
 import {
   LAST_STAGE,
@@ -59,4 +60,23 @@ test("every original stage names only pieces this game has", () => {
     ).toEqual([]);
     expect(entries.some(({ command }) => command == "nlaps")).toBe(true);
   }
+});
+
+// what the original's ContO made of pile(1081,4,6,...) with its Medium's own colours
+const originalPile = JSON.parse(
+  readFileSync(
+    new URL("./fixtures/pile-1081-4-6.json", import.meta.url),
+    "utf8",
+  ),
+);
+
+test("a rock pile has the original's shape and colours", () => {
+  const pile = makePile(1081, 4, 6);
+  expect(pile.faces.map(({ points }) => points)).toEqual(originalPile.faces);
+  expect(pile.maxR).toBe(originalPile.maxR);
+  expect(
+    pile.faces.map(({ shade }) =>
+      pileColor(shade, originalPile.cpol, originalPile.cgrnd),
+    ),
+  ).toEqual(originalPile.colors);
 });

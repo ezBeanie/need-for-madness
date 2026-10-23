@@ -238,52 +238,72 @@ const loadTextures = (model, files) => {
 export const loadModel = (file, model) => {
   model.loaded = 0;
   fetchText(file, (source) => {
-    const parsed = parseModel(source);
-    Object.assign(model, {
-      colrad: 0,
-      iscar: 0,
-      intershad: false,
-      interact: false,
-      copyonly: false,
-      skid: -1,
-    });
-    const build = applyModelDirectives(model, parsed.directives);
-    const { normals, texcoords, triangles } = parsed;
-    const vertices = parsed.vertices;
-    // collision, shadows and car damage need the raw geometry
-    if (model.copyonly || model.intershad || model.interact || model.iscar) {
-      model.vrt = vertices;
-      model.tri = triangles;
+    const build = buildModel(model, parseModel(source));
+    if (build) {
+      loadTextures(model, build.textureFiles);
     }
-    if (model.copyonly || model.intershad || model.interact) {
-      model.nrm = normals;
-    }
-    if (model.copyonly || model.iscar) {
-      model.tex = texcoords;
-    }
-    if (model.copyonly) {
-      model.loaded = 1;
-      return;
-    }
-    if (model.nt == 0) {
-      model.nt = 1;
-    }
-    if (build.scale != 1) {
-      for (let i = 0; i < vertices.length; i++) {
-        vertices[i] *= build.scale;
-      }
-    }
-    if (build.scaleX != 1) {
-      for (let i = 0; i < vertices.length; i += 3) {
-        vertices[i] *= build.scaleX;
-      }
-      model.vrt = vertices;
-    }
-    buildGeometry(model, vertices, normals, texcoords, triangles, build.flipX);
-    model.loaded = 1;
-    model.mat = mat4.create();
-    loadTextures(model, build.textureFiles);
   });
+};
+
+// A model from its parts (as parseModel reads them); returns how it is built, or null for
+// a model only copied from.
+export const buildModel = (model, parsed) => {
+  Object.assign(model, {
+    colrad: 0,
+    iscar: 0,
+    intershad: false,
+    interact: false,
+    copyonly: false,
+    skid: -1,
+  });
+  const build = applyModelDirectives(model, parsed.directives);
+  const { normals, texcoords, triangles } = parsed;
+  const vertices = parsed.vertices;
+  // collision, shadows and car damage need the raw geometry
+  if (model.copyonly || model.intershad || model.interact || model.iscar) {
+    model.vrt = vertices;
+    model.tri = triangles;
+  }
+  if (model.copyonly || model.intershad || model.interact) {
+    model.nrm = normals;
+  }
+  if (model.copyonly || model.iscar) {
+    model.tex = texcoords;
+  }
+  if (model.copyonly) {
+    model.loaded = 1;
+    return null;
+  }
+  if (model.nt == 0) {
+    model.nt = 1;
+  }
+  if (build.scale != 1) {
+    for (let i = 0; i < vertices.length; i++) {
+      vertices[i] *= build.scale;
+    }
+  }
+  if (build.scaleX != 1) {
+    for (let i = 0; i < vertices.length; i += 3) {
+      vertices[i] *= build.scaleX;
+    }
+    model.vrt = vertices;
+  }
+  buildGeometry(model, vertices, normals, texcoords, triangles, build.flipX);
+  model.loaded = 1;
+  model.mat = mat4.create();
+  return build;
+};
+
+// Gives a built model's buffers and texture back (a stage's own models, see piles.js).
+export const freeModel = (model) => {
+  for (const buffer of [model.vbuf, model.nbuf, model.tbuf, model.ibuf]) {
+    if (buffer) {
+      gl.deleteBuffer(buffer);
+    }
+  }
+  if (model.texture) {
+    gl.deleteTexture(model.texture);
+  }
 };
 
 // Colour gradients of particle models: a colour pair (rgba, rgba) split at mid along x, y

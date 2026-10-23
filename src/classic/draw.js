@@ -39,9 +39,15 @@ export const tintModel = (rad, randomness) => {
     if (poly.glass == 2) {
       c = medium.crgrnd.map((v) => Math.trunc(v * 0.925));
     }
+    if (poly.glass == 3) {
+      c = [...color];
+    }
     poly.c = c;
     poly.oc = color;
     poly.hsb = rgbToHsb(...c);
+    if (poly.glass == 3) {
+      poly.hsb[1] = Math.min(1, poly.hsb[1] + 0.05);
+    }
     poly.deltaf = deltaf(poly.points);
     poly.typ = flattestAxis(poly.points);
     poly.id = rad.polys.indexOf(poly);

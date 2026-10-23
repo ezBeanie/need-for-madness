@@ -1,5 +1,8 @@
 // Loading a stage: its loading screen, the stage file, and where the game goes afterwards.
 
+import { makePile } from "../data/pile.js";
+import { freeModel, newModel } from "../render/models.js";
+import { buildPileModel } from "../render/piles.js";
 import { game } from "../core/state.js";
 import {
   isSpecialFix,
@@ -73,7 +76,13 @@ let cloudType = 0;
 // the bounds the next piece gets ("bnd" in the stage file)
 let bounds = null;
 
+// the pieces every stage has; the original's rock piles follow them, each its own
+const SHARED_PIECES = pieceModels.length;
+
 const readStage = (text) => {
+  for (const pile of pieceModels.splice(SHARED_PIECES)) {
+    freeModel(pile);
+  }
   track.n = 0;
   track.nsp = 0;
   pieces.count = 0;
@@ -265,6 +274,20 @@ const COMMANDS = {
     track.special[pieces.fixCount] = isSpecialFix(e);
     pieces.fixes[pieces.fixCount] = pieces.count;
     pieces.fixCount++;
+    pieces.count++;
+  },
+  // one of the original's rock piles, a mound to drive over
+  pile: (e, v) => {
+    const piece = newPiece(null);
+    piece.typ = pieceModels.length;
+    piece.pile = makePile(v("seed"), v("width"), v("height"));
+    const model = newModel();
+    pieceModels.push(model);
+    buildPileModel(model, piece.pile, scene.colors.ground);
+    piece.x = -(v("x") / 10);
+    piece.y = 0;
+    piece.z = v("z") / 10;
+    measure(piece, 0);
     pieces.count++;
   },
   // the walls around the stage: right, left, top and bottom

@@ -1,6 +1,7 @@
 // The original Java game's models (.rad files, data/classic): polygons of a single
 // colour, as its ContO, Wheels and Plane classes read them. Coordinates stay in the
 // original's units and axes (ten times ours, x and y the other way round).
+import { pileColor } from "../data/pile.js";
 
 // what a model with nothing set looks like (ContO's defaults)
 const newRad = () => ({
@@ -22,7 +23,7 @@ const valueOf = (line, name, n) =>
   Math.trunc(parseFloat(line.slice(name.length + 1).split(/[,)]/)[n]));
 
 // A polygon: corners (x, y, z), colour, and how it is drawn. glass 1 takes the sky's
-// colour, 2 the ground's; light 1 shines at night, 2 is a back light; solo polygons
+// colour, 2 the ground's, 3 its own untinted; light 1 shines at night, 2 is a back light; solo polygons
 // have no outline; road polygons get a faint one up close.
 const newPoly = (points, color, flags) => ({
   points,
@@ -40,6 +41,26 @@ const newPoly = (points, color, flags) => ({
   wz: 0,
   master: 0,
   ...flags,
+});
+
+// One of the original's rock piles (see data/pile.js), in the stage's colours: its faces
+// as they are (glass 3), road it fades into, seen from close only (disline 4).
+export const pileRad = ({ faces, maxR }, polys, ground) => ({
+  ...newRad(),
+  polys: faces.map((face) =>
+    newPoly(face.points, pileColor(face.shade, polys, ground), {
+      glass: 3,
+      gr: -8,
+      road: true,
+      disline: 4,
+    }),
+  ),
+  maxR,
+  disp: Math.trunc(maxR / 17),
+  disline: 4,
+  noline: true,
+  decor: true,
+  grounded: 115,
 });
 
 export const parseRad = (text) => {
