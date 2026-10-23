@@ -115,6 +115,17 @@ export const PIECE_FILES = [
 ];
 const UNLOADED_PIECE = 40;
 
+// The pieces with writing on them, the same on both sides otherwise: the 3D picture is
+// mirrored (see render/renderer.js), so they are drawn mirrored back for their writing to
+// read as it should.
+export const LETTERED_PIECES = [
+  "sroad",
+  "soffroad",
+  "checkpoint",
+  "offcheckpoint",
+  "aircheckpoint",
+];
+
 // the picture above the loading bar, the first thing to load
 const loadingPicture = new Image();
 loadingPicture.src = "data/interface" + interfaceResolution + "/loading.png";
@@ -179,8 +190,8 @@ const requestWheelsAndTexts = () => {
   loadModel("data/3D/tiredisk.r3d", wheelDisk);
   loadParticleModel("data/3D/tire.prt", wheelTread);
   loadParticleModel("data/3D/tirelow.prt", wheelTreadLow);
-  loadParticleModel("data/3D/cptext.prt", checkpointText);
-  loadParticleModel("data/3D/fntext.prt", finishText);
+  loadParticleModel("data/3D/cptext.prt", checkpointText, true);
+  loadParticleModel("data/3D/fntext.prt", finishText, true);
   loadParticleModel("data/3D/timetube.prt", timeTube);
   loadParticleModel("data/3D/bg.prt", stageBackdrop);
 };
@@ -197,7 +208,11 @@ const requestCars = () => {
 const requestPieces = () => {
   PIECE_FILES.forEach((file, i) => {
     if (i != UNLOADED_PIECE) {
-      loadModel("data/3D/" + file + ".r3d", pieceModels[i]);
+      loadModel(
+        "data/3D/" + file + ".r3d",
+        pieceModels[i],
+        LETTERED_PIECES.includes(file),
+      );
     }
   });
 };

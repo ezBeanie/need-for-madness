@@ -331,10 +331,11 @@ const fingers = () => (ctx, frame) => {
   } else if (frame < 1100) {
     on.push(TOUCH.brake);
   }
+  // (the picture is mirrored: the right control steers the car to its left)
   if (frame % 200 < 60) {
-    on.push(TOUCH.left);
-  } else if (frame % 200 >= 100 && frame % 200 < 160) {
     on.push(TOUCH.right);
+  } else if (frame % 200 >= 100 && frame % 200 < 160) {
+    on.push(TOUCH.left);
   }
   if (frame >= 300 && frame < 330) {
     on.push(TOUCH.handbrake);
