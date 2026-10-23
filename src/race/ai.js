@@ -5,7 +5,7 @@ import { random } from "../core/random.js";
 import { MAX_CARS, MODE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { CAR, carStats } from "../data/carStats.js";
-import { car, racers } from "./racers.js";
+import { MISSED, car, racers } from "./racers.js";
 import { PIECE, pieceModels, pieces, track } from "./track.js";
 
 // path points marked "pr" in the stage file lie on ramps (see pathType)
@@ -329,7 +329,7 @@ function waitAtStart(c) {
 function headForFix(c, point) {
   if (track.stage != 17 && game.mode != MODE.switchCars) {
     if (
-      racers[c].missedcp == 0 ||
+      racers[c].missedCheckpoint == MISSED.none ||
       ai[c].ignoreMissed ||
       ai[c].fixing == FIX.jumping
     ) {
@@ -475,11 +475,11 @@ function chaseTarget(c) {
     track.stage == 15 &&
     ai[c].quitsAttackOnMissedCheckpoint &&
     !ai[c].bully &&
-    racers[c].missedcp != 0
+    racers[c].missedCheckpoint != MISSED.none
   ) {
     ai[c].attackTicks = 0;
   }
-  if (track.stage == 16 && racers[c].missedcp != 0) {
+  if (track.stage == 16 && racers[c].missedCheckpoint != MISSED.none) {
     if (
       track.pos[c] == 0 ||
       (track.pos[c] == 1 && track.pos[game.player] == 0)

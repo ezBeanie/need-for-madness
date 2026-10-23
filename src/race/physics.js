@@ -34,7 +34,7 @@ import {
   sprks,
 } from "./effects.js";
 import { raceEvents } from "./events.js";
-import { SKID, STUNT, car, racers } from "./racers.js";
+import { MISSED, SKID, STUNT, car, racers } from "./racers.js";
 import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
 import { PIECE, pieceModels, pieces, track } from "./track.js";
 
@@ -136,7 +136,7 @@ export function inishmad() {
     racers[c].nlaps = 0;
     racers[c].focus = -1;
     racers[c].power = 98;
-    racers[c].missedcp = 0;
+    racers[c].missedCheckpoint = MISSED.none;
     racers[c].lastcolido = 0;
     racers[c].nofocus = false;
     racers[c].point = 0;
@@ -399,19 +399,19 @@ function pathPointAhead(c, pnt) {
       pnt = 0;
     }
     if (c == game.player) {
-      if (racers[c].missedcp != -1) {
-        racers[c].missedcp = -1;
+      if (racers[c].missedCheckpoint != MISSED.following) {
+        racers[c].missedCheckpoint = MISSED.following;
       }
     } else {
-      if (racers[c].missedcp != 0) {
-        racers[c].missedcp = 0;
+      if (racers[c].missedCheckpoint != MISSED.none) {
+        racers[c].missedCheckpoint = MISSED.none;
       }
     }
   } else {
     pnt = racers[c].focus;
     if (c == game.player) {
       if (
-        racers[c].missedcp == 0 &&
+        racers[c].missedCheckpoint == MISSED.none &&
         racers[c].mtouch &&
         Math.sqrt(
           distanceSquaredXZ(
@@ -422,10 +422,10 @@ function pathPointAhead(c, pnt) {
           ),
         ) > 80
       ) {
-        racers[c].missedcp = 1;
+        racers[c].missedCheckpoint = MISSED.started;
       }
       if (
-        racers[c].missedcp == -2 &&
+        racers[c].missedCheckpoint == MISSED.warned &&
         Math.sqrt(
           distanceSquaredXZ(
             car[c].x / 10,
@@ -435,10 +435,10 @@ function pathPointAhead(c, pnt) {
           ),
         ) < 40
       ) {
-        racers[c].missedcp = 0;
+        racers[c].missedCheckpoint = MISSED.none;
       }
       if (
-        racers[c].missedcp != 0 &&
+        racers[c].missedCheckpoint != MISSED.none &&
         racers[c].mtouch &&
         Math.sqrt(
           distanceSquaredXZ(
@@ -449,14 +449,14 @@ function pathPointAhead(c, pnt) {
           ),
         ) < 25
       ) {
-        racers[c].missedcp = 68;
+        racers[c].missedCheckpoint = MISSED.comingBack;
       }
     } else {
-      racers[c].missedcp = 1;
+      racers[c].missedCheckpoint = MISSED.started;
     }
     if (racers[c].nofocus) {
       racers[c].focus = -1;
-      racers[c].missedcp = 0;
+      racers[c].missedCheckpoint = MISSED.none;
     }
   }
   return pnt;

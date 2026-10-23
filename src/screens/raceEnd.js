@@ -1,6 +1,7 @@
 // The race end: the result, what got unlocked (a stage, maybe a car, confetti after the
 // last stage), and back to the menus.
 
+import { CAR_TEXTURE } from "../render/generated.js";
 import { stopStageMusic } from "../audio/audio.js";
 import { CAR_FILES } from "../classic/cars.js";
 import { classicGroundOf } from "../classic/frame.js";
@@ -380,7 +381,7 @@ export function unlockedCarTick() {
     body.x = 0;
     body.y = carStats.wly[type][1] + 1.5 * carStats.wlh[type][1] - 17;
     body.z = -80;
-    body.ont = 0;
+    body.shownTexture = CAR_TEXTURE.menu;
     showcase.spin += 2;
     if (showcase.spin > 360) {
       showcase.spin -= 360;
@@ -448,7 +449,7 @@ const classicUnlockedCarTick = () => {
     carStats.wly[type][1] +
     1.5 * carStats.wlh[type][1];
   body.z = 100;
-  body.ont = 0;
+  body.shownTexture = CAR_TEXTURE.menu;
   body.wzy = (body.wzy ?? 0) - 10;
   if (body.wzy < -30) {
     body.wzy += 30;

@@ -33,7 +33,7 @@ import { CONFIRM, confirm } from "../input/confirm.js";
 import { pointer } from "../input/pointer.js";
 import { COUNTDOWN } from "../race/countdown.js";
 import { raceEvents } from "../race/events.js";
-import { STUNT, car, racers } from "../race/racers.js";
+import { MISSED, STUNT, car, racers } from "../race/racers.js";
 import {
   HIGHLIGHT,
   skipReplay,
@@ -327,7 +327,7 @@ const takeOverNextCar = () => {
     racers[i].pcleared = track.pcs;
     racers[i].clear = 0;
     racers[i].nlaps = 0;
-    racers[i].missedcp = 0;
+    racers[i].missedCheckpoint = MISSED.none;
     racers[i].focus = -1;
   }
   const from = racers[game.player].u;
@@ -855,11 +855,18 @@ const announceArrowTarget = () => {
   }
 };
 
+// the ticks of a missed checkpoint's warning that show its message
+const MISSED_MESSAGE_FROM = 15;
+const MISSED_MESSAGE_UNTIL = 50;
+
 // Under the arrow: a missed checkpoint, or driving the wrong way.
 const drawTrackWarnings = () => {
   const player = racers[game.player];
-  if (player.missedcp > 0) {
-    if (player.missedcp > 15 && player.missedcp < 50) {
+  if (player.missedCheckpoint >= MISSED.started) {
+    if (
+      player.missedCheckpoint > MISSED_MESSAGE_FROM &&
+      player.missedCheckpoint < MISSED_MESSAGE_UNTIL
+    ) {
       if (warningBlink) {
         drawCenteredText(112, "Check Point Missed!", 255, 0, 0, TEXT.label);
       } else {
@@ -874,9 +881,9 @@ const drawTrackWarnings = () => {
       }
     }
     if (once()) {
-      player.missedcp++;
-      if (player.missedcp == 70) {
-        player.missedcp = -2;
+      player.missedCheckpoint++;
+      if (player.missedCheckpoint == MISSED.ends) {
+        player.missedCheckpoint = MISSED.warned;
       }
     }
   } else if (player.mtouch && wrongWayShown < 70) {
@@ -1530,7 +1537,7 @@ export function drawHud() {
     ) {
       arrow(
         racers[game.player].point,
-        racers[game.player].missedcp,
+        racers[game.player].missedCheckpoint,
         arrowAtCars,
       );
       if (
@@ -1995,11 +2002,11 @@ const projectArrow = (xs, ys, zs) => {
 // points backwards, and blinks after a missed checkpoint.
 const drawTrackArrow = (xs, ys, missed) => {
   const angle = Math.abs(arrowAngle);
-  const fades = angle <= 45 && missed != -2 && wrongWayTicks == 0;
+  const fades = angle <= 45 && missed != MISSED.warned && wrongWayTicks == 0;
   let r = 190;
   let g = 255;
   const b = 0;
-  if (missed <= 0) {
+  if (missed < MISSED.started) {
     if (fades) {
       rd.globalAlpha = angle / 45;
     }
@@ -2022,7 +2029,7 @@ const drawTrackArrow = (xs, ys, missed) => {
   rd.globalAlpha = 1;
   r = 115;
   g = 170;
-  if (missed <= 0) {
+  if (missed < MISSED.started) {
     if (fades) {
       rd.globalAlpha = angle / 45;
     }
@@ -2078,8 +2085,8 @@ export function arrow(pathPoint, missed, atCars) {
   if (!atCars) {
     if (
       Math.abs(arrowAngle) > 7 ||
-      missed > 0 ||
-      missed == -2 ||
+      missed >= MISSED.started ||
+      missed == MISSED.warned ||
       wrongWayTicks != 0
     ) {
       projectArrow(xs, ys, zs);

@@ -12,7 +12,7 @@ export const newModel = () => ({
   y: 0,
   z: 0,
   mat: null,
-  ont: 0,
+  shownTexture: 0,
   ni: 0,
   nt: 0,
   tgn: 0,
@@ -213,7 +213,7 @@ const buildGeometry = (
 };
 
 // Textures count into model.loaded as they arrive. One texture is model.texture itself,
-// several (up to six) are model.texture[n], picked by model.ont.
+// several (up to six) are model.texture[n], picked by model.shownTexture.
 const loadTextures = (model, files) => {
   if (model.tgn || files.length == 0) {
     model.loaded++;

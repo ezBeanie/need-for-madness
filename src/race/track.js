@@ -99,8 +99,8 @@ export const spinFixHoops = () => {
       [0, 0, 1],
     );
   }
-  fixHoop.ont++;
-  if (fixHoop.ont == 5) {
-    fixHoop.ont = 0;
+  fixHoop.shownTexture++;
+  if (fixHoop.shownTexture == 5) {
+    fixHoop.shownTexture = 0;
   }
 };

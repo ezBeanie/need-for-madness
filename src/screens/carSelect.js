@@ -1,6 +1,7 @@
 // The car select: the cars turn one by one in front of drifting smoke, with their strengths
 // around them. Cars of later stages stay locked until those stages are won.
 
+import { CAR_TEXTURE } from "../render/generated.js";
 import { pauseMenuMusic } from "../audio/audio.js";
 import {
   drawClassicCarSelect,
@@ -108,7 +109,7 @@ export function carSelectTick() {
   body.y =
     carStats.wly[type][1] + 1.5 * carStats.wlh[type][1] + showcase.height;
   body.z = -98;
-  body.ont = 0;
+  body.shownTexture = CAR_TEXTURE.menu;
   showcase.spin += 5;
   if (showcase.spin > 360) {
     showcase.spin -= 360;
@@ -657,7 +658,7 @@ const classicTick = () => {
   body.y = CLASSIC_STAND + ground + classic.height;
   // (the original shows its biggest car a little farther away)
   body.z = type == CAR.masheen ? 100 : 95;
-  body.ont = 0;
+  body.shownTexture = CAR_TEXTURE.menu;
   body.wzy = (body.wzy ?? 0) - 10;
   if (body.wzy < -30) {
     body.wzy += 30;

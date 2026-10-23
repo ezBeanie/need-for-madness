@@ -140,9 +140,9 @@ const shadowOnPiece = (body, shadow, piece) => {
 // Whether the car lies the other way round for its silhouette (on its roof, other side or
 // other end).
 const shadowFlipped = (shadow, body) =>
-  (shadow.ont == SILHOUETTE.upright && body.mat[5] < 0) ||
-  (shadow.ont == SILHOUETTE.onItsSide && body.mat[1] < 0) ||
-  (shadow.ont == SILHOUETTE.onItsEnd && body.mat[9] > 0);
+  (shadow.shownTexture == SILHOUETTE.upright && body.mat[5] < 0) ||
+  (shadow.shownTexture == SILHOUETTE.onItsSide && body.mat[1] < 0) ||
+  (shadow.shownTexture == SILHOUETTE.onItsEnd && body.mat[9] > 0);
 
 // The hoops spin and their electricity flickers, checkpoints flash, and the checkpoint
 // the player drives through shows its text (and the finish text on the last one).
@@ -150,9 +150,9 @@ export const animateTrack = () => {
   spinFixHoops();
   if (raceEvents.onelec) {
     faceCamera(electricity);
-    electricity.ont++;
-    if (electricity.ont == 5) {
-      electricity.ont = 0;
+    electricity.shownTexture++;
+    if (electricity.shownTexture == 5) {
+      electricity.shownTexture = 0;
     }
   }
   // stage 1 flashes its checkpoints five times faster

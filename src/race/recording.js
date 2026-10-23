@@ -14,7 +14,7 @@ import { resetPursuit } from "./ai.js";
 import { burn, chipburn, dustup, firexp, sprks } from "./effects.js";
 import { raceEvents } from "./events.js";
 import { fixcar, regn } from "./physics.js";
-import { car, racers } from "./racers.js";
+import { MISSED, car, racers } from "./racers.js";
 import { track } from "./track.js";
 
 // how many ticks a tape holds; events are recorded at TAPE_TICKS and count down with
@@ -709,7 +709,7 @@ const backToTheRace = () => {
   for (let c = 0; c < game.carCount; c++) {
     resetPursuit(c);
     racers[c].focus = -1;
-    racers[c].missedcp = 0;
+    racers[c].missedCheckpoint = MISSED.none;
     racers[c].nofocus = false;
     racers[c].body.alpha = BLEND.alpha;
     if (recording.tape.cars[c].wastedAt > 0) {

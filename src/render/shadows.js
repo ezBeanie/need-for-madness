@@ -2,7 +2,7 @@
 
 import { carStats } from "../data/carStats.js";
 
-// the shadow textures (model.ont of a shadow)
+// the shadow textures (model.shownTexture of a shadow)
 export const SILHOUETTE = { upright: 0, onItsSide: 1, onItsEnd: 2 };
 
 // Lays the shadow under the body of a car of the given type; its height is up to the caller.
@@ -15,7 +15,7 @@ export const layShadow = (shadow, body, type) => {
   if (tippedOver && lengthUpright) {
     shadow.x = body.x;
     shadow.z = body.z;
-    shadow.ont = SILHOUETTE.onItsEnd;
+    shadow.shownTexture = SILHOUETTE.onItsEnd;
     s[0] = m[0];
     s[2] = m[2];
     s[4] = m[8];
@@ -28,13 +28,13 @@ export const layShadow = (shadow, body, type) => {
     s[0] = m[8];
     s[2] = m[10];
     if (tippedOver) {
-      shadow.ont = SILHOUETTE.onItsSide;
+      shadow.shownTexture = SILHOUETTE.onItsSide;
       s[4] = m[0];
       s[6] = m[2];
       s[8] = -m[4];
       s[10] = -m[6];
     } else {
-      shadow.ont = SILHOUETTE.upright;
+      shadow.shownTexture = SILHOUETTE.upright;
       s[4] = m[4];
       s[6] = m[6];
       s[8] = m[0];

@@ -20,7 +20,7 @@ const newShadow = () => ({
   x: 0,
   y: 0,
   z: 0,
-  ont: 0,
+  shownTexture: 0,
   mat: mat4.create(),
   intershad: false,
 });
@@ -46,6 +46,20 @@ export const SKID = { gripping: 0, sliding: 1, takeSpeedFromMotion: 2 };
 // racer.stunt: where the car is in a stunt. A stunt starts when the stunt keys are pressed in
 // the air, and after the first wheel touches down the car keeps turning upright.
 export const STUNT = { none: 0, starting: 1, flying: 2, touchingDown: -1 };
+
+// racer.missedCheckpoint: whether the car has lost the checkpoint it heads for. Other cars
+// only know none and started. The player's counts the ticks of "Check Point Missed!" from
+// started on (jumping ahead to comingBack when the car is back at the checkpoint) until it
+// ends, then waits as warned until the car is near the checkpoint again. Following: the
+// player's car follows the track's path points, no checkpoint in focus.
+export const MISSED = {
+  following: -1,
+  none: 0,
+  started: 1,
+  comingBack: 68,
+  ends: 70,
+  warned: -2,
+};
 
 export const racers = Array.from({ length: MAX_CARS }, newRacer);
 

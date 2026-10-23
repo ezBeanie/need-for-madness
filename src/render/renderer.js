@@ -404,7 +404,7 @@ const bindModelTexture = (model, uSampler) => {
   } else {
     gl.bindTexture(
       gl.TEXTURE_2D,
-      model.nt == 1 ? model.texture : model.texture[model.ont],
+      model.nt == 1 ? model.texture : model.texture[model.shownTexture],
     );
   }
   gl.uniform1i(uSampler, 0);

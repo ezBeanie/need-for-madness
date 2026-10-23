@@ -104,6 +104,10 @@ export function menuCarTextures() {
   }
 }
 
+// which of a car model's textures it shows (model.shownTexture): the menus' one with
+// light blue windows, or the race's with the sky's colour in them and the damage
+export const CAR_TEXTURE = { menu: 0, race: 1 };
+
 // The race textures of the cars, windows in the colour of the stage's sky; they get the
 // damage scratched into them.
 export function raceCarTextures() {
@@ -129,7 +133,7 @@ export function raceCarTextures() {
     model.texture[1] = texture;
     keepDamageTexture(model, pixels);
     model.cleanPixels = pixels && Uint8Array.from(pixels);
-    model.ont = 1;
+    model.shownTexture = CAR_TEXTURE.race;
     model.loaded = 4;
   }
   // The first car of a type dents the type's model, as every car did when all types

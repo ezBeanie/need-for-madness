@@ -289,7 +289,7 @@ const drawRace = () => {
       model.x = explosion.x;
       model.y = explosion.y;
       model.z = explosion.z;
-      model.ont = Math.floor(explosion.ani);
+      model.shownTexture = Math.floor(explosion.ani);
       model.mat = explosion.mat;
       drawModel(model);
     }
