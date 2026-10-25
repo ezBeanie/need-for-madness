@@ -219,11 +219,11 @@ const hoopStates = (piece) => {
 // distruct: all but its wheels), and turns blue in a bubble while it is fixed.
 const wreckAndFix = (c, rad, type) => {
   // a replay goes back to before the car was wrecked: a fresh model, dented as it was
-  if (rad.wrecked && racers[c].hitmag < carStats.maxmag[type]) {
+  if (rad.wrecked && racers[c].damage < carStats.maxmag[type]) {
     carModels[c] = undefined;
     return null;
   }
-  if (!rad.wrecked && racers[c].hitmag >= carStats.maxmag[type]) {
+  if (!rad.wrecked && racers[c].damage >= carStats.maxmag[type]) {
     rad.wrecked = true;
     for (const poly of rad.polys) {
       if (poly.wz == 0 || poly.gr == -17 || poly.gr == -16) {

@@ -52,9 +52,9 @@ const newCarTape = () => ({
   speedY: [],
   speedZ: [],
   cameraHeading: [],
-  hitmag: [],
+  damage: [],
   clear: [],
-  pcleared: [],
+  clearedPathPoint: [],
   nlaps: [],
   // the hits that dented it (see regn)
   hitCount: 0,
@@ -215,9 +215,9 @@ const copyCarTape = (from, to) => {
 const RECORDED_PER_TICK = [
   ...KEPT_PER_TICK,
   "cameraHeading",
-  "hitmag",
+  "damage",
   "clear",
-  "pcleared",
+  "clearedPathPoint",
   "nlaps",
 ];
 
@@ -295,9 +295,9 @@ export function recordTick() {
         racer.wheelSpeedZ[3]) /
       4;
     tape.cameraHeading[LAST_FRAME] = racer.cameraHeading;
-    tape.hitmag[LAST_FRAME] = racer.hitmag;
+    tape.damage[LAST_FRAME] = racer.damage;
     tape.clear[LAST_FRAME] = racer.clear;
-    tape.pcleared[LAST_FRAME] = racer.pcleared;
+    tape.clearedPathPoint[LAST_FRAME] = racer.clearedPathPoint;
     tape.nlaps[LAST_FRAME] = racer.nlaps;
     for (let i = 0; i < tape.hitCount; i++) {
       tape.hitAt[i]--;
@@ -701,9 +701,9 @@ export function timeRewindTick() {
       racer.wheelSpeedY[k] = carTape.speedY[frame];
       racer.wheelSpeedZ[k] = carTape.speedZ[frame];
     }
-    racer.hitmag = carTape.hitmag[frame];
+    racer.damage = carTape.damage[frame];
     racer.clear = carTape.clear[frame];
-    racer.pcleared = carTape.pcleared[frame];
+    racer.clearedPathPoint = carTape.clearedPathPoint[frame];
     racer.nlaps = carTape.nlaps[frame];
     racer.cameraHeading = carTape.cameraHeading[frame];
     turnCarAfterItsAngles(c);
@@ -725,7 +725,7 @@ const backToTheRace = () => {
     racers[c].nofocus = false;
     racers[c].body.alpha = BLEND.alpha;
     if (recording.tape.cars[c].wastedAt > 0) {
-      racers[c].dest = false;
+      racers[c].wasted = false;
       recording.tape.cars[c].wastedAt = NOT_WASTED;
     }
   }

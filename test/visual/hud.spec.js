@@ -70,7 +70,7 @@ test("hud: all opponents wasted", async ({ page }) => {
     for (let c = 1; c < s.game.carCount; c++) {
       // damage comes from hits, which shape the dents first; fixcar does that too
       fixcar(c);
-      s.racers[c].hitmag = 1e9;
+      s.racers[c].damage = 1e9;
     }
   });
   await game.advance(60);
@@ -83,7 +83,7 @@ test("hud: player wasted", async ({ page }) => {
     const s = window.gameState;
     const { fixcar } = await import("/src/race/physics.js");
     fixcar(0);
-    s.racers[0].hitmag = 1e9;
+    s.racers[0].damage = 1e9;
   });
   await game.advance(60);
   await expect.soft(page).toHaveScreenshot("hud-player-wasted.png");

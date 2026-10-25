@@ -35,7 +35,6 @@ class Track {
   // Coach Insano's tips for the stage, shown in the stage select
   tips = [];
   haltall = false;
-  pcleared = 0;
   // the outer walls (maxr, maxl, maxt, maxb): where they stand and which piece each is
   limr = 0;
   liml = 0;
@@ -52,7 +51,6 @@ class Track {
     this.magperc = Array(MAX_CARS).fill(0);
     this.wasted = 0;
     this.haltall = false;
-    this.pcleared = 0;
   }
 }
 

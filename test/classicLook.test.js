@@ -148,7 +148,7 @@ test("in the classic look a wrecked car burns and a car being fixed shows its bu
     ctx.regn(i % 2, i % 4, 300, 0);
   }
   expect(colored(flame)).toBe(0);
-  ctx.racers[0].hitmag = 9999;
+  ctx.racers[0].damage = 9999;
   // flames from the wreck's sixteenth tick on
   expect(colored(flame, 25)).toBeGreaterThan(0);
 });

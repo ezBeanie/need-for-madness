@@ -127,7 +127,7 @@ function createSwitchLines() {
     }
     line.on = false;
     const lastTwo = track.wasted == game.carCount - 2 && c != game.player;
-    if (racers[c].dest || lastTwo) {
+    if (racers[c].wasted || lastTwo) {
       continue;
     }
     let next = c;
@@ -135,7 +135,7 @@ function createSwitchLines() {
     if (next == game.carCount) {
       next = 0;
     }
-    while (racers[next].dest) {
+    while (racers[next].wasted) {
       next++;
       if (next == game.carCount) {
         next = 0;
@@ -235,7 +235,7 @@ const nextLivingCar = () => {
   if (next == game.carCount) {
     next = 0;
   }
-  while (racers[next].dest) {
+  while (racers[next].wasted) {
     next++;
     if (next == game.carCount) {
       next = 0;
@@ -331,7 +331,7 @@ const breatheSwitchCamera = (ticks) => {
 const takeOverNextCar = () => {
   raceEvents.onlastcheck = false;
   for (let i = 0; i < game.carCount; i++) {
-    racers[i].pcleared = track.pcs;
+    racers[i].clearedPathPoint = track.pcs;
     racers[i].clear = 0;
     racers[i].nlaps = 0;
     racers[i].missedCheckpoint = MISSED.none;
@@ -696,7 +696,7 @@ const raceOutcome = () => {
     raceEvents.winner = true;
   }
   if (!over) {
-    if (racers[game.player].dest && raceEvents.playerWreckTicks == 16) {
+    if (racers[game.player].wasted && raceEvents.playerWreckTicks == 16) {
       drawOutcome("You're Wasted!", "yourwasted");
       over = true;
       raceEvents.winner = false;
@@ -1004,7 +1004,7 @@ const drawArrowButton = () => {
 const drawMeters = () => {
   if (look.current == LOOK.classic) {
     drawClassicMeters(
-      racers[game.player].hitmag / carStats.maxmag[car[game.player].typ],
+      racers[game.player].damage / carStats.maxmag[car[game.player].typ],
       racers[game.player].power,
       raceEvents.stuntTicks < 45 && blink.on,
       once(),
@@ -1021,7 +1021,7 @@ const drawMeters = () => {
   rd.fillText("Damage", metersX - 15 * view.scale, 19 * view.scale);
   rd.fillText("Power", metersX - 15 * view.scale, 55 * view.scale);
   let damage =
-    98 * (racers[game.player].hitmag / carStats.maxmag[car[game.player].typ]);
+    98 * (racers[game.player].damage / carStats.maxmag[car[game.player].typ]);
   if (damage > 98) {
     damage = 98;
   }

@@ -114,10 +114,10 @@ export const raceState = (ctx) => ({
       car.wzy,
       ctx.racers[i].speed,
       ctx.racers[i].power,
-      ctx.racers[i].hitmag,
-      ctx.racers[i].dest,
+      ctx.racers[i].damage,
+      ctx.racers[i].wasted,
       ctx.racers[i].clear,
-      ctx.racers[i].pcleared,
+      ctx.racers[i].clearedPathPoint,
       ctx.track.pos[i],
       ctx.racers[i].grounded,
     ].map(round);

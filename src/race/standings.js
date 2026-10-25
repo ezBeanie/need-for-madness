@@ -26,7 +26,7 @@ export function updateStandings() {
   }
   track.wasted = 0;
   for (let i = 0; i < game.carCount; i++) {
-    if (game.player != i && racers[i].dest) {
+    if (game.player != i && racers[i].wasted) {
       track.wasted++;
     }
   }
@@ -48,7 +48,7 @@ export function updateStandings() {
 const updateDamageAndProgress = () => {
   for (let i = 0; i < game.carCount; i++) {
     track.magperc[i] = Math.min(
-      racers[i].hitmag / carStats.maxmag[car[i].typ],
+      racers[i].damage / carStats.maxmag[car[i].typ],
       1,
     );
     track.pos[i] = 0;
@@ -68,7 +68,7 @@ const rank = () => {
           track.pos[j]++;
         }
       } else {
-        const next = nextPathPoint(racers[i].pcleared);
+        const next = nextPathPoint(racers[i].clearedPathPoint);
         if (
           distanceTo(car[i], track.x[next], track.z[next]) >
           distanceTo(car[j], track.x[next], track.z[next])

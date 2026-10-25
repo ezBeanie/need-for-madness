@@ -124,14 +124,14 @@ export function inishmad() {
     }
     racers[c].squash = 0;
     racers[c].nbsq = 0;
-    racers[c].hitmag = 0;
+    racers[c].damage = 0;
     racers[c].cntdest = 0;
-    racers[c].dest = false;
+    racers[c].wasted = false;
     racers[c].embos = 0;
     racers[c].embodir = 0;
     racers[c].embomag = 0;
     racers[c].bshft = 0;
-    racers[c].pcleared = track.pcs;
+    racers[c].clearedPathPoint = track.pcs;
     racers[c].clear = 0;
     racers[c].nlaps = 0;
     racers[c].focus = -1;
@@ -227,7 +227,7 @@ function driveCar(c) {
   watchPlayerStuntKeys(c);
   startStuntWithHandbrake(c);
   startStunt(c);
-  if (!racers[c].dest) {
+  if (!racers[c].wasted) {
     if (racers[c].stunt == STUNT.flying) {
       rotateInStunt(c, type, airPush, rollSign, flipSign, pitchedOver);
     } else {
@@ -329,7 +329,7 @@ function driveCar(c) {
   if (
     tick.fraction >= tick.scale &&
     racers[c].lastcolido != 0 &&
-    !racers[c].dest
+    !racers[c].wasted
   ) {
     racers[c].lastcolido--;
   }
@@ -363,12 +363,13 @@ function pathPointAhead(c, pnt) {
     if (!racers[c].nofocus) {
       if (
         track.stage == 5 &&
-        (racers[c].pcleared == 27 || racers[c].pcleared == 35) &&
+        (racers[c].clearedPathPoint == 27 ||
+          racers[c].clearedPathPoint == 35) &&
         pnt < 29
       ) {
         pnt = 33;
       }
-      let ic = racers[c].pcleared + 1;
+      let ic = racers[c].clearedPathPoint + 1;
       if (ic >= track.n) {
         ic = 0;
       }
@@ -381,7 +382,7 @@ function pathPointAhead(c, pnt) {
       if (pnt > ic) {
         if (
           racers[c].clear != racers[c].nlaps * track.nsp ||
-          pnt < racers[c].pcleared
+          pnt < racers[c].clearedPathPoint
         ) {
           if (track.stage != 9 || ic != 9 || pnt < 16) {
             pnt = ic;
@@ -521,9 +522,9 @@ function passFixHoops(c) {
         if (car[c].fcnt == 20) {
           racers[c].squash = 0;
           racers[c].nbsq = 0;
-          racers[c].hitmag = 0;
+          racers[c].damage = 0;
           racers[c].cntdest = 0;
-          racers[c].dest = false;
+          racers[c].wasted = false;
           if (c == game.player) {
             raceEvents.playerWreckTicks = 0;
           }
@@ -540,7 +541,7 @@ function passFixHoops(c) {
 function trackStunt(c, type) {
   if (!racers[c].grounded) {
     countStuntInAir(c);
-  } else if (!racers[c].dest) {
+  } else if (!racers[c].wasted) {
     if (!racers[c].capsized) {
       if (racers[c].capcnt != 0) {
         racers[c].capcnt = 0;
@@ -753,7 +754,7 @@ function drainPower(c, type) {
 }
 
 function recordHowWasted(c) {
-  if (racers[c].dest) {
+  if (racers[c].wasted) {
     if (track.dested[c] == 0) {
       if (racers[c].lastcolido == 0) {
         track.dested[c] = 1;
@@ -1071,7 +1072,7 @@ function shakeOnRoughGround(c, type, step) {
 
 function burnWhenWasted(c, type, avgSpeedX, avgSpeedZ) {
   if (tick.fraction >= tick.scale) {
-    if (racers[c].hitmag >= carStats.maxmag[type]) {
+    if (racers[c].damage >= carStats.maxmag[type]) {
       if (recording.tape.cars[c].wastedAt == 700) {
         recording.tape.cars[c].wastedAt = 430;
         if (racers[c].lastcolido != 0) {
@@ -1123,7 +1124,7 @@ function burnWhenWasted(c, type, avgSpeedX, avgSpeedZ) {
         }
       }
       if (racers[c].cntdest == 4) {
-        racers[c].dest = true;
+        racers[c].wasted = true;
       }
     }
   }
@@ -1164,7 +1165,7 @@ function passCheckpoints(c) {
         ) {
           if (racers[c].clear == ic + racers[c].nlaps * track.nsp - 1) {
             racers[c].clear = ic + racers[c].nlaps * track.nsp;
-            racers[c].pcleared = i;
+            racers[c].clearedPathPoint = i;
             racers[c].focus = -1;
           }
         }
@@ -1188,7 +1189,7 @@ function passCheckpoints(c) {
         ) {
           if (racers[c].clear == ic + racers[c].nlaps * track.nsp - 1) {
             racers[c].clear = ic + racers[c].nlaps * track.nsp;
-            racers[c].pcleared = i;
+            racers[c].clearedPathPoint = i;
             racers[c].focus = -1;
           }
         }
@@ -2094,7 +2095,7 @@ function gripGround(type, c, turnedRound, step) {
   let driveX = -(racers[c].speed * sinDeg(car[c].xz) * cosDeg(racers[c].pitch));
   let driveZ = racers[c].speed * cosDeg(car[c].xz) * cosDeg(racers[c].pitch);
   let driveY = -(racers[c].speed * sinDeg(racers[c].pitch));
-  if (racers[c].capsized || racers[c].dest || track.haltall) {
+  if (racers[c].capsized || racers[c].wasted || track.haltall) {
     driveX = 0;
     driveZ = 0;
     driveY = 0;
@@ -3491,7 +3492,7 @@ function chipAndScratch(c, rad, i, tmag, modpix, spots) {
     }
   }
   if (game.phase == PHASE.race) {
-    racers[c].hitmag += Math.abs(tmag) * 0.667;
+    racers[c].damage += Math.abs(tmag) * 0.667;
   }
   if (spots) {
     spots.push(
