@@ -81,8 +81,8 @@ export function updateEngineSound() {
   let atTopSpeed = false;
   const onThePedal =
     (car.u.up && car.speed > 0) || (car.u.down && car.speed < 0);
-  if (car.wtouch && !car.capsized) {
-    if (car.mtouch) {
+  if (car.wheelsTouch && !car.capsized) {
+    if (car.grounded) {
       if (!slipping(car)) {
         atTopSpeed = followGears(car, type, onThePedal);
         if (slipRevs != 1 + 1.1 * carStats.engrev[type]) {
@@ -223,8 +223,8 @@ const revInTheAir = (car, onThePedal) => {
     targetVolume = Math.min(revLevel, 2);
     targetPitch = Math.max(revLevel, 1.4);
   }
-  // idle, the pedal moves the revs again (while mtouch)
-  if (revs == REV.idle && car.mtouch) {
+  // idle, the pedal moves the revs again (while grounded)
+  if (revs == REV.idle && car.grounded) {
     targetPitch = onThePedal ? targetPitch + 0.1 : targetPitch - 0.2;
     targetPitch = Math.min(Math.max(targetPitch, 1.4), 2);
     targetVolume = Math.min((targetPitch - 1.4) * 2.5 + 0.5, 2);

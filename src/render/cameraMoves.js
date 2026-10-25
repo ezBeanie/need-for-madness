@@ -75,7 +75,8 @@ const followBehind = () => {
     camera.lookBackYaw = 0;
   }
   const target = car[camera.target];
-  const heading = racers[camera.target].cxz - 180 + camera.lookBackYaw;
+  const heading =
+    racers[camera.target].cameraHeading - 180 + camera.lookBackYaw;
   camera.yaw = heading;
   camera.x = target.x - 80 * sinDeg(heading);
   camera.z = target.z + 80 * cosDeg(heading);
@@ -140,7 +141,7 @@ const watchFromTrackside = () => {
   const target = car[camera.target];
   if (camera.relocate) {
     const side = random.fx() > random.fx() ? -1 : 1;
-    const heading = racers[camera.target].mxz;
+    const heading = racers[camera.target].motionHeading;
     camera.y = target.y + 10 + 160 * random.fx();
     camera.x = target.x + 40 * side * cosDeg(heading) - 500 * sinDeg(heading);
     camera.z = target.z + 40 * side * sinDeg(heading) + 500 * cosDeg(heading);

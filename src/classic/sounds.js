@@ -124,7 +124,7 @@ export const classicEngineTick = (car, type, loop) => {
     }
     return n;
   };
-  if (onThePedal && car.mtouch) {
+  if (onThePedal && car.grounded) {
     if (car.capsized) {
       engine(4);
     } else if (slipping) {
@@ -165,12 +165,12 @@ export const classicEngineTick = (car, type, loop) => {
     state.aired = false;
   } else {
     state.pwait = 15;
-    if (!car.mtouch && !state.grounded && random.fx() > 0.4) {
+    if (!car.grounded && !state.grounded && random.fx() > 0.4) {
       air(Math.trunc(random.fx() * 4));
       state.stopcnt = 5;
       state.grounded = true;
     }
-    if (!car.wtouch && !state.aired) {
+    if (!car.wheelsTouch && !state.aired) {
       air(Math.trunc(random.fx() * 4));
       state.stopcnt = 10;
       state.aired = true;

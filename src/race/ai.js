@@ -252,7 +252,7 @@ export function control() {
       racers[c].u.down = false;
       racers[c].u.handb = false;
       if (!racers[c].dest) {
-        if (racers[c].mtouch) {
+        if (racers[c].grounded) {
           if (ai[c].ticksSinceRethink > ai[c].rethinkAfter) {
             rethink(c);
           } else {
@@ -263,9 +263,9 @@ export function control() {
         }
         let ride = false;
         if (ai[c].groundByWheels) {
-          ride = racers[c].wtouch;
+          ride = racers[c].wheelsTouch;
         } else {
-          ride = racers[c].mtouch;
+          ride = racers[c].grounded;
         }
         if (ride) {
           if (ai[c].stuntPhase != STUNT.takeoff) {
@@ -455,9 +455,11 @@ function chaseTarget(c) {
       2) *
     ai[c].leadAhead;
   let aimX =
-    car[ai[c].attackedCar].x - lead * sinDeg(racers[ai[c].attackedCar].mxz);
+    car[ai[c].attackedCar].x -
+    lead * sinDeg(racers[ai[c].attackedCar].motionHeading);
   let aimZ =
-    car[ai[c].attackedCar].z + lead * cosDeg(racers[ai[c].attackedCar].mxz);
+    car[ai[c].attackedCar].z +
+    lead * cosDeg(racers[ai[c].attackedCar].motionHeading);
   if (aimX - car[c].x >= 0) {
     behind = 180;
   }
@@ -655,8 +657,8 @@ function takeOff(c) {
     (random.sim() > ai[c].stuntCaution / cautionDivisor ||
       ai[c].stuntPlan == STUNT_PLAN.flipUpAtOnce)
   ) {
-    ai[c].takeoffXy = racers[c].pxy;
-    ai[c].takeoffZy = racers[c].pzy;
+    ai[c].takeoffXy = racers[c].roll;
+    ai[c].takeoffZy = racers[c].pitch;
     ai[c].airTicks = 0;
     ai[c].flip = 0;
     ai[c].roll = 0;
@@ -791,7 +793,7 @@ function flyAndWaitForLanding(c) {
   if (ai[c].roll != 0) {
     if (ai[c].airTicks > ai[c].rollAfter) {
       if (ai[c].rollReverses) {
-        if (Math.abs(racers[c].pxy - ai[c].takeoffXy) > 180) {
+        if (Math.abs(racers[c].roll - ai[c].takeoffXy) > 180) {
           if (ai[c].roll == -1) {
             ai[c].roll = 1;
           } else {
@@ -812,7 +814,7 @@ function flyAndWaitForLanding(c) {
   if (ai[c].flip != 0) {
     if (ai[c].airTicks > ai[c].flipAfter) {
       if (ai[c].flipReverses) {
-        if (Math.abs(racers[c].pzy - ai[c].takeoffZy) > 180) {
+        if (Math.abs(racers[c].pitch - ai[c].takeoffZy) > 180) {
           if (ai[c].flip == -1) {
             ai[c].flip = 1;
           } else {
@@ -862,7 +864,7 @@ function land(c) {
     }
     ai[c].landingStep = 1;
   }
-  if (racers[c].wtouch) {
+  if (racers[c].wheelsTouch) {
     if (ai[c].landingStep == 1) {
       ai[c].landingStep = 2;
     }
@@ -891,7 +893,7 @@ function land(c) {
 }
 
 function straightenPitch(c) {
-  let pitch = racers[c].pzy + 90;
+  let pitch = racers[c].pitch + 90;
   while (pitch < 0) {
     pitch += 360;
   }
@@ -966,7 +968,7 @@ function straightenPitch(c) {
 }
 
 function straightenRoll(c) {
-  let roll = racers[c].pxy + 90;
+  let roll = racers[c].roll + 90;
   if (racers[c].u.zyinv) {
     roll += 180;
   }

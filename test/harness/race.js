@@ -119,7 +119,7 @@ export const raceState = (ctx) => ({
       ctx.racers[i].clear,
       ctx.racers[i].pcleared,
       ctx.track.pos[i],
-      ctx.racers[i].mtouch,
+      ctx.racers[i].grounded,
     ].map(round);
   }),
 });

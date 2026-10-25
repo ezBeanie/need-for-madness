@@ -51,7 +51,7 @@ const newCarTape = () => ({
   speedX: [],
   speedY: [],
   speedZ: [],
-  cxz: [],
+  cameraHeading: [],
   hitmag: [],
   clear: [],
   pcleared: [],
@@ -214,7 +214,7 @@ const copyCarTape = (from, to) => {
 // the per tick fields of a live tape
 const RECORDED_PER_TICK = [
   ...KEPT_PER_TICK,
-  "cxz",
+  "cameraHeading",
   "hitmag",
   "clear",
   "pcleared",
@@ -282,7 +282,7 @@ export function recordTick() {
       (racer.scy[0] + racer.scy[1] + racer.scy[2] + racer.scy[3]) / 4;
     tape.speedZ[LAST_FRAME] =
       (racer.scz[0] + racer.scz[1] + racer.scz[2] + racer.scz[3]) / 4;
-    tape.cxz[LAST_FRAME] = racer.cxz;
+    tape.cameraHeading[LAST_FRAME] = racer.cameraHeading;
     tape.hitmag[LAST_FRAME] = racer.hitmag;
     tape.clear[LAST_FRAME] = racer.clear;
     tape.pcleared[LAST_FRAME] = racer.pcleared;
@@ -336,7 +336,7 @@ const catchWasting = (c, tape) => {
 };
 
 const applyHit = (c, tape, i) => {
-  racers[c].mtouch = tape.hitMtouch[i];
+  racers[c].grounded = tape.hitMtouch[i];
   regn(tape.hitSide[i], tape.hitPoint[i], tape.hitMag[i], c);
 };
 
@@ -682,8 +682,8 @@ export function timeRewindTick() {
     }
     poseFromTape(c, carTape, frame);
     const racer = racers[c];
-    racer.pxy = car[c].xy;
-    racer.pzy = car[c].zy;
+    racer.roll = car[c].xy;
+    racer.pitch = car[c].zy;
     for (let k = 0; k < 4; k++) {
       racer.scx[k] = carTape.speedX[frame];
       racer.scy[k] = carTape.speedY[frame];
@@ -693,7 +693,7 @@ export function timeRewindTick() {
     racer.clear = carTape.clear[frame];
     racer.pcleared = carTape.pcleared[frame];
     racer.nlaps = carTape.nlaps[frame];
-    racer.cxz = carTape.cxz[frame];
+    racer.cameraHeading = carTape.cameraHeading[frame];
     turnCarAfterItsAngles(c);
   }
   raceEvents.oncheckpoint = recording.tape.checkpoint[frame];

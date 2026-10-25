@@ -259,7 +259,7 @@ const placeSwitchCamera = (ticks) => {
   const to = camera.nextTarget;
   if (ticks < 20) {
     lookAt(
-      racers[from].cxz - 180 + swing,
+      racers[from].cameraHeading - 180 + swing,
       car[from].x,
       car[from].y,
       car[from].z,
@@ -269,7 +269,9 @@ const placeSwitchCamera = (ticks) => {
     const fromShare = 100 - ticks;
     const toShare = ticks - 20;
     const yaw =
-      (racers[from].cxz * fromShare + racers[to].cxz * toShare) / 80 -
+      (racers[from].cameraHeading * fromShare +
+        racers[to].cameraHeading * toShare) /
+        80 -
       180 +
       swing;
     camera.pitch = 10;
@@ -281,7 +283,12 @@ const placeSwitchCamera = (ticks) => {
     camera.y = (car[from].y * fromShare + car[to].y * toShare) / 80 + 25;
   }
   if (ticks >= 100) {
-    lookAt(racers[to].cxz - 180 + swing, car[to].x, car[to].y, car[to].z);
+    lookAt(
+      racers[to].cameraHeading - 180 + swing,
+      car[to].x,
+      car[to].y,
+      car[to].z,
+    );
   }
 };
 
@@ -886,7 +893,7 @@ const drawTrackWarnings = () => {
         player.missedCheckpoint = MISSED.warned;
       }
     }
-  } else if (player.mtouch && wrongWayShown < 70) {
+  } else if (player.grounded && wrongWayShown < 70) {
     if (once()) {
       if (Math.abs(arrowAngle) > 100) {
         wrongWayTicks++;
@@ -1214,7 +1221,7 @@ const learnStunts = () => {
     ) {
       stuntHint = 0;
     }
-    if (stuntHint == 1 && !player.mtouch) {
+    if (stuntHint == 1 && !player.grounded) {
       stuntHint = 2;
     }
   }
@@ -1242,7 +1249,7 @@ const drawPowerHint = () => {
   if (
     raceEvents.messageTicks == 30 &&
     raceEvents.stuntTicks == 45 &&
-    player.mtouch &&
+    player.grounded &&
     player.capcnt == 0
   ) {
     if (stuntHint != 3) {
