@@ -854,10 +854,10 @@ function flyAndWaitForLanding(c) {
 
 function land(c) {
   if (ai[c].landingStep == 0) {
-    if (racers[c].dcomp != 0 || racers[c].ucomp != 0) {
+    if (racers[c].flipBackSpeed != 0 || racers[c].flipForwardSpeed != 0) {
       ai[c].straightenPitch = true;
     }
-    if (racers[c].lcomp != 0 || racers[c].rcomp != 0) {
+    if (racers[c].rollLeftSpeed != 0 || racers[c].rollRightSpeed != 0) {
       ai[c].straightenRoll = true;
     }
     ai[c].landingStep = 1;
@@ -899,12 +899,12 @@ function straightenPitch(c) {
     pitch -= 360;
   }
   pitch = Math.abs(pitch);
-  if (Math.abs(racers[c].lcomp - racers[c].rcomp) < 5) {
+  if (Math.abs(racers[c].rollLeftSpeed - racers[c].rollRightSpeed) < 5) {
     if (ai[c].pressedDown || ai[c].pressedUp) {
       ai[c].pitchSettled = true;
     }
   }
-  if (racers[c].dcomp > racers[c].ucomp) {
+  if (racers[c].flipBackSpeed > racers[c].flipForwardSpeed) {
     if (racers[c].capsized) {
       if (ai[c].pitchSettled) {
         if (pitch < 90) {
@@ -977,12 +977,12 @@ function straightenRoll(c) {
     roll -= 360;
   }
   roll = Math.abs(roll);
-  if (Math.abs(racers[c].lcomp - racers[c].rcomp) < 10) {
+  if (Math.abs(racers[c].rollLeftSpeed - racers[c].rollRightSpeed) < 10) {
     if (ai[c].pressedLeft || ai[c].pressedRight) {
       ai[c].rollSettled = true;
     }
   }
-  if (racers[c].lcomp > racers[c].rcomp) {
+  if (racers[c].rollLeftSpeed > racers[c].rollRightSpeed) {
     if (racers[c].capsized) {
       if (ai[c].rollSettled) {
         if (roll > 90) {

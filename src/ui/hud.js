@@ -1210,7 +1210,7 @@ const learnStunts = () => {
   if (stuntHint != 0) {
     if (
       player.stunt == STUNT.flying &&
-      (Math.abs(player.travxy) > 110 || Math.abs(player.travzy) > 110)
+      (Math.abs(player.rolled) > 110 || Math.abs(player.flipped) > 110)
     ) {
       stuntHint = 0;
     }
@@ -1321,20 +1321,20 @@ const LOOPS = {
 };
 const SPINS = { 1: "Rollspin", 2: "double Rollspin", 3: "triple Rollspin" };
 
-// The name of the stunt that just landed: loops (travzy), roll spins (travxy) and turns
-// (travxz) the car made in the air, e.g. "double Forward with Rollspin by 360". Uses up the
+// The name of the stunt that just landed: loops (flipped), roll spins (rolled) and turns
+// (spun) the car made in the air, e.g. "double Forward with Rollspin by 360". Uses up the
 // car's counted turns. Each part makes the praise shorter (raceEvents.stuntTicks).
 const nameStunt = (player) => {
   let loopName = "";
   let spinName = "";
   let text = "";
   let turns = 0;
-  while (player.travzy > 225) {
-    player.travzy -= 360;
+  while (player.flipped > 225) {
+    player.flipped -= 360;
     turns++;
   }
-  while (player.travzy < -225) {
-    player.travzy += 360;
+  while (player.flipped < -225) {
+    player.flipped += 360;
     turns--;
   }
   loopName = LOOPS[turns] ?? "";
@@ -1345,25 +1345,28 @@ const nameStunt = (player) => {
     loopName = "massive Back looping";
   }
   if (turns == 0) {
-    if (player.ftab && player.btab) {
+    if (player.flippedFarForward && player.flippedFarBack) {
       loopName = "Tabletop and reversed Tabletop";
-    } else if (player.ftab || player.btab) {
+    } else if (player.flippedFarForward || player.flippedFarBack) {
       loopName = "Tabletop";
     }
   }
-  if ((turns > 0 && player.btab) || (turns < 0 && player.ftab)) {
+  if (
+    (turns > 0 && player.flippedFarBack) ||
+    (turns < 0 && player.flippedFarForward)
+  ) {
     loopName = "Hanged " + loopName;
   }
   if (loopName != "") {
     text += " " + loopName;
   }
   turns = 0;
-  player.travxy = Math.abs(player.travxy);
-  while (player.travxy > 270) {
-    player.travxy -= 360;
+  player.rolled = Math.abs(player.rolled);
+  while (player.rolled > 270) {
+    player.rolled -= 360;
     turns++;
   }
-  if (turns == 0 && player.rtab) {
+  if (turns == 0 && player.rolledFar) {
     spinName = loopName == "" ? "Tabletop" : "Flipside";
   }
   spinName = SPINS[turns] ?? spinName;
@@ -1372,9 +1375,9 @@ const nameStunt = (player) => {
   }
   let degrees = 0;
   let beyond = false;
-  player.travxz = Math.abs(player.travxz);
-  while (player.travxz > 90) {
-    player.travxz -= 180;
+  player.spun = Math.abs(player.spun);
+  while (player.spun > 90) {
+    player.spun -= 180;
     degrees += 180;
     if (degrees > 900) {
       degrees = 900;
@@ -1426,16 +1429,16 @@ const praiseStunt = () => {
     raceEvents.stuntTicks = -20;
   }
   let level = 0;
-  if (player.powerup > 20) {
+  if (player.stuntPower > 20) {
     level = 1;
   }
-  if (player.powerup > 40) {
+  if (player.stuntPower > 40) {
     level = 2;
   }
-  if (player.powerup > 150) {
+  if (player.stuntPower > 150) {
     level = 3;
   }
-  if (player.surfer) {
+  if (player.surfed) {
     stuntText = " " + PRAISE[4][Math.floor(random.fx() * 2.99)] + stuntText;
   }
   if (level != 3) {
@@ -1450,7 +1453,7 @@ const praiseStunt = () => {
     raceEvents.messageTicks = raceEvents.stuntTicks;
     message =
       player.power != 98
-        ? "POWER UP " + Math.floor((100 * player.powerup) / 98) + "%"
+        ? "POWER UP " + Math.floor((100 * player.stuntPower) / 98) + "%"
         : "POWER TO THE MAX";
   }
 };
@@ -1568,7 +1571,7 @@ export function drawHud() {
     learnStunts();
     drawPowerHint();
     drawMessages();
-    if (racers[game.player].trcnt == 10 && once()) {
+    if (racers[game.player].countingStunt == 10 && once()) {
       praiseStunt();
     }
     announceEvents();
