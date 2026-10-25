@@ -101,8 +101,8 @@ export const classicEngineTick = (car, type, loop) => {
     Math.abs(push[0] - (push[1] + push[0] + push[2] + push[3]) / 4) > 0.1;
   let slipping =
     (car.skid == SKID.sliding && car.u.handb) ||
-    uneven(car.scz) ||
-    uneven(car.scx);
+    uneven(car.wheelSpeedZ) ||
+    uneven(car.wheelSpeedX);
   let starting = false;
   let onThePedal = pedal;
   if (car.u.up && car.speed < 1) {

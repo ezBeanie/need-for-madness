@@ -631,10 +631,10 @@ function flyStunts(c) {
 function takeOff(c) {
   const type = car[c].typ;
   let lift =
-    ((racers[c].scy[0] +
-      racers[c].scy[1] +
-      racers[c].scy[2] +
-      racers[c].scy[3]) *
+    ((racers[c].wheelSpeedY[0] +
+      racers[c].wheelSpeedY[1] +
+      racers[c].wheelSpeedY[2] +
+      racers[c].wheelSpeedY[3]) *
       (car[c].y + 5)) /
     40;
   let cautionDivisor = 3;
@@ -833,10 +833,10 @@ function flyAndWaitForLanding(c) {
     }
   }
   if (
-    ((racers[c].scy[0] +
-      racers[c].scy[1] +
-      racers[c].scy[2] +
-      racers[c].scy[3]) *
+    ((racers[c].wheelSpeedY[0] +
+      racers[c].wheelSpeedY[1] +
+      racers[c].wheelSpeedY[2] +
+      racers[c].wheelSpeedY[3]) *
       100) /
       (car[c].y + 5) <
     -ai[c].landingMargin

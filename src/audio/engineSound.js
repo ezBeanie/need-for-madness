@@ -121,14 +121,14 @@ export function updateEngineSound() {
   coolDownCarSounds();
 }
 
-// Handbrake skids, or the wheels far from even (scx, scz: how each wheel is pushed).
+// Handbrake skids, or the wheels far from even (wheelSpeedX, wheelSpeedZ: how each wheel is pushed).
 const slipping = (car) => {
   const uneven = (push) =>
     Math.abs(push[0] - (push[1] + push[0] + push[2] + push[3]) / 4) > 0.1;
   return (
     (car.skid == SKID.sliding && car.u.handb) ||
-    uneven(car.scz) ||
-    uneven(car.scx)
+    uneven(car.wheelSpeedZ) ||
+    uneven(car.wheelSpeedX)
   );
 };
 

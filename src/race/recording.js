@@ -277,11 +277,23 @@ export function recordTick() {
     tape.wzy[LAST_FRAME] = car[c].wzy;
     tape.wxz[LAST_FRAME] = car[c].wxz;
     tape.speedX[LAST_FRAME] =
-      (racer.scx[0] + racer.scx[1] + racer.scx[2] + racer.scx[3]) / 4;
+      (racer.wheelSpeedX[0] +
+        racer.wheelSpeedX[1] +
+        racer.wheelSpeedX[2] +
+        racer.wheelSpeedX[3]) /
+      4;
     tape.speedY[LAST_FRAME] =
-      (racer.scy[0] + racer.scy[1] + racer.scy[2] + racer.scy[3]) / 4;
+      (racer.wheelSpeedY[0] +
+        racer.wheelSpeedY[1] +
+        racer.wheelSpeedY[2] +
+        racer.wheelSpeedY[3]) /
+      4;
     tape.speedZ[LAST_FRAME] =
-      (racer.scz[0] + racer.scz[1] + racer.scz[2] + racer.scz[3]) / 4;
+      (racer.wheelSpeedZ[0] +
+        racer.wheelSpeedZ[1] +
+        racer.wheelSpeedZ[2] +
+        racer.wheelSpeedZ[3]) /
+      4;
     tape.cameraHeading[LAST_FRAME] = racer.cameraHeading;
     tape.hitmag[LAST_FRAME] = racer.hitmag;
     tape.clear[LAST_FRAME] = racer.clear;
@@ -685,9 +697,9 @@ export function timeRewindTick() {
     racer.roll = car[c].xy;
     racer.pitch = car[c].zy;
     for (let k = 0; k < 4; k++) {
-      racer.scx[k] = carTape.speedX[frame];
-      racer.scy[k] = carTape.speedY[frame];
-      racer.scz[k] = carTape.speedZ[frame];
+      racer.wheelSpeedX[k] = carTape.speedX[frame];
+      racer.wheelSpeedY[k] = carTape.speedY[frame];
+      racer.wheelSpeedZ[k] = carTape.speedZ[frame];
     }
     racer.hitmag = carTape.hitmag[frame];
     racer.clear = carTape.clear[frame];
