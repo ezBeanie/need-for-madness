@@ -1,7 +1,7 @@
 // The race in the classic look: the original game's own models drawn the original's way
 // (see draw.js) onto a canvas of its own, 450 pixels high, where the modern look's 3D
 // canvas is. The game logic, the camera and the HUD stay the same.
-import { game } from "../core/state.js";
+import { PHASE, game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { raceEvents } from "../race/events.js";
 import { car, racers } from "../race/racers.js";
@@ -158,15 +158,15 @@ const NO_STAGE = {
   distance: 3750,
 };
 
-// Starts a frame: the models (loaded on the first), the stage's colours, the camera.
-const startFrame = () => {
+// Starts a frame: the models (loaded on the first), the colours, the camera.
+const startFrame = (colors = scene.colors ?? NO_STAGE) => {
   if (!loading) {
     loadModels();
   }
   fitScreen();
   startBatch();
-  if (tintedFor !== (scene.colors ?? NO_STAGE)) {
-    tintForStage(scene.colors ?? NO_STAGE);
+  if (tintedFor !== colors) {
+    tintForStage(colors);
   }
   setView(drawCamera.projection);
   // the camera, in the original's units: its height decides the ground's bands
@@ -215,15 +215,23 @@ const hoopStates = (piece) => {
   return hoopState.get(piece);
 };
 
+// A replay keeps the damage the race ended with: there the car is wrecked once the tape
+// wastes it.
+const isWrecked = (c, type) =>
+  game.phase == PHASE.replay || game.phase == PHASE.highlights
+    ? racers[c].destnow
+    : racers[c].damage >= carStats.maxmag[type];
+
 // A race car's model goes up in flames when the car is wrecked (the original's
 // distruct: all but its wheels), and turns blue in a bubble while it is fixed.
 const wreckAndFix = (c, rad, type) => {
+  const wrecked = isWrecked(c, type);
   // a replay goes back to before the car was wrecked: a fresh model, dented as it was
-  if (rad.wrecked && racers[c].damage < carStats.maxmag[type]) {
+  if (rad.wrecked && !wrecked) {
     carModels[c] = undefined;
     return null;
   }
-  if (!rad.wrecked && racers[c].damage >= carStats.maxmag[type]) {
+  if (!rad.wrecked && wrecked) {
     rad.wrecked = true;
     for (const poly of rad.polys) {
       if (poly.wz == 0 || poly.gr == -17 || poly.gr == -16) {
@@ -360,7 +368,8 @@ export const classicGroundOf = (type) => models.get(CAR_FILES[type])?.grat ?? 0;
 // shadow right below its wheels, in the classic menus on a floor at groundAt (our y) in
 // the original's menu shadow colour.
 export const drawClassicCar = (instance, type, groundAt = null) => {
-  startFrame();
+  // in the menus, as before any stage: no stage's colours on the car
+  startFrame(NO_STAGE);
   const object = carObject(game.carCount, instance, type);
   if (object) {
     object.shadowBelow = groundAt === null;
