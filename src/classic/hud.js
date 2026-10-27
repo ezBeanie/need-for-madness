@@ -52,9 +52,24 @@ let tintedFor = "";
 
 const clamp = (v) => Math.min(255, Math.max(0, Math.trunc(v)));
 
+// The red of the see-through background of the pictures that have one, as the original
+// read it: their palette's colour there (the browser reads see-through pixels as black).
+const SEE_THROUGH_RED = {
+  8: 192,
+  "0c": 255,
+  "1c": 255,
+  "2c": 255,
+  "3c": 255,
+  youwon: 215,
+  youlost: 215,
+  yourwasted: 215,
+  youwastedem: 215,
+};
+
 // The original's loadsnap: coloured pixels take the stage's tint; grey ones (the
-// lettering's edges on its background) turn into black, as opaque as they are dark.
-const tint = (image) => {
+// lettering's edges on its background) turn into black, as opaque as they are darker
+// than the background (its last pixel).
+const tint = (image, name) => {
   const canvas = document.createElement("canvas");
   canvas.width = image.width;
   canvas.height = image.height;
@@ -63,17 +78,17 @@ const tint = (image) => {
   const data = g.getImageData(0, 0, image.width, image.height);
   const px = data.data;
   const last = px.length - 4;
-  // (on a black background, like the countdown's, the grey all goes see-through)
-  const background = px[last];
+  const background = SEE_THROUGH_RED[name] ?? px[last];
   for (let i = 0; i < px.length; i += 4) {
-    const [r, gr, b] = [px[i], px[i + 1], px[i + 2]];
+    const [r, gr, b, a] = [px[i], px[i + 1], px[i + 2], px[i + 3]];
     if (r != gr && gr != b) {
       px[i] = clamp(r + r * (medium.snap[0] / 100));
       px[i + 1] = clamp(gr + gr * (medium.snap[1] / 100));
       px[i + 2] = clamp(b + b * (medium.snap[2] / 100));
       px[i + 3] = 255;
     } else {
-      px[i + 3] = background ? clamp(((background - r) / background) * 255) : 0;
+      // (a see-through pixel has the background's colour: it stays see-through)
+      px[i + 3] = a == 0 ? 0 : clamp(((background - r) / background) * 255);
       px[i] = 0;
       px[i + 1] = 0;
       px[i + 2] = 0;
@@ -93,7 +108,7 @@ const picture = (name) => {
     tintedFor = key;
   }
   if (!tinted.has(name) && originals.has(name)) {
-    tinted.set(name, tint(originals.get(name)));
+    tinted.set(name, tint(originals.get(name), name));
   }
   return tinted.get(name);
 };

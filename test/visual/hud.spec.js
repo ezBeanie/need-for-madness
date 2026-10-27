@@ -3,9 +3,9 @@ import { openGame } from "./driver.js";
 import { PHASE } from "../../src/core/state.js";
 
 // A race on stage 3 with all stages unlocked, past the countdown.
-const racing = async (page, frames = 200) => {
+const racing = async (page, frames = 200, storage = {}) => {
   const game = await openGame(page, {
-    storage: { carsel: "5", unlocked: "17" },
+    storage: { carsel: "5", unlocked: "17", ...storage },
   });
   await game.advanceUntil(PHASE.mainMenu);
   await game.settle();
@@ -36,6 +36,16 @@ test("hud: countdown numbers", async ({ page }) => {
   await expect.soft(page).toHaveScreenshot("hud-countdown-two.png");
   await game.advance(45);
   await expect.soft(page).toHaveScreenshot("hud-countdown-go.png");
+});
+
+test("hud: classic countdown numbers", async ({ page }) => {
+  const game = await racing(page, 0, { look: "1" });
+  // (the classic pictures load once the HUD first asks for them)
+  for (let i = 0; i < 15; i++) {
+    await game.advance(10);
+    await page.waitForTimeout(100);
+  }
+  await expect.soft(page).toHaveScreenshot("hud-classic-countdown-two.png");
 });
 
 test("hud: power low and the arrow at the cars", async ({ page }) => {
