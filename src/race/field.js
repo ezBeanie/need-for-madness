@@ -10,6 +10,7 @@ import { resetHud } from "../ui/hud.js";
 import { inishcontrol } from "./ai.js";
 import { inishmad } from "./physics.js";
 import { car } from "./racers.js";
+import { resetRaceTape } from "./raceTape.js";
 import { resetRecording } from "./recording.js";
 import { track } from "./track.js";
 
@@ -33,6 +34,7 @@ export function setUpField() {
   inishcontrol();
   inishmad();
   resetRecording();
+  resetRaceTape();
 }
 
 // The field size the cars were chosen for: it can change in the stage select after the

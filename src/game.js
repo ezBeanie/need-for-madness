@@ -40,6 +40,7 @@ import {
   replayTick,
   timeRewindTick,
 } from "./race/recording.js";
+import { cutRaceTape, recordRaceTick } from "./race/raceTape.js";
 import { raceEvents } from "./race/events.js";
 import { control } from "./race/ai.js";
 import { chipsfly, dustfly, expburn, sprksfly } from "./race/effects.js";
@@ -68,6 +69,7 @@ function raceTick() {
       drive();
       moveScenery(true);
       recordTick();
+      recordRaceTick();
       updateStandings();
       control();
       drawHud();
@@ -92,6 +94,9 @@ function raceTick() {
   }
   if (game.phase == PHASE.timeRewind) {
     timeRewindTick();
+    if (game.phase == PHASE.race) {
+      cutRaceTape(recording.resumedFrom);
+    }
     moveScenery(true);
     drawRewindOverlay();
   }

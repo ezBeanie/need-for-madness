@@ -38,7 +38,7 @@ export const HIGHLIGHT = {
   closeLoss: 5,
 };
 
-const newCarTape = () => ({
+export const newCarTape = () => ({
   // every tick: where the car was, the mean speed of its wheels, its standing
   x: [],
   y: [],
@@ -105,6 +105,8 @@ export const recording = {
   recordedTicks: 0,
   // the frame of the tape played
   frame: 0,
+  // the frame the race went on from after time was wound back
+  resumedFrom: 0,
   highlight: HIGHLIGHT.none,
   // the frame of the tape the highlight peaks at
   highlightAt: 0,
@@ -171,8 +173,8 @@ const KEPT_PER_TICK = [
   "speedY",
   "speedZ",
 ];
-const HIT = ["hitAt", "hitMtouch", "hitSide", "hitPoint", "hitMag"];
-const DUST = [
+export const HIT = ["hitAt", "hitMtouch", "hitSide", "hitPoint", "hitMag"];
+export const DUST = [
   "dustAt",
   "dustGround",
   "dustWheel",
@@ -212,7 +214,7 @@ const copyCarTape = (from, to) => {
 };
 
 // the per tick fields of a live tape
-const RECORDED_PER_TICK = [
+export const RECORDED_PER_TICK = [
   ...KEPT_PER_TICK,
   "cameraHeading",
   "damage",
@@ -712,6 +714,7 @@ export function timeRewindTick() {
   raceEvents.onlastcheck = recording.tape.lastCheck[frame];
   recording.frame -= fast ? 2 : 1;
   if (recording.frame <= start) {
+    recording.resumedFrom = frame;
     backToTheRace();
   }
 }
