@@ -108,6 +108,69 @@ const translate = async ({ index }) => {
     }
     polygons.push({ loop, color, area, normal: unit(normal) });
   }
+  // Merges neighbours in about one plane whose colours are alike, as long as the polygon
+  // stays simple (the classic look fills polygons that are not convex as Java did); the
+  // merged one takes their colours mixed by area.
+  const simple = (loop) => new Set(loop).size == loop.length;
+  const joined = (p, q) => {
+    for (let i = 0; i < p.loop.length; i++) {
+      const a = p.loop[i];
+      const b = p.loop[(i + 1) % p.loop.length];
+      const j = q.loop.findIndex(
+        (v, k) => v == b && q.loop[(k + 1) % q.loop.length] == a,
+      );
+      if (j >= 0) {
+        // p up to a, then q from after b round to before a
+        const rest = [];
+        for (let k = 2; k < q.loop.length; k++) {
+          rest.push(q.loop[(j + k) % q.loop.length]);
+        }
+        return [...p.loop.slice(0, i + 1), ...rest, ...p.loop.slice(i + 1)];
+      }
+    }
+    return null;
+  };
+  const mergeFlat = (alike) => {
+    let merged = true;
+    while (merged) {
+      merged = false;
+      for (let i = 0; i < polygons.length && !merged; i++) {
+        for (let j = i + 1; j < polygons.length && !merged; j++) {
+          const p = polygons[i];
+          const q = polygons[j];
+          const flat =
+            p.normal[0] * q.normal[0] +
+              p.normal[1] * q.normal[1] +
+              p.normal[2] * q.normal[2] >
+            0.96;
+          if (!flat || !alike(p.color, q.color)) {
+            continue;
+          }
+          const loop = joined(p, q);
+          if (loop && loop.length <= 40 && simple(loop)) {
+            const area = p.area + q.area;
+            polygons[i] = {
+              loop,
+              area,
+              normal: unit(
+                p.normal.map((v, k) => v * p.area + q.normal[k] * q.area),
+              ),
+              color: p.color.map(
+                (v, k) => (v * p.area + q.color[k] * q.area) / area,
+              ),
+            };
+            polygons.splice(j, 1);
+            merged = true;
+          }
+        }
+      }
+    }
+  };
+  // first the panels the texture only shades: their triangles' colours differ a little
+  const SIMILAR = 48;
+  mergeFlat(
+    (c, d) => Math.hypot(c[0] - d[0], c[1] - d[1], c[2] - d[2]) < SIMILAR,
+  );
   // the original's cars have a handful of colours: the texture's averages brought down
   // to a palette (k-means, from colours spread over the brightness)
   const PALETTE = 10;
@@ -145,59 +208,7 @@ const translate = async ({ index }) => {
   for (const p of polygons) {
     p.color = palette[nearest(p.color)];
   }
-  // merge neighbours in about one plane and of one colour, as long as the polygon stays
-  // simple (the classic look fills polygons that are not convex as Java did)
-  const simple = (loop) => new Set(loop).size == loop.length;
-  const joined = (p, q) => {
-    for (let i = 0; i < p.loop.length; i++) {
-      const a = p.loop[i];
-      const b = p.loop[(i + 1) % p.loop.length];
-      const j = q.loop.findIndex(
-        (v, k) => v == b && q.loop[(k + 1) % q.loop.length] == a,
-      );
-      if (j >= 0) {
-        // p up to a, then q from after b round to before a
-        const rest = [];
-        for (let k = 2; k < q.loop.length; k++) {
-          rest.push(q.loop[(j + k) % q.loop.length]);
-        }
-        return [...p.loop.slice(0, i + 1), ...rest, ...p.loop.slice(i + 1)];
-      }
-    }
-    return null;
-  };
-  let merged = true;
-  while (merged) {
-    merged = false;
-    for (let i = 0; i < polygons.length && !merged; i++) {
-      for (let j = i + 1; j < polygons.length && !merged; j++) {
-        const p = polygons[i];
-        const q = polygons[j];
-        const flat =
-          p.normal[0] * q.normal[0] +
-            p.normal[1] * q.normal[1] +
-            p.normal[2] * q.normal[2] >
-          0.985;
-        if (!flat || p.color != q.color) {
-          continue;
-        }
-        const loop = joined(p, q);
-        if (loop && loop.length <= 40 && simple(loop)) {
-          const area = p.area + q.area;
-          polygons[i] = {
-            loop,
-            area,
-            normal: unit(
-              p.normal.map((v, k) => v * p.area + q.normal[k] * q.area),
-            ),
-            color: p.color,
-          };
-          polygons.splice(j, 1);
-          merged = true;
-        }
-      }
-    }
-  }
+  mergeFlat((c, d) => c == d);
   const wheels = carStats.wheels?.[index] ?? null;
   return {
     polygons: polygons.map((p) => ({
@@ -238,6 +249,9 @@ for (const car of cars) {
     ...polygons.flatMap(({ color, points }) => [
       "<p>",
       `c(${color.join(",")})`,
+      // which side faces out: ours wind the other way round than the original's cars,
+      // which have fs(-1); without it the far sides are sorted and lit as near ones
+      "fs(1)",
       ...points.map((p) => `p(${p.join(",")})`),
       "</p>",
       "",
