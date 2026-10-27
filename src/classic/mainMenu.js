@@ -16,9 +16,10 @@ import {
   picture,
   screen,
   startScreen,
+  textButton,
 } from "./screen.js";
 
-export const OPTION = { play: 0, instructions: 1, reset: 2 };
+export const OPTION = { play: 0, instructions: 1, reset: 2, replay: 3 };
 
 // The options as the original had them: its box, its blinking colours, and the row of
 // its labels picture (options.png) the label is in. Each option takes the original's
@@ -189,6 +190,10 @@ export const classicMainMenu = (offersReset) => {
   draw(picture("byrd.png"), 72, 410);
   draw(picture("nfmcoms.png"), 567, 410);
   let chosen = -1;
+  // the original had no replay files: one of its rounded buttons
+  if (textButton(" Open Replay ", 620, 33)) {
+    chosen = OPTION.replay;
+  }
   if (confirm.state == CONFIRM.pressed) {
     confirm.state = CONFIRM.used;
     chosen = options[state.selected];

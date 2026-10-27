@@ -34,6 +34,7 @@ import {
 import { PAGE, TALK_TICKS, instructions } from "./instructions.js";
 import { menu } from "./menuState.js";
 import { SHOWCASE, showcase } from "./showcase.js";
+import { chooseReplayFile } from "./replays.js";
 
 // menu.animation of the main menu
 const OPENED = 0;
@@ -207,6 +208,28 @@ const drawButtons = ({ right }) => {
   }
   if (
     drawButton({
+      id: 8,
+      x: right - 230 * view.scale,
+      y: 720 * view.scaleY - 290 * view.scale,
+      width: 360,
+      height: 60,
+      faceTop: "#019DFF",
+      faceBottom: "#01EAFF",
+      shadowTop: "#004A78",
+      shadowBottom: "#016D77",
+      layout: BUTTON.textOnly,
+      text: "Open Replay",
+      fontSize: 19,
+      textOpacity: 0.9,
+      image: null,
+      imageOpacity: 0,
+      pulsing: false,
+    })
+  ) {
+    chooseReplayFile();
+  }
+  if (
+    drawButton({
       id: 3,
       x: right - 150 * view.scale,
       y: 720 * view.scaleY - 100 * view.scale,
@@ -295,6 +318,9 @@ const classicTick = () => {
   if (chosen == OPTION.reset) {
     insano.talkTicks = TALK_TICKS;
     game.phase = PHASE.resetQuestion;
+  }
+  if (chosen == OPTION.replay) {
+    chooseReplayFile();
   }
 };
 

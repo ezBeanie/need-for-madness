@@ -65,6 +65,7 @@ const RACER_FIELDS = [
   "destnow",
   "carnchp",
   "bshft",
+  "cameraHeading",
 ];
 
 const keepRace = () => ({
@@ -167,6 +168,8 @@ const pose = () => {
   for (let c = 0; c < raceTape.cars.length; c++) {
     const tape = raceTape.cars[c];
     poseFromTape(c, tape, viewer.frame);
+    // (the camera behind a car looks along it)
+    racers[c].cameraHeading = tape.cameraHeading[viewer.frame];
     if (t > 0) {
       for (const f of ["x", "y", "z"]) {
         car[c][f] = lerp(tape[f][viewer.frame], tape[f][next], t);

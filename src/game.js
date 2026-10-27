@@ -41,6 +41,7 @@ import {
 import { cutRaceTape, recordRaceTick } from "./race/raceTape.js";
 import { replayViewerTick } from "./race/replayViewer.js";
 import { drawReplayOverlay, heldArrow } from "./ui/replayControls.js";
+import { installReplayDrop } from "./screens/replays.js";
 import { raceEvents } from "./race/events.js";
 import { control } from "./race/ai.js";
 import { chipsfly, dustfly, expburn, sprksfly } from "./race/effects.js";
@@ -211,6 +212,8 @@ scatterMenuSmoke();
 // The original drew the tilt of the race end screen here, while loading; it is drawn again
 // before it shows. The draw stays so the randomness after it is as it was.
 random.fx();
+
+installReplayDrop(window);
 
 installPointer(canvas2D, {
   // a click or touch allows audio (see unlockAudio)

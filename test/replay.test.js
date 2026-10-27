@@ -136,3 +136,53 @@ test("the viewer shows each frame of the race where the cars were", async () => 
   expect(ctx.viewer.playing).toBe(false);
   ctx.closeReplay();
 });
+
+// all the numbers of a race tape, as 8 bytes each
+const rawSize = (tape) =>
+  8 *
+  (tape.cars.reduce(
+    (sum, car) =>
+      sum +
+      16 * tape.length +
+      5 * car.hitCount +
+      car.fixCount +
+      11 * car.dustCount,
+    0,
+  ) +
+    9 * tape.sparks.count +
+    2 * tape.length);
+
+// the speeds only send the fire of a burning wreck off: a file keeps them from then on
+const SPEEDS = ["speedX", "speedY", "speedZ"];
+// (and which hit wasted it, which only picks the highlight while racing)
+const withoutSpeedsBeforeWasted = (car, length) => {
+  const { playerHitTicks, ...kept } = car;
+  const from = Math.min(car.wastedAt, length);
+  for (const field of SPEEDS) {
+    kept[field] = car[field].map((v, i) => (i < from ? 0 : v));
+  }
+  return kept;
+};
+
+test("a replay file gives the race tape back to its last bit, and is small", async () => {
+  const { ctx } = await race(1500);
+  const tape = structuredClone(ctx.raceTape);
+  const raced = { stage: 5, name: "x", carTypes: [15, 1, 2], player: 0 };
+  const file = await ctx.encodeReplay(raced);
+  expect(file.length).toBeLessThan(rawSize(tape) / 2);
+  const decoded = await ctx.decodeReplay(new Blob([file]));
+  expect(decoded.race).toEqual(raced);
+  // every number to its last bit (toEqual also tells 0 from -0)
+  tape.cars.forEach((car, c) =>
+    expect(decoded.tape.cars[c]).toMatchObject(
+      withoutSpeedsBeforeWasted(car, tape.length),
+    ),
+  );
+  expect(decoded.tape.sparks).toEqual(tape.sparks);
+  expect(decoded.tape.length).toBe(tape.length);
+  expect(decoded.tape.checkpoint).toEqual(tape.checkpoint);
+  expect(decoded.tape.lastCheck).toEqual(tape.lastCheck);
+  await expect(ctx.decodeReplay(new Blob(["no replay"]))).rejects.toThrow(
+    "not a replay",
+  );
+});

@@ -38,6 +38,8 @@ export const AFTER_LOAD = {
   nextStage: 1,
   // the very first race starts right away
   race: 2,
+  // a replay file opened: its stage, then the replay
+  replay: 3,
 };
 
 export const stageLoad = {
@@ -421,7 +423,10 @@ const prepareStage = () => {
   effects.sparkCount = 0;
   effects.dustCount = 0;
   effects.explosionCount = 0;
-  if (stageLoad.after != AFTER_LOAD.race) {
+  if (
+    stageLoad.after != AFTER_LOAD.race &&
+    stageLoad.after != AFTER_LOAD.replay
+  ) {
     // the stage select tints the stage the other way round, three times as strong
     const oppositeTint = [
       -(scene.tint[0] * 3),

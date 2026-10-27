@@ -10,6 +10,7 @@ import { drawClassicReplayLabel } from "../classic/hud.js";
 import { racers } from "../race/racers.js";
 import {
   SPEEDS,
+  VIEWER_FROM,
   changeSpeed,
   closeReplay,
   lastFrame,
@@ -20,6 +21,7 @@ import {
   viewer,
 } from "../race/replayViewer.js";
 import { LOOK, look } from "../render/look.js";
+import { leaveOpenedReplay, saveReplay } from "../screens/replays.js";
 import { CAMERA, camera } from "../render/camera.js";
 import { BUTTON, drawButton } from "./widgets.js";
 import { rd, view } from "./view.js";
@@ -149,7 +151,21 @@ const button = (id, label, index, count) => {
   });
 };
 
-// what the buttons do, in their order
+// Back to where the viewer was opened from; after a replay file, the main menu.
+const exit = () => {
+  const fromFile = viewer.from == VIEWER_FROM.file;
+  closeReplay();
+  if (fromFile) {
+    leaveOpenedReplay();
+  }
+};
+
+// what the buttons do, in their order (a replay file needs no saving again)
+const buttons = () => [
+  ...BUTTONS,
+  ...(viewer.from == VIEWER_FROM.file ? [] : [["Save", saveReplay]]),
+  ["Exit", exit],
+];
 const BUTTONS = [
   ["<< 5 Sec", () => seekReplay(viewer.frame - JUMP_FRAMES)],
   [() => (viewer.playing ? "Pause" : "Play"), togglePlaying],
@@ -157,7 +173,6 @@ const BUTTONS = [
   [() => `Speed ${SPEEDS[viewer.speed]}x`, () => changeSpeed(1)],
   [() => CAMERA_NAMES[camera.mode] ?? "Camera", nextCamera],
   [() => `Car ${camera.target + 1}`, nextCar],
-  ["Exit", closeReplay],
 ];
 
 // --- the overlay ---
@@ -198,7 +213,7 @@ const readKeys = () => {
   }
   if (confirm.state == CONFIRM.pressed) {
     confirm.state = CONFIRM.used;
-    closeReplay();
+    exit();
   }
 };
 
@@ -210,9 +225,10 @@ export function drawReplayOverlay() {
   }
   drawInfo(classic);
   drawBar(classic);
-  BUTTONS.forEach(([label, act], i) => {
+  const all = buttons();
+  all.forEach(([label, act], i) => {
     const text = typeof label == "function" ? label() : label;
-    if (button(20 + i, text, i, BUTTONS.length)) {
+    if (button(20 + i, text, i, all.length)) {
       act();
     }
   });

@@ -67,6 +67,7 @@ import {
   strokeScaledPolygon,
 } from "../ui/widgets.js";
 import { menu } from "./menuState.js";
+import { showOpenedReplay } from "./replays.js";
 import { loadConfetti } from "./raceEnd.js";
 
 export const stageSelect = {
@@ -215,7 +216,9 @@ export function stageLoadingTick() {
   rd.clearRect(0, 0, view.width, view.height);
   if (
     stageLoad.progress == STAGE_LOAD.screenShown &&
-    (menu.redraw || stageLoad.after == AFTER_LOAD.race)
+    (menu.redraw ||
+      stageLoad.after == AFTER_LOAD.race ||
+      stageLoad.after == AFTER_LOAD.replay)
   ) {
     loadStage();
     if (!isEngineLoaded(game.carTypes[0])) {
@@ -235,7 +238,9 @@ export function stageLoadingTick() {
     drawLoadingScreen();
   }
   if (stageLoad.progress == STAGE_LOAD.loaded) {
-    if (stageLoad.after != AFTER_LOAD.race) {
+    if (stageLoad.after == AFTER_LOAD.replay) {
+      showOpenedReplay();
+    } else if (stageLoad.after != AFTER_LOAD.race) {
       openStageSelect();
     } else {
       game.carCount = 1;

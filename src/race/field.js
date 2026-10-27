@@ -25,10 +25,18 @@ const gridZ = Array.from(
   (_, i) => -76 + 38 * (Math.floor(i / 3) * 2 + (i % 3 == 0 ? 0 : 1)),
 );
 
+// a replay's cars (see screens/replays.js): the field it was raced in, not new opponents
+export const field = { replayCars: null };
+
 // Chooses the opponents and puts all cars on the start grid.
 export function setUpField() {
   track.insih();
-  chooseOpponents(track.stage);
+  if (field.replayCars) {
+    game.carCount = field.replayCars.length;
+    field.replayCars.forEach((type, c) => (game.carTypes[c] = type));
+  } else {
+    chooseOpponents(track.stage);
+  }
   resetHud();
   placeOnGrid();
   inishcontrol();
