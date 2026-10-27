@@ -48,6 +48,17 @@ test("hud: classic countdown numbers", async ({ page }) => {
   await expect.soft(page).toHaveScreenshot("hud-classic-countdown-two.png");
 });
 
+test("hud: the replay viewer", async ({ page }) => {
+  const game = await racing(page, 300);
+  await set(page, () => {
+    const s = window.gameState;
+    s.game.phase = 11;
+    s.openReplay(s.VIEWER_FROM.pauseMenu, 0);
+  });
+  await game.advance(60);
+  await expect.soft(page).toHaveScreenshot("hud-replay-viewer.png");
+});
+
 test("hud: power low and the arrow at the cars", async ({ page }) => {
   const game = await racing(page);
   await set(page, () => {

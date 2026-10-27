@@ -73,8 +73,9 @@ const driveThen = (afterFrames, action) => {
   };
 };
 
-// Every entry of the pause menu: pauses and resumes, asks for an instant replay too early,
-// pages through the instructions and back, then quits to the main menu.
+// Every entry of the pause menu: pauses and resumes, opens the instant replay (up and down
+// change its speed there, Enter closes it), pages through the instructions and back, then
+// quits to the main menu.
 const pauseMenuTour = () => {
   const drive = racingAutopilot();
   const keys = keyTapper();
@@ -87,7 +88,7 @@ const pauseMenuTour = () => {
     460: UP,
     470: UP,
     480: DOWN,
-    490: DOWN,
+    490: ENTER,
     500: DOWN,
     520: ENTER,
   };
@@ -385,11 +386,16 @@ const flows = [
     script: finishAndPlayOn,
   },
   {
-    // what the "Instant Replay" button of the pause menu calls
+    // what the "Instant Replay" button of the pause menu opens: the replay viewer at the
+    // race's last seconds; it plays them, then waits
     name: "instant-replay-stage-02",
     stage: 2,
     frames: 1700,
-    script: () => driveThen(900, (ctx) => ctx.startReplay()),
+    script: () =>
+      driveThen(900, (ctx) => {
+        ctx.game.phase = PHASE.paused;
+        ctx.openReplay(ctx.VIEWER_FROM.pauseMenu, ctx.raceTape.length - 430);
+      }),
   },
   {
     // switch mode: when its timer runs out, the switch screen picks the next car to drive

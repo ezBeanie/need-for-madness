@@ -20,7 +20,6 @@ import {
   drawClassicInsano,
   drawClassicOutcome,
   drawClassicMeters,
-  drawClassicReplayLabel,
   drawClassicStanding,
 } from "../classic/hud.js";
 import { isPhone } from "../core/platform.js";
@@ -34,12 +33,8 @@ import { pointer } from "../input/pointer.js";
 import { COUNTDOWN } from "../race/countdown.js";
 import { raceEvents } from "../race/events.js";
 import { MISSED, STUNT, car, racers } from "../race/racers.js";
-import {
-  HIGHLIGHT,
-  skipReplay,
-  startHighlight,
-  recording,
-} from "../race/recording.js";
+import { HIGHLIGHT, startHighlight, recording } from "../race/recording.js";
+import { VIEWER_FROM, openReplay } from "../race/replayViewer.js";
 import { track } from "../race/track.js";
 import { CAMERA, camera, faceCamera } from "../render/camera.js";
 import { LOOK, look } from "../render/look.js";
@@ -786,6 +781,30 @@ const afterRaceOver = () => {
     })
   ) {
     leave = true;
+  }
+  if (
+    drawButton({
+      id: 8,
+      x: 640 * view.scaleX - 290 * view.scale,
+      y: view.height - 60 * view.scale - 40 * view.scaleY,
+      width: 250,
+      height: 60,
+      faceTop: "#019DFF",
+      faceBottom: "#01BAFF",
+      shadowTop: "#004A78",
+      shadowBottom: "#015777",
+      layout: BUTTON.textOnly,
+      text: "Watch Race",
+      fontSize: 20,
+      textOpacity: 0.8,
+      image: null,
+      imageOpacity: 0,
+      pulsing: false,
+    })
+  ) {
+    stopEngine();
+    openReplay(VIEWER_FROM.raceOver, 0);
+    return;
   }
   if (leave) {
     if (recording.highlight) {
@@ -1618,46 +1637,6 @@ const replayButton = (text, faceBottom, shadowBottom) =>
     imageOpacity: 0.7,
     pulsing: false,
   });
-
-// The instant replay from the pause menu: "REPLAY" and "Exit", which fast forwards back
-// to the race.
-export function drawReplayOverlay() {
-  rd.clearRect(0, 0, view.width, view.height);
-  // the original's flickering "Replay >>"; Enter or a click goes back
-  if (look.current == LOOK.classic) {
-    drawClassicReplayLabel();
-    if (pointer.down) {
-      pointer.down = false;
-      hud.replayStartsIn = 2;
-    }
-  }
-  rd.letterSpacing = "1px";
-  rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
-  rd.textAlign = "left";
-  rd.textBaseline = "middle";
-  rd.fillStyle = "rgb(0,32,64)";
-  if (look.current != LOOK.classic) {
-    rd.fillText("REPLAY", 20 * view.scaleX, 35 * view.scaleY);
-    if (replayButton("Exit ", "#01EAFF", "#016D77")) {
-      hud.replayStartsIn = 2;
-    }
-  }
-  if (confirm.state == CONFIRM.pressed) {
-    hud.replayStartsIn = 2;
-    confirm.state = CONFIRM.used;
-  }
-  if (hud.replayStartsIn == 1) {
-    skipReplay();
-  }
-  if (recording.frame > 425) {
-    rd.fillStyle = "#000000";
-    rd.fillRect(0, 0, view.width, view.height);
-  }
-  if (hud.replayStartsIn) {
-    darken(0.7);
-    hud.replayStartsIn--;
-  }
-}
 
 // How often the highlight has played; after the second time the race end follows.
 let highlightPlays = 0;

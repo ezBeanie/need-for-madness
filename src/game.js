@@ -22,7 +22,6 @@ import { render } from "./render/drawFrame.js";
 import { lookForGamepads, pollGamepads } from "./input/gamepad.js";
 import {
   drawHighlightOverlay,
-  drawReplayOverlay,
   drawRewindOverlay,
   drawSwitchScreen,
   drawHud,
@@ -37,10 +36,11 @@ import {
   highlightTick,
   recordTick,
   recording,
-  replayTick,
   timeRewindTick,
 } from "./race/recording.js";
 import { cutRaceTape, recordRaceTick } from "./race/raceTape.js";
+import { replayViewerTick } from "./race/replayViewer.js";
+import { drawReplayOverlay, heldArrow } from "./ui/replayControls.js";
 import { raceEvents } from "./race/events.js";
 import { control } from "./race/ai.js";
 import { chipsfly, dustfly, expburn, sprksfly } from "./race/effects.js";
@@ -79,8 +79,7 @@ function raceTick() {
     }
   }
   if (game.phase == PHASE.replay) {
-    replayTick();
-    moveScenery(true);
+    moveScenery(replayViewerTick(heldArrow()));
     drawReplayOverlay();
   }
   if (game.phase == PHASE.highlights) {

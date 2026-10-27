@@ -10,7 +10,9 @@ import { PHASE, game } from "../core/state.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { fixcar } from "../race/physics.js";
 import { racers } from "../race/racers.js";
-import { recording, startReplay } from "../race/recording.js";
+import { raceTape } from "../race/raceTape.js";
+import { TAPE_TICKS } from "../race/recording.js";
+import { VIEWER_FROM, openReplay } from "../race/replayViewer.js";
 import { interpolation } from "../render/interpolation.js";
 import { LOOK, look } from "../render/look.js";
 import { backdropHue, cssRgb, hslToRgb } from "../ui/color.js";
@@ -53,7 +55,7 @@ const BUTTON_COLORS = [
 ];
 
 // a replay needs this many recorded ticks
-const REPLAY_MIN_TICKS = 430;
+const REPLAY_MIN_TICKS = 30;
 // how long "Not enough gameplay was recorded yet!" shows (the original's message longer)
 const TOO_SHORT_TICKS = 30;
 const CLASSIC_TOO_SHORT_TICKS = 150;
@@ -61,6 +63,10 @@ const CLASSIC_TOO_SHORT_TICKS = 150;
 const REPLAY_STARTS = 1;
 
 let tooShortTicks = 0;
+
+// The whole race so far, from its last seconds (as long as the instant replay always was).
+const startReplay = () =>
+  openReplay(VIEWER_FROM.pauseMenu, raceTape.length - TAPE_TICKS);
 // the instant replay started from here and plays the stage music, which keeps playing
 // when the race resumes
 let musicPlayingForReplay = false;
@@ -183,7 +189,7 @@ const choose = (entry) => {
     game.phase = PHASE.race;
   }
   if (entry == INSTANT_REPLAY) {
-    if (recording.recordedTicks >= REPLAY_MIN_TICKS) {
+    if (raceTape.length >= REPLAY_MIN_TICKS) {
       hud.replayStartsIn = 2;
       resumeStageMusic();
       musicPlayingForReplay = true;

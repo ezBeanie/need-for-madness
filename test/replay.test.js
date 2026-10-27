@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { autopilot, startRace } from "./harness/race.js";
+import { autopilot, raceState, startRace } from "./harness/race.js";
 import { PHASE } from "../src/core/state.js";
 
 const TAPE_TICKS = 430;
@@ -80,4 +80,59 @@ test("time wound back takes back what the race tape had recorded since", async (
     step();
   }
   expect(ctx.raceTape.cars[0].x).toHaveLength(resumedAt + 51);
+});
+
+// Runs the race on: n ticks, the autopilot driving.
+const drive = (ctx, step, n) => {
+  const states = [];
+  for (let i = 0; i < n && ctx.game.phase === PHASE.race; i++) {
+    Object.assign(ctx.racers[0].u, autopilot(ctx));
+    step();
+    states.push(JSON.stringify(raceState(ctx)));
+  }
+  return states;
+};
+
+test("a replay watched in the pause menu leaves the race as it was", async () => {
+  const plain = await race(1200);
+  const goesOn = drive(plain.ctx, plain.step, 600);
+
+  const watched = await race(1200);
+  const { ctx, step } = watched;
+  ctx.game.phase = PHASE.paused;
+  ctx.openReplay(ctx.VIEWER_FROM.pauseMenu, 0);
+  expect(ctx.game.phase).toBe(PHASE.replay);
+  for (let i = 0; i < 200; i++) {
+    ctx.replayViewerTick(0);
+  }
+  ctx.seekReplay(100);
+  ctx.changeSpeed(2);
+  for (let i = 0; i < 100; i++) {
+    ctx.replayViewerTick(i < 40 ? -1 : 0);
+  }
+  ctx.closeReplay();
+  expect(ctx.game.phase).toBe(PHASE.paused);
+  ctx.game.phase = PHASE.race;
+  expect(drive(ctx, step, 600)).toEqual(goesOn);
+});
+
+test("the viewer shows each frame of the race where the cars were", async () => {
+  const { ctx } = await race(800);
+  ctx.game.phase = PHASE.paused;
+  ctx.openReplay(ctx.VIEWER_FROM.pauseMenu, 0);
+  for (let i = 0; i < 300; i++) {
+    ctx.replayViewerTick(0);
+  }
+  expect(ctx.viewer.frame).toBe(300);
+  expect(ctx.car[3].x).toBe(ctx.raceTape.cars[3].x[300]);
+  ctx.seekReplay(50);
+  expect(ctx.car[2].z).toBe(ctx.raceTape.cars[2].z[50]);
+  // played to its end it stops there
+  ctx.changeSpeed(2);
+  for (let i = 0; i < 400; i++) {
+    ctx.replayViewerTick(0);
+  }
+  expect(ctx.viewer.frame).toBe(ctx.raceTape.length - 1);
+  expect(ctx.viewer.playing).toBe(false);
+  ctx.closeReplay();
 });

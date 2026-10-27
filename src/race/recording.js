@@ -1,7 +1,7 @@
 // What is recorded of a race: the last ticks of every car (where it was, its hits, fixes,
-// dust and its wasting), the sparks and the checkpoint texts. They play back as the
-// instant replay, wind back as rewinding time, and a copy kept when something worth
-// showing happened plays as the highlight after the race.
+// dust and its wasting), the sparks and the checkpoint texts. They wind back as rewinding
+// time, and a copy kept when something worth showing happened plays as the highlight
+// after the race. The race tape (raceTape.js) keeps them all for the replay viewer.
 
 import { resumeStageMusic } from "../audio/audio.js";
 import { rotateAxes } from "../core/math.js";
@@ -374,9 +374,9 @@ const reapplyHits = (c, tape, fixedAt, matches) => {
   }
 };
 
-// The cars as at the start of the tape: whole, with the hits before it since their last
-// fix before it; wasted ones handled by onWasted.
-const resetCarsToTapeStart = (tape, onWasted) => {
+// The cars as at frame start of the tape (its first by default): whole, with the hits
+// before it since their last fix before it; wasted ones handled by onWasted.
+export const resetCarsToTapeStart = (tape, onWasted, start = 0) => {
   for (let c = 0; c < game.carCount; c++) {
     const racer = racers[c];
     racer.destnow = false;
@@ -389,11 +389,11 @@ const resetCarsToTapeStart = (tape, onWasted) => {
     fixcar(c);
     racer.body.alpha = BLEND.alpha;
     const carTape = tape.cars[c];
-    if (carTape.wastedAt < 0) {
+    if (carTape.wastedAt < start) {
       onWasted(c);
     }
-    const fixedAt = lastFix(carTape, (at) => at < 0);
-    reapplyHits(c, carTape, fixedAt, (at) => at < 0);
+    const fixedAt = lastFix(carTape, (at) => at < start);
+    reapplyHits(c, carTape, fixedAt, (at) => at < start);
   }
 };
 
@@ -402,52 +402,6 @@ const burningFromTheStart = (c) => {
   racers[c].destnow = true;
   racers[c].cntdest = 7;
 };
-
-export function startReplay() {
-  game.phase = PHASE.replayRewind;
-  recording.frame = 0;
-  camera.mode = CAMERA.orbit;
-  camera.target = game.player;
-  resetCarsToTapeStart(recording.tape, burningFromTheStart);
-  game.phase = PHASE.replay;
-}
-
-export function replayTick() {
-  playTape(recording.tape, false);
-  if (recording.frame == LAST_FRAME) {
-    game.phase = PHASE.paused;
-    camera.mode = CAMERA.behind;
-    camera.target = game.player;
-    recording.frame = 0;
-  } else {
-    recording.frame++;
-  }
-}
-
-// Leaves the instant replay for the race as it was: wastings, fixes and hits still to
-// come in the replay happen at once, and the cars go back to where they are.
-export function skipReplay() {
-  game.phase = PHASE.replayRewind;
-  for (let c = 0; c < game.carCount; c++) {
-    const tape = recording.tape.cars[c];
-    if (tape.wastedAt != NOT_WASTED && tape.wastedAt >= recording.frame) {
-      racers[c].embos = 0;
-      racers[c].cntdest = 7;
-    }
-    const fixedAt = lastFix(tape, (at) => at >= recording.frame);
-    if (fixedAt) {
-      racers[c].squash = 0;
-      racers[c].nbsq = 0;
-      car[c].fcnt = 0;
-      fixcar(c);
-    }
-    reapplyHits(c, tape, fixedAt, (at) => at >= recording.frame);
-    poseFromTape(c, tape, LAST_FRAME);
-  }
-  camera.mode = CAMERA.behind;
-  camera.target = game.player;
-  game.phase = PHASE.paused;
-}
 
 export function startHighlight() {
   game.phase = PHASE.replayRewind;
@@ -471,7 +425,7 @@ export function highlightTick() {
 
 // A frame of a tape: the cars where they were, with their wasting, fixes, hits, dust and
 // sparks happening again. A frozen frame lets neither the burning nor the hits move on.
-const playTape = (tape, frozen) => {
+export const playTape = (tape, frozen) => {
   const frame = recording.frame;
   for (let c = 0; c < game.carCount; c++) {
     const carTape = tape.cars[c];
@@ -612,7 +566,7 @@ const flickerWhileFixing = (c) => {
   }
 };
 
-const poseFromTape = (c, carTape, frame) => {
+export const poseFromTape = (c, carTape, frame) => {
   car[c].x = carTape.x[frame];
   car[c].y = carTape.y[frame];
   car[c].z = carTape.z[frame];
@@ -623,7 +577,7 @@ const poseFromTape = (c, carTape, frame) => {
   car[c].wxz = carTape.wxz[frame];
 };
 
-const turnCarAfterItsAngles = (c) => {
+export const turnCarAfterItsAngles = (c) => {
   const across = [1, 0, 0];
   const up = [0, 1, 0];
   const along = [0, 0, 1];

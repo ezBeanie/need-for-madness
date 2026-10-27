@@ -11,6 +11,7 @@ import { raceEvents } from "../race/events.js";
 import { nextRaceSize } from "../race/field.js";
 import { racers } from "../race/racers.js";
 import { startTimeRewind } from "../race/recording.js";
+import { nextCamera, nextCar, togglePlaying } from "../race/replayViewer.js";
 import { CAMERA, camera } from "../render/camera.js";
 import { toggleLook, toggleSharp } from "../render/look.js";
 import { fitCanvas3D } from "../render/renderer.js";
@@ -38,8 +39,12 @@ export function onKey(action, pressed) {
   }
   if (action == "handbrake") {
     input.handb = pressed;
-    // outside races the space bar confirms
-    if (game.phase != PHASE.race) {
+    // the space bar plays and pauses replays, outside races it confirms
+    if (game.phase == PHASE.replay) {
+      if (!pressed) {
+        togglePlaying();
+      }
+    } else if (game.phase != PHASE.race) {
       pressConfirm(pressed);
     }
   }
@@ -77,6 +82,9 @@ export function onKey(action, pressed) {
   if (action == "lookBackRight") {
     camera.lookBack = pressed ? 1 : 0;
   }
+  if (!pressed && action == "nextCamera" && game.phase == PHASE.replay) {
+    nextCamera();
+  }
   if (!pressed && action == "nextCamera" && game.phase == PHASE.race) {
     camera.mode++;
     if (camera.mode == CAMERA.flyTo) {
@@ -94,6 +102,9 @@ export function onKey(action, pressed) {
   }
   if (!pressed && action == "raceCars" && game.phase == PHASE.stageSelect) {
     nextRaceSize();
+  }
+  if (!pressed && action == "raceCars" && game.phase == PHASE.replay) {
+    nextCar();
   }
   if (!pressed && action == "toggleLook") {
     toggleLook();
