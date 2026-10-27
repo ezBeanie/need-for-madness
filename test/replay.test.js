@@ -51,7 +51,11 @@ test("the whole race is recorded, its last ticks as the instant replay has them"
   expect(raceTape.length).toBe(raced);
   const from = raceTape.length - TAPE_TICKS;
   // (the module needs the browser stand-ins the game was loaded with)
-  const fields = await import("../src/race/raceTape.js");
+  const fields = {
+    ...(await import("../src/race/raceTape.js")),
+    RECORDED_PER_TICK: (await import("../src/race/recording.js"))
+      .RECORDED_PER_TICK,
+  };
   const whole = lastTicksOf(fields, raceTape, from);
   expect(whole).toEqual(lastTicksOf(fields, recording.tape, 0));
   // (opponents crash into each other on stage 5)

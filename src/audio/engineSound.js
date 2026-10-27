@@ -50,34 +50,37 @@ export const resetEngineSound = () => {
 };
 
 // The classic look's engine is the original's (see classic/sounds.js).
-const updateClassicEngine = () => {
+const updateClassicEngine = (car, type, over) => {
   if (engine.started) {
     stopEngine();
   }
-  if (raceEvents.raceOverTicks) {
+  if (over) {
     stopClassicLoops();
   } else {
-    const type = game.carTypes[game.player];
-    classicEngineTick(racers[game.player], type, loopClassicSound);
+    classicEngineTick(car, type, loopClassicSound);
   }
   coolDownCarSounds();
 };
 
-export function updateEngineSound() {
+// The engine of car (the player's, or the car a replay follows: see
+// audio/replaySounds.js) of the type; over: the race is over, it dies down.
+export function updateEngineSound(
+  car = racers[game.player],
+  type = game.carTypes[game.player],
+  over = raceEvents.raceOverTicks != 0,
+) {
   if (look.current == LOOK.classic) {
-    updateClassicEngine();
+    updateClassicEngine(car, type, over);
     return;
   }
   stopClassicLoops();
   if (!engine.started) {
-    if (!raceEvents.raceOverTicks) {
-      startEngine(game.carTypes[game.player], true);
+    if (!over) {
+      startEngine(type, true);
     }
     coolDownCarSounds();
     return;
   }
-  const car = racers[game.player];
-  const type = game.carTypes[game.player];
   let atTopSpeed = false;
   const onThePedal =
     (car.u.up && car.speed > 0) || (car.u.down && car.speed < 0);
@@ -102,7 +105,7 @@ export function updateEngineSound() {
   } else {
     revInTheAir(car, onThePedal);
   }
-  if (raceEvents.raceOverTicks == 0) {
+  if (!over) {
     engine.volume.gain.value +=
       ((targetVolume - 1) * 0.75 + 1 - engine.volume.gain.value) / 10;
   } else if (engine.volume.gain.value > 0.3) {

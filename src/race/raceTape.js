@@ -4,6 +4,7 @@
 // tick's number here. Its shape is the shape of that tape, so it plays the same way.
 
 import { game } from "../core/state.js";
+import { SKID, racers } from "./racers.js";
 import {
   DUST,
   HIT,
@@ -20,11 +21,44 @@ export const NEVER_WASTED = Infinity;
 const NEWEST = TAPE_TICKS - 1;
 
 export const SPARK = ["at", "carType", "x", "y", "z", "sx", "sy", "sz", "kind"];
-export { DUST, HIT, RECORDED_PER_TICK };
+export { DUST, HIT };
+
+// What the engine sound needs of a car every tick (see audio/replaySounds.js): its speed,
+// power and these, as bits of one number.
+export const ENGINE_BITS = {
+  up: 1,
+  down: 2,
+  handbrake: 4,
+  grounded: 8,
+  wheelsTouch: 16,
+  capsized: 32,
+  slipping: 64,
+  sliding: 128,
+};
+const SOUND_PER_TICK = ["speed", "power", "engine"];
+
+// every per tick field of the race tape
+export const PER_TICK = [...RECORDED_PER_TICK, ...SOUND_PER_TICK];
+
+// wheels pushed unevenly: the engine sound's slipping
+const uneven = (push) =>
+  Math.abs(push[0] - (push[1] + push[0] + push[2] + push[3]) / 4) > 0.1;
+
+const engineBits = (racer) =>
+  (racer.u.up ? ENGINE_BITS.up : 0) |
+  (racer.u.down ? ENGINE_BITS.down : 0) |
+  (racer.u.handb ? ENGINE_BITS.handbrake : 0) |
+  (racer.grounded ? ENGINE_BITS.grounded : 0) |
+  (racer.wheelsTouch ? ENGINE_BITS.wheelsTouch : 0) |
+  (racer.capsized ? ENGINE_BITS.capsized : 0) |
+  (uneven(racer.wheelSpeedZ) || uneven(racer.wheelSpeedX)
+    ? ENGINE_BITS.slipping
+    : 0) |
+  (racer.skid == SKID.sliding ? ENGINE_BITS.sliding : 0);
 
 const newRaceCarTape = () => {
   const tape = newCarTape();
-  for (const field of RECORDED_PER_TICK) {
+  for (const field of PER_TICK) {
     tape[field] = [];
   }
   tape.wastedAt = NEVER_WASTED;
@@ -76,6 +110,10 @@ export const recordRaceTick = () => {
     for (const field of RECORDED_PER_TICK) {
       to[field][at] = from[field][NEWEST];
     }
+    const racer = racers[c];
+    to.speed[at] = racer.speed;
+    to.power[at] = racer.power;
+    to.engine[at] = engineBits(racer);
     for (let i = 0; i < from.hitCount; i++) {
       if (from.hitAt[i] == NEWEST) {
         addEvent(from, i, to, HIT, "hitCount", at);
@@ -131,7 +169,7 @@ export const cutRaceTape = (frame) => {
     return;
   }
   for (const tape of raceTape.cars) {
-    for (const field of RECORDED_PER_TICK) {
+    for (const field of PER_TICK) {
       tape[field].length = length;
     }
     cutEvents(tape, HIT, "hitCount", length);

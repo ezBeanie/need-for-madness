@@ -9,32 +9,63 @@ const ACTIONS = {
   65: "steerLeft", // A
   39: "steerRight", // arrow right
   68: "steerRight", // D
-  32: "handbrake", // space, also plays and pauses replays and confirms outside races
+  32: "handbrake", // space, also confirms outside races
   13: "confirm", // enter
   27: "confirm", // escape
   81: "toggleArrow", // Q: the arrow points to the next checkpoint or the opponents
   82: "rewind", // R: rewind time in a race
   90: "lookBackLeft", // Z: swing the camera behind the car to the left
   88: "lookBackRight", // X: ... or to the right
-  86: "nextCamera", // V: the camera, in races and replays
+  86: "nextCamera", // V: the camera, in races
   78: "muteSound", // N
   77: "muteMusic", // M
-  67: "raceCars", // C: how many cars race, in the stage select; the car a replay follows
+  67: "raceCars", // C: how many cars race, in the stage select
   76: "toggleLook", // L: the modern or the classic look (see render/look.js)
   75: "toggleSharp", // K: the classic look sharp or in the original's pixels
 };
 
 export const actionFor = (keyCode) => ACTIONS[keyCode];
 
-// Calls onKey(action, pressed) for every key with an action. The page itself never
-// reacts to keys (scrolling, ...).
+// The keys held, and those pressed since a screen last took them, by their place on the
+// keyboard (event.code: "KeyW" is W on QWERTY and QWERTZ alike), for a screen with keys
+// of its own (the replay viewer). Only the last few presses are kept.
+export const keys = { held: new Set(), pressed: [] };
+const KEPT_PRESSES = 10;
+
+// The keys pressed since last asked: { code, shift, ctrl } each.
+export const takePressedKeys = () => keys.pressed.splice(0);
+
+const remember = (event, pressed) => {
+  if (!pressed) {
+    keys.held.delete(event.code);
+    return;
+  }
+  keys.held.add(event.code);
+  if (!event.repeat) {
+    keys.pressed.push({
+      code: event.code,
+      shift: event.shiftKey,
+      ctrl: event.ctrlKey || event.metaKey,
+    });
+    keys.pressed.splice(0, keys.pressed.length - KEPT_PRESSES);
+  }
+};
+
+// A key event (or one like it): remembered, and onKey(action, pressed) called if the key
+// has an action.
+export const handleKey = (event, pressed, onKey) => {
+  remember(event, pressed);
+  const action = actionFor(event.keyCode);
+  if (action) {
+    onKey(action, pressed);
+  }
+};
+
+// Handles every key; the page itself never reacts to keys (scrolling, ...).
 export const installKeyboard = (onKey) => {
   const listen = (pressed) => (event) => {
     event.preventDefault();
-    const action = actionFor(event.keyCode);
-    if (action) {
-      onKey(action, pressed);
-    }
+    handleKey(event, pressed, onKey);
   };
   window.addEventListener("keydown", listen(true), false);
   window.addEventListener("keyup", listen(false), false);

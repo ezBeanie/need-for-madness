@@ -4,6 +4,7 @@
 // there, the race as it was.
 
 import { random } from "../core/random.js";
+import { takePressedKeys } from "../input/keyboard.js";
 import { PHASE, game } from "../core/state.js";
 import { CAMERA, camera } from "../render/camera.js";
 import { BLEND, gl } from "../render/renderer.js";
@@ -24,8 +25,13 @@ const NORMAL_SPEED = 2;
 // how many frames a tick winds while an arrow is held, after it was held this long
 const SCRUB_FRAMES = 4;
 const SCRUB_AFTER_TICKS = 8;
-// the cameras one can switch through
-const CAMERAS = [CAMERA.orbit, CAMERA.behind, CAMERA.trackside];
+// the cameras one can switch through; the free one stays where the last one was
+export const CAMERAS = [
+  CAMERA.orbit,
+  CAMERA.behind,
+  CAMERA.trackside,
+  CAMERA.free,
+];
 
 // where the viewer was opened from, and goes back to
 export const VIEWER_FROM = { pauseMenu: 0, raceOver: 1, file: 2 };
@@ -66,6 +72,7 @@ const RACER_FIELDS = [
   "carnchp",
   "bshft",
   "cameraHeading",
+  "motionHeading",
 ];
 
 const keepRace = () => ({
@@ -168,8 +175,9 @@ const pose = () => {
   for (let c = 0; c < raceTape.cars.length; c++) {
     const tape = raceTape.cars[c];
     poseFromTape(c, tape, viewer.frame);
-    // (the camera behind a car looks along it)
+    // (the camera behind a car looks along it, the one beside the track waits ahead)
     racers[c].cameraHeading = tape.cameraHeading[viewer.frame];
+    racers[c].motionHeading = racers[c].cameraHeading;
     if (t > 0) {
       for (const f of ["x", "y", "z"]) {
         car[c][f] = lerp(tape[f][viewer.frame], tape[f][next], t);
@@ -234,6 +242,8 @@ export const openReplay = (from, frame) => {
   camera.mode = CAMERA.orbit;
   camera.target = game.player;
   game.phase = PHASE.replay;
+  // (keys pressed before, in the menus, are not the viewer's)
+  takePressedKeys();
   seekReplay(frame);
 };
 
@@ -262,10 +272,26 @@ export const changeSpeed = (step) => {
 
 export const nextCamera = () => {
   camera.mode = CAMERAS[(CAMERAS.indexOf(camera.mode) + 1) % CAMERAS.length];
+  // (beside the track: a new spot ahead of the car)
+  camera.relocate = true;
 };
 
-export const nextCar = () => {
-  camera.target = (camera.target + 1) % raceTape.cars.length;
+// step 1: the next car, -1: the one before
+export const nextCar = (step = 1) => {
+  const count = raceTape.cars.length;
+  camera.target = (camera.target + step + count) % count;
+  camera.relocate = true;
+};
+
+// The free camera: forward, side (right) and up its own way, turned by yaw and pitch
+// (degrees), in this game's units.
+export const moveFreeCamera = (forward, side, up, yaw, pitch) => {
+  camera.yaw += yaw;
+  camera.pitch = Math.max(-89, Math.min(89, camera.pitch + pitch));
+  const heading = (camera.yaw * Math.PI) / 180;
+  camera.x += forward * Math.sin(heading) + side * Math.cos(heading);
+  camera.z += -forward * Math.cos(heading) + side * Math.sin(heading);
+  camera.y = Math.max(1, camera.y + up);
 };
 
 // Plays the frames up to `to`, their events happening.

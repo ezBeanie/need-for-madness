@@ -3,7 +3,6 @@ import { readFileSync, readdirSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
-import { actionFor } from "../../src/input/keyboard.js";
 import { createBrowserGlobals, createTaskQueue } from "./browserStubs.js";
 
 const PROJECT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -11,6 +10,19 @@ const PROJECT_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
 const PUBLIC_ROOT = join(PROJECT_ROOT, "public");
 
 const FRAME_MS = 35;
+
+// a key's place on the keyboard (a browser event's code) by its key code
+const NAMED_KEYS = {
+  13: "Enter",
+  27: "Escape",
+  32: "Space",
+  37: "ArrowLeft",
+  38: "ArrowUp",
+  39: "ArrowRight",
+  40: "ArrowDown",
+};
+const codeOf = (keyCode) =>
+  NAMED_KEYS[keyCode] ?? `Key${String.fromCharCode(keyCode)}`;
 
 // mulberry32: tiny, fast and identical on every platform.
 export const seededRandom = (seed) => {
@@ -132,12 +144,8 @@ export const loadGame = async ({
   };
 
   // like a key event in the browser: through the game's key bindings
-  const key = (keyCode, down) => {
-    const action = actionFor(keyCode);
-    if (action) {
-      ctx.onKey(action, down);
-    }
-  };
+  const key = (keyCode, down) =>
+    ctx.handleKey({ keyCode, code: codeOf(keyCode) }, down, ctx.onKey);
 
   return { ctx, step, stepUntil, key };
 };

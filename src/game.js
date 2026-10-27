@@ -39,7 +39,8 @@ import {
   timeRewindTick,
 } from "./race/recording.js";
 import { cutRaceTape, recordRaceTick } from "./race/raceTape.js";
-import { replayViewerTick } from "./race/replayViewer.js";
+import { replayViewerTick, viewer } from "./race/replayViewer.js";
+import { replaySoundsTick } from "./audio/replaySounds.js";
 import { drawReplayOverlay, heldArrow } from "./ui/replayControls.js";
 import { installReplayDrop } from "./screens/replays.js";
 import { raceEvents } from "./race/events.js";
@@ -80,7 +81,9 @@ function raceTick() {
     }
   }
   if (game.phase == PHASE.replay) {
+    const from = viewer.frame;
     moveScenery(replayViewerTick(heldArrow()));
+    replaySoundsTick(from, viewer.frame, viewer.playing);
     drawReplayOverlay();
   }
   if (game.phase == PHASE.highlights) {

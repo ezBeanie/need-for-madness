@@ -4,7 +4,7 @@
 // one before (a car moves little from tick to tick, so most of them come out 0), split
 // into byte planes, and the whole is gzipped.
 
-import { DUST, HIT, RECORDED_PER_TICK, SPARK, raceTape } from "./raceTape.js";
+import { DUST, HIT, PER_TICK, SPARK, raceTape } from "./raceTape.js";
 
 const FORMAT = "nfm-replay";
 const SPEEDS = ["speedX", "speedY", "speedZ"];
@@ -112,13 +112,14 @@ const columnsOf = (tape) => {
   const add = (owner, field, length, name, from = 0) =>
     columns.push({
       name,
+      length: length - from,
       values: () => owner[field].slice(from, length),
       set: (values) => {
         owner[field] = [...Array(from).fill(0), ...values];
       },
     });
   tape.cars.forEach((car, c) => {
-    for (const field of RECORDED_PER_TICK) {
+    for (const field of PER_TICK) {
       // the speeds only send a burning wreck's fire off
       const from = SPEEDS.includes(field)
         ? Math.min(car.wastedAt, tape.length)
@@ -227,15 +228,24 @@ export const decodeReplay = async (file) => {
     })),
     sparks: { count: counts.sparks },
   };
-  const columns = columnsOf(tape);
+  // the columns by name: a file of an older version lacks some (they stay 0)
+  const stored = new Map();
   let at = 4 + headSize;
-  header.columns.forEach((stored, i) => {
-    const column = columns[i];
-    if (column?.name != stored.name) {
-      throw new Error("This replay file is damaged.");
-    }
-    column.set(unpackColumn(bytes.subarray(at, at + stored.size), stored));
-    at += stored.size;
-  });
+  for (const column of header.columns) {
+    stored.set(column.name, {
+      ...column,
+      bytes: bytes.subarray(at, at + column.size),
+    });
+    at += column.size;
+  }
+  if (at != bytes.length) {
+    throw new Error("This replay file is damaged.");
+  }
+  for (const column of columnsOf(tape)) {
+    const found = stored.get(column.name);
+    column.set(
+      found ? unpackColumn(found.bytes, found) : Array(column.length).fill(0),
+    );
+  }
   return { race: header.race, tape };
 };
