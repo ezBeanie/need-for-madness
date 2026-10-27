@@ -5,7 +5,9 @@ import {
   stopEngine,
   stopStageMusic,
   switchMusicLook,
+  toggleOtherCarSounds,
 } from "../audio/audio.js";
+import { announce } from "../ui/hud.js";
 import { PHASE, game } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
 import { nextRaceSize } from "../race/field.js";
@@ -88,6 +90,12 @@ export function onKey(action, pressed) {
     if (audio.muteSound) {
       stopEngine();
     }
+  }
+  if (!pressed && action == "otherCarSounds") {
+    toggleOtherCarSounds();
+    announce(
+      audio.otherCars ? "Other cars' sounds: on" : "Other cars' sounds: off",
+    );
   }
   if (!pressed && action == "muteMusic") {
     audio.muteMusic = !audio.muteMusic;

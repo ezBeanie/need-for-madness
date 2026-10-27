@@ -45,23 +45,27 @@ const carAt = (tape, frame) => {
 };
 
 // a hit's crash, as the race's regn made it: what is over 10 of its strength
-const crash = (mag) => crashSound(mag > 0 ? mag - 10 : mag + 10, 0);
+const crash = (mag, heardAs) =>
+  crashSound(mag > 0 ? mag - 10 : mag + 10, 0, heardAs);
 
-// The events of the frame, of car c.
+// The events of the frame, of car c: the followed car's as the player's own, the other
+// cars' heard from where they are (see carSounds.js).
 const eventsAt = (c, frame) => {
   const tape = raceTape.cars[c];
+  const followed = c == camera.target;
+  const heardAs = followed ? null : c;
   for (let i = 0; i < tape.hitCount; i++) {
     if (tape.hitAt[i] == frame && Math.abs(tape.hitMag[i]) > 10) {
-      crash(tape.hitMag[i]);
+      crash(tape.hitMag[i], heardAs);
     }
   }
-  if (tape.fixAt.includes(frame)) {
+  if (followed && tape.fixAt.includes(frame)) {
     playSound(SOUND.fixed, 1);
   }
-  if (tape.wastedAt == frame) {
+  if (followed && tape.wastedAt == frame) {
     playSound(SOUND.wasted, 1);
   }
-  if (tape.wastedAt + WASTED_FLAMES_AFTER == frame) {
+  if (followed && tape.wastedAt + WASTED_FLAMES_AFTER == frame) {
     playSound(SOUND.flames, 1);
   }
   for (let i = 0; i < tape.dustCount; i++) {
@@ -70,6 +74,7 @@ const eventsAt = (c, frame) => {
         tape.dustGround[i],
         false,
         Math.hypot(tape.dustSpeedX[i], tape.dustSpeedZ[i]),
+        heardAs,
       );
     }
   }
@@ -81,7 +86,7 @@ const eventsAt = (c, frame) => {
       Math.hypot(sparks.x[i] - tape.x[frame], sparks.z[i] - tape.z[frame]) <
         SCRAPE_REACH
     ) {
-      scrapeSound(sparks.sx[i], sparks.sy[i], sparks.sz[i]);
+      scrapeSound(sparks.sx[i], sparks.sy[i], sparks.sz[i], heardAs);
     }
   }
 };
@@ -104,7 +109,9 @@ export const replaySoundsTick = (from, to, playing) => {
   updateEngineSound(carAt(raceTape.cars[c], to), type, false);
   if (to > from && to - from <= MOST_FRAMES_HEARD) {
     for (let frame = from + 1; frame <= to; frame++) {
-      eventsAt(c, frame);
+      for (let other = 0; other < raceTape.cars.length; other++) {
+        eventsAt(other, frame);
+      }
     }
   }
 };

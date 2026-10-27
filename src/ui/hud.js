@@ -866,6 +866,13 @@ const drawSwitchTimer = () => {
   }
 };
 
+// A message in the middle of the race, for a moment.
+export const announce = (text) => {
+  messageImportant = false;
+  message = text;
+  raceEvents.messageTicks = -5;
+};
+
 const announceArrowTarget = () => {
   arrowAtCars = racers[game.player].u.arrace;
   if (arrowAtCars) {

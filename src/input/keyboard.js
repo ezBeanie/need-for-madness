@@ -19,6 +19,7 @@ const ACTIONS = {
   86: "nextCamera", // V: the camera, in races
   78: "muteSound", // N
   77: "muteMusic", // M
+  79: "otherCarSounds", // O: the other cars' crashes, scrapes and skids heard or not
   67: "raceCars", // C: how many cars race, in the stage select
   76: "toggleLook", // L: the modern or the classic look (see render/look.js)
   75: "toggleSharp", // K: the classic look sharp or in the original's pixels

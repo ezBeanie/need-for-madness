@@ -97,6 +97,7 @@ export const openGame = async (page, { storage = {} } = {}) => {
         window.gameState.random.sim = window.seededRandom(1);
         window.gameState.random.fx = window.seededRandom(1001);
         window.gameState.random.scratch = window.seededRandom(1501);
+        window.gameState.random.sound = window.seededRandom(1701);
         window.gameState.tick.fraction = 0;
       });
     },

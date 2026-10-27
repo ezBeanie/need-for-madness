@@ -2,12 +2,23 @@
 // Browsers only play audio after the player touched the page: see unlockAudio.
 
 import { musicOf } from "../data/stages.js";
+import { loadSetting, saveSetting } from "../core/storage.js";
 import { CLASSIC_FILES, CLASSIC_SOUNDS } from "../classic/sounds.js";
 import { isIos } from "../core/platform.js";
 import { LOOK, look } from "../render/look.js";
 import { fetchText } from "../render/models.js";
 
-export const audio = { muteMusic: false, muteSound: false };
+// otherCars: the other cars' crashes, scrapes and skids are heard too (see carSounds.js)
+export const audio = {
+  muteMusic: false,
+  muteSound: false,
+  otherCars: loadSetting("otherCarSounds") != 0,
+};
+
+export const toggleOtherCarSounds = () => {
+  audio.otherCars = !audio.otherCars;
+  saveSetting("otherCarSounds", audio.otherCars ? 1 : 0);
+};
 
 // The engine sound of the player's car; the game adjusts its pitch and volume while driving.
 export const engine = { started: false, source: null, volume: null };
@@ -305,33 +316,44 @@ const classicBuffer = (file) => {
   return classicBuffers.get(file);
 };
 
-const playBuffer = (buffer, rate) => {
+// place: null, or { volume (0..1), pan (-1 left .. 1 right) } for a sound heard from afar
+const playBuffer = (buffer, rate, place = null) => {
   const source = contexts.sounds.createBufferSource();
   source.buffer = buffer;
-  source.connect(contexts.sounds.destination);
+  if (place) {
+    const volume = contexts.sounds.createGain();
+    volume.gain.value = place.volume;
+    source.connect(volume);
+    // (browsers without stereo panning play it in the middle)
+    if (contexts.sounds.createStereoPanner) {
+      const panner = contexts.sounds.createStereoPanner();
+      panner.pan.value = place.pan;
+      volume.connect(panner).connect(contexts.sounds.destination);
+    } else {
+      volume.connect(contexts.sounds.destination);
+    }
+  } else {
+    source.connect(contexts.sounds.destination);
+  }
   source.playbackRate.value = rate;
   source.start();
   playedASound = true;
   return source;
 };
 
-export const playSound = (sound, rate) => {
+// place: where it is heard from (see playBuffer), null for the player's own sounds
+export const playSound = (sound, rate, place = null) => {
   // the classic look plays the original's sound, as it was
   const file = look.current == LOOK.classic && CLASSIC_SOUNDS[sound];
   if (file) {
     const buffer = classicBuffer(file);
     if (buffer && !audio.muteSound) {
-      playBuffer(buffer, 1);
+      playBuffer(buffer, 1, place);
     }
     return;
   }
   if (contexts && soundLoaded[sound] && !audio.muteSound) {
-    const source = contexts.sounds.createBufferSource();
-    source.buffer = soundBuffers[sound];
-    source.connect(contexts.sounds.destination);
-    source.playbackRate.value = rate;
-    source.start();
-    playedASound = true;
+    playBuffer(soundBuffers[sound], rate, place);
   }
 };
 

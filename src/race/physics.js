@@ -1263,12 +1263,13 @@ function throwScrapeSparks(c, type, step) {
             1,
           );
         }
-        if (c == game.player && step.sparkKind[k]) {
+        if (step.sparkKind[k]) {
           groundScrapeSound(
             step.sparkKind[k],
             racers[c].wheelSpeedX[k],
             racers[c].wheelSpeedY[k],
             racers[c].wheelSpeedZ[k],
+            heardAs(c),
           );
         }
       }
@@ -1301,14 +1302,13 @@ function throwScrapeSparks(c, type, step) {
         racers[c].wheelSpeedZ[k],
         1,
       );
-      if (c == game.player) {
-        groundScrapeSound(
-          1,
-          racers[c].wheelSpeedX[k],
-          racers[c].wheelSpeedY[k],
-          racers[c].wheelSpeedZ[k],
-        );
-      }
+      groundScrapeSound(
+        1,
+        racers[c].wheelSpeedX[k],
+        racers[c].wheelSpeedY[k],
+        racers[c].wheelSpeedZ[k],
+        heardAs(c),
+      );
     }
   }
 }
@@ -1799,13 +1799,12 @@ function bounceOffWallFacingPlusZ(
         racers[c].wheelSpeedZ[k],
         2,
       );
-      if (c == game.player) {
-        scrapeSound(
-          racers[c].wheelSpeedX[k],
-          racers[c].wheelSpeedY[k],
-          racers[c].wheelSpeedZ[k],
-        );
-      }
+      scrapeSound(
+        racers[c].wheelSpeedX[k],
+        racers[c].wheelSpeedY[k],
+        racers[c].wheelSpeedZ[k],
+        heardAs(c),
+      );
     }
   }
   const bounce = wallBounce(c, type, step);
@@ -1846,13 +1845,12 @@ function bounceOffWallFacingMinusZ(
         racers[c].wheelSpeedZ[k],
         2,
       );
-      if (c == game.player) {
-        scrapeSound(
-          racers[c].wheelSpeedX[k],
-          racers[c].wheelSpeedY[k],
-          racers[c].wheelSpeedZ[k],
-        );
-      }
+      scrapeSound(
+        racers[c].wheelSpeedX[k],
+        racers[c].wheelSpeedY[k],
+        racers[c].wheelSpeedZ[k],
+        heardAs(c),
+      );
     }
   }
   const bounce = wallBounce(c, type, step);
@@ -1893,13 +1891,12 @@ function bounceOffWallFacingPlusX(
         racers[c].wheelSpeedZ[k],
         2,
       );
-      if (c == game.player) {
-        scrapeSound(
-          racers[c].wheelSpeedX[k],
-          racers[c].wheelSpeedY[k],
-          racers[c].wheelSpeedZ[k],
-        );
-      }
+      scrapeSound(
+        racers[c].wheelSpeedX[k],
+        racers[c].wheelSpeedY[k],
+        racers[c].wheelSpeedZ[k],
+        heardAs(c),
+      );
     }
   }
   const bounce = wallBounce(c, type, step);
@@ -1940,13 +1937,12 @@ function bounceOffWallFacingMinusX(
         racers[c].wheelSpeedZ[k],
         2,
       );
-      if (c == game.player) {
-        scrapeSound(
-          racers[c].wheelSpeedX[k],
-          racers[c].wheelSpeedY[k],
-          racers[c].wheelSpeedZ[k],
-        );
-      }
+      scrapeSound(
+        racers[c].wheelSpeedX[k],
+        racers[c].wheelSpeedY[k],
+        racers[c].wheelSpeedZ[k],
+        heardAs(c),
+      );
     }
   }
   const bounce = wallBounce(c, type, step);
@@ -2223,7 +2219,7 @@ function kickUpDust(grip, type, c, i, step) {
           racers[c].tilt,
           racers[c].capsized && racers[c].grounded,
         );
-        if (c == game.player && !racers[c].capsized) {
+        if (!racers[c].capsized) {
           skidSound(
             step.surface,
             step.onTrackPiece,
@@ -2231,6 +2227,7 @@ function kickUpDust(grip, type, c, i, step) {
               racers[c].wheelSpeedX[i] * racers[c].wheelSpeedX[i] +
                 racers[c].wheelSpeedZ[i] * racers[c].wheelSpeedZ[i],
             ),
+            heardAs(c),
           );
         }
       }
@@ -3345,12 +3342,12 @@ export function regn(hitSide, k, mag, c) {
           racers[c].nbsq++;
         }
       }
-      if (game.phase == PHASE.race && (c == game.player || racers[c].colidim)) {
-        crashSound(mag, xsing * zsing);
+      if (game.phase == PHASE.race) {
+        crashSound(mag, xsing * zsing, crashHeardAs(c));
       }
     } else {
-      if (game.phase == PHASE.race && (c == game.player || racers[c].colidim)) {
-        crashSound(mag, 0);
+      if (game.phase == PHASE.race) {
+        crashSound(mag, 0, crashHeardAs(c));
       }
     }
     if (!keepsShape) {
@@ -3358,6 +3355,11 @@ export function regn(hitSide, k, mag, c) {
     }
   }
 }
+
+// How car c's sounds are heard (see audio/carSounds.js): null as the player's own,
+// else as another car's from where it is. Crashes into the player sound as its own.
+const heardAs = (c) => (c == game.player ? null : c);
+const crashHeardAs = (c) => (racers[c].colidim ? null : heardAs(c));
 
 // The hit is replayed from the tape in instant replays and highlights (see recording.js).
 function recordHit(c, hitSide, k, mag) {

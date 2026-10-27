@@ -37,6 +37,17 @@ export const camera = {
   transition: 0,
 };
 
+// Where a point is heard from the camera: how far, and how far to the side (-1 left,
+// 1 right), after the camera's heading.
+export const heardFrom = (x, z) => {
+  const dx = x - camera.x;
+  const dz = z - camera.z;
+  const distance = Math.hypot(dx, dz);
+  const heading = (camera.yaw * Math.PI) / 180;
+  const right = dx * Math.cos(heading) + dz * Math.sin(heading);
+  return { distance, side: distance ? right / distance : 0 };
+};
+
 // A fresh projection with a field of view of 55 degrees; the camera's turns follow it.
 export const startProjection = () => {
   camera.matrix = mat4.create();
