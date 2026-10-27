@@ -15,6 +15,14 @@ export const STAGE_COUNT = LAST_STAGE + 27;
 const setOf = (stage) =>
   SETS.find((set) => stage >= set.first && stage < set.first + set.count);
 
+// The stage select's collections of stages: this game's own, then the original's sets.
+export const COLLECTIONS = ["Modern", "NFM 1", "NFM 2"];
+
+export const collectionOf = (stage) => SETS.indexOf(setOf(stage)) + 1;
+
+// the first stage of one of the original's sets (collection 1 or 2)
+export const firstOfCollection = (collection) => SETS[collection - 1].first;
+
 // The original's number of the stage, 0 for one of this game's own.
 export const originalOf = (stage) => {
   const set = setOf(stage);

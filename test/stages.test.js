@@ -3,7 +3,10 @@ import { expect, test } from "vitest";
 import { makePile, pileColor } from "../src/data/pile.js";
 import { parseStage } from "../src/data/stageFormat.js";
 import {
+  COLLECTIONS,
   LAST_STAGE,
+  collectionOf,
+  firstOfCollection,
   STAGE_COUNT,
   levelOf,
   musicOf,
@@ -26,6 +29,12 @@ test("after this game's stages come the original's of Need for Madness 1 and 2",
   expect(stageFile(3)).toBe("data/stages/3.txt");
   expect(stageFile(28)).toBe("data/classic/stages/11.txt");
   expect(STAGE_COUNT).toBe(44);
+});
+
+test("the stage select offers this game's stages, NFM1's and NFM2's as collections", () => {
+  expect(COLLECTIONS).toHaveLength(3);
+  expect([1, 17, 18, 27, 28, 44].map(collectionOf)).toEqual([0, 0, 1, 1, 2, 2]);
+  expect([1, 2].map(firstOfCollection)).toEqual([18, 28]);
 });
 
 test("the original's stages get opponents from easy to hard, and their own music", () => {

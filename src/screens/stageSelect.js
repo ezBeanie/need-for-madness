@@ -2,8 +2,11 @@
 // jagged border with the stage's name and buttons. Also the screen while a stage loads.
 
 import {
+  COLLECTIONS,
   LAST_STAGE,
   STAGE_COUNT,
+  collectionOf,
+  firstOfCollection,
   originalOf,
   stageLabel,
 } from "../data/stages.js";
@@ -331,6 +334,13 @@ const drawClassic = () => {
   if (switchOffered()) {
     buttons.push(["switch", " Play Switch ", 480, 392]);
   }
+  let x = 75;
+  COLLECTIONS.forEach((label, collection) => {
+    const current = collection == collectionOf(track.stage);
+    const text = current ? ` > ${label} < ` : ` ${label} `;
+    buttons.push([collection, text, x, 64]);
+    x += Math.round(text.length * 6.6) + 24;
+  });
   const chosen = drawClassicStageSelect({
     title: `${stageTitle()}  >`,
     name: track.name,
@@ -351,6 +361,10 @@ const drawClassic = () => {
     }
     input.left = false;
   }
+  if (Number.isInteger(chosen)) {
+    showCollection(chosen);
+  }
+  browseCollections();
   if (chosen == "exit") {
     backToCarSelect();
   }
@@ -512,6 +526,31 @@ const showPreviousStage = () => {
   }
 };
 
+// A collection's stage: of this game's own the last open one, of the original's sets
+// the first.
+const showCollection = (collection) => {
+  if (collection == collectionOf(track.stage)) {
+    return;
+  }
+  showStage(
+    collection == 0
+      ? Math.min(game.unlocked, LAST_STAGE)
+      : firstOfCollection(collection),
+  );
+};
+
+// up and down: the collection before or after this one, round and round
+const browseCollections = () => {
+  const input = racers[0].u;
+  const step = input.down ? 1 : input.up ? -1 : 0;
+  if (step) {
+    const count = COLLECTIONS.length;
+    showCollection((collectionOf(track.stage) + step + count) % count);
+  }
+  input.up = false;
+  input.down = false;
+};
+
 const stageTitle = () =>
   track.stage == LAST_STAGE ? "Final Stage" : stageLabel(track.stage);
 
@@ -536,6 +575,8 @@ const drawControls = (hue) => {
     }
     input.left = false;
   }
+  browseCollections();
+  drawCollectionTabs(colors);
   if (
     drawButton({
       id: 9,
@@ -616,6 +657,32 @@ const drawControls = (hue) => {
     confirm.state = CONFIRM.used;
   }
   pulseButtons();
+};
+
+// a tab for each collection under the stage's name, the current one bright
+const drawCollectionTabs = (colors) => {
+  COLLECTIONS.forEach((label, collection) => {
+    const current = collection == collectionOf(track.stage);
+    if (
+      drawButton({
+        id: 12 + collection,
+        x: (640 + (collection - 1) * 170) * view.scaleX,
+        y: 245 * view.scaleY,
+        width: 150,
+        height: 40,
+        ...colors,
+        layout: BUTTON.textOnly,
+        text: label,
+        fontSize: 15,
+        textOpacity: current ? 0.9 : 0.45,
+        image: null,
+        imageOpacity: 0,
+        pulsing: false,
+      })
+    ) {
+      showCollection(collection);
+    }
+  });
 };
 
 const browseButton = ({ id, x, colors, layout, text, image }) =>
