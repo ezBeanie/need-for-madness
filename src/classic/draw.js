@@ -136,9 +136,10 @@ export const Y = new Float64Array(MAX_CORNERS);
 export const Z = new Float64Array(MAX_CORNERS);
 const GX = new Float64Array(MAX_CORNERS);
 const GZ = new Float64Array(MAX_CORNERS);
-// on screen
-const SX = new Float64Array(MAX_CORNERS);
-const SY = new Float64Array(MAX_CORNERS);
+// on screen, and the distances of a polygon cut off before the camera (see clipNear)
+const SX = new Float64Array(MAX_CORNERS * 2);
+const SY = new Float64Array(MAX_CORNERS * 2);
+const CZ = new Float64Array(MAX_CORNERS * 2);
 
 // Puts corner i of a polygon at (mx, my, mz) in the model (the original's units and
 // axes), placed with a modern model matrix relative to the camera; with a groundY, pressed
@@ -373,6 +374,31 @@ const distanceOf = (poly, n) => {
   return av;
 };
 
+// A polygon reaching nearer than its projection holds (xs and ys take a corner nearer
+// than cz as if it were that far, bending what reaches past the screen's edge) cut off
+// there, onto the screen (SX, SY) with its distances (CZ). Returns how many corners.
+const clipNear = (n) => {
+  const near = medium.cz;
+  let m = 0;
+  const keep = (x, y, z) => {
+    SX[m] = xs(x, z);
+    SY[m] = ys(y, z);
+    CZ[m] = z;
+    m++;
+  };
+  for (let i = 0; i < n; i++) {
+    const j = (i + 1) % n;
+    if (Z[i] >= near) {
+      keep(X[i], Y[i], Z[i]);
+    }
+    if (Z[i] >= near != Z[j] >= near) {
+      const t = (near - Z[i]) / (Z[j] - Z[i]);
+      keep(X[i] + (X[j] - X[i]) * t, Y[i] + (Y[j] - Y[i]) * t, near);
+    }
+  }
+  return m;
+};
+
 // One polygon (Plane.d), its corners placed: seen at all, how bright, in which colour,
 // outlined or not. size is how big its object looks, or -1 for the next checkpoint.
 const drawPoly = (poly, n, noline, size) => {
@@ -381,6 +407,7 @@ const drawPoly = (poly, n, noline, size) => {
   let off2 = 0;
   let off3 = 0;
   let behind = 0;
+  let cut = false;
   let minX = Infinity;
   let maxX = -Infinity;
   let minY = Infinity;
@@ -396,6 +423,7 @@ const drawPoly = (poly, n, noline, size) => {
     if (sx < 0 || near) off2++;
     if (sx > medium.w || near) off3++;
     if (near) behind++;
+    cut ||= Z[i] < medium.cz;
     minX = Math.min(minX, sx);
     maxX = Math.max(maxX, sx);
     minY = Math.min(minY, sy);
@@ -545,7 +573,17 @@ const drawPoly = (poly, n, noline, size) => {
     fog(r, g, b, av);
     [r, g, b] = color;
   }
-  startPolygon(SX, SY, Z, n);
+  // with medium.depth what reaches nearer than the projection holds is cut off, where
+  // the original bent it
+  let zs = Z;
+  if (medium.depth && cut) {
+    n = clipNear(n);
+    zs = CZ;
+    if (n < 3) {
+      return;
+    }
+  }
+  startPolygon(SX, SY, zs, n);
   fillPolygon(SX, SY, n, r, g, b);
   if (!race && poly.gr == -10) {
     far = false;

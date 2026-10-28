@@ -185,3 +185,58 @@ test("J switches the classic look's depth test", async () => {
   expect(ctx.look.depth).toBe(false);
   expect(depthTested()).toBe(false);
 });
+
+test("in the classic look by depth the edges behind a wall the camera is close to stay hidden", async () => {
+  const { ctx } = await classicRace();
+  ctx.startBatch();
+  // a big piece reaching from beside the camera far away
+  ctx.startObject(1, 3000);
+  // its back, drawn first as the farther, outlined
+  const back = [
+    [100, 700, 700, 100],
+    [100, 100, 300, 300],
+    [530, 530, 530, 530],
+  ];
+  ctx.startPolygon(...back, 4);
+  ctx.fillPolygon(back[0], back[1], 4, ...BLUE);
+  ctx.drawPolygon(back[0], back[1], 4, ...WHITE);
+  // the wall before it, a few steps nearer
+  const wall = [
+    [50, 750, 750, 50],
+    [50, 50, 350, 350],
+    [500, 500, 500, 500],
+  ];
+  ctx.startPolygon(...wall, 4);
+  ctx.fillPolygon(wall[0], wall[1], 4, ...RED);
+  ctx.endObject();
+  const words = flushed(ctx, true);
+  // where the back's top edge lies behind the wall
+  expect(pixel(words, 400, 100, true)).toEqual(RED);
+});
+
+test("in the classic look by depth what reaches past the camera is cut off, its edges straight", async () => {
+  const { ctx } = await classicRace();
+  const { medium } = ctx;
+  // a camera looking straight ahead (towards -z), its focal length 450 pixels
+  ctx.setView([1, 0, 0, 0, 0, 900 / medium.h, 0, 0, 0, 0, 0, -1, 0, 0, 0, 0]);
+  // a long strip of road below it, from far ahead to behind it
+  const rad = ctx.parseRad(
+    "<p>\nc(120,120,120)\np(-1000,1000,-30000)\np(1000,1000,-30000)\n" +
+      "p(1000,1000,2000)\np(-1000,1000,2000)\n</p>\n",
+  );
+  ctx.tintModel(rad, () => 0.5);
+  const matrix = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1];
+  medium.depth = true;
+  medium.frame++;
+  ctx.startBatch();
+  ctx.drawObject(rad, matrix);
+  const words = flushed(ctx, true);
+  expect(words.length).toBeGreaterThan(0);
+  // every corner on the screen lies on the strip's edges, which run straight from its
+  // middle at 45 degrees
+  for (let v = 0; v < words.length; v += 4) {
+    const dx = Math.abs(words[v] - medium.cx);
+    const dy = Math.abs(words[v + 1] - medium.cy);
+    expect(Math.abs(dx - dy)).toBeLessThan(1);
+  }
+});

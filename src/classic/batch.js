@@ -37,8 +37,11 @@ const SLICE = 2 / 256;
 const SPREAD = 0.96;
 const STEP = 2.5e-7;
 // how much nearer an outline is than its polygon: enough to stay whole where it runs
-// along a polygon that slants towards the camera, as in the original it lay on top
+// along a polygon that slants towards the camera, as in the original it lay on top, but
+// never more than a hundredth of its distance, lest the edges behind a wall the camera
+// is close to show through it (an object near the camera spreads its slice thin)
 const OUTLINE = SLICE * 0.005;
+const OUTLINE_SHARE = 0.01;
 
 // where the drawing without depth (sky, ground, effects) goes: in front of everything
 // drawn so far
@@ -51,9 +54,9 @@ const object = { farInverse: 0, span: 1, polygons: 0 };
 // as a polygon seen edge on has a plane that is hardly known
 let plane = null;
 const coefficients = { a: 0, b: 0, c: 0, low: 0, high: 0 };
-const cornerInverses = new Float64Array(64);
-// how far an outline is nudged nearer
-let nudge = 0;
+const cornerInverses = new Float64Array(128);
+// whether an outline is being drawn, nudged nearer
+let outline = false;
 
 // The depth of a vertex at (x, y), at the polygon's corner when given.
 const depthAt = (x, y, corner) => {
@@ -71,6 +74,12 @@ const depthAt = (x, y, corner) => {
     1,
     Math.max(0, (inverse - object.farInverse) / object.span),
   );
+  const nudge = outline
+    ? Math.min(
+        OUTLINE,
+        (SLICE * SPREAD * inverse * OUTLINE_SHARE) / object.span,
+      )
+    : 0;
   return slice - SLICE * SPREAD * near - object.polygons * STEP - nudge;
 };
 
@@ -88,7 +97,7 @@ const vertex = (x, y, color, corner = -1) => {
 export const startObject = (near, far) => {
   slice = flat;
   object.farInverse = 1 / far;
-  object.span = 1 / Math.max(near, 1) - object.farInverse || 1;
+  object.span = 1 / Math.max(near, 10) - object.farInverse || 1;
   object.polygons = 0;
   plane = null;
 };
@@ -272,7 +281,7 @@ export const fillPolygon = (xs, ys, n, r, g, b, alpha = 255) => {
 // the corners it joins).
 export const drawPolygon = (xs, ys, n, r, g, b) => {
   const color = pack(r, g, b);
-  nudge = OUTLINE;
+  outline = true;
   reserve(n * 6);
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n;
@@ -296,7 +305,7 @@ export const drawPolygon = (xs, ys, n, r, g, b) => {
     vertex(bx - nx, by - ny, color, j);
     vertex(ax - nx, ay - ny, color, i);
   }
-  nudge = 0;
+  outline = false;
 };
 
 // A line one pixel wide (the original's drawLine).
