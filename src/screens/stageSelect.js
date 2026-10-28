@@ -4,10 +4,11 @@
 import {
   COLLECTIONS,
   LAST_STAGE,
-  STAGE_COUNT,
   collectionOf,
   firstOfCollection,
   originalOf,
+  stageAfter,
+  stageBefore,
   stageLabel,
 } from "../data/stages.js";
 import {
@@ -350,12 +351,12 @@ const drawClassic = () => {
     title: `${stageTitle()}  >`,
     name: track.name,
     first: track.stage == FIRST_STAGE,
-    last: track.stage == STAGE_COUNT,
+    last: !stageAfter(track.stage),
     buttons,
     tip: showingTip ? track.tips : null,
   });
   if (input.right || chosen == "next") {
-    if (track.stage < STAGE_COUNT) {
+    if (stageAfter(track.stage)) {
       showNextStage();
     }
     input.right = false;
@@ -516,7 +517,9 @@ const showStage = (stage) => {
 
 // The next stage; after the last of this game's stages won, the original's first.
 const showNextStage = () => {
-  if (originalOf(track.stage) || track.stage < game.unlocked) {
+  if (originalOf(track.stage)) {
+    showStage(stageAfter(track.stage));
+  } else if (track.stage < game.unlocked) {
     showStage(track.stage + 1);
   } else {
     showStage(LAST_STAGE + 1);
@@ -527,7 +530,7 @@ const showPreviousStage = () => {
   if (track.stage == LAST_STAGE + 1) {
     showStage(Math.min(game.unlocked, LAST_STAGE));
   } else {
-    showStage(track.stage - 1);
+    showStage(stageBefore(track.stage));
   }
 };
 
@@ -569,7 +572,7 @@ const drawControls = (hue) => {
   const colors = buttonColors(hue);
   const input = racers[0].u;
   if (input.right) {
-    if (track.stage < STAGE_COUNT) {
+    if (stageAfter(track.stage)) {
       showNextStage();
     }
     input.right = false;
@@ -634,7 +637,7 @@ const drawControls = (hue) => {
     showPreviousStage();
   }
   if (
-    track.stage < STAGE_COUNT &&
+    stageAfter(track.stage) &&
     browseButton({
       id: 2,
       x: view.width - 190 * view.scale,

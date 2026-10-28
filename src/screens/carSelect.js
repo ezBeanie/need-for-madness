@@ -1,7 +1,7 @@
 // The car select: the cars turn one by one in front of drifting smoke, with their strengths
 // around them. Cars of later stages stay locked until those stages are won.
 
-import { LAST_STAGE } from "../data/stages.js";
+import { LAST_STAGE, originalOf } from "../data/stages.js";
 import { CAR_TEXTURE } from "../render/generated.js";
 import { pauseMenuMusic } from "../audio/audio.js";
 import {
@@ -693,7 +693,8 @@ const classicTick = () => {
 
 const openStageSelect = () => {
   saveSetting("carsel", game.carTypes[0]);
-  if (track.stage > game.unlocked) {
+  // the original's stages are all open; of this game's own only those won
+  if (!originalOf(track.stage) && track.stage > game.unlocked) {
     track.stage = game.unlocked;
   }
   // switch mode needs all stages won
