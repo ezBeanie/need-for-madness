@@ -30,7 +30,7 @@ test("after this game's stages come the original's of Need for Madness 1 and 2",
   ]);
   expect(stageFile(3)).toBe("data/stages/3.txt");
   expect(stageFile(28)).toBe("data/classic/stages/11.txt");
-  expect(STAGE_COUNT).toBe(45);
+  expect(STAGE_COUNT).toBe(50);
 });
 
 test("NFM1's eleventh stage is the original's 27, after its tenth and before NFM2's first", () => {
@@ -38,7 +38,7 @@ test("NFM1's eleventh stage is the original's 27, after its tenth and before NFM
   expect(stageLabel(45)).toBe("NFM1 Stage 11");
   expect(stageFile(45)).toBe("data/classic/stages/27.txt");
   expect(collectionOf(45)).toBe(1);
-  expect([27, 45, 44].map(stageAfter)).toEqual([45, 28, 0]);
+  expect([27, 45, 44].map(stageAfter)).toEqual([45, 28, 46]);
   expect([28, 45, 18].map(stageBefore)).toEqual([45, 27, 17]);
   expect(musicOf(45)).toEqual({ file: "nfm1-stage11", classic: true });
   const loops = JSON.parse(
@@ -50,10 +50,36 @@ test("NFM1's eleventh stage is the original's 27, after its tenth and before NFM
   expect(loops["nfm1-stage11"]).toBeDefined();
 });
 
-test("the stage select offers this game's stages, NFM1's and NFM2's as collections", () => {
-  expect(COLLECTIONS).toHaveLength(3);
-  expect([1, 17, 18, 27, 28, 44].map(collectionOf)).toEqual([0, 0, 1, 1, 2, 2]);
-  expect([1, 2].map(firstOfCollection)).toEqual([18, 28]);
+test("the stage select offers this game's stages, NFM1's, NFM2's and the multiplayer stages as collections", () => {
+  expect(COLLECTIONS).toHaveLength(4);
+  expect([1, 17, 18, 27, 28, 44, 46, 50].map(collectionOf)).toEqual([
+    0, 0, 1, 1, 2, 2, 3, 3,
+  ]);
+  expect([1, 2, 3].map(firstOfCollection)).toEqual([18, 28, 46]);
+});
+
+test("the original's multiplayer stages 28 to 32 come last, with their own music", () => {
+  expect([46, 50].map(originalOf)).toEqual([28, 32]);
+  expect([46, 50].map(stageLabel)).toEqual([
+    "Multiplayer Stage 1",
+    "Multiplayer Stage 5",
+  ]);
+  expect(stageFile(50)).toBe("data/classic/stages/32.txt");
+  expect([44, 46, 50].map(stageAfter)).toEqual([46, 47, 0]);
+  expect(stageBefore(46)).toBe(44);
+  expect([46, 50].map(musicOf)).toEqual([
+    { file: "mp-stage1", classic: true },
+    { file: "mp-stage5", classic: true },
+  ]);
+  const loops = JSON.parse(
+    readFileSync(
+      new URL("../public/data/classic/music/loops.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  for (let i = 1; i <= 5; i++) {
+    expect(loops[`mp-stage${i}`]).toBeDefined();
+  }
 });
 
 test("the original's stages get opponents from easy to hard, and their own music", () => {
@@ -68,9 +94,9 @@ test("the original's stages get opponents from easy to hard, and their own music
   ]);
 });
 
-// the pieces this game has: the file counts from 10 (see PIECE_FILES); the original's
-// net (51) this game does not have
-const knownPiece = (piece) => piece >= 10 && piece <= 75 && piece != 51;
+// the pieces this game has: the file counts from 10 (see PIECE_FILES; the original's net,
+// its 51, comes after them)
+const knownPiece = (piece) => piece >= 10 && piece <= 75;
 
 test("every original stage names only pieces this game has", () => {
   for (let stage = LAST_STAGE + 1; stage <= STAGE_COUNT; stage++) {
@@ -146,4 +172,23 @@ test("this game's stages play their own music in the classic look too", async ()
     globalThis.Audio = Audio;
   }
   expect(played).toEqual(["data/music/stage2.mp3"]);
+});
+
+test("the multiplayer stages load and race, the original's net as a piece of its own", async () => {
+  const { startRace } = await import("./harness/race.js");
+  for (const stage of [46, 47, 48, 49, 50]) {
+    const { ctx, step } = await startRace({ stage, car: 5 });
+    for (let i = 0; i < 30; i++) {
+      step();
+    }
+    const types = ctx.pieces.list.slice(0, ctx.pieces.count).map((p) => p.typ);
+    // the net stands in the original's 29, 30 and 32, nowhere this game's takeoffb
+    expect(types.filter((typ) => typ == 66).length, stageLabel(stage)).toBe(
+      { 46: 0, 47: 1, 48: 1, 49: 0, 50: 4 }[stage],
+    );
+    expect(types.includes(41), stageLabel(stage)).toBe(false);
+  }
+  const { pieceModels } = await import("../src/race/track.js");
+  expect(pieceModels[66].ni).toBeGreaterThan(0);
+  expect(pieceModels[66].intershad).toBe(true);
 });

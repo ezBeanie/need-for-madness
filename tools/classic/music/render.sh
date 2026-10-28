@@ -51,6 +51,12 @@ render nfm1-stage8 stage8.zip 7900 230 125
 render nfm1-stage9 stage9.zip 7900 180 125
 render nfm1-stage10 stage10.zip 8100 280 145
 render nfm1-stage11 stage27.zip 8800 276 145
+# the original's multiplayer stages, 28 to 32
+render mp-stage1 stage28.zip 8000 182 125
+render mp-stage2 stage29.zip 8000 220 125
+render mp-stage3 stage30.zip 8000 200 125
+render mp-stage4 stage31.zip 7900 350 125
+render mp-stage5 stage32.zip 8000 310 125
 # the loops, in seconds: where playing goes back to, and from where
 {
   printf "{\n"

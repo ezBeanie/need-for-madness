@@ -112,6 +112,8 @@ export const PIECE_FILES = [
   "cac1",
   "cac2",
   "cac3",
+  // the original's net (its piece 51, see stageLoad.js), made from its model
+  "thenet",
 ];
 const UNLOADED_PIECE = 40;
 

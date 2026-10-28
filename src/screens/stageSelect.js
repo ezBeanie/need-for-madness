@@ -10,6 +10,7 @@ import {
   stageAfter,
   stageBefore,
   stageLabel,
+  stageNumber,
 } from "../data/stages.js";
 import {
   isEngineLoaded,
@@ -345,10 +346,14 @@ const drawClassic = () => {
     const current = collection == collectionOf(track.stage);
     const text = current ? ` > ${label} < ` : ` ${label} `;
     buttons.push([collection, text, x, 64]);
-    x += Math.round(text.length * 6.6) + 24;
+    x += Math.round(text.length * 6.6) + 14;
   });
   const chosen = drawClassicStageSelect({
-    title: `${stageTitle()}  >`,
+    // as the original, the stage counted within its set (the tab above names the set)
+    title:
+      track.stage == LAST_STAGE
+        ? "Final Stage  >"
+        : `Stage ${stageNumber(track.stage)}  >`,
     name: track.name,
     first: track.stage == FIRST_STAGE,
     last: !stageAfter(track.stage),
@@ -674,7 +679,9 @@ const drawCollectionTabs = (colors) => {
     if (
       drawButton({
         id: 12 + collection,
-        x: (640 + (collection - 1) * 170) * view.scaleX,
+        x:
+          (640 + (collection - (COLLECTIONS.length - 1) / 2) * 170) *
+          view.scaleX,
         y: 245 * view.scaleY,
         width: 150,
         height: 40,

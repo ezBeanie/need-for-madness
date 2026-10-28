@@ -51,6 +51,9 @@ export const stageLoad = {
 const TSIDE = 39;
 const WALL = 29;
 const AIR_CHECKPOINT = 54;
+// the original's net, where this game has its takeoffb, kept after its own pieces
+const ORIGINAL_NET = 41;
+const NET = 66;
 // the walls around a stage are pieces this far apart
 const WALL_SPACING = 480;
 
@@ -357,6 +360,9 @@ const newPiece = (v) => {
   piece.mat = mat4.create();
   if (v) {
     piece.typ = v("piece") - 10;
+    if (piece.typ == ORIGINAL_NET && originalOf(track.stage)) {
+      piece.typ = NET;
+    }
   }
   return piece;
 };

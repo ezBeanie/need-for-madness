@@ -80,7 +80,7 @@ export const PIECE = {
 };
 
 // One model per piece type a stage can place.
-export const pieceModels = Array.from({ length: 66 }, newModel);
+export const pieceModels = Array.from({ length: 67 }, newModel);
 
 // The pieces placed on the stage (count of them in count), and which of them are fix
 // hoops (the first fixCount entries of fixes are indices into list).
