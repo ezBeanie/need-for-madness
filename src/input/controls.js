@@ -14,7 +14,7 @@ import { nextRaceSize } from "../race/field.js";
 import { racers } from "../race/racers.js";
 import { startTimeRewind } from "../race/recording.js";
 import { CAMERA, camera } from "../render/camera.js";
-import { toggleLook, toggleSharp } from "../render/look.js";
+import { look, toggleDepth, toggleLook, toggleSharp } from "../render/look.js";
 import { fitCanvas3D } from "../render/renderer.js";
 import { buttons } from "../ui/widgets.js";
 import { pressConfirm } from "./confirm.js";
@@ -107,6 +107,12 @@ export function onKey(action, pressed) {
     toggleLook();
     fitCanvas3D();
     switchMusicLook();
+  }
+  if (!pressed && action == "toggleDepth") {
+    toggleDepth();
+    announce(
+      look.depth ? "Classic look by depth: on" : "Classic look by depth: off",
+    );
   }
   if (!pressed && action == "toggleSharp") {
     toggleSharp();

@@ -122,7 +122,7 @@ test("in the classic look a wrecked car burns and a car being fixed shows its bu
           args[1].byteOffset,
           args[1].length,
         );
-        for (let i = 2; i < words.length; i += 3) {
+        for (let i = 3; i < words.length; i += 4) {
           const w = words[i];
           if (likes(w & 255, (w >> 8) & 255, (w >> 16) & 255)) {
             found++;

@@ -23,6 +23,7 @@ const ACTIONS = {
   67: "raceCars", // C: how many cars race, in the stage select
   76: "toggleLook", // L: the modern or the classic look (see render/look.js)
   75: "toggleSharp", // K: the classic look sharp or in the original's pixels
+  74: "toggleDepth", // J: the classic look's polygons covering each other by depth or not
 };
 
 export const actionFor = (keyCode) => ACTIONS[keyCode];

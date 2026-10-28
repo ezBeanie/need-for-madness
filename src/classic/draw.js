@@ -1,7 +1,14 @@
 // Draws models the way the original Java game did (its ContO.d and Plane.d): no depth
 // buffer, the farthest object first and each object's farthest polygon first, every
-// polygon in one colour lit from above, fogged in bands, and outlined when near.
-import { drawPolygon, fillPolygon } from "./batch.js";
+// polygon in one colour lit from above, fogged in bands, and outlined when near. With
+// medium.depth an object's nearer polygons also cover its farther ones (see batch.js).
+import {
+  drawPolygon,
+  endObject,
+  fillPolygon,
+  startObject,
+  startPolygon,
+} from "./batch.js";
 import { hsbToRgb, rgbToHsb } from "./color.js";
 import { cosDeg, medium, sinDeg, xs, ys } from "./medium.js";
 
@@ -538,6 +545,7 @@ const drawPoly = (poly, n, noline, size) => {
     fog(r, g, b, av);
     [r, g, b] = color;
   }
+  startPolygon(SX, SY, Z, n);
   fillPolygon(SX, SY, n, r, g, b);
   if (!race && poly.gr == -10) {
     far = false;
@@ -657,6 +665,7 @@ const wreck = (poly, index, matrix, angles) => {
       SX[j] = xs(X[j], Z[j]);
       SY[j] = ys(Y[j], Z[j]);
     }
+    startPolygon(SX, SY, Z, n);
     fillPolygon(SX, SY, n, 230, 230, 230);
   }
   let bloat = 1;
@@ -738,6 +747,7 @@ const wreck = (poly, index, matrix, angles) => {
         SX[j] = xs(X[j], Z[j]);
         SY[j] = ys(Y[j], Z[j]);
       }
+      startPolygon(SX, SY, Z, 3);
       fillPolygon(SX, SY, 3, ...color.map(clamp));
     }
   }
@@ -749,11 +759,14 @@ const wreck = (poly, index, matrix, angles) => {
 };
 
 // An object (ContO.d): skipped when off screen or too far, else its polygons from the
-// farthest. Returns how far it is for ordering the next frame (0: not drawn).
+// farthest. Returns how far it is for ordering the next frame (0: not drawn). Objects
+// sharing one model (the stage's pieces) each keep the order of its polygons in a
+// sorting of their own, as the original's copies of a model did.
 export const drawObject = (
   rad,
   matrix,
   {
+    sorting = rad,
     wxz = 0,
     wzy = 0,
     nextCheckpoint = false,
@@ -793,6 +806,18 @@ export const drawObject = (
   ) {
     return 0;
   }
+  const polys = rad.polys;
+  // how far its polygons were last frame (the shadow's fog too)
+  const fresh = sorting.drawnFrame != medium.frame - 1;
+  sorting.drawnFrame = medium.frame;
+  if (!fresh && sorting.distances) {
+    for (let i = 0; i < polys.length; i++) {
+      polys[i].av = sorting.distances[i];
+    }
+  }
+  if (medium.depth) {
+    startObject(depth - maxR, depth + maxR);
+  }
   if (rad.shadow && depth < 2000) {
     drawShadow(rad, matrix, groundY);
   }
@@ -805,15 +830,12 @@ export const drawObject = (
   // the farthest first, by how far each was last frame, as in the original; an object
   // not drawn last frame (the menus draw only when something moves) is measured now.
   // (An insertion sort: the order changes little from frame to frame.)
-  const polys = rad.polys;
-  const fresh = rad.drawnFrame != medium.frame - 1;
-  rad.drawnFrame = medium.frame;
   if (fresh) {
     for (const poly of polys) {
       poly.av = distanceOf(poly, placePoly(poly, matrix));
     }
   }
-  const order = (rad.order ??= polys.map((poly, i) => i));
+  const order = (sorting.order ??= polys.map((poly, i) => i));
   const before = (i, j) =>
     (polys[i].av ?? 0) > (polys[j].av ?? 0) ||
     ((polys[i].av ?? 0) == (polys[j].av ?? 0) && i < j);
@@ -837,6 +859,13 @@ export const drawObject = (
       corners = 12;
     }
     drawPoly(poly, corners, rad.noline, size);
+  }
+  const distances = (sorting.distances ??= new Array(polys.length));
+  for (let i = 0; i < polys.length; i++) {
+    distances[i] = polys[i].av;
+  }
+  if (medium.depth) {
+    endObject();
   }
   return Math.trunc(Math.sqrt(Math.trunc(distance)) * rad.grounded);
 };

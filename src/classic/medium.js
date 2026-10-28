@@ -43,6 +43,8 @@ export const medium = {
   // counts the frames drawn, and the logic tick they show
   frame: 0,
   tick: 0,
+  // an object's nearer polygons cover its farther ones, whatever their order (look.depth)
+  depth: false,
 };
 
 const clamp255 = (v) => Math.min(255, Math.max(0, v));

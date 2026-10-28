@@ -13,6 +13,7 @@ import {
   placeModel,
 } from "../render/interpolation.js";
 import { fetchText } from "../render/models.js";
+import { look } from "../render/look.js";
 import { canvas3D } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 import { PIECE_FILES } from "../loading/assets.js";
@@ -175,6 +176,7 @@ const startFrame = (colors = scene.colors ?? NO_STAGE) => {
     (Math.asin(Math.max(-1, Math.min(1, -drawCamera.projection[7]))) * 180) /
     Math.PI;
   medium.flicker = !medium.flicker;
+  medium.depth = look.depth;
   medium.frame++;
   medium.tick = interpolation.tick;
   medium.lastCheck = raceEvents.onlastcheck;
@@ -195,6 +197,7 @@ const pieceObjects = (count, nextCheckpoint) => {
         key: piece,
         rad,
         place: () => matrixOf(piece),
+        sorting: sortingOf(piece),
         nextCheckpoint: piece.iscp != 0 && nextCheckpoint(piece),
         // electricity arcs across the fix hoops
         beforePolygons: hoops.has(i)
@@ -204,6 +207,15 @@ const pieceObjects = (count, nextCheckpoint) => {
     }
   }
   return objects;
+};
+
+// how each piece's polygons were ordered last frame: pieces of a type share one model
+const sortings = new WeakMap();
+const sortingOf = (piece) => {
+  if (!sortings.has(piece)) {
+    sortings.set(piece, {});
+  }
+  return sortings.get(piece);
 };
 
 // each fix hoop's electricity
@@ -290,6 +302,7 @@ const drawInOrder = (objects) => {
       drawObject(object.rad, matrix, {
         wxz: object.car?.wxz ?? 0,
         wzy: object.car?.wzy ?? 0,
+        sorting: object.sorting,
         nextCheckpoint: object.nextCheckpoint,
         angles: object.car,
         beforePolygons: object.beforePolygons,
@@ -302,7 +315,7 @@ const drawInOrder = (objects) => {
       }),
     );
   }
-  flushBatch(medium.w, medium.h);
+  flushBatch(medium.w, medium.h, medium.depth);
 };
 
 // the cars' classic models follow the physics' dents; a repaired car gets a fresh copy
