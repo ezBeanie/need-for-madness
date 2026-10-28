@@ -3,6 +3,8 @@
 // to jump along and buttons, each with its key. The viewer reads the keys by their place
 // on the keyboard: W A S D are the free camera's, not the arrows' as in races.
 
+import { game } from "../core/state.js";
+import { carStats } from "../data/carStats.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { keys, takePressedKeys } from "../input/keyboard.js";
 import { pointer } from "../input/pointer.js";
@@ -44,6 +46,9 @@ const DRAG_TURN = 0.25;
 
 // -1 or 1 while the left or right arrow is held (without Shift: that jumps)
 export const heldArrow = () => {
+  if (picker.open) {
+    return 0;
+  }
   if (keys.held.has("ShiftLeft") || keys.held.has("ShiftRight")) {
     return 0;
   }
@@ -69,12 +74,14 @@ const SHOWN_TICKS = 90;
 let pinned = false;
 let shownTicks = 0;
 let lastPointer = { x: -1, y: -1 };
+let pointerMoved = false;
 
 const panelShown = () => pinned || shownTicks > 0 || draggingBar;
 
 const watchPointer = () => {
   const moved = pointer.x[0] != lastPointer.x || pointer.y[0] != lastPointer.y;
   lastPointer = { x: pointer.x[0], y: pointer.y[0] };
+  pointerMoved = moved;
   if (moved || pointer.down) {
     shownTicks = SHOWN_TICKS;
   } else if (shownTicks > 0) {
@@ -230,13 +237,14 @@ const controls = () => [
   ["Slower", "Down", () => changeSpeed(-1)],
   ["Faster", "Up", () => changeSpeed(1)],
   [CAMERA_NAMES[camera.mode] ?? "Camera", "V", nextCamera],
-  [`Car ${camera.target + 1}`, "C", () => nextCar()],
+  ["Cars", "Tab", openPicker],
   ...(canSave() ? [["Save", "Ctrl+S", save]] : []),
   ["Exit", "Esc", exit],
 ];
 
 // what the keys do that have no button of their own, or more than one key
 const KEYS = {
+  Tab: openPicker,
   Space: togglePlaying,
   KeyV: nextCamera,
   KeyH: () => (pinned = !pinned),
@@ -247,6 +255,10 @@ const KEYS = {
 };
 
 const readKeys = () => {
+  if (picker.open) {
+    readPickerKeys();
+    return;
+  }
   for (const { code, shift, ctrl } of takePressedKeys()) {
     if (code == "KeyC") {
       nextCar(shift ? -1 : 1);
@@ -299,6 +311,150 @@ const moveFree = () => {
   );
 };
 
+// --- the list of cars to follow: a picture of each, its name ---
+
+// the player's own car is marked
+const carName = (c) =>
+  carStats.names[game.carTypes[c]] + (c == game.player ? " (You)" : "");
+
+const picker = { open: false, choice: 0 };
+// the pictures, by look and car type (see tools/replay/carPictures.mjs)
+const pictures = new Map();
+
+const pictureOf = (classic, type) => {
+  const key = `${classic ? "classic" : "modern"}/car${type}`;
+  if (!pictures.has(key)) {
+    const image = new Image();
+    image.src = `data/cars/${key}.jpg`;
+    pictures.set(key, image);
+  }
+  const image = pictures.get(key);
+  return image.complete && image.naturalWidth ? image : null;
+};
+
+function openPicker() {
+  picker.open = true;
+  picker.choice = camera.target;
+}
+
+const pick = (c) => {
+  if (c != camera.target) {
+    nextCar(c - camera.target);
+  }
+  picker.open = false;
+};
+
+// as many columns as fit the cars in about the screen's shape
+const columnsFor = (count) =>
+  Math.min(count, Math.ceil(Math.sqrt(count * 1.8)));
+
+const readPickerKeys = () => {
+  const count = game.carCount;
+  const columns = columnsFor(count);
+  const moves = {
+    ArrowLeft: -1,
+    ArrowRight: 1,
+    ArrowUp: -columns,
+    ArrowDown: columns,
+  };
+  for (const { code } of takePressedKeys()) {
+    if (code in moves) {
+      picker.choice = Math.max(
+        0,
+        Math.min(count - 1, picker.choice + moves[code]),
+      );
+    } else if (code == "Enter" || code == "Space") {
+      pick(picker.choice);
+    } else if (code == "Escape" || code == "Tab") {
+      picker.open = false;
+    }
+  }
+  // (Enter and Escape confirm too: here they never close the replay)
+  if (confirm.state == CONFIRM.pressed) {
+    confirm.state = CONFIRM.used;
+  }
+};
+
+// the cards in design units: the picture 5 by 3, the name below it
+const CARD = { width: 250, picture: 150, name: 34, gap: 16 };
+const PICKER_AREA = { top: 150, bottom: 690, width: 1200 };
+
+const drawPicker = (classic, colors) => {
+  const count = game.carCount;
+  const columns = columnsFor(count);
+  const rows = Math.ceil(count / columns);
+  const height = CARD.picture + CARD.name;
+  const fit = Math.min(
+    1,
+    (PICKER_AREA.width - CARD.gap * (columns - 1)) / (columns * CARD.width),
+    (PICKER_AREA.bottom - PICKER_AREA.top - CARD.gap * (rows - 1)) /
+      (rows * height),
+  );
+  const width = CARD.width * fit;
+  const tall = height * fit;
+  const left = 640 - (columns * width + (columns - 1) * CARD.gap) / 2;
+  const top =
+    (PICKER_AREA.top + PICKER_AREA.bottom) / 2 -
+    (rows * tall + (rows - 1) * CARD.gap) / 2;
+  rd.fillStyle = "rgba(0,0,0,0.55)";
+  rd.fillRect(0, 0, view.width, view.height);
+  font(classic, 22, true);
+  rd.fillStyle = colors.text;
+  rd.textAlign = "center";
+  rd.textBaseline = "middle";
+  rd.fillText("Which car to follow?", dx(640), dy(top - 34));
+  font(classic, 12);
+  rd.fillStyle = colors.key;
+  rd.fillText(
+    "Click a car, or the arrows and Enter.   Esc or Tab: back",
+    dx(640),
+    dy(PICKER_AREA.bottom + 12),
+  );
+  let clicked = -1;
+  for (let c = 0; c < count; c++) {
+    const x = dx(left + (c % columns) * (width + CARD.gap));
+    const y = dy(top + Math.floor(c / columns) * (tall + CARD.gap));
+    const w = dx(width);
+    const h = dy(tall);
+    const hovered = over(x, y, w, h);
+    if (hovered && pointerMoved) {
+      picker.choice = c;
+    }
+    const chosen = c == picker.choice;
+    rd.fillStyle = colors.panel;
+    rounded(x, y, w, h, 10 * view.scale);
+    rd.fill();
+    const picture = pictureOf(classic, game.carTypes[c]);
+    const ph = dy(CARD.picture * fit);
+    if (picture) {
+      rd.save();
+      rounded(x, y, w, ph, 10 * view.scale);
+      rd.clip();
+      rd.drawImage(picture, x, y, w, ph);
+      rd.restore();
+    }
+    rd.strokeStyle = chosen ? colors.pressed : colors.edge;
+    rd.lineWidth = (chosen ? 4 : 1) * view.scale;
+    rounded(x, y, w, h, 10 * view.scale);
+    rd.stroke();
+    font(classic, 14, true);
+    rd.fillStyle = c == camera.target ? colors.pressed : colors.label;
+    rd.fillText(carName(c), x + w / 2, y + ph + (h - ph) / 2);
+    if (hovered && pointer.down) {
+      pressed = c;
+    }
+    if (hovered && !pointer.down && pressed == c) {
+      clicked = c;
+    }
+  }
+  if (!pointer.down) {
+    pressed = -1;
+  }
+  if (clicked >= 0) {
+    pick(clicked);
+  }
+};
+
 // --- the overlay ---
 
 const MORE_KEYS =
@@ -324,6 +480,8 @@ const drawTitle = (classic, colors) => {
     font(classic, 14);
     rd.fillStyle = colors.text;
     rd.fillText(line, dx(20), dy(35));
+    font(classic, 16, true);
+    rd.fillText(carName(camera.target), dx(20), dy(62));
     return;
   }
   rd.letterSpacing = "1px";
@@ -333,6 +491,8 @@ const drawTitle = (classic, colors) => {
   font(classic, 20);
   rd.fillStyle = "rgb(0,32,64)";
   rd.fillText(line, dx(20), dy(80));
+  font(classic, 22, true);
+  rd.fillText(carName(camera.target), dx(20), dy(118));
 };
 
 // bottom middle, while the panel is hidden
@@ -367,7 +527,7 @@ const drawPanel = (classic, colors) => {
   rd.textBaseline = "middle";
   rd.textAlign = "left";
   rd.fillText(
-    `${CAMERA_NAMES[camera.mode] ?? "Camera"} camera,  car ${camera.target + 1}`,
+    `${CAMERA_NAMES[camera.mode] ?? "Camera"} camera,  ${carName(camera.target)}`,
     dx(BAR.left),
     dy(563),
   );
@@ -400,7 +560,9 @@ export function drawReplayOverlay() {
   const colors = classic ? COLORS.classic : COLORS.modern;
   watchPointer();
   drawTitle(classic, colors);
-  if (panelShown()) {
+  if (picker.open) {
+    drawPicker(classic, colors);
+  } else if (panelShown()) {
     drawPanel(classic, colors);
   } else {
     pressed = -1;

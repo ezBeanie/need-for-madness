@@ -196,3 +196,50 @@ test("a replay file gives the race tape back to its last bit, and is small", asy
     "not a replay",
   );
 });
+
+test("the replay's effects fly as fast as it plays, and stand while it stands", async () => {
+  const { ctx, step } = await race(900);
+  ctx.game.phase = PHASE.paused;
+  ctx.openReplay(ctx.VIEWER_FROM.pauseMenu, 300);
+  for (let i = 0; i < 40; i++) {
+    step();
+  }
+  // what the effects are like: where the dust and fire are, how far on
+  const effectsNow = () =>
+    JSON.stringify({
+      dust: ctx.effects.dustClouds
+        .slice(0, ctx.effects.dustCount)
+        .map(({ x, z, stg, mag }) => [x, z, stg, mag]),
+      fire: ctx.effects.explosions
+        .slice(0, ctx.effects.explosionCount)
+        .map(({ x, y, z, ani }) => [x, y, z, ani]),
+    });
+  ctx.togglePlaying();
+  step();
+  const standing = effectsNow();
+  for (let i = 0; i < 30; i++) {
+    step();
+  }
+  expect(effectsNow()).toBe(standing);
+
+  // in slow motion a tick moves them part of a tick, fast forward several
+  const paces = [];
+  for (const speed of [1, 3]) {
+    ctx.viewer.speed = speed;
+    ctx.viewer.playing = true;
+    step();
+    const moves = [];
+    ctx.atReplayPace(() => moves.push([ctx.effects.step, ctx.tick.scale]));
+    paces.push(moves);
+  }
+  expect(paces).toEqual([
+    [[0.5, 0.35]],
+    [
+      [1, 0.7],
+      [1, 0.7],
+    ],
+  ]);
+  // and the race's own time step is back after
+  expect([ctx.effects.step, ctx.tick.scale]).toEqual([1, 0.7]);
+  ctx.closeReplay();
+});

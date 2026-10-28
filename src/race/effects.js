@@ -13,6 +13,9 @@ import { car, racers } from "./racers.js";
 import { recording } from "./recording.js";
 
 export const effects = {
+  // how much of a tick passes as they fly: 1 in races, less in a replay's slow motion
+  // (see replayViewer.js); the ones that fly by tick.scale take it from there
+  step: 1,
   // stat: 0 gone, then its age in ticks up to 8
   sparks: [],
   sparkCount: 0,
@@ -223,7 +226,12 @@ export function chipsfly() {
       if (axis < 3) {
         const around = [0, 0, 0];
         around[axis] = 1;
-        mat4.rotate(chip.mat, chip.mat, degrees * (Math.PI / 180), around);
+        mat4.rotate(
+          chip.mat,
+          chip.mat,
+          degrees * effects.step * (Math.PI / 180),
+          around,
+        );
       }
     }
     if (tick.fraction >= tick.scale) {
@@ -325,8 +333,8 @@ export function sprksfly() {
     spark.x += spark.mat[8] * spark.sp * tick.scale;
     spark.y += spark.mat[9] * spark.sp * tick.scale;
     spark.z += spark.mat[10] * spark.sp * tick.scale;
-    spark.stat++;
-    if (spark.stat == SPARK_TICKS) {
+    spark.stat += effects.step;
+    if (spark.stat >= SPARK_TICKS) {
       spark.stat = 0;
     } else {
       anyFlying = true;
@@ -434,8 +442,8 @@ export function dustfly() {
       continue;
     }
     if (!recording.frozen) {
-      cloud.x += cloud.sx / (cloud.stg + 1);
-      cloud.z += cloud.sz / (cloud.stg + 1);
+      cloud.x += (cloud.sx / (cloud.stg + 1)) * effects.step;
+      cloud.z += (cloud.sz / (cloud.stg + 1)) * effects.step;
       cloud.y = cloud.dy + 3 * cloud.mag;
     }
     const unit = 1 / Math.sqrt(cloud.sx * cloud.sx + cloud.sz * cloud.sz);
@@ -462,14 +470,14 @@ export function dustfly() {
       anyFlying = true;
       continue;
     }
-    cloud.mag += 0.05 + random.fx() * 0.05;
+    cloud.mag += (0.05 + random.fx() * 0.05) * effects.step;
     if (cloud.stg >= 2) {
-      cloud.ta = Math.min(cloud.ta + 0.45, 4);
+      cloud.ta = Math.min(cloud.ta + 0.45 * effects.step, 4);
     }
-    if (cloud.stg == DUST_TICKS) {
+    if (cloud.stg >= DUST_TICKS) {
       cloud.stg = 0;
     } else {
-      cloud.stg++;
+      cloud.stg += effects.step;
       anyFlying = true;
     }
   }
@@ -556,14 +564,14 @@ export function expburn() {
       explosion.mat[k * 4 + 1] *= explosion.size;
       explosion.mat[k * 4 + 2] *= explosion.size;
     }
-    explosion.y += explosion.vy;
+    explosion.y += explosion.vy * effects.step;
     if (explosion.first) {
       explosion.x += explosion.vsx * tick.scale;
-      explosion.vsx *= 0.95;
+      explosion.vsx *= 0.95 ** effects.step;
       explosion.y += explosion.vsy * tick.scale;
-      explosion.vsy *= 0.95;
+      explosion.vsy *= 0.95 ** effects.step;
       explosion.z += explosion.vsz * tick.scale;
-      explosion.vsz *= 0.95;
+      explosion.vsz *= 0.95 ** effects.step;
       explosion.size += explosion.size * 0.05 * tick.scale;
       explosion.ani += 0.85 * tick.scale;
     } else {

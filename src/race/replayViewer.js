@@ -4,6 +4,7 @@
 // there, the race as it was.
 
 import { random } from "../core/random.js";
+import { tick } from "../core/tick.js";
 import { takePressedKeys } from "../input/keyboard.js";
 import { PHASE, game } from "../core/state.js";
 import { CAMERA, camera } from "../render/camera.js";
@@ -45,11 +46,40 @@ export const viewer = {
   playing: true,
   // ticks an arrow is held: -1 back, 1 forward
   heldTicks: 0,
+  // how much of the race's time passed this tick (0 while it stands or winds back)
+  pace: 0,
   // the race as it was when the viewer opened from it
   race: null,
 };
 
 export const lastFrame = () => raceTape.length - 1;
+
+// the replay's own count of the race's ticks for things done once a tick (see tick.js)
+let fraction = 0;
+
+// Runs moveOn (the scenery moving on a tick) as far as the replay played on: several
+// whole ticks when it plays fast, part of one in slow motion (effects.step), not at all
+// while it stands. Returns whether it ran.
+export const atReplayPace = (moveOn) => {
+  if (viewer.pace <= 0) {
+    return false;
+  }
+  const times = Math.max(1, Math.round(viewer.pace));
+  const kept = { scale: tick.scale, fraction: tick.fraction };
+  effects.step = viewer.pace / times;
+  tick.scale = kept.scale * effects.step;
+  for (let i = 0; i < times; i++) {
+    tick.fraction = fraction;
+    moveOn();
+    if (fraction >= tick.scale) {
+      fraction -= 1;
+    }
+    fraction += tick.scale;
+  }
+  effects.step = 1;
+  Object.assign(tick, kept);
+  return true;
+};
 
 // the viewer's own random numbers (a Lehmer generator), while a race waits for it
 let seed = 1;
@@ -176,7 +206,11 @@ const pose = () => {
     const tape = raceTape.cars[c];
     poseFromTape(c, tape, viewer.frame);
     // (the camera behind a car looks along it, the one beside the track waits ahead)
-    racers[c].cameraHeading = tape.cameraHeading[viewer.frame];
+    racers[c].cameraHeading = lerpAngle(
+      tape.cameraHeading[viewer.frame],
+      tape.cameraHeading[next],
+      t,
+    );
     racers[c].motionHeading = racers[c].cameraHeading;
     if (t > 0) {
       for (const f of ["x", "y", "z"]) {
@@ -324,7 +358,8 @@ export const replayViewerTick = (held) => {
   } else if (held) {
     frames = 0;
   }
-  const at = Math.min(lastFrame(), viewer.frame + viewer.between + frames);
+  const before = viewer.frame + viewer.between;
+  const at = Math.min(lastFrame(), before + frames);
   const target = Math.max(0, at);
   const whole = Math.floor(target);
   const movedOn = whole > viewer.frame;
@@ -334,6 +369,7 @@ export const replayViewerTick = (held) => {
     windBack(whole);
   }
   viewer.between = target - whole;
+  viewer.pace = Math.max(0, target - before);
   if (viewer.frame == lastFrame()) {
     viewer.playing = false;
   }
