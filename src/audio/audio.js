@@ -34,7 +34,7 @@ const menuMusic = {
   pendingPlay: false,
   firstPlay: true,
 };
-const stageMusic = { track: null, file: null, state: 0, pendingPlay: false };
+const stageMusic = { track: null, stage: 0, state: 0, pendingPlay: false };
 
 // The classic look plays the original's tracks (see tools/classic/music), which loop from
 // a point of their own: on the sound context, not as audio elements.
@@ -165,25 +165,16 @@ export const pauseMenuMusic = () => {
   }
 };
 
-// the stage's track in the look (the original's stages have their own in both)
-const stageFile = (stage) =>
-  `${musicOf(stage).classic ? LOOK.classic : look.current}:stage${stage}`;
-
-// (the stage a track was for, from its stageFile)
-const stageOfFile = (file) => Number(file.split(":stage")[1]);
-
+// the stage's own track, the same in both looks
 export const playStageMusic = (stage) => {
   try {
-    if (stageMusic.file != stageFile(stage)) {
+    if (stageMusic.stage != stage) {
       stageMusic.track?.pause();
       const music = musicOf(stage);
-      stageMusic.track = newTrack(
-        music.file,
-        music.classic || look.current == LOOK.classic,
-      );
+      stageMusic.track = newTrack(music.file, music.classic);
       stageMusic.track.volume = 1;
       stageMusic.track.loop = true;
-      stageMusic.file = stageFile(stage);
+      stageMusic.stage = stage;
     } else {
       stageMusic.track.currentTime = 0;
     }
@@ -208,12 +199,6 @@ export const stopStageMusic = () => {
 };
 
 export const resumeStageMusic = () => {
-  // the look changed meanwhile: the stage's track in it, from its start
-  const stage = stageMusic.file && stageOfFile(stageMusic.file);
-  if (stageMusic.state == 2 && stageMusic.file != stageFile(stage)) {
-    playStageMusic(stage);
-    return;
-  }
   if (stageMusic.state == 2) {
     if (unlocked && !audio.muteMusic) {
       stageMusic.track.play();
@@ -222,13 +207,11 @@ export const resumeStageMusic = () => {
   }
 };
 
-// The look changed: the music playing now is the new look's.
+// The look changed: the menus' music playing now is the new look's (a stage keeps its
+// own).
 export const switchMusicLook = () => {
   if (menuMusic.state == 1) {
     playMenuMusic();
-  }
-  if (stageMusic.state == 1) {
-    playStageMusic(stageOfFile(stageMusic.file));
   }
 };
 

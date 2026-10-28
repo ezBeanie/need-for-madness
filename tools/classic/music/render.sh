@@ -20,7 +20,7 @@ render() { # name, module zip, its rate, loudness, tempo
 java -cp "$work" Render "$src/OBJ/music/interface.zip" "$work/interface.wav" 44000 160 125 \
   > "$work/interface.loop"
 ffmpeg -loglevel error -y -i "$work/interface.wav" -ar 22050 -ac 1 -b:a 64k "$out/interface.mp3"
-# this game's stages 1 to 17 are remakes of the original's 11 to 27 (its loadstrack)
+# the original's Need for Madness 2 stages, 11 to 27, as stage1 to stage17 (its loadstrack)
 render stage1 stage11.zip 8000 120 125
 render stage2 stage12.zip 7200 260 125
 render stage3 stage13.zip 8000 270 125

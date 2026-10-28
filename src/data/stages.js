@@ -78,15 +78,15 @@ export const levelOf = (stage) => {
   );
 };
 
-// The music of the stage: this game's own in each look, the original's stages always
-// their own (the classic look's files; NFM1's eleventh has a tune of its own, not NFM2's
-// party).
+// The music of the stage, the same in both looks: this game's stages their own, the
+// original's theirs (the classic look's files; NFM1's eleventh has a tune of its own, not
+// NFM2's party).
 export const musicOf = (stage) => {
   const set = setOf(stage);
   if (!set) {
     return { file: `stage${stage}`, classic: false };
   }
-  // the classic look plays the original's stages 11 to 27 for this game's 1 to 17
+  // (the original's stages 11 to 27 rendered as stage1 to stage17)
   const file =
     set == SETS[0]
       ? `nfm1-stage${set.stages.indexOf(stage) + 1}`

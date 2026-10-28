@@ -124,3 +124,26 @@ test("the stage select opens again on the original's stage last played, not on t
   stepUntil(() => ctx.game.phase === PHASE.stageSelect, 300, "stage select");
   expect(ctx.track.stage).toBe(30);
 });
+
+test("this game's stages play their own music in the classic look too", async () => {
+  const { startRace } = await import("./harness/race.js");
+  const { ctx, key, step } = await startRace({ stage: 1, car: 5 });
+  key(76, true);
+  key(76, false);
+  step();
+  expect(ctx.look.current).toBe(ctx.LOOK.classic);
+  const played = [];
+  const Audio = globalThis.Audio;
+  globalThis.Audio = class extends Audio {
+    constructor(src) {
+      super();
+      played.push(src);
+    }
+  };
+  try {
+    ctx.playStageMusic(2);
+  } finally {
+    globalThis.Audio = Audio;
+  }
+  expect(played).toEqual(["data/music/stage2.mp3"]);
+});
