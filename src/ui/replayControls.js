@@ -1,7 +1,7 @@
-// The replay viewer's controls over the race (see race/replayViewer.js): the time, a
-// bar of the whole race to jump along, buttons with their keys above them, and a list of
-// all keys (H). The viewer reads the keys by their place on the keyboard: W A S D are
-// the free camera's, not the arrows' as in races.
+// The replay viewer's controls over the race (see race/replayViewer.js): the title and
+// time, and a panel shown with H (or while the mouse moves) with a bar of the whole race
+// to jump along and buttons, each with its key. The viewer reads the keys by their place
+// on the keyboard: W A S D are the free camera's, not the arrows' as in races.
 
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { keys, takePressedKeys } from "../input/keyboard.js";
@@ -24,7 +24,6 @@ import { stopReplaySounds } from "../audio/replaySounds.js";
 import { LOOK, look } from "../render/look.js";
 import { leaveOpenedReplay, saveReplay } from "../screens/replays.js";
 import { CAMERA, camera } from "../render/camera.js";
-import { BUTTON, drawButton } from "./widgets.js";
 import { rd, view } from "./view.js";
 
 const TICK_SECONDS = 0.035;
@@ -57,40 +56,111 @@ const time = (frame) => {
   return `${minutes}:${(seconds % 60).toFixed(1).padStart(4, "0")}`;
 };
 
-// --- the bar of the whole race, in design units (1280 x 720) ---
+// --- the panel: hidden until asked for (H, or the mouse moved or the screen touched) ---
 
-const BAR = { left: 80, right: 1200, top: 600, height: 14 };
+// in design units (1280 x 720)
+const PANEL = { left: 40, right: 1240, top: 540, bottom: 708 };
+const BAR = { left: 70, right: 1210, top: 586, height: 10 };
+const BUTTONS = { left: 70, right: 1210, top: 610, height: 52, gap: 8 };
+// how long the panel stays after the mouse last moved
+const SHOWN_TICKS = 90;
 
-const barRect = () => ({
-  x: BAR.left * view.scaleX,
-  y: BAR.top * view.scaleY,
-  width: (BAR.right - BAR.left) * view.scaleX,
-  height: BAR.height * view.scale,
-});
+// H keeps it shown; the mouse shows it for a while
+let pinned = false;
+let shownTicks = 0;
+let lastPointer = { x: -1, y: -1 };
+
+const panelShown = () => pinned || shownTicks > 0 || draggingBar;
+
+const watchPointer = () => {
+  const moved = pointer.x[0] != lastPointer.x || pointer.y[0] != lastPointer.y;
+  lastPointer = { x: pointer.x[0], y: pointer.y[0] };
+  if (moved || pointer.down) {
+    shownTicks = SHOWN_TICKS;
+  } else if (shownTicks > 0) {
+    shownTicks--;
+  }
+};
+
+const dx = (x) => x * view.scaleX;
+const dy = (y) => y * view.scaleY;
+const font = (classic, size, bold = false) => {
+  rd.letterSpacing = "0px";
+  rd.font = classic
+    ? `bold ${Math.round(size * 0.7 * (view.height / 450))}px Arial`
+    : `${bold ? "bold " : ""}${size * 0.5 * (view.scaleY + view.scaleX)}px verd`;
+};
+
+// the looks' colours: the classic one the original's menu blue and black
+const COLORS = {
+  classic: {
+    panel: "rgba(0,0,0,0.65)",
+    edge: "rgb(0,128,255)",
+    played: "rgb(0,128,255)",
+    unplayed: "rgba(255,255,255,0.15)",
+    button: "rgba(0,0,0,0)",
+    over: "rgba(0,128,255,0.25)",
+    label: "rgb(0,128,255)",
+    pressed: "rgb(255,255,180)",
+    key: "rgb(150,150,150)",
+    text: "rgb(0,128,255)",
+  },
+  modern: {
+    panel: "rgba(0,16,32,0.6)",
+    edge: "rgba(1,234,255,0.35)",
+    played: "#01EAFF",
+    unplayed: "rgba(255,255,255,0.18)",
+    button: "rgba(255,255,255,0.08)",
+    over: "rgba(1,234,255,0.25)",
+    label: "#FFFFFF",
+    pressed: "#01EAFF",
+    key: "rgba(160,230,255,0.8)",
+    text: "#FFFFFF",
+  },
+};
+
+const rounded = (x, y, width, height, radius) => {
+  rd.beginPath();
+  if (rd.roundRect) {
+    rd.roundRect(x, y, width, height, radius);
+  } else {
+    rd.rect(x, y, width, height);
+  }
+};
+
+const over = (x, y, width, height) =>
+  pointer.x[0] > x &&
+  pointer.x[0] < x + width &&
+  pointer.y[0] > y &&
+  pointer.y[0] < y + height;
+
+// --- the bar of the whole race ---
 
 let draggingBar = false;
 
-const drawBar = (classic) => {
-  const { x, y, width, height } = barRect();
+const drawBar = (colors) => {
+  const x = dx(BAR.left);
+  const y = dy(BAR.top);
+  const width = dx(BAR.right - BAR.left);
+  const height = BAR.height * view.scale;
   const played = lastFrame() > 0 ? viewer.frame / lastFrame() : 1;
-  rd.globalAlpha = 0.6;
-  rd.fillStyle = classic ? "#000000" : "#002040";
-  rd.fillRect(x, y, width, height);
-  rd.globalAlpha = 1;
-  rd.fillStyle = classic ? "rgb(0,128,255)" : "#01EAFF";
-  rd.fillRect(x, y, width * played, height);
+  rd.fillStyle = colors.unplayed;
+  rounded(x, y, width, height, height / 2);
+  rd.fill();
+  rd.fillStyle = colors.played;
+  rounded(x, y, Math.max(height, width * played), height, height / 2);
+  rd.fill();
+  rd.beginPath();
+  rd.arc(x + width * played, y + height / 2, height, 0, 2 * Math.PI);
   rd.fillStyle = "#FFFFFF";
-  rd.fillRect(x + width * played - 2, y - 4, 4, height + 8);
+  rd.fill();
   // pressed on it (with room around), and dragged: the race jumps along
   const reach = 12 * view.scale;
-  const over =
-    pointer.x[0] > x - reach &&
-    pointer.x[0] < x + width + reach &&
-    pointer.y[0] > y - reach &&
-    pointer.y[0] < y + height + reach;
   if (!pointer.down) {
     draggingBar = false;
-  } else if (over) {
+  } else if (
+    over(x - reach, y - reach, width + 2 * reach, height + 2 * reach)
+  ) {
     draggingBar = true;
   }
   if (draggingBar) {
@@ -102,78 +172,35 @@ const drawBar = (classic) => {
   }
 };
 
-// --- buttons ---
+// --- buttons: flat, the label and its key below it; clicked when let go on them ---
 
-// classic buttons: the one pressed, by its id
-let pressedId = 0;
+// the button pressed, by its index
+let pressed = -1;
 
-// The original's blue, its bold Arial; clicked when let go on it.
-const classicButton = (id, label, x, y, width, height) => {
-  const left = x - width / 2;
-  const over =
-    pointer.x[0] > left &&
-    pointer.x[0] < left + width &&
-    pointer.y[0] > y &&
-    pointer.y[0] < y + height;
-  rd.fillStyle = over && pointer.down ? "rgb(255,255,180)" : "rgb(1,157,255)";
-  rd.fillRect(left, y, width, height);
-  rd.strokeStyle = "#000000";
-  rd.lineWidth = Math.max(1, view.scale);
-  rd.strokeRect(left, y, width, height);
-  rd.fillStyle = "#000000";
-  rd.font = `bold ${Math.round(12 * (view.height / 450))}px Arial`;
+const button = (index, count, label, key, classic, colors) => {
+  const { left, right, top, height, gap } = BUTTONS;
+  const each = (right - left - gap * (count - 1)) / count;
+  const x = dx(left + index * (each + gap));
+  const y = dy(top);
+  const width = dx(each);
+  const h = dy(height);
+  const hovered = over(x, y, width, h);
+  if (pointer.down && hovered && !draggingBar && pressed == -1) {
+    pressed = index;
+  }
+  rd.fillStyle = hovered ? colors.over : colors.button;
+  rounded(x, y, width, h, 8 * view.scale);
+  rd.fill();
   rd.textAlign = "center";
   rd.textBaseline = "middle";
-  rd.fillText(label, x, y + height / 2);
-  if (pointer.down && over && !draggingBar) {
-    pressedId = id;
-  }
-  const clicked = !pointer.down && pressedId == id && over;
-  if (!pointer.down && pressedId == id) {
-    pressedId = 0;
-  }
+  font(classic, 15, true);
+  rd.fillStyle = pressed == index && hovered ? colors.pressed : colors.label;
+  rd.fillText(label, x + width / 2, y + h * 0.38);
+  font(classic, 10);
+  rd.fillStyle = colors.key;
+  rd.fillText(key, x + width / 2, y + h * 0.75);
+  const clicked = !pointer.down && pressed == index && hovered;
   return clicked;
-};
-
-// its key, small above it
-const drawKey = (key, x, y, classic) => {
-  rd.font = classic
-    ? `bold ${Math.round(9 * (view.height / 450))}px Arial`
-    : "" + 6 * (view.scaleY + view.scaleX) + "px verd";
-  rd.letterSpacing = "0px";
-  rd.textAlign = "center";
-  rd.textBaseline = "bottom";
-  rd.fillStyle = classic ? "rgb(0,128,255)" : "rgb(0,32,64)";
-  rd.fillText(key, x, y - 4 * view.scale);
-};
-
-const button = (id, label, key, index, count) => {
-  const classic = look.current == LOOK.classic;
-  // (spread over the screen, a margin left and right for their slanted ends)
-  const x = (40 + ((index + 0.5) * 1200) / count) * view.scaleX;
-  const y = 720 * view.scaleY - 80 * view.scale;
-  drawKey(key, x, y, classic);
-  if (classic) {
-    return classicButton(id, label, x, y, 112 * view.scale, 40 * view.scale);
-  }
-  return drawButton({
-    id,
-    x,
-    y,
-    width: 112,
-    height: 46,
-    faceTop: "#019DFF",
-    faceBottom: "#01EAFF",
-    shadowTop: "#004A78",
-    shadowBottom: "#016D77",
-    layout: BUTTON.textOnly,
-    text: label,
-    fontSize: 13,
-    textOpacity: 0.8,
-    image: null,
-    imageOpacity: 0,
-    pulsing: false,
-  });
 };
 
 // Back to where the viewer was opened from; after a replay file, the main menu.
@@ -212,7 +239,7 @@ const controls = () => [
 const KEYS = {
   Space: togglePlaying,
   KeyV: nextCamera,
-  KeyH: () => (help = !help),
+  KeyH: () => (pinned = !pinned),
   Home: () => seekReplay(0),
   End: () => seekReplay(lastFrame()),
   ArrowUp: () => changeSpeed(1),
@@ -253,7 +280,7 @@ const moveFree = () => {
   let yaw = 0;
   let pitch = 0;
   // dragged on the race (not on the controls below it)
-  const onRace = pointer.y[0] < (BAR.top - 30) * view.scaleY;
+  const onRace = !panelShown() || pointer.y[0] < dy(PANEL.top);
   if (pointer.down && (dragFrom || onRace)) {
     if (dragFrom) {
       yaw = (pointer.x[0] - dragFrom.x) * DRAG_TURN;
@@ -272,102 +299,112 @@ const moveFree = () => {
   );
 };
 
-// --- the list of keys ---
-
-let help = false;
-
-const HELP = [
-  ["Space", "Play / pause"],
-  ["Left / Right", "One step back / on (hold: wind)"],
-  ["Shift + Left / Right", "5 seconds back / on"],
-  ["Home / End", "To the start / the end"],
-  ["Up / Down", "Faster / slower"],
-  ["V", "Camera: orbit, behind, track, free"],
-  ["C / Shift + C", "Next / previous car"],
-  ["W A S D", "Free camera: move"],
-  ["Q / E", "Free camera: down / up"],
-  ["Z / X, mouse", "Free camera: turn, drag to look"],
-  ["Shift", "Free camera: faster"],
-  ["Z / X", "Behind the car: look back"],
-  ["Ctrl + S", "Save the replay as a file"],
-  ["Esc / Enter", "Close the replay"],
-  ["H", "Show / hide these keys"],
-];
-
-const drawHelp = (classic) => {
-  const x = 340 * view.scaleX;
-  const y = 120 * view.scaleY;
-  const row = 26 * view.scaleY;
-  rd.globalAlpha = 0.75;
-  rd.fillStyle = "#000000";
-  rd.fillRect(
-    x - 20 * view.scaleX,
-    y - 30 * view.scaleY,
-    640 * view.scaleX,
-    row * (HELP.length + 1),
-  );
-  rd.globalAlpha = 1;
-  rd.textBaseline = "middle";
-  rd.letterSpacing = "0px";
-  rd.font = classic
-    ? `bold ${Math.round(12 * (view.height / 450))}px Arial`
-    : "" + 8 * (view.scaleY + view.scaleX) + "px verd";
-  HELP.forEach(([key, what], i) => {
-    rd.textAlign = "left";
-    rd.fillStyle = classic ? "rgb(0,128,255)" : "#01EAFF";
-    rd.fillText(key, x, y + i * row);
-    rd.fillStyle = "#FFFFFF";
-    rd.fillText(what, x + 230 * view.scaleX, y + i * row);
-  });
-};
-
 // --- the overlay ---
 
-const drawInfo = (classic) => {
-  const state = viewer.playing
+const MORE_KEYS =
+  "Left / Right: a step (hold: wind)     Home / End: start / end     " +
+  "Free camera: W A S D, Q / E, Shift, drag to look     Behind: Z / X look back";
+
+const stateOf = () =>
+  viewer.playing
     ? `${SPEEDS[viewer.speed]}x`
     : viewer.frame == lastFrame()
       ? "End"
       : "Paused";
-  const line = `${time(viewer.frame)} / ${time(lastFrame())}   ${state}`;
-  const hint = help ? "H: hide the keys" : "H: show all keys";
+
+// top left: the title, the time and how fast it plays
+const drawTitle = (classic, colors) => {
+  const line = `${time(viewer.frame)} / ${time(lastFrame())}   ${stateOf()}`;
   rd.textAlign = "left";
   rd.textBaseline = "middle";
   if (classic) {
-    rd.font = `bold ${Math.round(13 * (view.height / 450))}px Arial`;
-    rd.fillStyle = "rgb(0,128,255)";
-    rd.fillText(line, BAR.left * view.scaleX, (BAR.top - 18) * view.scaleY);
-    rd.textAlign = "right";
-    rd.fillText(hint, BAR.right * view.scaleX, (BAR.top - 18) * view.scaleY);
+    // (the original's flickering "Replay >>" at the top)
+    drawClassicReplayLabel();
+    rd.textAlign = "left";
+    font(classic, 14);
+    rd.fillStyle = colors.text;
+    rd.fillText(line, dx(20), dy(35));
     return;
   }
   rd.letterSpacing = "1px";
   rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
   rd.fillStyle = "rgb(0,32,64)";
-  rd.fillText("REPLAY", 20 * view.scaleX, 35 * view.scaleY);
-  rd.font = "" + 10 * (view.scaleY + view.scaleX) + "px verd";
-  rd.letterSpacing = "0px";
-  rd.fillText(line, 20 * view.scaleX, 80 * view.scaleY);
-  rd.font = "" + 8 * (view.scaleY + view.scaleX) + "px verd";
-  rd.fillText(hint, 20 * view.scaleX, 115 * view.scaleY);
+  rd.fillText("REPLAY", dx(20), dy(35));
+  font(classic, 20);
+  rd.fillStyle = "rgb(0,32,64)";
+  rd.fillText(line, dx(20), dy(80));
+};
+
+// bottom middle, while the panel is hidden
+const drawHint = (classic, colors) => {
+  const text = "Press H for the replay controls";
+  font(classic, 15, true);
+  rd.textAlign = "center";
+  rd.textBaseline = "middle";
+  const x = dx(640);
+  const y = dy(690);
+  const width = rd.measureText(text).width + dx(40);
+  rd.fillStyle = colors.panel;
+  rounded(x - width / 2, y - dy(18), width, dy(36), dy(18));
+  rd.fill();
+  rd.fillStyle = colors.text;
+  rd.fillText(text, x, y);
+};
+
+const drawPanel = (classic, colors) => {
+  const x = dx(PANEL.left);
+  const y = dy(PANEL.top);
+  const width = dx(PANEL.right - PANEL.left);
+  const height = dy(PANEL.bottom - PANEL.top);
+  rd.fillStyle = colors.panel;
+  rounded(x, y, width, height, 14 * view.scale);
+  rd.fill();
+  rd.strokeStyle = colors.edge;
+  rd.lineWidth = Math.max(1, view.scale);
+  rd.stroke();
+  font(classic, 13);
+  rd.fillStyle = colors.text;
+  rd.textBaseline = "middle";
+  rd.textAlign = "left";
+  rd.fillText(
+    `${CAMERA_NAMES[camera.mode] ?? "Camera"} camera,  car ${camera.target + 1}`,
+    dx(BAR.left),
+    dy(563),
+  );
+  rd.textAlign = "right";
+  rd.fillText(
+    pinned ? "H: hide the controls" : "H: keep the controls",
+    dx(BAR.right),
+    dy(563),
+  );
+  drawBar(colors);
+  const all = controls();
+  const chosen = all
+    .map(([label, key], i) =>
+      button(i, all.length, label, key, classic, colors),
+    )
+    .indexOf(true);
+  if (!pointer.down) {
+    pressed = -1;
+  }
+  font(classic, 10);
+  rd.fillStyle = colors.key;
+  rd.textAlign = "center";
+  rd.fillText(MORE_KEYS, dx(640), dy(684));
+  all[chosen]?.[2]();
 };
 
 export function drawReplayOverlay() {
   rd.clearRect(0, 0, view.width, view.height);
   const classic = look.current == LOOK.classic;
-  if (classic) {
-    drawClassicReplayLabel();
-  }
-  drawInfo(classic);
-  drawBar(classic);
-  const all = controls();
-  all.forEach(([label, key, act], i) => {
-    if (button(20 + i, label, key, i, all.length)) {
-      act();
-    }
-  });
-  if (help) {
-    drawHelp(classic);
+  const colors = classic ? COLORS.classic : COLORS.modern;
+  watchPointer();
+  drawTitle(classic, colors);
+  if (panelShown()) {
+    drawPanel(classic, colors);
+  } else {
+    pressed = -1;
+    drawHint(classic, colors);
   }
   readKeys();
   moveFree();
