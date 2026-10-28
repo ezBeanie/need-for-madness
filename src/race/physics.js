@@ -1264,12 +1264,12 @@ function throwScrapeSparks(c, type, step) {
           );
         }
         if (step.sparkKind[k]) {
-          groundScrapeSound(
+          groundScrapeOf(
+            c,
             step.sparkKind[k],
             racers[c].wheelSpeedX[k],
             racers[c].wheelSpeedY[k],
             racers[c].wheelSpeedZ[k],
-            heardAs(c),
           );
         }
       }
@@ -1302,12 +1302,12 @@ function throwScrapeSparks(c, type, step) {
         racers[c].wheelSpeedZ[k],
         1,
       );
-      groundScrapeSound(
+      groundScrapeOf(
+        c,
         1,
         racers[c].wheelSpeedX[k],
         racers[c].wheelSpeedY[k],
         racers[c].wheelSpeedZ[k],
-        heardAs(c),
       );
     }
   }
@@ -1799,11 +1799,11 @@ function bounceOffWallFacingPlusZ(
         racers[c].wheelSpeedZ[k],
         2,
       );
-      scrapeSound(
+      scrapeOf(
+        c,
         racers[c].wheelSpeedX[k],
         racers[c].wheelSpeedY[k],
         racers[c].wheelSpeedZ[k],
-        heardAs(c),
       );
     }
   }
@@ -1845,11 +1845,11 @@ function bounceOffWallFacingMinusZ(
         racers[c].wheelSpeedZ[k],
         2,
       );
-      scrapeSound(
+      scrapeOf(
+        c,
         racers[c].wheelSpeedX[k],
         racers[c].wheelSpeedY[k],
         racers[c].wheelSpeedZ[k],
-        heardAs(c),
       );
     }
   }
@@ -1891,11 +1891,11 @@ function bounceOffWallFacingPlusX(
         racers[c].wheelSpeedZ[k],
         2,
       );
-      scrapeSound(
+      scrapeOf(
+        c,
         racers[c].wheelSpeedX[k],
         racers[c].wheelSpeedY[k],
         racers[c].wheelSpeedZ[k],
-        heardAs(c),
       );
     }
   }
@@ -1937,11 +1937,11 @@ function bounceOffWallFacingMinusX(
         racers[c].wheelSpeedZ[k],
         2,
       );
-      scrapeSound(
+      scrapeOf(
+        c,
         racers[c].wheelSpeedX[k],
         racers[c].wheelSpeedY[k],
         racers[c].wheelSpeedZ[k],
-        heardAs(c),
       );
     }
   }
@@ -2220,14 +2220,14 @@ function kickUpDust(grip, type, c, i, step) {
           racers[c].capsized && racers[c].grounded,
         );
         if (!racers[c].capsized) {
-          skidSound(
+          skidOf(
+            c,
             step.surface,
             step.onTrackPiece,
             Math.sqrt(
               racers[c].wheelSpeedX[i] * racers[c].wheelSpeedX[i] +
                 racers[c].wheelSpeedZ[i] * racers[c].wheelSpeedZ[i],
             ),
-            heardAs(c),
           );
         }
       }
@@ -3359,6 +3359,33 @@ export function regn(hitSide, k, mag, c) {
 // How car c's sounds are heard (see audio/carSounds.js): null as the player's own,
 // else as another car's from where it is. Crashes into the player sound as its own.
 const heardAs = (c) => (c == game.player ? null : c);
+
+// Told of every scrape, ground scrape and skid sound of a car, heard or not: the race tape
+// keeps them for replays (see raceTape.js). Only heard, so the simulation is the same.
+export const carSoundTape = { record: null };
+export const CAR_SOUND = { scrape: 0, groundScrape: 1, skid: 2 };
+
+const scrapeOf = (c, sx, sy, sz) => {
+  carSoundTape.record?.(c, CAR_SOUND.scrape, 0, sx, sy, sz);
+  scrapeSound(sx, sy, sz, heardAs(c));
+};
+
+const groundScrapeOf = (c, kind, sx, sy, sz) => {
+  carSoundTape.record?.(c, CAR_SOUND.groundScrape, kind, sx, sy, sz);
+  groundScrapeSound(kind, sx, sy, sz, heardAs(c));
+};
+
+const skidOf = (c, surface, onTrackPiece, mag) => {
+  carSoundTape.record?.(
+    c,
+    CAR_SOUND.skid,
+    surface,
+    onTrackPiece ? 1 : 0,
+    mag,
+    0,
+  );
+  skidSound(surface, onTrackPiece, mag, heardAs(c));
+};
 const crashHeardAs = (c) => (racers[c].colidim ? null : heardAs(c));
 
 // The hit is replayed from the tape in instant replays and highlights (see recording.js).

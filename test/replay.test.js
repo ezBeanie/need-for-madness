@@ -61,6 +61,10 @@ test("the whole race is recorded, its last ticks as the instant replay has them"
   // (opponents crash into each other on stage 5)
   expect(whole.cars.some((car) => car.hits.length)).toBe(true);
   expect(whole.cars.some((car) => car.dust.length)).toBe(true);
+  // the cars' skids and scrapes as heard, each in a tick of the race
+  const sounds = raceTape.cars.flatMap((car) => car.soundAt);
+  expect(sounds.length).toBeGreaterThan(0);
+  expect(sounds.every((at) => at >= 0 && at < raceTape.length)).toBe(true);
   expect(raceTape.cars[0].x.slice(0, 5)).not.toEqual(whole.cars[0].perTick[0]);
 });
 
@@ -78,6 +82,8 @@ test("time wound back takes back what the race tape had recorded since", async (
   for (const tape of ctx.raceTape.cars) {
     expect(tape.x).toHaveLength(ctx.raceTape.length);
     expect(tape.hitAt.every((at) => at <= resumedAt)).toBe(true);
+    expect(tape.soundAt.every((at) => at <= resumedAt)).toBe(true);
+    expect(tape.soundAt).toHaveLength(tape.soundCount);
   }
   for (let i = 0; i < 50; i++) {
     Object.assign(ctx.racers[0].u, autopilot(ctx));

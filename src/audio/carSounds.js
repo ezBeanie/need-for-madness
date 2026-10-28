@@ -7,6 +7,7 @@
 // (random.sound), so hearing them never changes the race.
 
 import { random } from "../core/random.js";
+import { PHASE, game } from "../core/state.js";
 import { car } from "../race/racers.js";
 import { heardFrom } from "../render/camera.js";
 import { audio, playSound } from "./audio.js";
@@ -32,7 +33,12 @@ const newVoice = (pick, c) => ({
   bumpHigh: false,
 });
 
-const own = newVoice(() => random.fx(), null);
+// (the player's own in a race as the original picked them: one of these random numbers
+// reaches the race; in a replay they would change how its dust and sparks fly)
+const own = newVoice(
+  () => (game.phase == PHASE.race ? random.fx() : random.sound()),
+  null,
+);
 const others = [];
 
 // The voice of car c (null: the player's own) and where it is heard from; null when

@@ -4,6 +4,7 @@
 // tick's number here. Its shape is the shape of that tape, so it plays the same way.
 
 import { game } from "../core/state.js";
+import { carSoundTape } from "./physics.js";
 import { SKID, racers } from "./racers.js";
 import {
   DUST,
@@ -37,6 +38,17 @@ export const ENGINE_BITS = {
 };
 const SOUND_PER_TICK = ["speed", "power", "engine"];
 
+// a car's scrapes, ground scrapes and skids as the race heard them (see carSoundTape in
+// physics.js): when, which (CAR_SOUND) and its four values
+export const SOUND = [
+  "soundAt",
+  "soundKind",
+  "soundA",
+  "soundB",
+  "soundC",
+  "soundD",
+];
+
 // every per tick field of the race tape
 export const PER_TICK = [...RECORDED_PER_TICK, ...SOUND_PER_TICK];
 
@@ -61,6 +73,10 @@ const newRaceCarTape = () => {
   for (const field of PER_TICK) {
     tape[field] = [];
   }
+  for (const field of SOUND) {
+    tape[field] = [];
+  }
+  tape.soundCount = 0;
   tape.wastedAt = NEVER_WASTED;
   return tape;
 };
@@ -98,6 +114,15 @@ const addEvent = (from, i, to, fields, count, at) => {
   }
   to[fields[0]][k] = at;
   to[count]++;
+};
+
+// a car's sound in the tick being raced: it is the tick recordRaceTick records next
+carSoundTape.record = (c, kind, a, b, cc, d) => {
+  const tape = raceTape.cars[c];
+  const k = tape.soundCount++;
+  [raceTape.length, kind, a, b, cc, d].forEach(
+    (value, i) => (tape[SOUND[i]][k] = value),
+  );
 };
 
 // After recording's tick: that tick and its events.
@@ -175,6 +200,7 @@ export const cutRaceTape = (frame) => {
     cutEvents(tape, HIT, "hitCount", length);
     cutEvents(tape, ["fixAt"], "fixCount", length);
     cutEvents(tape, DUST, "dustCount", length);
+    cutEvents(tape, SOUND, "soundCount", length);
     if (tape.wastedAt >= length) {
       tape.wastedAt = NEVER_WASTED;
     }

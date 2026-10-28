@@ -1,19 +1,23 @@
-// The sounds of a replay, of the car it follows: its engine as it ran (from the race
-// tape's speed, power and engine bits, see race/raceTape.js), and its crashes, scrapes,
-// skids, fixes and wasting as the race played them.
+// The sounds of a replay: the followed car's engine as it ran (from the race tape's speed,
+// power and engine bits, see race/raceTape.js), its fixes and wasting, and the crashes,
+// scrapes and skids of all cars as the race played them.
 
 import { game } from "../core/state.js";
 import { ENGINE_BITS, raceTape } from "../race/raceTape.js";
+import { CAR_SOUND } from "../race/physics.js";
 import { SKID } from "../race/racers.js";
 import { camera } from "../render/camera.js";
 import { isEngineLoaded, loadEngine, playSound, stopEngine } from "./audio.js";
-import { crashSound, scrapeSound, skidSound } from "./carSounds.js";
+import {
+  crashSound,
+  groundScrapeSound,
+  scrapeSound,
+  skidSound,
+} from "./carSounds.js";
 import { updateEngineSound } from "./engineSound.js";
 
 // the race played on further than this a tick (jumped, or wound fast): no sounds of it
 const MOST_FRAMES_HEARD = 4;
-// how near the car sparks fly that it scrapes
-const SCRAPE_REACH = 60;
 // the ticks after its wasting the burst of flames is heard (as the race's HUD has them)
 const WASTED_FLAMES_AFTER = 16;
 // sounds as the race played them (see audio.js)
@@ -68,25 +72,22 @@ const eventsAt = (c, frame) => {
   if (followed && tape.wastedAt + WASTED_FLAMES_AFTER == frame) {
     playSound(SOUND.flames, 1);
   }
-  for (let i = 0; i < tape.dustCount; i++) {
-    if (tape.dustAt[i] == frame && !tape.dustCapsized[i]) {
-      skidSound(
-        tape.dustGround[i],
-        false,
-        Math.hypot(tape.dustSpeedX[i], tape.dustSpeedZ[i]),
-        heardAs,
-      );
-    }
-  }
-  const sparks = raceTape.sparks;
-  for (let i = 0; i < sparks.count; i++) {
-    if (
-      sparks.at[i] == frame &&
-      sparks.carType[i] == game.carTypes[c] &&
-      Math.hypot(sparks.x[i] - tape.x[frame], sparks.z[i] - tape.z[frame]) <
-        SCRAPE_REACH
-    ) {
-      scrapeSound(sparks.sx[i], sparks.sy[i], sparks.sz[i], heardAs);
+  // its scrapes and skids as the race played them (see carSoundTape in physics.js)
+  for (let i = 0; i < tape.soundCount; i++) {
+    if (tape.soundAt[i] == frame) {
+      const [a, b, cc, d] = [
+        tape.soundA[i],
+        tape.soundB[i],
+        tape.soundC[i],
+        tape.soundD[i],
+      ];
+      if (tape.soundKind[i] == CAR_SOUND.scrape) {
+        scrapeSound(b, cc, d, heardAs);
+      } else if (tape.soundKind[i] == CAR_SOUND.groundScrape) {
+        groundScrapeSound(a, b, cc, d, heardAs);
+      } else {
+        skidSound(a, b == 1, cc, heardAs);
+      }
     }
   }
 };

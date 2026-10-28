@@ -4,7 +4,7 @@
 // one before (a car moves little from tick to tick, so most of them come out 0), split
 // into byte planes, and the whole is gzipped.
 
-import { DUST, HIT, PER_TICK, SPARK, raceTape } from "./raceTape.js";
+import { DUST, HIT, PER_TICK, SOUND, SPARK, raceTape } from "./raceTape.js";
 
 const FORMAT = "nfm-replay";
 const SPEEDS = ["speedX", "speedY", "speedZ"];
@@ -133,6 +133,9 @@ const columnsOf = (tape) => {
     for (const field of DUST) {
       add(car, field, car.dustCount, `car${c}.${field}`);
     }
+    for (const field of SOUND) {
+      add(car, field, car.soundCount, `car${c}.${field}`);
+    }
   });
   for (const field of SPARK) {
     add(tape.sparks, field, tape.sparks.count, `sparks.${field}`);
@@ -149,6 +152,7 @@ const countsOf = (tape) => ({
     hitCount: car.hitCount,
     fixCount: car.fixCount,
     dustCount: car.dustCount,
+    soundCount: car.soundCount,
     wastedAt: Number.isFinite(car.wastedAt) ? car.wastedAt : null,
   })),
   sparks: tape.sparks.count,
@@ -224,6 +228,8 @@ export const decodeReplay = async (file) => {
       hitCount: car.hitCount,
       fixCount: car.fixCount,
       dustCount: car.dustCount,
+      // (none in files of the first version)
+      soundCount: car.soundCount ?? 0,
       wastedAt: car.wastedAt ?? Infinity,
     })),
     sparks: { count: counts.sparks },
