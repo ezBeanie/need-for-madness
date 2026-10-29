@@ -92,22 +92,30 @@ Nachricht, 120 Nachrichten/s pro Spiel, Kompression, kein Logging), im Dev-Serve
 unter `/net`, eigenständig mit `node server/main.js`. Eine Tick-Nachricht sind unkomprimiert
 etwa 2,9 KB bei 7 Autos (80 KB/s) und 7,3 KB bei 20 Autos (200 KB/s).
 
-Deployment auf beanie (noch nicht ausgeführt, braucht OK):
+Deployment auf beanie (seit 29.10.2026 live):
 
-1. `docker build -f server/Dockerfile -t nfm-relay .` und Container `nfm-relay` im selben
-   Docker-Netz wie `nfm` starten.
-2. nginx im Container `nfm` reicht `/net` weiter, ohne Access-Log (keine IPs):
+- Relay: Quellen nach `/home/janu/nfm-relay` (`package.json`, `package-lock.json`, `server/`),
+  dort `docker build -f server/Dockerfile -t nfm-relay .`, Container
+  `docker run -d --name nfm-relay --restart unless-stopped -p 127.0.0.1:8787:8787 nfm-relay`.
+- nginx: Container `nfm` im Host-Netz, damit das Access-Log die echten Absender zeigt (über
+  Dockers Port-Weiterleitung stand dort nur das Docker-Gateway):
+  `docker run -d --name nfm --restart unless-stopped --network host -v /home/janu/nfm:/usr/share/nginx/html:ro -v /home/janu/nfm-nginx/default.conf:/etc/nginx/conf.d/default.conf:ro -v /home/janu/nfm-logs:/var/log/nginx nginx:alpine`.
+- `/home/janu/nfm-nginx/default.conf` hört auf 8090 und reicht `/net` ohne Access-Log weiter:
 
-   ```nginx
-   location /net {
-     access_log off;
-     proxy_pass http://nfm-relay:8787;
-     proxy_http_version 1.1;
-     proxy_set_header Upgrade $http_upgrade;
-     proxy_set_header Connection "upgrade";
-     proxy_read_timeout 120s;
-   }
-   ```
+  ```nginx
+  location /net {
+    access_log off;
+    proxy_pass http://127.0.0.1:8787;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_read_timeout 120s;
+  }
+  ```
+
+- Logs in `/home/janu/nfm-logs`, Rotation nach 7 Tagen per
+  `/home/janu/nfm-nginx/logrotate.conf` (der tägliche Cronjob dafür ist Sache des Besitzers).
+- Spiel wie bisher: `npm run build`, `rsync -az --delete dist/ beanie-ts:/home/janu/nfm/`.
 
 Im Menü: Der Knopf „Multiplayer“ neben dem Zahnrad (Hauptmenü, Auto- und Streckenwahl) öffnet
 einen Dialog (`src/ui/multiplayerMenu.js`). „Host a race“ öffnet einen Raum mit einem Code aus
