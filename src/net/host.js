@@ -53,7 +53,8 @@ const receive = (message) => {
   }
 };
 
-// Every tick: a guest gone is forgotten, and a race the host left ends for the guest too.
+// Every tick: a guest gone is forgotten (its car driven by the AI), and a race the host
+// left ends for the guest too.
 export const hostTick = () => {
   if (link.role != ROLE.host) {
     return;
@@ -61,6 +62,11 @@ export const hostTick = () => {
   host.quietTicks++;
   if (!guestThere()) {
     field.guestCarType = null;
+  }
+  if (host.racing && !guestThere()) {
+    // the guest's connection is lost: the AI drives its car on
+    host.racing = false;
+    game.humans = [];
   }
   if (host.racing && !RACE_GOES_ON.includes(game.phase)) {
     link.send({ type: MESSAGE.end });

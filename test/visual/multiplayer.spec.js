@@ -32,42 +32,47 @@ const guestState = (page) =>
 
 // Two tabs, linked by the relay of the dev server: the host's game races, the guest's shows
 // that race and drives a car in it.
-test("a guest in another tab drives a car in the host's race", async ({
-  context,
-}) => {
+// Host and guest, each in a tab of its own, in a race the host started.
+const raceTogether = async (context, room) => {
   const hostPage = await context.newPage();
   const guestPage = await context.newPage();
   const host = await openGame(hostPage, {
     storage: { carsel: HOST_TYPE, unlocked: "3" },
-    url: "/?host=test",
+    url: `/?host=${room}`,
   });
   const guest = await openGame(guestPage, {
     storage: { carsel: GUEST_TYPE, unlocked: "3" },
-    url: "/?join=test",
+    url: `/?join=${room}`,
   });
-  const both = [
-    { game: host, page: hostPage },
-    { game: guest, page: guestPage },
-  ];
   await host.advanceUntil(PHASE.mainMenu);
   await guest.advanceUntil(PHASE.mainMenu);
-  // the guest says it is there
-  await guest.advance();
-  await hostPage.waitForTimeout(DELIVERY_MS);
-
   await host.tap("Enter");
   await host.advanceUntil(PHASE.carSelect);
   await host.advance(40);
   await host.tap("Enter");
   await host.advanceUntil(PHASE.stageSelect);
   await host.advance(190);
-  // (a guest silent for a while has gone: it says again that it is there)
+  // the guest says it is there
   await guest.advance(30);
   await hostPage.waitForTimeout(DELIVERY_MS);
   await host.tap("Enter");
   await host.advanceUntil(PHASE.race);
   await guestPage.waitForTimeout(DELIVERY_MS);
   await guest.advanceUntil(PHASE.guestRace);
+  return { host, guest, hostPage, guestPage };
+};
+
+test("a guest in another tab drives a car in the host's race", async ({
+  context,
+}) => {
+  const { host, guest, hostPage, guestPage } = await raceTogether(
+    context,
+    "test",
+  );
+  const both = [
+    { game: host, page: hostPage },
+    { game: guest, page: guestPage },
+  ];
 
   const start = await hostPage.evaluate(
     (c) => window.gameState.car[c].z,
@@ -132,4 +137,26 @@ test("a guest in another tab drives a car in the host's race", async ({
     phase: PHASE.mainMenu,
     carType: Number(GUEST_TYPE),
   });
+});
+
+test("the AI drives on the car of a guest whose connection is lost", async ({
+  context,
+}) => {
+  const { host, hostPage, guestPage } = await raceTogether(context, "lost");
+  const start = await hostPage.evaluate(
+    (c) => window.gameState.car[c].z,
+    GUEST_CAR,
+  );
+  await guestPage.close();
+  // past the countdown, and the ticks a silent guest is waited for
+  await host.advance(400);
+  const onHost = await hostPage.evaluate(
+    (c) => ({
+      humans: window.gameState.game.humans,
+      z: window.gameState.car[c].z,
+    }),
+    GUEST_CAR,
+  );
+  expect(onHost.humans).toEqual([]);
+  expect(Math.abs(onHost.z - start)).toBeGreaterThan(500);
 });
