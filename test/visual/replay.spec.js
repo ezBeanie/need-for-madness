@@ -46,10 +46,12 @@ test("a replay saved from the viewer opens again from the main menu", async ({
     s.openReplay(s.VIEWER_FROM.pauseMenu, 0);
   }, PHASE.paused);
   await game.advance(5);
-  // Save, the eighth of the panel's nine buttons (moving the mouse shows the panel)
+  // Save, the eighth of the nine buttons, once H shows the controls
+  await game.tap("h");
   const download = page.waitForEvent("download");
-  const each = (1140 - 8 * 8) / 9;
-  await page.mouse.move(70 + 7 * (each + 8) + each / 2, 636);
+  // (a row of nine along the bottom, 16 pixels in from the edges, 6 apart)
+  const each = (1248 - 8 * 6) / 9;
+  await page.mouse.move(16 + 7 * (each + 6) + each / 2, 686);
   await page.mouse.down();
   await game.advance(1);
   await page.mouse.up();

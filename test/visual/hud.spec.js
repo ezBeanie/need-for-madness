@@ -56,6 +56,8 @@ test("hud: the replay viewer", async ({ page }) => {
     s.openReplay(s.VIEWER_FROM.pauseMenu, 0);
   });
   await game.advance(60);
+  // (the controls show only when asked for)
+  await game.tap("h");
   await expect.soft(page).toHaveScreenshot("hud-replay-viewer.png");
 });
 

@@ -1,7 +1,9 @@
-// The replay viewer's controls over the race (see race/replayViewer.js): the title and
-// time, and a panel shown with H (or while the mouse moves) with a bar of the whole race
-// to jump along and buttons, each with its key. The viewer reads the keys by their place
-// on the keyboard: W A S D are the free camera's, not the arrows' as in races.
+// The replay viewer's controls over the race (see race/replayViewer.js): the title, time
+// and car followed; a hint, and the controls only when asked for (H, or the hint
+// clicked): a bar of the whole race to jump along and a low row of buttons, each with
+// its key; and the cars to follow, driving in at the screen's edges (Tab). The viewer
+// reads the keys by their place on the keyboard: W A S D are the free camera's, not the
+// arrows' as in races.
 
 import { game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
@@ -26,6 +28,7 @@ import { stopReplaySounds } from "../audio/replaySounds.js";
 import { LOOK, look } from "../render/look.js";
 import { leaveOpenedReplay, saveReplay } from "../screens/replays.js";
 import { CAMERA, camera } from "../render/camera.js";
+import { isPhone } from "../core/platform.js";
 import { rd, view } from "./view.js";
 
 const TICK_SECONDS = 0.035;
@@ -61,32 +64,51 @@ const time = (frame) => {
   return `${minutes}:${(seconds % 60).toFixed(1).padStart(4, "0")}`;
 };
 
-// --- the panel: hidden until asked for (H, or the mouse moved or the screen touched) ---
+// --- the controls: hidden until asked for (H, or the hint clicked or touched) ---
 
-// in design units (1280 x 720)
-const PANEL = { left: 40, right: 1240, top: 540, bottom: 708 };
-const BAR = { left: 70, right: 1210, top: 586, height: 10 };
-const BUTTONS = { left: 70, right: 1210, top: 610, height: 52, gap: 8 };
-// how long the panel stays after the mouse last moved
-const SHOWN_TICKS = 90;
+// Where the controls go, in the window's pixels: a row of buttons along the bottom (two
+// rows on a narrow screen), the bar of the race above it, a line of the other keys
+// above that. Big enough to touch on phones, where the keys go unmentioned.
+const layout = () => {
+  const touch = isPhone;
+  const margin = Math.max(6, 16 * view.scale);
+  const gap = Math.max(4, 6 * view.scale);
+  const row = Math.max(touch ? 44 : 28, 36 * view.scale);
+  const count = controls().length;
+  const width = view.width - 2 * margin;
+  const fewest = touch ? 88 : 100;
+  const perRow = Math.max(
+    1,
+    Math.min(count, Math.floor((width + gap) / (fewest + gap))),
+  );
+  const rows = Math.ceil(count / perRow);
+  const buttonsTop = view.height - margin - rows * row - (rows - 1) * gap;
+  const seek = { x: margin, width, height: row, y: buttonsTop - gap - row };
+  const lineHeight = Math.max(touch ? 32 : 18, 18 * view.scale);
+  const line = { y: seek.y - gap - lineHeight, height: lineHeight };
+  const buttonAt = (i) => {
+    const r = Math.floor(i / perRow);
+    const inRow = Math.min(perRow, count - r * perRow);
+    const each = (width - gap * (inRow - 1)) / inRow;
+    return {
+      x: margin + (i % perRow) * (each + gap),
+      y: buttonsTop + r * (row + gap),
+      width: each,
+      height: row,
+    };
+  };
+  return { touch, seek, line, buttonAt, top: line.y - gap };
+};
 
-// H keeps it shown; the mouse shows it for a while
-let pinned = false;
-let shownTicks = 0;
+let shown = false;
 let lastPointer = { x: -1, y: -1 };
 let pointerMoved = false;
 
-const panelShown = () => pinned || shownTicks > 0 || draggingBar;
+const panelShown = () => shown || draggingBar;
 
 const watchPointer = () => {
-  const moved = pointer.x[0] != lastPointer.x || pointer.y[0] != lastPointer.y;
+  pointerMoved = pointer.x[0] != lastPointer.x || pointer.y[0] != lastPointer.y;
   lastPointer = { x: pointer.x[0], y: pointer.y[0] };
-  pointerMoved = moved;
-  if (moved || pointer.down) {
-    shownTicks = SHOWN_TICKS;
-  } else if (shownTicks > 0) {
-    shownTicks--;
-  }
 };
 
 const dx = (x) => x * view.scaleX;
@@ -96,6 +118,15 @@ const font = (classic, size, bold = false) => {
   rd.font = classic
     ? `bold ${Math.round(size * 0.7 * (view.height / 450))}px Arial`
     : `${bold ? "bold " : ""}${size * 0.5 * (view.scaleY + view.scaleX)}px verd`;
+};
+
+// a font so many pixels high: the classic look's the original's bold Arial
+const pixelFont = (size, bold = false) => {
+  rd.letterSpacing = "0px";
+  rd.font =
+    look.current == LOOK.classic
+      ? `bold ${Math.round(size)}px Arial`
+      : `${bold ? "bold " : ""}${Math.round(size)}px verd`;
 };
 
 // the looks' colours: the classic one the original's menu blue and black
@@ -141,15 +172,29 @@ const over = (x, y, width, height) =>
   pointer.y[0] > y &&
   pointer.y[0] < y + height;
 
-// --- the bar of the whole race ---
+// --- the bar of the whole race: its own element, the times at its ends ---
 
 let draggingBar = false;
 
-const drawBar = (colors) => {
-  const x = dx(BAR.left);
-  const y = dy(BAR.top);
-  const width = dx(BAR.right - BAR.left);
-  const height = BAR.height * view.scale;
+const drawSeekBar = (colors, { seek }) => {
+  const box = seek;
+  rd.fillStyle = colors.panel;
+  rounded(box.x, box.y, box.width, box.height, box.height / 2);
+  rd.fill();
+  pixelFont(box.height * 0.36, true);
+  rd.fillStyle = colors.text;
+  rd.textBaseline = "middle";
+  const middle = box.y + box.height / 2;
+  const inset = box.height * 0.5;
+  rd.textAlign = "left";
+  rd.fillText(time(viewer.frame), box.x + inset, middle);
+  rd.textAlign = "right";
+  rd.fillText(time(lastFrame()), box.x + box.width - inset, middle);
+  const timeWidth = rd.measureText("00:00.0").width + inset * 1.5;
+  const x = box.x + timeWidth;
+  const width = box.width - 2 * timeWidth;
+  const height = Math.max(6, box.height * 0.22);
+  const y = middle - height / 2;
   const played = lastFrame() > 0 ? viewer.frame / lastFrame() : 1;
   rd.fillStyle = colors.unplayed;
   rounded(x, y, width, height, height / 2);
@@ -158,16 +203,13 @@ const drawBar = (colors) => {
   rounded(x, y, Math.max(height, width * played), height, height / 2);
   rd.fill();
   rd.beginPath();
-  rd.arc(x + width * played, y + height / 2, height, 0, 2 * Math.PI);
+  rd.arc(x + width * played, middle, height, 0, 2 * Math.PI);
   rd.fillStyle = "#FFFFFF";
   rd.fill();
-  // pressed on it (with room around), and dragged: the race jumps along
-  const reach = 12 * view.scale;
+  // pressed on it (anywhere on its element), and dragged: the race jumps along
   if (!pointer.down) {
     draggingBar = false;
-  } else if (
-    over(x - reach, y - reach, width + 2 * reach, height + 2 * reach)
-  ) {
+  } else if (over(box.x, box.y, box.width, box.height)) {
     draggingBar = true;
   }
   if (draggingBar) {
@@ -179,35 +221,36 @@ const drawBar = (colors) => {
   }
 };
 
-// --- buttons: flat, the label and its key below it; clicked when let go on them ---
+// --- buttons: flat and low, the label and its key beside it; clicked when let go ---
 
 // the button pressed, by its index
 let pressed = -1;
 
-const button = (index, count, label, key, classic, colors) => {
-  const { left, right, top, height, gap } = BUTTONS;
-  const each = (right - left - gap * (count - 1)) / count;
-  const x = dx(left + index * (each + gap));
-  const y = dy(top);
-  const width = dx(each);
-  const h = dy(height);
+const button = (index, box, label, key, colors) => {
+  const { x, y, width, height: h } = box;
   const hovered = over(x, y, width, h);
   if (pointer.down && hovered && !draggingBar && pressed == -1) {
     pressed = index;
   }
-  rd.fillStyle = hovered ? colors.over : colors.button;
-  rounded(x, y, width, h, 8 * view.scale);
+  rd.fillStyle = hovered ? colors.over : colors.panel;
+  rounded(x, y, width, h, h / 2);
   rd.fill();
-  rd.textAlign = "center";
   rd.textBaseline = "middle";
-  font(classic, 15, true);
+  rd.textAlign = "left";
+  pixelFont(h * 0.3);
+  const keyWidth = key ? rd.measureText(key).width : 0;
+  pixelFont(h * 0.36, true);
+  const labelWidth = rd.measureText(label).width;
+  const space = key ? h * 0.18 : 0;
+  const textLeft = x + (width - labelWidth - space - keyWidth) / 2;
   rd.fillStyle = pressed == index && hovered ? colors.pressed : colors.label;
-  rd.fillText(label, x + width / 2, y + h * 0.38);
-  font(classic, 10);
-  rd.fillStyle = colors.key;
-  rd.fillText(key, x + width / 2, y + h * 0.75);
-  const clicked = !pointer.down && pressed == index && hovered;
-  return clicked;
+  rd.fillText(label, textLeft, y + h / 2);
+  if (key) {
+    pixelFont(h * 0.3);
+    rd.fillStyle = colors.key;
+    rd.fillText(key, textLeft + labelWidth + space, y + h / 2);
+  }
+  return !pointer.down && pressed == index && hovered;
 };
 
 // Back to where the viewer was opened from; after a replay file, the main menu.
@@ -231,23 +274,23 @@ const save = () => {
 // The controls: [label, key shown, what it does, the keys (code, with Shift)]. A replay
 // file needs no saving again.
 const controls = () => [
-  ["<< 5 Sec", "Shift+Left", () => jump(-JUMP_FRAMES)],
+  ["<< 5 s", "\u21e7\u2190", () => jump(-JUMP_FRAMES)],
   [viewer.playing ? "Pause" : "Play", "Space", togglePlaying],
-  ["5 Sec >>", "Shift+Right", () => jump(JUMP_FRAMES)],
-  ["Slower", "Down", () => changeSpeed(-1)],
-  ["Faster", "Up", () => changeSpeed(1)],
+  ["5 s >>", "\u21e7\u2192", () => jump(JUMP_FRAMES)],
+  ["Slower", "\u2193", () => changeSpeed(-1)],
+  ["Faster", "\u2191", () => changeSpeed(1)],
   [CAMERA_NAMES[camera.mode] ?? "Camera", "V", nextCamera],
-  ["Cars", "Tab", openPicker],
+  ["Cars", "Tab", togglePicker],
   ...(canSave() ? [["Save", "Ctrl+S", save]] : []),
   ["Exit", "Esc", exit],
 ];
 
 // what the keys do that have no button of their own, or more than one key
 const KEYS = {
-  Tab: openPicker,
+  Tab: togglePicker,
   Space: togglePlaying,
   KeyV: nextCamera,
-  KeyH: () => (pinned = !pinned),
+  KeyH: () => (shown = !shown),
   Home: () => seekReplay(0),
   End: () => seekReplay(lastFrame()),
   ArrowUp: () => changeSpeed(1),
@@ -255,11 +298,12 @@ const KEYS = {
 };
 
 const readKeys = () => {
-  if (picker.open) {
-    readPickerKeys();
-    return;
-  }
+  let escaped = false;
   for (const { code, shift, ctrl } of takePressedKeys()) {
+    escaped ||= code == "Escape";
+    if (picker.open && pickerKey(code)) {
+      continue;
+    }
     if (code == "KeyC") {
       nextCar(shift ? -1 : 1);
     } else if (code == "KeyS" && ctrl) {
@@ -272,7 +316,10 @@ const readKeys = () => {
   }
   if (confirm.state == CONFIRM.pressed) {
     confirm.state = CONFIRM.used;
-    exit();
+    // (Enter follows the chosen car while the list shows; Escape still leaves)
+    if (!picker.open || escaped) {
+      exit();
+    }
   }
 };
 
@@ -292,7 +339,7 @@ const moveFree = () => {
   let yaw = 0;
   let pitch = 0;
   // dragged on the race (not on the controls below it)
-  const onRace = !panelShown() || pointer.y[0] < dy(PANEL.top);
+  const onRace = !panelShown() || pointer.y[0] < layout().top;
   if (pointer.down && (dragFrom || onRace)) {
     if (dragFrom) {
       yaw = (pointer.x[0] - dragFrom.x) * DRAG_TURN;
@@ -332,90 +379,91 @@ const pictureOf = (classic, type) => {
   return image.complete && image.naturalWidth ? image : null;
 };
 
-function openPicker() {
-  picker.open = true;
+function togglePicker() {
+  picker.open = !picker.open;
   picker.choice = camera.target;
+  picker.ticks = 0;
 }
 
+// (the list stays: only Tab, or its button, takes it away)
 const pick = (c) => {
+  picker.choice = c;
   if (c != camera.target) {
     nextCar(c - camera.target);
   }
-  picker.open = false;
 };
 
-// as many columns as fit the cars in about the screen's shape
-const columnsFor = (count) =>
-  Math.min(count, Math.ceil(Math.sqrt(count * 1.8)));
+// The cars drive in from the screen's edges: the first half down the left, the others
+// down the right. Where car c's card is: { side (0 left, 1 right), row }.
+const cardOf = (c, count) => {
+  const perSide = Math.ceil(count / 2);
+  return c < perSide
+    ? { side: 0, row: c, perSide }
+    : { side: 1, row: c - perSide, perSide };
+};
 
-const readPickerKeys = () => {
+// While the list shows, the arrows choose a car and Enter follows it (the rest of the
+// keys do what they always do). Returns whether the key was the list's.
+const pickerKey = (code) => {
   const count = game.carCount;
-  const columns = columnsFor(count);
-  const moves = {
-    ArrowLeft: -1,
-    ArrowRight: 1,
-    ArrowUp: -columns,
-    ArrowDown: columns,
-  };
-  for (const { code } of takePressedKeys()) {
-    if (code in moves) {
-      picker.choice = Math.max(
-        0,
-        Math.min(count - 1, picker.choice + moves[code]),
-      );
-    } else if (code == "Enter" || code == "Space") {
-      pick(picker.choice);
-    } else if (code == "Escape" || code == "Tab") {
-      picker.open = false;
-    }
+  const { side, row, perSide } = cardOf(picker.choice, count);
+  const at = (s, r) =>
+    Math.min(count - 1, s * perSide + Math.max(0, Math.min(perSide - 1, r)));
+  if (code == "ArrowUp" || code == "ArrowDown") {
+    picker.choice = at(side, row + (code == "ArrowUp" ? -1 : 1));
+  } else if (code == "ArrowLeft" || code == "ArrowRight") {
+    picker.choice = at(code == "ArrowLeft" ? 0 : 1, row);
+  } else if (code == "Enter") {
+    pick(picker.choice);
+  } else {
+    return false;
   }
-  // (Enter and Escape confirm too: here they never close the replay)
-  if (confirm.state == CONFIRM.pressed) {
-    confirm.state = CONFIRM.used;
-  }
+  return true;
 };
 
-// the cards in design units: the picture 5 by 3, the name below it
-const CARD = { width: 250, picture: 150, name: 34, gap: 16 };
-const PICKER_AREA = { top: 150, bottom: 690, width: 1200 };
+// the cards in design units: as wide as a picture 5 by 3 at its tallest, the name on it
+// the cards: at most so wide and high (design units), at least so high to be touched
+// (pixels), a picture 5 by 3 with the name on it; below the title, above the controls
+const CARD = { width: 210, tallest: 126, smallest: 56, gap: 8, margin: 14 };
+const TITLE_BOTTOM = 130;
+
+// ticks the cards take to drive in
+const DRIVE_IN = 8;
 
 const drawPicker = (classic, colors) => {
   const count = game.carCount;
-  const columns = columnsFor(count);
-  const rows = Math.ceil(count / columns);
-  const height = CARD.picture + CARD.name;
-  const fit = Math.min(
-    1,
-    (PICKER_AREA.width - CARD.gap * (columns - 1)) / (columns * CARD.width),
-    (PICKER_AREA.bottom - PICKER_AREA.top - CARD.gap * (rows - 1)) /
-      (rows * height),
-  );
-  const width = CARD.width * fit;
-  const tall = height * fit;
-  const left = 640 - (columns * width + (columns - 1) * CARD.gap) / 2;
-  const top =
-    (PICKER_AREA.top + PICKER_AREA.bottom) / 2 -
-    (rows * tall + (rows - 1) * CARD.gap) / 2;
-  rd.fillStyle = "rgba(0,0,0,0.55)";
-  rd.fillRect(0, 0, view.width, view.height);
-  font(classic, 22, true);
-  rd.fillStyle = colors.text;
-  rd.textAlign = "center";
-  rd.textBaseline = "middle";
-  rd.fillText("Which car to follow?", dx(640), dy(top - 34));
-  font(classic, 12);
-  rd.fillStyle = colors.key;
-  rd.fillText(
-    "Click a car, or the arrows and Enter.   Esc or Tab: back",
-    dx(640),
-    dy(PICKER_AREA.bottom + 12),
-  );
+  const { perSide } = cardOf(0, count);
+  // in pixels: down to the controls, or the hint
+  const top = dy(TITLE_BOTTOM) + 8;
+  const bottom = panelShown()
+    ? layout().top
+    : view.height - 3 * layout().seek.height;
+  const gap = dy(CARD.gap);
+  // in more columns on each side while too few would make them too small to touch
+  let columns = 1;
+  let rows = perSide;
+  const fit = () => (bottom - top - gap * (rows - 1)) / rows;
+  while (fit() < CARD.smallest && columns < perSide) {
+    columns++;
+    rows = Math.ceil(perSide / columns);
+  }
+  const tall = Math.max(CARD.smallest, Math.min(dy(CARD.tallest), fit()));
+  const width = Math.min(dx(CARD.width), (tall * 5) / 3);
+  const sideWidth = columns * width + (columns - 1) * gap;
+  // driving in: fast, then slowing down
+  picker.ticks = Math.min(DRIVE_IN, (picker.ticks ?? 0) + 1);
+  const t = picker.ticks / DRIVE_IN;
+  const inBy = (1 - (1 - t) ** 3) * (sideWidth + dx(CARD.margin));
   let clicked = -1;
   for (let c = 0; c < count; c++) {
-    const x = dx(left + (c % columns) * (width + CARD.gap));
-    const y = dy(top + Math.floor(c / columns) * (tall + CARD.gap));
-    const w = dx(width);
-    const h = dy(tall);
+    const { side, row: place } = cardOf(c, count);
+    const column = place % columns;
+    const row = Math.floor(place / columns);
+    const sideLeft = side == 0 ? inBy - sideWidth : view.width - inBy;
+    const x = sideLeft + column * (width + gap);
+    const y = top + row * (tall + gap);
+    const w = width;
+    const h = tall;
     const hovered = over(x, y, w, h);
     if (hovered && pointerMoved) {
       picker.choice = c;
@@ -425,31 +473,40 @@ const drawPicker = (classic, colors) => {
     rounded(x, y, w, h, 10 * view.scale);
     rd.fill();
     const picture = pictureOf(classic, game.carTypes[c]);
-    const ph = dy(CARD.picture * fit);
+    rd.save();
+    rounded(x, y, w, h, 10 * view.scale);
+    rd.clip();
     if (picture) {
-      rd.save();
-      rounded(x, y, w, ph, 10 * view.scale);
-      rd.clip();
-      rd.drawImage(picture, x, y, w, ph);
-      rd.restore();
+      rd.drawImage(picture, x, y, w, h);
     }
+    // the name on a dark strip along the bottom
+    const strip = Math.max(16, h * 0.22);
+    rd.fillStyle = "rgba(0,0,0,0.6)";
+    rd.fillRect(x, y + h - strip, w, strip);
+    rd.restore();
     rd.strokeStyle = chosen ? colors.pressed : colors.edge;
-    rd.lineWidth = (chosen ? 4 : 1) * view.scale;
+    rd.lineWidth = (chosen ? 3 : 1) * view.scale;
     rounded(x, y, w, h, 10 * view.scale);
     rd.stroke();
-    font(classic, 14, true);
-    rd.fillStyle = c == camera.target ? colors.pressed : colors.label;
-    rd.fillText(carName(c), x + w / 2, y + ph + (h - ph) / 2);
-    if (hovered && pointer.down) {
-      pressed = c;
+    // (a long name smaller, to fit)
+    pixelFont(strip * 0.6, true);
+    const nameWidth = rd.measureText(carName(c)).width;
+    if (nameWidth > w * 0.92) {
+      pixelFont((strip * 0.6 * w * 0.92) / nameWidth, true);
     }
-    if (hovered && !pointer.down && pressed == c) {
+    rd.textAlign = "center";
+    rd.textBaseline = "middle";
+    rd.fillStyle = c == camera.target ? colors.pressed : "#FFFFFF";
+    rd.fillText(carName(c), x + w / 2, y + h - strip / 2);
+    // (a card's press told from a button's: both may show at once)
+    if (hovered && pointer.down) {
+      pressed = `car${c}`;
+    }
+    if (hovered && !pointer.down && pressed == `car${c}`) {
       clicked = c;
     }
   }
-  if (!pointer.down) {
-    pressed = -1;
-  }
+  // (the press is let go of after the controls below had their look at it)
   if (clicked >= 0) {
     pick(clicked);
   }
@@ -457,9 +514,15 @@ const drawPicker = (classic, colors) => {
 
 // --- the overlay ---
 
-const MORE_KEYS =
-  "Left / Right: a step (hold: wind)     Home / End: start / end     " +
-  "Free camera: W A S D, Q / E, Shift, drag to look     Behind: Z / X look back";
+// the keys with no button, and the free camera's while it is on
+const keysLine = () =>
+  "\u2190 \u2192: a step (hold: wind)     Home / End: start / end     " +
+  (camera.mode == CAMERA.free
+    ? "Free camera: W A S D, Q / E, Shift, drag to look"
+    : camera.mode == CAMERA.behind
+      ? "Z / X: look back"
+      : "C / \u21e7C: next / previous car") +
+  "     H: hide";
 
 const stateOf = () =>
   viewer.playing
@@ -495,62 +558,71 @@ const drawTitle = (classic, colors) => {
   rd.fillText(carName(camera.target), dx(20), dy(118));
 };
 
-// bottom middle, while the panel is hidden
-const drawHint = (classic, colors) => {
-  const text = "Press H for the replay controls";
-  font(classic, 15, true);
+// A line of text in a pill, its middle at (x, y) and so high, in pixels; returns
+// whether it was clicked.
+const drawPill = (colors, text, x, y, height, id) => {
+  pixelFont(height * 0.42, true);
   rd.textAlign = "center";
   rd.textBaseline = "middle";
-  const x = dx(640);
-  const y = dy(690);
-  const width = rd.measureText(text).width + dx(40);
-  rd.fillStyle = colors.panel;
-  rounded(x - width / 2, y - dy(18), width, dy(36), dy(18));
+  const width = Math.min(
+    view.width - 12,
+    rd.measureText(text).width + height * 1.2,
+  );
+  const left = x - width / 2;
+  const top = y - height / 2;
+  const hovered = over(left, top, width, height);
+  rd.fillStyle = hovered ? colors.over : colors.panel;
+  rounded(left, top, width, height, height / 2);
   rd.fill();
   rd.fillStyle = colors.text;
   rd.fillText(text, x, y);
+  if (hovered && pointer.down) {
+    pressed = id;
+  }
+  return hovered && !pointer.down && pressed == id;
 };
 
-const drawPanel = (classic, colors) => {
-  const x = dx(PANEL.left);
-  const y = dy(PANEL.top);
-  const width = dx(PANEL.right - PANEL.left);
-  const height = dy(PANEL.bottom - PANEL.top);
-  rd.fillStyle = colors.panel;
-  rounded(x, y, width, height, 14 * view.scale);
-  rd.fill();
-  rd.strokeStyle = colors.edge;
-  rd.lineWidth = Math.max(1, view.scale);
-  rd.stroke();
-  font(classic, 13);
-  rd.fillStyle = colors.text;
-  rd.textBaseline = "middle";
-  rd.textAlign = "left";
-  rd.fillText(
-    `${CAMERA_NAMES[camera.mode] ?? "Camera"} camera,  ${carName(camera.target)}`,
-    dx(BAR.left),
-    dy(563),
-  );
-  rd.textAlign = "right";
-  rd.fillText(
-    pinned ? "H: hide the controls" : "H: keep the controls",
-    dx(BAR.right),
-    dy(563),
-  );
-  drawBar(colors);
+// the hint at the bottom, while the controls are hidden; it shows them when clicked
+const drawHint = (colors) => {
+  const { touch } = layout();
+  const height = Math.max(touch ? 44 : 30, 34 * view.scale);
+  const text = picker.open
+    ? touch
+      ? "Tap a car to follow it.   Tap here for the controls"
+      : "Click a car to follow it   Tab: hide the cars   H: the controls"
+    : touch
+      ? "Tap here for the replay controls"
+      : "Press H for the replay controls";
+  if (
+    drawPill(colors, text, view.width / 2, view.height - height, height, "hint")
+  ) {
+    shown = true;
+  }
+};
+
+const drawControls = (colors) => {
+  const place = layout();
+  // the other keys; on a phone, where to hide the controls again
+  const line = place.touch ? "Tap here to hide the controls" : keysLine();
+  if (
+    drawPill(
+      colors,
+      line,
+      view.width / 2,
+      place.line.y + place.line.height / 2,
+      place.line.height,
+      "line",
+    )
+  ) {
+    shown = false;
+  }
+  drawSeekBar(colors, place);
   const all = controls();
   const chosen = all
     .map(([label, key], i) =>
-      button(i, all.length, label, key, classic, colors),
+      button(i, place.buttonAt(i), label, place.touch ? "" : key, colors),
     )
     .indexOf(true);
-  if (!pointer.down) {
-    pressed = -1;
-  }
-  font(classic, 10);
-  rd.fillStyle = colors.key;
-  rd.textAlign = "center";
-  rd.fillText(MORE_KEYS, dx(640), dy(684));
   all[chosen]?.[2]();
 };
 
@@ -562,11 +634,14 @@ export function drawReplayOverlay() {
   drawTitle(classic, colors);
   if (picker.open) {
     drawPicker(classic, colors);
-  } else if (panelShown()) {
-    drawPanel(classic, colors);
+  }
+  if (panelShown()) {
+    drawControls(colors);
   } else {
+    drawHint(colors);
+  }
+  if (!pointer.down) {
     pressed = -1;
-    drawHint(classic, colors);
   }
   readKeys();
   moveFree();
