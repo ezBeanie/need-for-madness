@@ -1449,7 +1449,7 @@ const nameStunt = (player) => {
 };
 
 // Praises a landed stunt, more for the more power it gave, and tells the power up.
-const praiseStunt = () => {
+export const praiseStunt = () => {
   const player = racers[game.player];
   stuntText = nameStunt(player);
   if (raceEvents.stuntTicks >= 45) {
@@ -1505,12 +1505,14 @@ const announceEvents = () => {
     for (let i = 0; i < game.carCount; i++) {
       if (knownWrecks[i] != track.dested[i] && i != game.player) {
         knownWrecks[i] = track.dested[i];
-        if (knownWrecks[i] == 1) {
+        // (with a guest, a car hit last by the other human was not wasted by this one)
+        const byYou = knownWrecks[i] == 2 && racers[i].lastHitBy == game.player;
+        if (knownWrecks[i] == 1 || (knownWrecks[i] == 2 && !byYou)) {
           messageImportant = true;
           message = "" + carStats.names[game.carTypes[i]] + " has been wasted!";
           raceEvents.messageTicks = -15;
         }
-        if (knownWrecks[i] == 2) {
+        if (byYou) {
           messageImportant = true;
           message = "You wasted " + carStats.names[game.carTypes[i]] + "!";
           raceEvents.messageTicks = -15;
@@ -1653,6 +1655,10 @@ export function drawGuestHud(hud, notice, ping) {
   }
   if (!raceOver) {
     drawCountdown();
+    learnStunts();
+    drawPowerHint();
+    drawMessages();
+    announceEvents();
   }
   if (notice) {
     drawCenteredText(192, notice, 0, 0, 0, TEXT.label);

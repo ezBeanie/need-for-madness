@@ -3092,11 +3092,14 @@ function crashCorners(c, xc, i, j, at, xat) {
     racers[xc].wheelSpeedZ,
     HIT.alongZ,
   );
+  // (and which human it was, so each one is told whom they wasted)
   if (isHuman(c)) {
     racers[xc].lastcolido = 70;
+    racers[xc].lastHitBy = c;
   }
   if (isHuman(xc)) {
     racers[c].lastcolido = 70;
+    racers[c].lastHitBy = xc;
   }
   racers[xc].wheelSpeedY[j] += carStats.lift[car[c].typ];
 }

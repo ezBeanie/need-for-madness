@@ -7,10 +7,12 @@ import { raceEvents } from "../race/events.js";
 import { field, setUpField } from "../race/field.js";
 import { raceCarTextures } from "../render/generated.js";
 import { raceTape, tapeTick } from "../race/raceTape.js";
-import { racers } from "../race/racers.js";
+import { car, racers } from "../race/racers.js";
 import { track } from "../race/track.js";
+import { tick } from "../core/tick.js";
 import {
   GUEST_CAR,
+  GUEST_HUD_FIELDS,
   MESSAGE,
   OUTCOME,
   ROLE,
@@ -167,11 +169,13 @@ export const sendHostTick = () => {
       wasted: racers
         .slice(0, game.carCount)
         .filter((racer, c) => c != GUEST_CAR && racer.wasted).length,
-      nlaps: guest.nlaps,
-      damage: guest.damage,
-      power: guest.power,
-      point: guest.point,
-      missedCheckpoint: guest.missedCheckpoint,
+      ...Object.fromEntries(GUEST_HUD_FIELDS.map((key) => [key, guest[key]])),
+      fcnt: car[GUEST_CAR].fcnt,
+      // the guest's stunt landed this tick (as the host's HUD praises the player's)
+      stunted: guest.countingStunt == 10 && tick.fraction >= tick.scale,
+      // the cars wasted, and who hit them last: whether the guest wasted them
+      dested: track.dested.slice(0, game.carCount),
+      lastHitBy: racers.slice(0, game.carCount).map((r) => r.lastHitBy ?? -1),
       ...guestOutcome(),
     },
   });

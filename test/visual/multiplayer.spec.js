@@ -233,3 +233,74 @@ test("leaving the room ends the link", async ({ page }) => {
   await game.advance();
   await expect(page.getByRole("button", { name: "Multiplayer" })).toBeVisible();
 });
+
+// Every text a page draws on its canvas, to see what its HUD shows.
+const recordDrawnTexts = (context) =>
+  context.addInitScript(() => {
+    window.drawnTexts = new Set();
+    const fillText = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function (text, ...rest) {
+      window.drawnTexts.add(String(text));
+      return fillText.call(this, text, ...rest);
+    };
+  });
+
+const drawnTexts = async (page) => {
+  const texts = await page.evaluate(() => [...window.drawnTexts]);
+  await page.evaluate(() => window.drawnTexts.clear());
+  return texts;
+};
+
+test("the guest's HUD tells of its stunts and of the car it wasted, the host's of a car wasted", async ({
+  context,
+}) => {
+  await recordDrawnTexts(context);
+  const { host, guest, hostPage, guestPage } = await raceTogether(
+    context,
+    "events",
+  );
+  const both = [
+    { game: host, page: hostPage },
+    { game: guest, page: guestPage },
+  ];
+  // past the countdown
+  while (
+    await hostPage.evaluate(() => window.gameState.raceEvents.countdown != 0)
+  ) {
+    await advanceBoth(...both, 10);
+  }
+  await advanceBoth(...both, 10);
+  await drawnTexts(hostPage);
+  await drawnTexts(guestPage);
+
+  // the guest's car lands a stunt, and wastes the car beside it (wasted with no dent,
+  // that car gets the body the hits wasting it would have given it)
+  for (const page of [hostPage, guestPage]) {
+    await page.evaluate((c) => window.gameState.fixcar(c + 1), GUEST_CAR);
+  }
+  await hostPage.evaluate((c) => {
+    const { racers } = window.gameState;
+    // a forward looping, landed
+    racers[c].countingStunt = 9;
+    racers[c].flipped = 360;
+    racers[c].stuntPower = 30;
+    racers[c + 1].lastcolido = 70;
+    racers[c + 1].lastHitBy = c;
+    racers[c + 1].damage = 1e6;
+  }, GUEST_CAR);
+  await advanceBoth(...both, 20);
+  await guestPage.waitForTimeout(DELIVERY_MS);
+  await guest.advance(STORE_TICKS + 3);
+
+  const onGuest = await drawnTexts(guestPage);
+  const onHost = await drawnTexts(hostPage);
+  // (with a full power bar, the praise is "POWER TO THE MAX")
+  expect(onGuest.some((text) => /^POWER (UP|TO THE MAX)/.test(text))).toBe(
+    true,
+  );
+  expect(onGuest.some((text) => /Forward loop/.test(text))).toBe(true);
+  expect(onGuest.some((text) => /^You wasted .+!$/.test(text))).toBe(true);
+  // the host did not waste it
+  expect(onHost.some((text) => /^You wasted /.test(text))).toBe(false);
+  expect(onHost.some((text) => / has been wasted!$/.test(text))).toBe(true);
+});

@@ -18,6 +18,28 @@ export const MESSAGE = {
 // the car the guest drives: the one beside the player's on the start grid
 export const GUEST_CAR = 1;
 
+// What the host sends of the guest's car each tick besides the race tape, for the guest's
+// HUD: its meters, checkpoints and stunts (see ui/hud.js).
+export const GUEST_HUD_FIELDS = [
+  "nlaps",
+  "damage",
+  "power",
+  "point",
+  "missedCheckpoint",
+  "clear",
+  "capcnt",
+  "grounded",
+  "stunt",
+  "stuntPower",
+  "surfed",
+  "flipped",
+  "flippedFarBack",
+  "flippedFarForward",
+  "rolled",
+  "rolledFar",
+  "spun",
+];
+
 // How the race ended for the guest, as the guest's HUD shows it.
 export const OUTCOME = { none: 0, won: 1, wastedThem: 2, wasted: 3, lost: 4 };
 

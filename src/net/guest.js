@@ -17,11 +17,13 @@ import { COUNTDOWN, circleTheField, dropBehindCar } from "../race/countdown.js";
 import { raceEvents } from "../race/events.js";
 import { field } from "../race/field.js";
 import { addTapeTick, raceTape } from "../race/raceTape.js";
-import { racers } from "../race/racers.js";
+import { car, racers } from "../race/racers.js";
 import { followLive, viewer } from "../race/replayViewer.js";
 import { track } from "../race/track.js";
 import { menu } from "../screens/menuState.js";
+import { praiseStunt } from "../ui/hud.js";
 import {
+  GUEST_HUD_FIELDS,
   MESSAGE,
   OUTCOME,
   ROLE,
@@ -172,14 +174,13 @@ const showHud = (hud) => {
   const player = racers[game.player];
   hud.positions.forEach((position, c) => (track.pos[c] = position));
   track.wasted = hud.wasted;
-  for (const field of [
-    "nlaps",
-    "damage",
-    "power",
-    "point",
-    "missedCheckpoint",
-  ]) {
+  for (const field of GUEST_HUD_FIELDS) {
     player[field] = hud[field];
+  }
+  car[game.player].fcnt = hud.fcnt;
+  if (Array.isArray(hud.dested) && Array.isArray(hud.lastHitBy)) {
+    hud.dested.forEach((dested, c) => (track.dested[c] = dested));
+    hud.lastHitBy.forEach((by, c) => (racers[c].lastHitBy = by));
   }
 };
 
@@ -200,6 +201,12 @@ export const guestRaceTick = () => {
     raceEvents.countdown = message.countdown;
     message.tape.forEach(addTapeTick);
     guest.hud = message.hud;
+    // (each of the host's ticks, so a stunt is praised as it was landed, even in a tick
+    // that shows two of them)
+    showHud(message.hud);
+    if (message.hud.stunted === true) {
+      praiseStunt();
+    }
   }
   if (
     countdown > COUNTDOWN.behindTheCar &&
@@ -215,9 +222,6 @@ export const guestRaceTick = () => {
       : !guest.ended && guest.quietTicks > HOST_QUIET_TICKS
         ? NOTICE.waiting
         : null;
-  if (guest.hud) {
-    showHud(guest.hud);
-  }
   if (raceTape.length > 0) {
     followLive();
   }
