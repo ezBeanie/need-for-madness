@@ -6,6 +6,8 @@ import { PHASE } from "../../src/core/state.js";
 const GUEST_CAR = 1;
 // time for a message between the tabs
 const DELIVERY_MS = 20;
+// how many of the host's ticks the guest keeps in store
+const STORE_TICKS = 3;
 // the car types host and guest chose
 const HOST_TYPE = "5";
 const GUEST_TYPE = "9";
@@ -98,7 +100,8 @@ test("a guest in another tab drives a car in the host's race", async ({
   await guestPage.keyboard.down("ArrowUp");
   await advanceBoth(...both, 300);
   await guestPage.waitForTimeout(DELIVERY_MS);
-  await guest.advance();
+  // (the guest plays the host's ticks from a small store, see src/net/guest.js)
+  await guest.advance(STORE_TICKS + 3);
   await guestPage.screenshot({ path: "test-results/multiplayer-guest.png" });
   await hostPage.screenshot({ path: "test-results/multiplayer-host.png" });
 

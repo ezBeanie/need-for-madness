@@ -34,7 +34,13 @@ const RACE_GOES_ON = [
 
 // sent: how many ticks of the race tape the guest has; quietTicks: since the guest's
 // last message
-const host = { racing: false, sent: 0, quietTicks: GUEST_GONE_TICKS };
+// pong: the guest's last ping, sent back with the next tick
+const host = {
+  racing: false,
+  sent: 0,
+  quietTicks: GUEST_GONE_TICKS,
+  pong: null,
+};
 const guestKeys = Object.fromEntries(GUEST_KEYS.map((key) => [key, false]));
 
 export const guestThere = () => host.quietTicks < GUEST_GONE_TICKS;
@@ -51,6 +57,9 @@ const receive = (message) => {
   if (message.type == MESSAGE.keys && message.keys) {
     for (const key of GUEST_KEYS) {
       guestKeys[key] = message.keys[key] === true;
+    }
+    if (Number.isFinite(message.ping)) {
+      host.pong = message.ping;
     }
   }
 };
@@ -151,6 +160,7 @@ export const sendHostTick = () => {
   link.send({
     type: MESSAGE.tick,
     countdown: raceEvents.countdown,
+    pong: host.pong,
     tape,
     hud: {
       positions: track.pos.slice(0, game.carCount),
@@ -165,4 +175,5 @@ export const sendHostTick = () => {
       ...guestOutcome(),
     },
   });
+  host.pong = null;
 };

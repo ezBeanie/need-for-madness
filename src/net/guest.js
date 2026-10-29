@@ -30,6 +30,7 @@ import {
   openLink,
   urlRoom,
 } from "./link.js";
+import { ticksToShow } from "./tickStore.js";
 
 // how often a guest not in a race tells the host it is there
 const JOIN_EVERY_TICKS = 30;
@@ -39,6 +40,8 @@ const WAITING_PHASES = [PHASE.mainMenu, PHASE.carSelect, PHASE.stageSelect];
 const HOST_QUIET_TICKS = 15;
 // a host not answering this long to joins is not in the room
 const HOST_GONE_TICKS = 100;
+// how often the guest measures the time to the host and back
+const PING_EVERY_TICKS = 30;
 
 export const NOTICE = {
   waiting: "Waiting for the host...",
@@ -48,8 +51,12 @@ export const NOTICE = {
 export const guest = {
   // the race the host started, until its stage loads
   start: null,
-  // ticks of the host's race not shown yet
+  // ticks of the host's race not shown yet, and whether they are shown (see tickStore.js)
   ticks: [],
+  playing: false,
+  // the time to the host and back, in ms (null until measured)
+  ping: null,
+  pingTicks: 0,
   // what the guest's HUD shows, as the host sent it last
   hud: null,
   // the car the guest drives in the host's race
@@ -91,6 +98,9 @@ const receive = (message) => {
     Array.isArray(message.hud.positions)
   ) {
     guest.ticks.push(message);
+    if (Number.isFinite(message.pong)) {
+      guest.ping = Math.round(performance.now() - message.pong);
+    }
   }
 };
 
@@ -115,6 +125,8 @@ const loadHostedRace = (start) => {
   guest.ownPlayer = game.player;
   guest.hud = null;
   guest.ended = false;
+  guest.playing = false;
+  guest.ping = null;
   track.stage = start.stage;
   field.replayCars = start.carTypes;
   guest.car = start.car;
@@ -184,12 +196,11 @@ const leaveHostedRace = () => {
 // A tick of the guest's race: what the host sent shows, the keys go to the host.
 export const guestRaceTick = () => {
   const countdown = raceEvents.countdown;
-  for (const message of guest.ticks) {
+  for (const message of ticksToShow(guest)) {
     raceEvents.countdown = message.countdown;
     message.tape.forEach(addTapeTick);
     guest.hud = message.hud;
   }
-  guest.ticks = [];
   if (
     countdown > COUNTDOWN.behindTheCar &&
     raceEvents.countdown <= COUNTDOWN.behindTheCar
@@ -211,7 +222,13 @@ export const guestRaceTick = () => {
     followLive();
   }
   const { up, down, left, right, handb } = racers[game.player].u;
-  link.send({ type: MESSAGE.keys, keys: { up, down, left, right, handb } });
+  link.send({
+    type: MESSAGE.keys,
+    keys: { up, down, left, right, handb },
+    // (the host sends it back with its next tick)
+    ping:
+      guest.pingTicks++ % PING_EVERY_TICKS == 0 ? performance.now() : undefined,
+  });
   if ((raceOver || guest.ended) && confirm.state == CONFIRM.pressed) {
     confirm.state = CONFIRM.used;
     leaveHostedRace();

@@ -1631,7 +1631,7 @@ const drawGuestOutcome = ({ outcome, winner }) => {
 };
 
 // A guest's HUD: the race as the host sent it (see net/guest.js).
-export function drawGuestHud(hud, notice) {
+export function drawGuestHud(hud, notice, ping) {
   rd.clearRect(0, 0, view.width, view.height);
   const raceOver = hud != null && hud.outcome != OUTCOME.none;
   if (raceOver) {
@@ -1656,6 +1656,10 @@ export function drawGuestHud(hud, notice) {
   }
   if (notice) {
     drawCenteredText(192, notice, 0, 0, 0, TEXT.label);
+  }
+  // (how far the guest's race is behind the host's, the first thing to know when it lags)
+  if (ping != null) {
+    drawCenteredText(706, `Ping ${ping} ms`, 0, 0, 0, TEXT.small);
   }
 }
 

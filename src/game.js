@@ -115,7 +115,7 @@ function raceTick() {
     if (raceTape.length > 0) {
       replaySoundsTick(from, viewer.frame, true);
     }
-    drawGuestHud(guest.hud, guest.notice);
+    drawGuestHud(guest.hud, guest.notice, guest.ping);
   }
   if (game.phase == PHASE.replay) {
     const from = viewer.frame;
