@@ -21,6 +21,7 @@ import { TEXT, drawCenteredText } from "../ui/widgets.js";
 import { raceEvents } from "./events.js";
 import { racers } from "./racers.js";
 import { track } from "./track.js";
+import { startHostedRace } from "../net/host.js";
 
 // raceEvents.countdown: where it starts, where the race has faded in from white, and from
 // where the camera is behind the car with the numbers counting down to 0
@@ -64,6 +65,7 @@ const beginRace = () => {
   }
   menu.redraw = false;
   game.phase = PHASE.race;
+  startHostedRace();
 };
 
 export function countDown() {

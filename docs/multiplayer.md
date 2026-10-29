@@ -74,6 +74,11 @@ Grundsatz: Einzelspieler bleibt bitgleich, alle Golden Masters grün.
   HUD des Spielers hoch (hud.js `drawTrackWarnings`), abhängig von Kamera und Pfeil. Für einen
   entfernten Menschen bleibt er beim Host stehen; ihn zählt künftig der Bildschirm des Gastes.
 
+Stand nach Schritt 2: `src/net/{link,host,guest}.js`, Phase `guestRace`, Test
+`test/visual/multiplayer.spec.js` (zwei Tabs). Offen: Der Gast fährt das Auto, das das Feld des
+Hosts an Platz 1 hat; Pause beim Host hält den Gast an; verlässt der Host das Rennen, bleibt der
+Gast stehen; Touch-Steuerung beim Gast fehlt; Kamera des Gastes ohne den Countdown-Flug.
+
 ### Schritt 3: Server und Raum per Link
 
 - Kleiner Node-WebSocket-Dienst (Relay, Räume), eigener Container neben nginx auf beanie.

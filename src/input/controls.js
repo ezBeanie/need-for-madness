@@ -41,7 +41,11 @@ export function onKey(action, pressed) {
   if (action == "handbrake") {
     input.handb = pressed;
     // outside races the space bar confirms (the replay viewer has keys of its own)
-    if (game.phase != PHASE.race && game.phase != PHASE.replay) {
+    if (
+      game.phase != PHASE.race &&
+      game.phase != PHASE.replay &&
+      game.phase != PHASE.guestRace
+    ) {
       pressConfirm(pressed);
     }
   }
@@ -59,8 +63,12 @@ export function onKey(action, pressed) {
     }
   }
   if (action == "rewind") {
-    // rewinding starts when the key is let go
-    if (game.phase == PHASE.race && raceEvents.countdown == 0) {
+    // rewinding starts when the key is let go; a race with a guest goes on for both
+    if (
+      game.phase == PHASE.race &&
+      raceEvents.countdown == 0 &&
+      game.humans.length == 0
+    ) {
       if (pressed) {
         buttons.pressedByKey = REWIND_BUTTON;
       } else {
@@ -79,7 +87,11 @@ export function onKey(action, pressed) {
   if (action == "lookBackRight") {
     camera.lookBack = pressed ? 1 : 0;
   }
-  if (!pressed && action == "nextCamera" && game.phase == PHASE.race) {
+  if (
+    !pressed &&
+    action == "nextCamera" &&
+    (game.phase == PHASE.race || game.phase == PHASE.guestRace)
+  ) {
     camera.mode++;
     if (camera.mode == CAMERA.flyTo) {
       camera.mode = CAMERA.behind;

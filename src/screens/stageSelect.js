@@ -70,6 +70,7 @@ import {
 } from "../ui/widgets.js";
 import { menu } from "./menuState.js";
 import { showOpenedReplay } from "./replays.js";
+import { showHostedRace } from "../net/guest.js";
 import { loadConfetti } from "./raceEnd.js";
 
 export const stageSelect = {
@@ -220,7 +221,8 @@ export function stageLoadingTick() {
     stageLoad.progress == STAGE_LOAD.screenShown &&
     (menu.redraw ||
       stageLoad.after == AFTER_LOAD.race ||
-      stageLoad.after == AFTER_LOAD.replay)
+      stageLoad.after == AFTER_LOAD.replay ||
+      stageLoad.after == AFTER_LOAD.guest)
   ) {
     loadStage();
     if (!isEngineLoaded(game.carTypes[0])) {
@@ -242,6 +244,8 @@ export function stageLoadingTick() {
   if (stageLoad.progress == STAGE_LOAD.loaded) {
     if (stageLoad.after == AFTER_LOAD.replay) {
       showOpenedReplay();
+    } else if (stageLoad.after == AFTER_LOAD.guest) {
+      showHostedRace();
     } else if (stageLoad.after != AFTER_LOAD.race) {
       openStageSelect();
     } else {

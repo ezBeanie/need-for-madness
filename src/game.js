@@ -24,6 +24,7 @@ import {
   drawHighlightOverlay,
   drawRewindOverlay,
   drawSwitchScreen,
+  drawGuestHud,
   drawHud,
 } from "./ui/hud.js";
 import { menu } from "./screens/menuState.js";
@@ -38,7 +39,7 @@ import {
   recording,
   timeRewindTick,
 } from "./race/recording.js";
-import { cutRaceTape, recordRaceTick } from "./race/raceTape.js";
+import { cutRaceTape, raceTape, recordRaceTick } from "./race/raceTape.js";
 import { atReplayPace, replayViewerTick, viewer } from "./race/replayViewer.js";
 import { replaySoundsTick } from "./audio/replaySounds.js";
 import { drawReplayOverlay, heldArrow } from "./ui/replayControls.js";
@@ -56,6 +57,13 @@ import { updateStandings } from "./race/standings.js";
 import { animateTrack, castShadows, placeWheels } from "./render/raceScene.js";
 import { countDown, flashTick } from "./race/countdown.js";
 import { onKey } from "./input/controls.js";
+import { applyGuestKeys, sendHostTick, startHosting } from "./net/host.js";
+import {
+  guest,
+  guestRaceTick,
+  guestWaitingTick,
+  startGuesting,
+} from "./net/guest.js";
 
 // The logic runs in fixed ticks, whatever the display's refresh rate (see tick.js).
 const TICK_MS = 35;
@@ -69,6 +77,7 @@ function raceTick() {
   raceEvents.onelec = false;
   if (game.phase == PHASE.race) {
     if (raceEvents.countdown == 0) {
+      applyGuestKeys();
       drive();
       moveScenery(true);
       recordTick();
@@ -80,6 +89,19 @@ function raceTick() {
     } else {
       countDown();
     }
+    sendHostTick();
+  }
+  if (game.phase == PHASE.guestRace) {
+    const from = viewer.frame;
+    guestRaceTick();
+    if (!atReplayPace(() => moveScenery(true))) {
+      placeWheels();
+      castShadows();
+    }
+    if (raceTape.length > 0) {
+      replaySoundsTick(from, viewer.frame, true);
+    }
+    drawGuestHud(guest.hud);
   }
   if (game.phase == PHASE.replay) {
     const from = viewer.frame;
@@ -153,6 +175,7 @@ let musicPaused = false;
 export function runTick() {
   fitToWindow();
   pollGamepads();
+  guestWaitingTick();
   for (const [phases, run] of TICKS) {
     if (phases.includes(game.phase)) {
       run();
@@ -224,6 +247,8 @@ scatterMenuSmoke();
 random.fx();
 
 installReplayDrop(window);
+startHosting();
+startGuesting();
 installOptionsMenu();
 
 installPointer(canvas2D, {

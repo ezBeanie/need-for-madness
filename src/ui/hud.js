@@ -36,6 +36,7 @@ import { MISSED, STUNT, car, racers } from "../race/racers.js";
 import { HIGHLIGHT, startHighlight, recording } from "../race/recording.js";
 import { VIEWER_FROM, openReplay } from "../race/replayViewer.js";
 import { track } from "../race/track.js";
+import { OUTCOME } from "../net/link.js";
 import { CAMERA, camera, faceCamera } from "../render/camera.js";
 import { LOOK, look } from "../render/look.js";
 import { newParticleModel } from "../render/models.js";
@@ -1610,6 +1611,51 @@ export function drawHud() {
     announceEvents();
   }
 }
+// How a race with a host ended for the guest (see net/guest.js), as the host's game decided.
+const drawGuestOutcome = ({ outcome, winner }) => {
+  if (outcome == OUTCOME.won) {
+    drawOutcome("You Won!", "youwon");
+    drawBlinking(192, "You finished first, nice job!", 0, 128, 255);
+  }
+  if (outcome == OUTCOME.wastedThem) {
+    drawOutcome("You Wasted'em!", "youwastedem");
+    drawBlinking(192, "You Won, all cars have been wasted!", 0, 128, 255);
+  }
+  if (outcome == OUTCOME.wasted) {
+    drawOutcome("You're Wasted!", "yourwasted");
+  }
+  if (outcome == OUTCOME.lost) {
+    drawOutcome("You Lost!", "youlost");
+    drawBlinking(192, "" + winner + " finished first, race over!", 0, 128, 255);
+  }
+};
+
+// A guest's HUD: the race as the host sent it (see net/guest.js).
+export function drawGuestHud(hud) {
+  rd.clearRect(0, 0, view.width, view.height);
+  const raceOver = hud != null && hud.outcome != OUTCOME.none;
+  if (raceOver) {
+    drawGuestOutcome(hud);
+  } else if (
+    raceEvents.countdown == 0 &&
+    camera.mode == CAMERA.behind &&
+    track.stage != 16
+  ) {
+    arrow(
+      racers[game.player].point,
+      racers[game.player].missedCheckpoint,
+      racers[game.player].u.arrace,
+    );
+  }
+  if (raceEvents.countdown <= COUNTDOWN.behindTheCar) {
+    drawStanding();
+    drawMeters();
+  }
+  if (!raceOver) {
+    drawCountdown();
+  }
+}
+
 const darken = (alpha) => {
   rd.globalAlpha = alpha;
   rd.fillStyle = "#000000";

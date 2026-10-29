@@ -51,9 +51,9 @@ const prepareBrowser = ({ seed, storage }) => {
   };
 };
 
-export const openGame = async (page, { storage = {} } = {}) => {
+export const openGame = async (page, { storage = {}, url = "/" } = {}) => {
   await page.addInitScript(prepareBrowser, { seed: 1, storage });
-  await page.goto("/");
+  await page.goto(url);
   await page.waitForFunction(() => window.advanceFrames !== undefined);
   // the dev server serves the game with the test plugin that exports its state
   await page.evaluate(async (modules) => {

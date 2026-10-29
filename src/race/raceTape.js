@@ -210,3 +210,61 @@ export const cutRaceTape = (frame) => {
   raceTape.lastCheck.length = length;
   raceTape.length = length;
 };
+
+// The events of tick at, of one of the tape's event lists, as rows of their fields.
+const eventsOf = (tape, fields, count, at) => {
+  const rows = [];
+  for (let i = 0; i < tape[count]; i++) {
+    if (tape[fields[0]][i] == at) {
+      rows.push(fields.map((field) => tape[field][i]));
+    }
+  }
+  return rows;
+};
+
+const addEvents = (tape, fields, count, rows) => {
+  for (const row of rows) {
+    const k = tape[count]++;
+    fields.forEach((field, i) => (tape[field][k] = row[i]));
+  }
+};
+
+const CAR_EVENTS = [
+  [HIT, "hitCount"],
+  [["fixAt"], "fixCount"],
+  [DUST, "dustCount"],
+  [SOUND, "soundCount"],
+];
+
+// Tick at of the tape, everything a guest's copy of it needs (see net/guest.js).
+export const tapeTick = (at) => ({
+  cars: raceTape.cars.map((tape) => ({
+    values: PER_TICK.map((field) => tape[field][at]),
+    events: CAR_EVENTS.map(([fields, count]) =>
+      eventsOf(tape, fields, count, at),
+    ),
+    wasted: tape.wastedAt == at,
+  })),
+  sparks: eventsOf(raceTape.sparks, SPARK, "count", at),
+  checkpoint: raceTape.checkpoint[at],
+  lastCheck: raceTape.lastCheck[at],
+});
+
+// Adds a tick made by tapeTick to the end of the tape.
+export const addTapeTick = (tick) => {
+  const at = raceTape.length;
+  tick.cars.forEach((from, c) => {
+    const tape = raceTape.cars[c];
+    PER_TICK.forEach((field, i) => (tape[field][at] = from.values[i]));
+    CAR_EVENTS.forEach(([fields, count], i) =>
+      addEvents(tape, fields, count, from.events[i]),
+    );
+    if (from.wasted) {
+      tape.wastedAt = at;
+    }
+  });
+  addEvents(raceTape.sparks, SPARK, "count", tick.sparks);
+  raceTape.checkpoint[at] = tick.checkpoint;
+  raceTape.lastCheck[at] = tick.lastCheck;
+  raceTape.length++;
+};

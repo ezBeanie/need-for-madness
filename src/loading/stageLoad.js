@@ -40,6 +40,8 @@ export const AFTER_LOAD = {
   race: 2,
   // a replay file opened: its stage, then the replay
   replay: 3,
+  // the race of a host (see net/guest.js)
+  guest: 4,
 };
 
 export const stageLoad = {
@@ -431,7 +433,8 @@ const prepareStage = () => {
   effects.explosionCount = 0;
   if (
     stageLoad.after != AFTER_LOAD.race &&
-    stageLoad.after != AFTER_LOAD.replay
+    stageLoad.after != AFTER_LOAD.replay &&
+    stageLoad.after != AFTER_LOAD.guest
   ) {
     // the stage select tints the stage the other way round, three times as strong
     const oppositeTint = [

@@ -345,6 +345,15 @@ const windBack = (to) => {
   }
 };
 
+// A guest's view of the host's race (see net/guest.js): on to the last frame sent.
+export const followLive = () => {
+  const before = viewer.frame;
+  playOn(lastFrame());
+  viewer.between = 0;
+  viewer.pace = viewer.frame - before;
+  pose();
+};
+
 // A tick of the viewer; held is -1 or 1 while an arrow is held. Returns whether the race
 // moved on (and chips and sparks fly on).
 export const replayViewerTick = (held) => {
