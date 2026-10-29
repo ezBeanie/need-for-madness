@@ -1,7 +1,8 @@
 // The stage's surfaces the original laid the cars' shadows on (its Trackers): the
-// <track> boxes of the pieces' models, placed and turned with the pieces, in our units.
-// A shadow polygon lies on the surface under its middle, flat or sloped like a ramp,
-// in that surface's colour darkened (see drawShadow in draw.js).
+// <track> boxes of the pieces' models (and the rock piles' made like the original's),
+// placed and turned with the pieces, in our units. A shadow lies on them, flat or
+// sloped like a ramp, in the colour of the one under each polygon's middle darkened
+// (see drawShadow in draw.js).
 import { cosDeg, sinDeg, snapOf } from "./medium.js";
 
 const surfaces = [];
@@ -43,7 +44,10 @@ export const placeSurfaces = (stagePieces, radOf) => {
         // and y point the other way)
         xSlope: tanDeg(xy),
         zSlope: -tanDeg(zy),
-        shadow: t.c.map((v, k) => Math.trunc(snapOf(v, k) / 1.5)),
+        // (a rock pile's are the stage's colours already)
+        shadow: t.c.map((v, k) =>
+          Math.trunc((t.tinted ? v : snapOf(v, k)) / 1.5),
+        ),
       });
     }
   }
@@ -52,14 +56,18 @@ export const placeSurfaces = (stagePieces, radOf) => {
 // the surfaces near the car being drawn
 const near = [];
 
-// Picks the surfaces a car's shadow may reach, the car at (x, z), reach from its middle;
-// false: none, it lies on the ground.
-export const surfacesNear = (x, z, reach) => {
+// Picks the surfaces a car's shadow may lie on, the car at (x, z) with its wheels at
+// height `wheels`, reach from its middle: those not above it there, much as it climbs a
+// slope (the original took a bridge's deck over a car too). False: none, it lies on the
+// ground.
+const CLIMB = 5;
+export const surfacesNear = (x, z, reach, wheels) => {
   near.length = 0;
   for (const s of surfaces) {
     if (
       Math.abs(x - s.x) < s.radx + reach &&
-      Math.abs(z - s.z) < s.radz + reach
+      Math.abs(z - s.z) < s.radz + reach &&
+      heightOn(s, x, z) < wheels + CLIMB
     ) {
       near.push(s);
     }
@@ -67,16 +75,29 @@ export const surfacesNear = (x, z, reach) => {
   return near.length > 0;
 };
 
-// Of those, the surface under (x, z): the last placed first, as the original searched.
+// Of those, the highest under (x, z), where boxes overlap (the original took the last
+// placed, the lower one too where the boxes reach past their slopes' ends), or null.
 export const surfaceUnder = (x, z) => {
-  for (let i = near.length - 1; i >= 0; i--) {
-    const s = near[i];
+  let highest = null;
+  let height = -Infinity;
+  for (const s of near) {
     if (Math.abs(x - s.x) < s.radx && Math.abs(z - s.z) < s.radz) {
-      return s;
+      const h = heightOn(s, x, z);
+      if (h > height) {
+        highest = s;
+        height = h;
+      }
     }
   }
-  return null;
+  return highest;
 };
 
 export const heightOn = (s, x, z) =>
   s.y + (x - s.x) * s.xSlope + (z - s.z) * s.zSlope;
+
+// The height a shadow lies at, at (x, z): on the highest surface there, never under the
+// ground.
+export const shadowHeight = (x, z) => {
+  const s = surfaceUnder(x, z);
+  return s ? Math.max(0, heightOn(s, x, z)) : 0;
+};

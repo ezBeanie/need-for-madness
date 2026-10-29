@@ -11,7 +11,7 @@ import {
 } from "./batch.js";
 import { hsbToRgb, rgbToHsb } from "./color.js";
 import { cosDeg, medium, sinDeg, xs, ys } from "./medium.js";
-import { heightOn, surfaceUnder, surfacesNear } from "./surfaces.js";
+import { shadowHeight, surfaceUnder, surfacesNear } from "./surfaces.js";
 
 // --- a model's polygons for a stage (Plane's constructor) ---
 
@@ -665,13 +665,21 @@ const onSpot = (n) => {
 };
 
 // A car's shadow (Plane.s): each polygon pressed flat onto the ground below the car, in
-// the ground's colour darkened. On a stage (seen from camera) onto the surface under
-// the polygon's middle instead, a ramp or a bridge, in its colour darkened, and, painted
-// without depth, not over the cars drawn before.
-const drawShadow = (rad, matrix, groundY, camera) => {
+// the ground's colour darkened. On a stage (seen from camera) onto the surfaces under
+// it, a ramp, a bridge or a rock pile: each corner onto the one under it (the original
+// put all of a polygon's onto the one under its middle, hanging over or sinking into
+// their edges), in the colour of the one under its middle darkened. Painted without
+// depth, not over the cars drawn before. wheels: how far below the car's middle its
+// wheels touch the ground.
+const drawShadow = (rad, matrix, groundY, camera, wheels) => {
   const onSurfaces =
     camera &&
-    surfacesNear(matrix[12] + camera.x, matrix[14] + camera.z, rad.maxR / 10);
+    surfacesNear(
+      matrix[12] + camera.x,
+      matrix[14] + camera.z,
+      rad.maxR / 10,
+      matrix[13] + camera.y - wheels,
+    );
   for (const poly of rad.polys) {
     const n = placePoly(poly, matrix, groundY);
     if (camera && !medium.depth && onSpot(n)) {
@@ -679,15 +687,17 @@ const drawShadow = (rad, matrix, groundY, camera) => {
     }
     let shade =
       medium.menuShadow ?? medium.crgrnd.map((v) => Math.trunc(v / 1.5));
-    const surface = onSurfaces && surfaceUnderPoly(n, camera);
-    if (surface) {
+    if (onSurfaces) {
+      const surface = surfaceUnderPoly(n, camera);
+      if (surface) {
+        shade = surface.shadow;
+      }
       for (let i = 0; i < n; i++) {
         const x = GX[i] / 10;
         const z = GZ[i] / 10;
-        const y = heightOn(surface, x + camera.x, z + camera.z) - camera.y;
+        const y = shadowHeight(x + camera.x, z + camera.z) - camera.y;
         placeSeen(i, x, y, z);
       }
-      shade = surface.shadow;
     }
     let off0 = 0;
     let off1 = 0;
@@ -926,7 +936,7 @@ export const drawObject = (
     startObject(depth - maxR, depth + maxR);
   }
   if (rad.shadow && depth < 2000) {
-    drawShadow(rad, matrix, groundY, shadowCamera);
+    drawShadow(rad, matrix, groundY, shadowCamera, ground ?? 0);
   }
   // drawn before its polygons: the fix hoop's electricity, the bubble round a car being
   // fixed

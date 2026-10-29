@@ -47,23 +47,91 @@ const newPoly = (points, color, flags) => ({
 
 // One of the original's rock piles (see data/pile.js), in the stage's colours: its faces
 // as they are (glass 3), road it fades into, seen from close only (disline 4).
-export const pileRad = ({ faces, maxR }, polys, ground) => ({
-  ...newRad(),
-  polys: faces.map((face) =>
-    newPoly(face.points, pileColor(face.shade, polys, ground), {
-      glass: 3,
-      gr: -8,
-      road: true,
-      disline: 4,
-    }),
-  ),
-  maxR,
-  disp: Math.trunc(maxR / 17),
-  disline: 4,
-  noline: true,
-  decor: true,
-  grounded: 115,
-});
+export const pileRad = ({ faces, maxR }, polys, ground) => {
+  const colors = faces.map((face) => pileColor(face.shade, polys, ground));
+  return {
+    ...newRad(),
+    polys: faces.map((face, k) =>
+      newPoly(face.points, colors[k], {
+        glass: 3,
+        gr: -8,
+        road: true,
+        disline: 4,
+      }),
+    ),
+    maxR,
+    disp: Math.trunc(maxR / 17),
+    disline: 4,
+    noline: true,
+    decor: true,
+    grounded: 115,
+    tracks: pileTracks(faces, colors),
+  };
+};
+
+const idiv = (a, b) => Math.trunc(a / b);
+const slopeOf = (rise, run) =>
+  Math.min(40, Math.trunc((Math.atan(rise / run) * 180) / Math.PI));
+
+// The surfaces of a rock pile as the original made them (ContO's pile): a box sloping
+// down each side, across the middle of its foot and top corners, and a flat one on top,
+// in their faces' colours (the stage's already). The original's top box was twice as
+// wide as the top (its half sizes: the whole width between the sides' boxes); this one
+// fits it.
+const pileTracks = (faces, colors) => {
+  const foot = faces.slice(0, 4).flatMap((face) => face.points.slice(0, 2));
+  const top = faces[4].points;
+  const sides = [0, 1, 2, 3].map((k) => {
+    const middle = k * 2 + 1;
+    const first = foot[k * 2];
+    const last = foot[(k * 2 + 2) % 8];
+    const [x, , z] = foot[middle];
+    const [tx, ty, tz] = top[middle];
+    const track = { c: colors[k], tinted: true, xy: 0, zy: 0 };
+    track.ty = idiv(ty, 2);
+    track.rady = Math.abs(track.ty);
+    // the sides towards z and away from it slope along z, the other two along x
+    if (k % 2 == 0) {
+      track.tz = idiv(z + tz, 2);
+      track.radz = Math.abs(track.tz - z);
+      track.tx = idiv(first[0] + last[0], 2);
+      track.radx = Math.abs(track.tx - first[0]);
+      track.zy = (k == 0 ? 1 : -1) * slopeOf(track.rady, track.radz);
+    } else {
+      track.tx = idiv(x + tx, 2);
+      track.radx = Math.abs(track.tx - x);
+      track.tz = idiv(first[2] + last[2], 2);
+      track.radz = Math.abs(track.tz - first[2]);
+      track.xy = (k == 1 ? 1 : -1) * slopeOf(track.rady, track.radx);
+    }
+    track.rady += 10;
+    return track;
+  });
+  // the top: between the sides' boxes, at the height of its corners
+  const [towardsZ, towardsX, awayZ, awayX] = sides;
+  const right = towardsX.tx - towardsX.radx;
+  const left = awayX.tx + awayX.radx;
+  const front = towardsZ.tz - towardsZ.radz;
+  const back = awayZ.tz + awayZ.radz;
+  return [
+    ...sides,
+    {
+      c: colors[4],
+      tinted: true,
+      xy: 0,
+      zy: 0,
+      tx: idiv(right + left, 2),
+      ty: idiv(
+        top.reduce((sum, [, y]) => sum + y, 0),
+        8,
+      ),
+      tz: idiv(front + back, 2),
+      radx: Math.abs(idiv(right - left, 2)),
+      rady: 200,
+      radz: Math.abs(idiv(front - back, 2)),
+    },
+  ];
+};
 
 export const parseRad = (text) => {
   const rad = newRad();
