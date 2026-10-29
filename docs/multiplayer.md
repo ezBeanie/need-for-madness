@@ -75,9 +75,10 @@ Grundsatz: Einzelspieler bleibt bitgleich, alle Golden Masters grün.
   entfernten Menschen bleibt er beim Host stehen; ihn zählt künftig der Bildschirm des Gastes.
 
 Stand nach Schritt 2: `src/net/{link,host,guest}.js`, Phase `guestRace`, Test
-`test/visual/multiplayer.spec.js` (zwei Tabs). Offen: Der Gast fährt das Auto, das das Feld des
-Hosts an Platz 1 hat; Pause beim Host hält den Gast an; verlässt der Host das Rennen, bleibt der
-Gast stehen; Touch-Steuerung beim Gast fehlt; Kamera des Gastes ohne den Countdown-Flug.
+`test/visual/multiplayer.spec.js` (zwei Tabs). Danach ergänzt: Der Gast fährt sein
+eigenes Auto, sieht den Countdown-Flug, bekommt "Waiting for the host..." bei Pause und "The host
+left the race", wenn der Host geht; ein Gast, der 100 Ticks schweigt, gilt als gegangen.
+Offen: Touch-Steuerung beim Gast.
 
 ### Schritt 3: Server und Raum per Link
 

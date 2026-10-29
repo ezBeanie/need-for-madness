@@ -8,7 +8,11 @@ export const MESSAGE = {
   keys: "keys",
   start: "start",
   tick: "tick",
+  end: "end",
 };
+
+// the car the guest drives: the one beside the player's on the start grid
+export const GUEST_CAR = 1;
 
 // How the race ended for the guest, as the guest's HUD shows it.
 export const OUTCOME = { none: 0, won: 1, wastedThem: 2, wasted: 3, lost: 4 };

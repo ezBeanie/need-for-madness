@@ -68,15 +68,31 @@ const beginRace = () => {
   startHostedRace();
 };
 
+// The camera circles the field high above while the countdown starts.
+export const circleTheField = () => {
+  camera.orbitHeight = 190;
+  camera.pitch = 40;
+  camera.orbitAngle = 250;
+  camera.target = 3;
+  camera.orbitHigh = true;
+  camera.orbitTilt = 0;
+  camera.mode = CAMERA.orbit;
+};
+
+// ... and drops behind car c when the numbers count down.
+export const dropBehindCar = (c) => {
+  camera.orbitDescending = false;
+  camera.orbitHeight = 90;
+  camera.orbitAngle = 0;
+  camera.target = c;
+  camera.orbitHigh = false;
+  camera.orbitTilt = 0;
+  camera.mode = CAMERA.behind;
+};
+
 export function countDown() {
   if (raceEvents.countdown == COUNTDOWN.start) {
-    camera.orbitHeight = 190;
-    camera.pitch = 40;
-    camera.orbitAngle = 250;
-    camera.target = 3;
-    camera.orbitHigh = true;
-    camera.orbitTilt = 0;
-    camera.mode = CAMERA.orbit;
+    circleTheField();
   }
   if (raceEvents.countdown != 0) {
     raceEvents.countdown--;
@@ -122,13 +138,7 @@ export function countDown() {
     racers[0].u.handb = false;
   }
   if (raceEvents.countdown == COUNTDOWN.behindTheCar) {
-    camera.orbitDescending = false;
-    camera.orbitHeight = 90;
-    camera.orbitAngle = 0;
-    camera.target = 0;
-    camera.orbitHigh = false;
-    camera.orbitTilt = 0;
-    camera.mode = CAMERA.behind;
+    dropBehindCar(game.player);
     resetEngineSound();
     // a white flash
     rd.fillStyle = "#FFFFFF";

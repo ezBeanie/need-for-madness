@@ -57,7 +57,12 @@ import { updateStandings } from "./race/standings.js";
 import { animateTrack, castShadows, placeWheels } from "./render/raceScene.js";
 import { countDown, flashTick } from "./race/countdown.js";
 import { onKey } from "./input/controls.js";
-import { applyGuestKeys, sendHostTick, startHosting } from "./net/host.js";
+import {
+  applyGuestKeys,
+  hostTick,
+  sendHostTick,
+  startHosting,
+} from "./net/host.js";
 import {
   guest,
   guestRaceTick,
@@ -101,7 +106,7 @@ function raceTick() {
     if (raceTape.length > 0) {
       replaySoundsTick(from, viewer.frame, true);
     }
-    drawGuestHud(guest.hud);
+    drawGuestHud(guest.hud, guest.notice);
   }
   if (game.phase == PHASE.replay) {
     const from = viewer.frame;
@@ -176,6 +181,7 @@ export function runTick() {
   fitToWindow();
   pollGamepads();
   guestWaitingTick();
+  hostTick();
   for (const [phases, run] of TICKS) {
     if (phases.includes(game.phase)) {
       run();

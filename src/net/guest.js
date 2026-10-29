@@ -11,13 +11,13 @@ import { stopReplaySounds } from "../audio/replaySounds.js";
 import { PHASE, game } from "../core/state.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
+import { COUNTDOWN, circleTheField, dropBehindCar } from "../race/countdown.js";
 import { raceEvents } from "../race/events.js";
 import { field } from "../race/field.js";
 import { addTapeTick, raceTape } from "../race/raceTape.js";
 import { racers } from "../race/racers.js";
 import { followLive, viewer } from "../race/replayViewer.js";
 import { track } from "../race/track.js";
-import { CAMERA, camera } from "../render/camera.js";
 import { menu } from "../screens/menuState.js";
 import { MESSAGE, OUTCOME, ROLE, link, openLink } from "./link.js";
 
@@ -25,6 +25,13 @@ import { MESSAGE, OUTCOME, ROLE, link, openLink } from "./link.js";
 const JOIN_EVERY_TICKS = 30;
 // the screens a race of the host's takes the guest away from
 const WAITING_PHASES = [PHASE.mainMenu, PHASE.carSelect, PHASE.stageSelect];
+// a host silent this long in a race has paused it, or gone
+const HOST_QUIET_TICKS = 15;
+
+export const NOTICE = {
+  waiting: "Waiting for the host...",
+  hostLeft: "The host left the race",
+};
 
 export const guest = {
   // the race the host started, until its stage loads
@@ -39,9 +46,18 @@ export const guest = {
   ownCarType: 0,
   ownPlayer: 0,
   joinTicks: 0,
+  // ticks since the host's last message, and whether the host left the race
+  quietTicks: 0,
+  ended: false,
+  // what the guest's HUD tells about the host, if anything
+  notice: null,
 };
 
 const receive = (message) => {
+  guest.quietTicks = 0;
+  if (message.type == MESSAGE.end) {
+    guest.ended = true;
+  }
   if (message.type == MESSAGE.start) {
     guest.start = message;
     guest.ticks = [];
@@ -61,6 +77,7 @@ const loadHostedRace = (start) => {
   guest.ownCarType = game.carTypes[0];
   guest.ownPlayer = game.player;
   guest.hud = null;
+  guest.ended = false;
   track.stage = start.stage;
   field.replayCars = start.carTypes;
   guest.car = start.car;
@@ -77,7 +94,7 @@ export const guestWaitingTick = () => {
     return;
   }
   if (guest.joinTicks++ % JOIN_EVERY_TICKS == 0) {
-    link.send({ type: MESSAGE.join });
+    link.send({ type: MESSAGE.join, carType: game.carTypes[0] });
   }
   if (guest.start) {
     loadHostedRace(guest.start);
@@ -93,8 +110,11 @@ export const showHostedRace = () => {
   viewer.race = null;
   viewer.frame = 0;
   playStageMusic(track.stage);
-  camera.mode = CAMERA.behind;
-  camera.target = game.player;
+  if (raceEvents.countdown > COUNTDOWN.behindTheCar) {
+    circleTheField();
+  } else {
+    dropBehindCar(game.player);
+  }
   game.phase = PHASE.guestRace;
 };
 
@@ -125,12 +145,27 @@ const leaveHostedRace = () => {
 
 // A tick of the guest's race: what the host sent shows, the keys go to the host.
 export const guestRaceTick = () => {
+  const countdown = raceEvents.countdown;
   for (const message of guest.ticks) {
     raceEvents.countdown = message.countdown;
     message.tape.forEach(addTapeTick);
     guest.hud = message.hud;
   }
   guest.ticks = [];
+  if (
+    countdown > COUNTDOWN.behindTheCar &&
+    raceEvents.countdown <= COUNTDOWN.behindTheCar
+  ) {
+    dropBehindCar(game.player);
+  }
+  guest.quietTicks++;
+  const raceOver = guest.hud != null && guest.hud.outcome != OUTCOME.none;
+  guest.notice =
+    guest.ended && !raceOver
+      ? NOTICE.hostLeft
+      : !guest.ended && guest.quietTicks > HOST_QUIET_TICKS
+        ? NOTICE.waiting
+        : null;
   if (guest.hud) {
     showHud(guest.hud);
   }
@@ -139,11 +174,7 @@ export const guestRaceTick = () => {
   }
   const { up, down, left, right, handb } = racers[game.player].u;
   link.send({ type: MESSAGE.keys, keys: { up, down, left, right, handb } });
-  if (
-    guest.hud &&
-    guest.hud.outcome != OUTCOME.none &&
-    confirm.state == CONFIRM.pressed
-  ) {
+  if ((raceOver || guest.ended) && confirm.state == CONFIRM.pressed) {
     confirm.state = CONFIRM.used;
     leaveHostedRace();
   }

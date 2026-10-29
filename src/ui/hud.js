@@ -1631,7 +1631,7 @@ const drawGuestOutcome = ({ outcome, winner }) => {
 };
 
 // A guest's HUD: the race as the host sent it (see net/guest.js).
-export function drawGuestHud(hud) {
+export function drawGuestHud(hud, notice) {
   rd.clearRect(0, 0, view.width, view.height);
   const raceOver = hud != null && hud.outcome != OUTCOME.none;
   if (raceOver) {
@@ -1653,6 +1653,9 @@ export function drawGuestHud(hud) {
   }
   if (!raceOver) {
     drawCountdown();
+  }
+  if (notice) {
+    drawCenteredText(192, notice, 0, 0, 0, TEXT.label);
   }
 }
 
