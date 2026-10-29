@@ -267,3 +267,23 @@ test("the camera flies to the next car followed instead of jumping there", async
   expect(Math.abs(near(1) - before)).toBeLessThan(1);
   ctx.closeReplay();
 });
+
+test("winding the replay back leaves no effects hanging where they were", async () => {
+  const { ctx } = await race(900);
+  ctx.game.phase = PHASE.paused;
+  ctx.openReplay(ctx.VIEWER_FROM.pauseMenu, 300);
+  for (let i = 0; i < 60; i++) {
+    ctx.replayViewerTick(0);
+    ctx.atReplayPace(() => {
+      ctx.dustfly();
+      ctx.expburn();
+    });
+  }
+  // (wheels on sand raise dust on stage 5)
+  expect(ctx.effects.dustCount).toBeGreaterThan(0);
+  for (let i = 0; i < 12; i++) {
+    ctx.replayViewerTick(-1);
+  }
+  expect([ctx.effects.dustCount, ctx.effects.chipCount]).toEqual([0, 0]);
+  ctx.closeReplay();
+});

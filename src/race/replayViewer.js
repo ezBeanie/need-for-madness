@@ -144,6 +144,13 @@ const clearEffects = () => {
   effects.explosionCount = 0;
 };
 // (a chip's texture is its car's: only its buffers are its own)
+// Time wound back or jumped: what flew then cannot fly back, it goes (and comes again
+// as the replay plays on).
+const dropEffects = () => {
+  freeChips();
+  clearEffects();
+};
+
 const freeChips = () => {
   for (const chip of effects.chips) {
     for (const buffer of [chip.vbuf, chip.nbuf, chip.tbuf]) {
@@ -237,6 +244,7 @@ const pose = () => {
 export const seekReplay = (frame) => {
   const phase = game.phase;
   game.phase = PHASE.replayRewind;
+  dropEffects();
   viewer.frame = Math.max(0, Math.min(lastFrame(), Math.round(frame)));
   viewer.between = 0;
   // (the hits dent the cars again without chips flying off)
@@ -366,6 +374,7 @@ const windBack = (to) => {
   if (changedBetween(to, viewer.frame)) {
     seekReplay(to);
   } else {
+    dropEffects();
     viewer.frame = to;
   }
 };
