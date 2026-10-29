@@ -42,6 +42,8 @@ const drag = 0.05;
 const lonorm = [];
 export function inishmad() {
   for (let c = 0; c < MAX_CARS; c++) {
+    // (a wall of the stage before, which may be gone: its piece's model with it)
+    racers[c].wall = -1;
     racers[c].motionHeading = 0;
     racers[c].cameraHeading = 0;
     racers[c].dominate = [];
