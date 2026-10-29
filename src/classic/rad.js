@@ -16,6 +16,8 @@ const newRad = () => ({
   grat: 0,
   keyx: [0, 0, 0, 0],
   keyz: [0, 0, 0, 0],
+  // the surfaces of a piece (its <track> boxes) the cars' shadows lie on, see surfaces.js
+  tracks: [],
 });
 
 // value n of a line like name(a,b,c), cut to a whole number as the original does
@@ -81,6 +83,7 @@ export const parseRad = (text) => {
   const wheels = newWheels();
   let wheelCount = 0;
   let gwgr = 0;
+  let track = null;
   for (const raw of text.split(/\r?\n/)) {
     const line = raw.trim();
     // (the original read at most 210 polygons; none of its own models has more, the
@@ -162,6 +165,39 @@ export const parseRad = (text) => {
         gwgr,
       );
       wheelCount++;
+    }
+    if (line.startsWith("<track>")) {
+      track = {
+        c: [0, 0, 0],
+        xy: 0,
+        zy: 0,
+        radx: 0,
+        rady: 0,
+        radz: 0,
+        tx: 0,
+        ty: 0,
+        tz: 0,
+      };
+    }
+    if (track) {
+      if (line.startsWith("c(")) {
+        track.c = [0, 1, 2].map((n) => valueOf(line, "c", n));
+      }
+      for (const name of ["xy", "zy"]) {
+        if (line.startsWith(`${name}(`)) {
+          track[name] = valueOf(line, name, 0);
+        }
+      }
+      // (sized as the model's points are)
+      for (const name of ["radx", "rady", "radz", "tx", "ty", "tz"]) {
+        if (line.startsWith(`${name}(`)) {
+          track[name] = Math.trunc(valueOf(line, name, 0) * div);
+        }
+      }
+      if (line.startsWith("</track>")) {
+        rad.tracks.push(track);
+        track = null;
+      }
     }
     if (line.startsWith("disp(")) {
       rad.disp = valueOf(line, "disp", 0);

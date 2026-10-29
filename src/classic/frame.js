@@ -23,7 +23,7 @@ import { dentClassic, hitOn } from "./damage.js";
 import { electrify, fixBubble, fixStep, startFixing } from "./fixing.js";
 import { effectObjects } from "./effects.js";
 import { CAR_FILES } from "./cars.js";
-import { drawObject, setView, tintModel } from "./draw.js";
+import { clearShadowSpots, drawObject, setView, tintModel } from "./draw.js";
 import {
   drawSkyAndGround,
   medium,
@@ -32,6 +32,7 @@ import {
 } from "./medium.js";
 import { drawScenery, newScenery } from "./scenery.js";
 import { parseRad, pileRad } from "./rad.js";
+import { placeSurfaces } from "./surfaces.js";
 
 // pieces the original has under another name
 const PIECE_STAND_INS = { takeoffb: "takeoff" };
@@ -61,6 +62,13 @@ const loadModels = () => {
 let tintedFor = null;
 // the models of the stage's rock piles, by piece
 const pileRads = new Map();
+
+const radOf = (piece) => {
+  const file = PIECE_FILES[piece.typ];
+  return piece.pile
+    ? pileRads.get(piece)
+    : models.get(PIECE_STAND_INS[file] ?? file);
+};
 
 // a fixed sequence for the original's random rock colours, the same on every load
 const seeded = (seed) => () => {
@@ -99,6 +107,8 @@ const tintForStage = (colors) => {
       pileRads.set(piece, rad);
     }
   }
+  // (their colours tinted by the stage's snap, set above)
+  placeSurfaces(pieces.list.slice(0, pieces.count), radOf);
   // the stage's bounds and roads, in the original's units
   const xBounds = [-10 * track.liml, -10 * track.limr];
   const zBounds = [10 * track.limb, 10 * track.limt];
@@ -180,6 +190,7 @@ const startFrame = (colors = scene.colors ?? NO_STAGE) => {
   medium.frame++;
   medium.tick = interpolation.tick;
   medium.lastCheck = raceEvents.onlastcheck;
+  clearShadowSpots();
 };
 
 // The stage's first count pieces; nextCheckpoint picks the checkpoints that flash.
@@ -188,10 +199,7 @@ const pieceObjects = (count, nextCheckpoint) => {
   const hoops = new Set(pieces.fixes.slice(0, pieces.fixCount));
   for (let i = 0; i < count; i++) {
     const piece = pieces.list[i];
-    const file = PIECE_FILES[piece.typ];
-    const rad = piece.pile
-      ? pileRads.get(piece)
-      : models.get(PIECE_STAND_INS[file] ?? file);
+    const rad = radOf(piece);
     if (rad) {
       objects.push({
         key: piece,
@@ -307,6 +315,7 @@ const drawInOrder = (objects) => {
         angles: object.car,
         beforePolygons: object.beforePolygons,
         ground: object.ground ?? null,
+        shadowCamera: object.onStage ? drawCamera : null,
         // the ground, relative to the camera
         // (matrix[13]: where the car is drawn, between ticks, relative to the camera)
         groundY: object.shadowBelow
@@ -357,6 +366,7 @@ export const drawClassicRace = () => {
   for (let c = 0; c < game.carCount; c++) {
     const object = carObject(c, car[c], car[c].typ);
     if (object) {
+      object.onStage = true;
       objects.push(object);
     }
   }

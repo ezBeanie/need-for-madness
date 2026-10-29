@@ -96,7 +96,7 @@ fadeFrom(3000);
 // --- the original's own stages: their look exactly as its Medium set it ---
 
 // n tinted by the snap, in the original's float maths: (int)(n + n * (snap / 100f))
-const snapOf = (n, i) => {
+export const snapOf = (n, i) => {
   const by = Math.fround(medium.snap[i] / 100);
   return clamp255(Math.trunc(Math.fround(n + Math.fround(n * by))));
 };
