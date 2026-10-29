@@ -30,8 +30,8 @@ const guestState = (page) =>
     };
   });
 
-// Two tabs of one browser: the host's game races, the guest's shows that race and drives a
-// car in it.
+// Two tabs, linked by the relay of the dev server: the host's game races, the guest's shows
+// that race and drives a car in it.
 test("a guest in another tab drives a car in the host's race", async ({
   context,
 }) => {

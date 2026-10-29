@@ -29,7 +29,7 @@ export default [
     },
   },
   {
-    files: ["test/**/*.js", "*.config.js"],
+    files: ["test/**/*.js", "server/**/*.js", "*.config.js"],
     languageOptions: {
       sourceType: "module",
       globals: globals.node,

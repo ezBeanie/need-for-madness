@@ -87,6 +87,28 @@ Offen: Touch-Steuerung beim Gast.
 - Raum über Link `?room=xyz`, Host wählt Strecke und Autos, gemeinsamer Countdown.
 - Im MP abschalten: Pause, Zeit-Rewind, Switch-Modus, Meisterschaftsfortschritt.
 
+Stand nach Schritt 3: `server/relay.js` (Räume, max. 8 Spiele pro Raum, 200 Räume, 256 KB pro
+Nachricht, 120 Nachrichten/s pro Spiel, Kompression, kein Logging), im Dev-Server per Vite-Plugin
+unter `/net`, eigenständig mit `node server/main.js`. Eine Tick-Nachricht sind unkomprimiert
+etwa 2,9 KB bei 7 Autos (80 KB/s) und 7,3 KB bei 20 Autos (200 KB/s).
+
+Deployment auf beanie (noch nicht ausgeführt, braucht OK):
+
+1. `docker build -f server/Dockerfile -t nfm-relay .` und Container `nfm-relay` im selben
+   Docker-Netz wie `nfm` starten.
+2. nginx im Container `nfm` reicht `/net` weiter, ohne Access-Log (keine IPs):
+
+   ```nginx
+   location /net {
+     access_log off;
+     proxy_pass http://nfm-relay:8787;
+     proxy_http_version 1.1;
+     proxy_set_header Upgrade $http_upgrade;
+     proxy_set_header Connection "upgrade";
+     proxy_read_timeout 120s;
+   }
+   ```
+
 ### Schritt 4: Feinschliff
 
 - Vorhersage fürs eigene Auto beim Gast, Abgleich mit dem Host.

@@ -8,7 +8,9 @@ import {
   stopStageMusic,
 } from "../audio/audio.js";
 import { stopReplaySounds } from "../audio/replaySounds.js";
-import { PHASE, game } from "../core/state.js";
+import { MAX_CARS, PHASE, game } from "../core/state.js";
+import { carStats } from "../data/carStats.js";
+import { STAGE_COUNT } from "../data/stages.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
 import { COUNTDOWN, circleTheField, dropBehindCar } from "../race/countdown.js";
@@ -19,7 +21,7 @@ import { racers } from "../race/racers.js";
 import { followLive, viewer } from "../race/replayViewer.js";
 import { track } from "../race/track.js";
 import { menu } from "../screens/menuState.js";
-import { MESSAGE, OUTCOME, ROLE, link, openLink } from "./link.js";
+import { MESSAGE, OUTCOME, ROLE, isIndex, link, openLink } from "./link.js";
 
 // how often a guest not in a race tells the host it is there
 const JOIN_EVERY_TICKS = 30;
@@ -53,16 +55,28 @@ export const guest = {
   notice: null,
 };
 
+const isStart = ({ stage, carTypes, car }) =>
+  isIndex(stage, STAGE_COUNT + 1) &&
+  Array.isArray(carTypes) &&
+  carTypes.length <= MAX_CARS &&
+  carTypes.every((type) => isIndex(type, carStats.names.length)) &&
+  isIndex(car, carTypes.length);
+
 const receive = (message) => {
   guest.quietTicks = 0;
   if (message.type == MESSAGE.end) {
     guest.ended = true;
   }
-  if (message.type == MESSAGE.start) {
+  if (message.type == MESSAGE.start && isStart(message)) {
     guest.start = message;
     guest.ticks = [];
   }
-  if (message.type == MESSAGE.tick) {
+  if (
+    message.type == MESSAGE.tick &&
+    Array.isArray(message.tape) &&
+    message.hud &&
+    Array.isArray(message.hud.positions)
+  ) {
     guest.ticks.push(message);
   }
 };

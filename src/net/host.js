@@ -9,7 +9,15 @@ import { raceCarTextures } from "../render/generated.js";
 import { raceTape, tapeTick } from "../race/raceTape.js";
 import { racers } from "../race/racers.js";
 import { track } from "../race/track.js";
-import { GUEST_CAR, MESSAGE, OUTCOME, ROLE, link, openLink } from "./link.js";
+import {
+  GUEST_CAR,
+  MESSAGE,
+  OUTCOME,
+  ROLE,
+  isIndex,
+  link,
+  openLink,
+} from "./link.js";
 
 const GUEST_KEYS = ["up", "down", "left", "right", "handb"];
 // a guest silent for this many ticks has gone (it sends every tick in a race, and every
@@ -32,11 +40,16 @@ const guestThere = () => host.quietTicks < GUEST_GONE_TICKS;
 
 const receive = (message) => {
   host.quietTicks = 0;
-  if (message.type == MESSAGE.join) {
+  if (
+    message.type == MESSAGE.join &&
+    isIndex(message.carType, carStats.names.length)
+  ) {
     field.guestCarType = message.carType;
   }
-  if (message.type == MESSAGE.keys) {
-    Object.assign(guestKeys, message.keys);
+  if (message.type == MESSAGE.keys && message.keys) {
+    for (const key of GUEST_KEYS) {
+      guestKeys[key] = message.keys[key] === true;
+    }
   }
 };
 
