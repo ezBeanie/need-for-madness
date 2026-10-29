@@ -86,7 +86,10 @@ const eventsAt = (c, frame) => {
       } else if (tape.soundKind[i] == CAR_SOUND.groundScrape) {
         groundScrapeSound(a, b, cc, d, heardAs);
       } else {
-        skidSound(a, b == 1, cc, heardAs);
+        // (only the followed car's skids, as only the player's in a race)
+        if (followed) {
+          skidSound(a, b == 1, cc);
+        }
       }
     }
   }

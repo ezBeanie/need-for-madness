@@ -42,6 +42,8 @@ const drag = 0.05;
 const lonorm = [];
 export function inishmad() {
   for (let c = 0; c < MAX_CARS; c++) {
+    // (a wall of the stage before, which may be gone: its piece's model with it)
+    racers[c].wall = -1;
     racers[c].motionHeading = 0;
     racers[c].cameraHeading = 0;
     racers[c].dominate = [];
@@ -3384,7 +3386,10 @@ const skidOf = (c, surface, onTrackPiece, mag) => {
     mag,
     0,
   );
-  skidSound(surface, onTrackPiece, mag, heardAs(c));
+  // (only the player's skids are heard: the others' would squeal all the time)
+  if (c == game.player) {
+    skidSound(surface, onTrackPiece, mag);
+  }
 };
 const crashHeardAs = (c) => (racers[c].colidim ? null : heardAs(c));
 

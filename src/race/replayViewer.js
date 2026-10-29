@@ -144,6 +144,13 @@ const clearEffects = () => {
   effects.explosionCount = 0;
 };
 // (a chip's texture is its car's: only its buffers are its own)
+// Time wound back or jumped: what flew then cannot fly back, it goes (and comes again
+// as the replay plays on).
+const dropEffects = () => {
+  freeChips();
+  clearEffects();
+};
+
 const freeChips = () => {
   for (const chip of effects.chips) {
     for (const buffer of [chip.vbuf, chip.nbuf, chip.tbuf]) {
@@ -237,6 +244,7 @@ const pose = () => {
 export const seekReplay = (frame) => {
   const phase = game.phase;
   game.phase = PHASE.replayRewind;
+  dropEffects();
   viewer.frame = Math.max(0, Math.min(lastFrame(), Math.round(frame)));
   viewer.between = 0;
   // (the hits dent the cars again without chips flying off)
@@ -310,11 +318,36 @@ export const nextCamera = () => {
   camera.relocate = true;
 };
 
+// The camera flies to another car followed, from where it was (FLIGHT_TICKS long).
+const FLIGHT_TICKS = 15;
+const flight = { ticks: FLIGHT_TICKS, from: null };
+
 // step 1: the next car, -1: the one before
 export const nextCar = (step = 1) => {
   const count = raceTape.cars.length;
   camera.target = (camera.target + step + count) % count;
   camera.relocate = true;
+  const { x, y, z, yaw, pitch } = camera;
+  flight.from = { x, y, z, yaw, pitch };
+  flight.ticks = 0;
+};
+
+// After the camera moved on (moveCamera): on its way from the car before, it is only
+// part of the way there, faster in the middle. The free camera goes nowhere by itself.
+export const flyCamera = () => {
+  if (flight.ticks >= FLIGHT_TICKS || camera.mode == CAMERA.free) {
+    flight.ticks = FLIGHT_TICKS;
+    return;
+  }
+  flight.ticks++;
+  const t = flight.ticks / FLIGHT_TICKS;
+  const along = t * t * (3 - 2 * t);
+  const { from } = flight;
+  camera.x = lerp(from.x, camera.x, along);
+  camera.y = lerp(from.y, camera.y, along);
+  camera.z = lerp(from.z, camera.z, along);
+  camera.yaw = lerpAngle(from.yaw, camera.yaw, along);
+  camera.pitch = lerp(from.pitch, camera.pitch, along);
 };
 
 // The free camera: forward, side (right) and up its own way, turned by yaw and pitch
@@ -341,6 +374,7 @@ const windBack = (to) => {
   if (changedBetween(to, viewer.frame)) {
     seekReplay(to);
   } else {
+    dropEffects();
     viewer.frame = to;
   }
 };
