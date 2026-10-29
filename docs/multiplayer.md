@@ -70,6 +70,9 @@ Grundsatz: Einzelspieler bleibt bitgleich, alle Golden Masters grün.
   pro Auto (damage, power, pos, nlaps, missedCheckpoint, wasted, ...), die das Tape noch nicht hat.
 - Gast simuliert nicht, sondern zeigt Schnappschüsse wie der Replay-Viewer, mit Interpolation.
 - Transport zuerst `BroadcastChannel` zwischen zwei Tabs: kein Server nötig, Ablauf testbar.
+- Aus Schritt 1 bekannt: Den Zähler von "Check Point Missed!" (`missedCheckpoint`) zählt das
+  HUD des Spielers hoch (hud.js `drawTrackWarnings`), abhängig von Kamera und Pfeil. Für einen
+  entfernten Menschen bleibt er beim Host stehen; ihn zählt künftig der Bildschirm des Gastes.
 
 ### Schritt 3: Server und Raum per Link
 

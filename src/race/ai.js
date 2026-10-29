@@ -2,7 +2,7 @@
 
 import { cosDeg, distanceSquaredXZ, distanceXZ, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
-import { MAX_CARS, MODE, game } from "../core/state.js";
+import { MAX_CARS, MODE, game, isHuman } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { CAR, carStats } from "../data/carStats.js";
 import { MISSED, car, racers } from "./racers.js";
@@ -244,7 +244,7 @@ export function inishcontrol() {
 }
 export function control() {
   for (let c = 0; c < game.carCount; c++) {
-    if (c != game.player) {
+    if (!isHuman(c)) {
       let type = car[c].typ;
       racers[c].u.left = false;
       racers[c].u.right = false;

@@ -18,7 +18,7 @@ import {
   sinDeg,
 } from "../core/math.js";
 import { random } from "../core/random.js";
-import { MAX_CARS, MODE, PHASE, game } from "../core/state.js";
+import { MAX_CARS, MODE, PHASE, game, isHuman } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
 import { BLEND, gl, keepDamageTexture } from "../render/renderer.js";
@@ -355,7 +355,7 @@ function reportCheckpoints(c) {
 
 function pathPointAhead(c, pnt) {
   if (racers[c].focus == -1) {
-    if (c == game.player) {
+    if (isHuman(c)) {
       pnt += 2;
     } else {
       pnt++;
@@ -399,7 +399,7 @@ function pathPointAhead(c, pnt) {
     if (track.typ[pnt] == -3) {
       pnt = 0;
     }
-    if (c == game.player) {
+    if (isHuman(c)) {
       if (racers[c].missedCheckpoint != MISSED.following) {
         racers[c].missedCheckpoint = MISSED.following;
       }
@@ -410,7 +410,7 @@ function pathPointAhead(c, pnt) {
     }
   } else {
     pnt = racers[c].focus;
-    if (c == game.player) {
+    if (isHuman(c)) {
       if (
         racers[c].missedCheckpoint == MISSED.none &&
         racers[c].grounded &&
@@ -674,7 +674,7 @@ function forgetStunt(c) {
 function flipBackWhenCapsized(c, type) {
   let flmat = 7,
     capto = 30;
-  if (c == game.player) {
+  if (isHuman(c)) {
     if (track.stage == 1 && game.unlocked == 1) {
       flmat = 30;
       capto = 10;
@@ -726,7 +726,7 @@ function flipBackWhenCapsized(c, type) {
 // Power fades while driving without a stunt; the first races fade it slower for the player.
 function drainPower(c, type) {
   let pfact = 1;
-  if (c == game.player) {
+  if (isHuman(c)) {
     if (track.stage == 1 && game.unlocked == 1) {
       pfact = 0.6;
     }
@@ -2458,7 +2458,7 @@ function touchDownFromStunt(c) {
 }
 
 function watchPlayerStuntKeys(c) {
-  if (c == game.player) {
+  if (isHuman(c)) {
     if (!racers[c].wheelsTouch) {
       if (racers[c].u.up) {
         if (!racers[c].upHeldFromGround) {
@@ -3090,10 +3090,10 @@ function crashCorners(c, xc, i, j, at, xat) {
     racers[xc].wheelSpeedZ,
     HIT.alongZ,
   );
-  if (c == game.player) {
+  if (isHuman(c)) {
     racers[xc].lastcolido = 70;
   }
-  if (xc == game.player) {
+  if (isHuman(xc)) {
     racers[c].lastcolido = 70;
   }
   racers[xc].wheelSpeedY[j] += carStats.lift[car[c].typ];

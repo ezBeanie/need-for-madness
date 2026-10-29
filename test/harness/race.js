@@ -74,12 +74,12 @@ export const startRace = async ({
   return game;
 };
 
-// Steers the player towards the path point the game itself tracks for car 0.
-// Deliberately naive: crashes and wrecks are as interesting for the tests as clean laps.
-export const autopilot = (ctx) => {
-  const car = ctx.car[0];
+// Steers car c towards the path point the game itself tracks for it. Deliberately naive:
+// crashes and wrecks are as interesting for the tests as clean laps.
+export const steerAlongPath = (ctx, c) => {
+  const car = ctx.car[c];
   const cp = ctx.track;
-  const target = (ctx.racers[0].point + 2) % cp.n;
+  const target = (ctx.racers[c].point + 2) % cp.n;
   const dx = cp.x[target] - car.x;
   const dz = cp.z[target] - car.z;
   let pan = 90 + (dx >= 0 ? 180 : 0) + Math.atan(dz / dx) / DEG;
@@ -94,6 +94,9 @@ export const autopilot = (ctx) => {
   }
   return { ...NO_INPUT, up: true, left: diff > 5, right: diff < -5 };
 };
+
+// Steers the player's car, an input for recordRace.
+export const autopilot = (ctx) => steerAlongPath(ctx, 0);
 
 const round = (n) => (typeof n === "boolean" ? Number(n) : n);
 

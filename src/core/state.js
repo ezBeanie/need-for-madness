@@ -53,6 +53,13 @@ export const game = {
   carCount: 7,
   // how many cars a championship race has, chosen in the stage select
   raceCars: 7,
-  // index of the car the player controls (another one in replays)
+  // index of the car the player controls (another one in replays): the car this screen
+  // follows, its HUD, camera and sounds
   player: 0,
+  // the cars people drive in a multiplayer race; empty when only the player does
+  humans: [],
 };
+
+// Whether people drive car c: then the AI leaves it alone and it races by the player's rules.
+export const isHuman = (c) =>
+  game.humans.length == 0 ? c == game.player : game.humans.includes(c);
