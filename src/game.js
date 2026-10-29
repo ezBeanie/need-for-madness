@@ -44,6 +44,10 @@ import { atReplayPace, replayViewerTick, viewer } from "./race/replayViewer.js";
 import { replaySoundsTick } from "./audio/replaySounds.js";
 import { drawReplayOverlay, heldArrow } from "./ui/replayControls.js";
 import { installReplayDrop } from "./screens/replays.js";
+import {
+  installMultiplayerMenu,
+  placeMultiplayerButton,
+} from "./ui/multiplayerMenu.js";
 import { installOptionsMenu, placeOptionsButton } from "./ui/optionsMenu.js";
 import { raceEvents } from "./race/events.js";
 import { control } from "./race/ai.js";
@@ -200,6 +204,7 @@ export function runTick() {
   }
   tick.fraction += tick.scale;
   placeOptionsButton();
+  placeMultiplayerButton();
   interpolation.tick++;
 }
 
@@ -256,6 +261,7 @@ installReplayDrop(window);
 startHosting();
 startGuesting();
 installOptionsMenu();
+installMultiplayerMenu();
 
 installPointer(canvas2D, {
   // a click or touch allows audio (see unlockAudio)

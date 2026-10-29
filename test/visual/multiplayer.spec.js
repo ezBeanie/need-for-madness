@@ -32,20 +32,24 @@ const guestState = (page) =>
 
 // Two tabs, linked by the relay of the dev server: the host's game races, the guest's shows
 // that race and drives a car in it.
-// Host and guest, each in a tab of its own, in a race the host started.
-const raceTogether = async (context, room) => {
+const openTwoGames = async (context, hostUrl, guestUrl) => {
   const hostPage = await context.newPage();
   const guestPage = await context.newPage();
   const host = await openGame(hostPage, {
     storage: { carsel: HOST_TYPE, unlocked: "3" },
-    url: `/?host=${room}`,
+    url: hostUrl,
   });
   const guest = await openGame(guestPage, {
     storage: { carsel: GUEST_TYPE, unlocked: "3" },
-    url: `/?join=${room}`,
+    url: guestUrl,
   });
   await host.advanceUntil(PHASE.mainMenu);
   await guest.advanceUntil(PHASE.mainMenu);
+  return { host, guest, hostPage, guestPage };
+};
+
+// The host goes from the main menu to a race, the guest along into it.
+const hostStartsRace = async ({ host, guest, hostPage, guestPage }) => {
   await host.tap("Enter");
   await host.advanceUntil(PHASE.carSelect);
   await host.advance(40);
@@ -59,7 +63,13 @@ const raceTogether = async (context, room) => {
   await host.advanceUntil(PHASE.race);
   await guestPage.waitForTimeout(DELIVERY_MS);
   await guest.advanceUntil(PHASE.guestRace);
-  return { host, guest, hostPage, guestPage };
+};
+
+// Host and guest, each in a tab of its own, in a race the host started.
+const raceTogether = async (context, room) => {
+  const games = await openTwoGames(context, `/?host=${room}`, `/?join=${room}`);
+  await hostStartsRace(games);
+  return games;
 };
 
 test("a guest in another tab drives a car in the host's race", async ({
@@ -159,4 +169,64 @@ test("the AI drives on the car of a guest whose connection is lost", async ({
   );
   expect(onHost.humans).toEqual([]);
   expect(Math.abs(onHost.z - start)).toBeGreaterThan(500);
+});
+
+test("the multiplayer dialog opens a room, and a guest joins it with its code", async ({
+  context,
+}) => {
+  const games = await openTwoGames(context, "/", "/");
+  const { host, guest, hostPage, guestPage } = games;
+  const both = [
+    { game: host, page: hostPage },
+    { game: guest, page: guestPage },
+  ];
+  await advanceBoth(...both, 2);
+
+  await hostPage.getByRole("button", { name: "Multiplayer" }).click();
+  await hostPage.getByRole("button", { name: "Host a race" }).click();
+  const room = await hostPage.locator("#multiplayerRoomName").textContent();
+  expect(room).toMatch(/^[a-z0-9]{5}$/);
+  await expect(hostPage.getByLabel("Link for your guest")).toHaveValue(
+    new RegExp(`\\?join=${room}$`),
+  );
+
+  await guestPage.getByRole("button", { name: "Multiplayer" }).click();
+  const code = guestPage.getByLabel("Code of the host's room");
+  // a code the relay would turn away is not sent
+  await code.fill("no room");
+  await guestPage.getByRole("button", { name: "Join the race" }).click();
+  await expect(guestPage.getByRole("alert")).toBeVisible();
+  await expect(code).toHaveAttribute("aria-invalid", "true");
+  await code.fill(room.toUpperCase());
+  await guestPage.getByRole("button", { name: "Join the race" }).click();
+  await expect(guestPage.locator("#multiplayerRoomName")).toHaveText(room);
+
+  // each one sees the other is there
+  await guestPage.waitForTimeout(DELIVERY_MS);
+  await advanceBoth(...both, 35);
+  await expect(hostPage.getByRole("status")).toContainText(
+    "Your guest is here",
+  );
+  await expect(guestPage.getByRole("status")).toContainText("The host is here");
+  await hostPage.getByRole("button", { name: "Close" }).click();
+  await guestPage.getByRole("button", { name: "Close" }).click();
+  await expect(
+    hostPage.getByRole("button", { name: `Room ${room}` }),
+  ).toBeVisible();
+  await hostStartsRace(games);
+  expect((await guestState(guestPage)).phase).toBe(PHASE.guestRace);
+});
+
+test("leaving the room ends the link", async ({ page }) => {
+  const game = await openGame(page);
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance(2);
+  await page.getByRole("button", { name: "Multiplayer" }).click();
+  await page.getByRole("button", { name: "Host a race" }).click();
+  await expect(page.locator("#multiplayerRoom")).toBeVisible();
+  await page.getByRole("button", { name: "Leave the room" }).click();
+  await expect(page.getByRole("button", { name: "Host a race" })).toBeVisible();
+  await page.getByRole("button", { name: "Close" }).click();
+  await game.advance();
+  await expect(page.getByRole("button", { name: "Multiplayer" })).toBeVisible();
 });

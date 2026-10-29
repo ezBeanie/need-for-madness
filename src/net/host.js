@@ -17,6 +17,7 @@ import {
   isIndex,
   link,
   openLink,
+  urlRoom,
 } from "./link.js";
 
 const GUEST_KEYS = ["up", "down", "left", "right", "handb"];
@@ -36,7 +37,7 @@ const RACE_GOES_ON = [
 const host = { racing: false, sent: 0, quietTicks: GUEST_GONE_TICKS };
 const guestKeys = Object.fromEntries(GUEST_KEYS.map((key) => [key, false]));
 
-const guestThere = () => host.quietTicks < GUEST_GONE_TICKS;
+export const guestThere = () => host.quietTicks < GUEST_GONE_TICKS;
 
 const receive = (message) => {
   host.quietTicks = 0;
@@ -45,6 +46,7 @@ const receive = (message) => {
     isIndex(message.carType, carStats.names.length)
   ) {
     field.guestCarType = message.carType;
+    link.send({ type: MESSAGE.here });
   }
   if (message.type == MESSAGE.keys && message.keys) {
     for (const key of GUEST_KEYS) {
@@ -75,9 +77,16 @@ export const hostTick = () => {
   }
 };
 
+// Opens a room for a guest to join.
+export const hostRoom = (room) => {
+  host.quietTicks = GUEST_GONE_TICKS;
+  field.guestCarType = null;
+  openLink(ROLE.host, room, receive);
+};
+
 export const startHosting = () => {
-  if (link.role == ROLE.host) {
-    openLink(receive);
+  if (urlRoom.host) {
+    hostRoom(urlRoom.host);
   }
 };
 

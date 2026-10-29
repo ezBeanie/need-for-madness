@@ -18,35 +18,51 @@ src: url(data/JunkDog.ttf);
 font-family: verd;
 src: url(data/verdana.ttf);
 }
-/* the options: the switches that otherwise have only keys (see src/ui/optionsMenu.js) */
-.options-button {
+/* the options and multiplayer: switches without keys and races together (see src/ui/) */
+.options-button, .multiplayer-button {
   position: fixed; top: 8px; right: 76px; width: 44px; height: 44px;
   border-radius: 22px; border: 1px solid rgba(1, 234, 255, 0.6);
   background: rgba(0, 16, 32, 0.7); color: #ffffff; font-size: 24px; line-height: 1;
   cursor: pointer;
 }
-.options-button:focus-visible, #options button:focus-visible {
+.multiplayer-button {
+  right: 128px; width: auto; padding: 0 16px; font-family: verd, Verdana, sans-serif;
+  font-size: 15px;
+}
+.options-button:focus-visible, .multiplayer-button:focus-visible,
+.menu-dialog button:focus-visible, .menu-dialog input:focus-visible {
   outline: 3px solid #ffffff; outline-offset: 2px;
 }
-#options {
+.menu-dialog {
   width: min(90vw, 420px); padding: 16px 20px; border: 1px solid rgba(1, 234, 255, 0.6);
   border-radius: 14px; background: rgba(0, 16, 32, 0.94); color: #ffffff;
   font-family: verd, Verdana, sans-serif;
 }
-#options::backdrop { background: rgba(0, 0, 0, 0.5); }
-#options h2 { margin: 0 0 12px; font-size: 20px; }
-#options ul { list-style: none; margin: 0; padding: 0; }
-#options li + li { margin-top: 8px; }
-#options button {
+.menu-dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
+.menu-dialog h2 { margin: 0 0 12px; font-size: 20px; }
+.menu-dialog p { margin: 0 0 12px; font-size: 14px; line-height: 1.4; }
+.menu-dialog ul { list-style: none; margin: 0; padding: 0; }
+.menu-dialog li + li { margin-top: 8px; }
+.menu-dialog button {
   display: flex; justify-content: space-between; align-items: center; gap: 12px;
   width: 100%; min-height: 44px; padding: 8px 14px; border: 0; border-radius: 22px;
   background: rgba(255, 255, 255, 0.1); color: #ffffff; font: inherit; font-size: 15px;
   text-align: left; cursor: pointer;
 }
-#options button:hover { background: rgba(1, 234, 255, 0.25); }
+.menu-dialog button:hover { background: rgba(1, 234, 255, 0.25); }
+.menu-dialog label { display: block; margin: 16px 0 6px; font-size: 14px; }
+.menu-dialog input {
+  box-sizing: border-box; width: 100%; min-height: 44px; padding: 8px 14px;
+  border: 1px solid rgba(1, 234, 255, 0.6); border-radius: 22px;
+  background: rgba(0, 0, 0, 0.4); color: #ffffff; font: inherit; font-size: 15px;
+}
+.menu-dialog input + button, .menu-dialog .error + button { margin-top: 8px; }
+.menu-dialog .error { margin: 6px 0 0; color: #ffb4a8; }
+.menu-dialog .error::before { content: "\26A0  "; }
+.menu-dialog .room { font-size: 26px; letter-spacing: 3px; color: #01eaff; }
 #options .state { color: #01eaff; font-weight: bold; white-space: nowrap; }
 #options .key { color: rgba(160, 230, 255, 0.8); font-size: 12px; }
-#options .close { justify-content: center; margin-top: 14px; }
+.menu-dialog .close { justify-content: center; margin-top: 14px; }
 </style>
 <script src="gl-matrix-min.js"></script>
 
@@ -67,7 +83,7 @@ src: url(data/verdana.ttf);
 
 
 <button type="button" id="optionsButton" class="options-button" aria-label="Options" aria-haspopup="dialog" aria-controls="options" hidden>&#9881;</button>
-<dialog id="options" aria-labelledby="optionsTitle">
+<dialog id="options" class="menu-dialog" aria-labelledby="optionsTitle">
 <h2 id="optionsTitle">Options</h2>
 <ul>
 <li><button type="button" id="option-toggleLook" aria-pressed="false"><span>Look <span class="key">L</span></span><span class="state"></span></button></li>
@@ -78,6 +94,32 @@ src: url(data/verdana.ttf);
 <li><button type="button" id="option-otherCarSounds" aria-pressed="false"><span>Other cars' sounds <span class="key">O</span></span><span class="state"></span></button></li>
 </ul>
 <button type="button" id="optionsClose" class="close">Close</button>
+</dialog>
+
+<button type="button" id="multiplayerButton" class="multiplayer-button" aria-haspopup="dialog" aria-controls="multiplayer" hidden>Multiplayer</button>
+<dialog id="multiplayer" class="menu-dialog" aria-labelledby="multiplayerTitle">
+<h2 id="multiplayerTitle">Multiplayer</h2>
+<div id="multiplayerChoose">
+<p>Race a friend: one of you hosts, the other joins with the host's code.</p>
+<button type="button" id="multiplayerHost">Host a race</button>
+<form id="multiplayerJoinForm" novalidate>
+<label for="multiplayerCode">Code of the host's room</label>
+<input id="multiplayerCode" name="room" maxlength="32" required aria-required="true" aria-describedby="multiplayerCodeError" autocomplete="off" autocapitalize="none" spellcheck="false">
+<p id="multiplayerCodeError" class="error" role="alert" hidden></p>
+<button type="submit">Join the race</button>
+</form>
+</div>
+<div id="multiplayerRoom" hidden>
+<p>Room <strong id="multiplayerRoomName" class="room"></strong></p>
+<div id="multiplayerShare">
+<label for="multiplayerLink">Link for your guest</label>
+<input id="multiplayerLink" readonly>
+<button type="button" id="multiplayerCopy">Copy</button>
+</div>
+<p id="multiplayerStatus" role="status"></p>
+<button type="button" id="multiplayerLeave">Leave the room</button>
+</div>
+<button type="button" id="multiplayerClose" class="close">Close</button>
 </dialog>
 
 <script type="module" src="/src/game.js"></script>

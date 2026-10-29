@@ -21,7 +21,15 @@ import { racers } from "../race/racers.js";
 import { followLive, viewer } from "../race/replayViewer.js";
 import { track } from "../race/track.js";
 import { menu } from "../screens/menuState.js";
-import { MESSAGE, OUTCOME, ROLE, isIndex, link, openLink } from "./link.js";
+import {
+  MESSAGE,
+  OUTCOME,
+  ROLE,
+  isIndex,
+  link,
+  openLink,
+  urlRoom,
+} from "./link.js";
 
 // how often a guest not in a race tells the host it is there
 const JOIN_EVERY_TICKS = 30;
@@ -29,6 +37,8 @@ const JOIN_EVERY_TICKS = 30;
 const WAITING_PHASES = [PHASE.mainMenu, PHASE.carSelect, PHASE.stageSelect];
 // a host silent this long in a race has paused it, or gone
 const HOST_QUIET_TICKS = 15;
+// a host not answering this long to joins is not in the room
+const HOST_GONE_TICKS = 100;
 
 export const NOTICE = {
   waiting: "Waiting for the host...",
@@ -48,6 +58,8 @@ export const guest = {
   ownCarType: 0,
   ownPlayer: 0,
   joinTicks: 0,
+  // ticks since the host last answered
+  hostAnsweredTicks: HOST_GONE_TICKS,
   // ticks since the host's last message, and whether the host left the race
   quietTicks: 0,
   ended: false,
@@ -64,6 +76,7 @@ const isStart = ({ stage, carTypes, car }) =>
 
 const receive = (message) => {
   guest.quietTicks = 0;
+  guest.hostAnsweredTicks = 0;
   if (message.type == MESSAGE.end) {
     guest.ended = true;
   }
@@ -81,9 +94,19 @@ const receive = (message) => {
   }
 };
 
+export const hostThere = () => guest.hostAnsweredTicks < HOST_GONE_TICKS;
+
+// Joins the room of a host.
+export const joinRoom = (room) => {
+  guest.hostAnsweredTicks = HOST_GONE_TICKS;
+  guest.joinTicks = 0;
+  guest.start = null;
+  openLink(ROLE.guest, room, receive);
+};
+
 export const startGuesting = () => {
-  if (link.role == ROLE.guest) {
-    openLink(receive);
+  if (urlRoom.join) {
+    joinRoom(urlRoom.join);
   }
 };
 
@@ -107,6 +130,7 @@ export const guestWaitingTick = () => {
   if (link.role != ROLE.guest || !WAITING_PHASES.includes(game.phase)) {
     return;
   }
+  guest.hostAnsweredTicks++;
   if (guest.joinTicks++ % JOIN_EVERY_TICKS == 0) {
     link.send({ type: MESSAGE.join, carType: game.carTypes[0] });
   }

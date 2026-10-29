@@ -109,6 +109,12 @@ Deployment auf beanie (noch nicht ausgeführt, braucht OK):
    }
    ```
 
+Im Menü: Der Knopf „Multiplayer“ neben dem Zahnrad (Hauptmenü, Auto- und Streckenwahl) öffnet
+einen Dialog (`src/ui/multiplayerMenu.js`). „Host a race“ öffnet einen Raum mit einem Code aus
+5 Zeichen und zeigt den Link für den Gast; der Gast gibt den Code ein. Der Host antwortet auf
+jedes `join` mit `here`, so sieht jede Seite, ob die andere da ist. `?host=`/`?join=` gehen
+weiterhin.
+
 ### Schritt 4: Feinschliff
 
 - Vorhersage fürs eigene Auto beim Gast, Abgleich mit dem Host.
