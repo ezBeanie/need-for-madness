@@ -198,7 +198,15 @@ const drawShowcaseCar = (classicFloor = null) => {
   );
 };
 
+// The ground's texture repeats this often (data/3D/ground.r3d: 17 times over its 2.5
+// at a scale of 12000), and the ground reaches 15000 from its middle.
+const GROUND_TILE = (2.5 * 12000) / 17;
+
 const drawRace = () => {
+  // under the camera, a whole number of tiles from where it was: the stage's far ends
+  // (The Stretch) on ground too, and its texture stays where it lies
+  ground.x = Math.round(camera.x / GROUND_TILE) * GROUND_TILE;
+  ground.z = Math.round(camera.z / GROUND_TILE) * GROUND_TILE;
   drawModel(ground);
   drawModel(sky);
   if (game.phase == PHASE.timeRewind) {
