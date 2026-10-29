@@ -3384,7 +3384,10 @@ const skidOf = (c, surface, onTrackPiece, mag) => {
     mag,
     0,
   );
-  skidSound(surface, onTrackPiece, mag, heardAs(c));
+  // (only the player's skids are heard: the others' would squeal all the time)
+  if (c == game.player) {
+    skidSound(surface, onTrackPiece, mag);
+  }
 };
 const crashHeardAs = (c) => (racers[c].colidim ? null : heardAs(c));
 

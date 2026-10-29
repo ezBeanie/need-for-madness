@@ -243,3 +243,27 @@ test("the replay's effects fly as fast as it plays, and stand while it stands", 
   expect([ctx.effects.step, ctx.tick.scale]).toEqual([1, 0.7]);
   ctx.closeReplay();
 });
+
+test("the camera flies to the next car followed instead of jumping there", async () => {
+  const { ctx, step } = await race(600);
+  ctx.game.phase = PHASE.paused;
+  ctx.openReplay(ctx.VIEWER_FROM.pauseMenu, 200);
+  ctx.camera.mode = ctx.CAMERA.behind;
+  ctx.togglePlaying();
+  for (let i = 0; i < 5; i++) {
+    step();
+  }
+  const near = (c) =>
+    Math.hypot(ctx.camera.x - ctx.car[c].x, ctx.camera.z - ctx.car[c].z);
+  const before = near(0);
+  ctx.nextCar();
+  step();
+  // on its way: still far from the car it goes to
+  expect(near(1)).toBeGreaterThan(before * 2);
+  for (let i = 0; i < 20; i++) {
+    step();
+  }
+  // there: behind it, as far as behind the first
+  expect(Math.abs(near(1) - before)).toBeLessThan(1);
+  ctx.closeReplay();
+});
