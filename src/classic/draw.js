@@ -11,6 +11,7 @@ import {
 } from "./batch.js";
 import { hsbToRgb, rgbToHsb } from "./color.js";
 import { cosDeg, medium, sinDeg, xs, ys } from "./medium.js";
+import { cornerHeight, surfaceUnder, surfacesNear } from "./surfaces.js";
 
 // --- a model's polygons for a stage (Plane's constructor) ---
 
@@ -641,11 +642,63 @@ const drawPoly = (poly, n, noline, size) => {
   }
 };
 
+// Where the cars drawn so far this frame stand (the original's spots, at most seven),
+// relative to the camera, ten times our units: painted over them, a later car's shadow
+// would cover them.
+const spots = [];
+export const clearShadowSpots = () => {
+  spots.length = 0;
+};
+
+const onSpot = (n) => {
+  for (const spot of spots) {
+    for (let i = 0; i < n; i++) {
+      if (
+        Math.abs(GX[i] - spot.x) < spot.reach &&
+        Math.abs(GZ[i] - spot.z) < spot.reach
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+};
+
 // A car's shadow (Plane.s): each polygon pressed flat onto the ground below the car, in
-// the ground's colour darkened.
-const drawShadow = (rad, matrix, groundY) => {
+// the ground's colour darkened. On a stage (seen from camera) onto the surfaces under
+// it, a ramp, a bridge or a rock pile: each corner onto the one under it (the original
+// put all of a polygon's onto the one under its middle, hanging over or sinking into
+// their edges), in the colour of the one under its middle darkened. Painted without
+// depth, not over the cars drawn before. wheels: how far below the car's middle its
+// wheels touch the ground.
+const drawShadow = (rad, matrix, groundY, camera, wheels) => {
+  const onSurfaces =
+    camera &&
+    surfacesNear(
+      matrix[12] + camera.x,
+      matrix[14] + camera.z,
+      rad.maxR / 10,
+      matrix[13] + camera.y - wheels,
+    );
   for (const poly of rad.polys) {
     const n = placePoly(poly, matrix, groundY);
+    if (camera && !medium.depth && onSpot(n)) {
+      continue;
+    }
+    let shade =
+      medium.menuShadow ?? medium.crgrnd.map((v) => Math.trunc(v / 1.5));
+    if (onSurfaces) {
+      const surface = surfaceUnderPoly(n, camera);
+      if (surface) {
+        shade = surface.shadow;
+      }
+      for (let i = 0; i < n; i++) {
+        const x = GX[i] / 10;
+        const z = GZ[i] / 10;
+        const y = cornerHeight(x + camera.x, z + camera.z, middle, surface);
+        placeSeen(i, x, y - camera.y, z);
+      }
+    }
     let off0 = 0;
     let off1 = 0;
     let off2 = 0;
@@ -662,11 +715,37 @@ const drawShadow = (rad, matrix, groundY) => {
     if (n < 3 || off0 == n || off1 == n || off2 == n || off3 == n) {
       continue;
     }
-    const [r, g, b] =
-      medium.menuShadow ?? medium.crgrnd.map((v) => Math.trunc(v / 1.5));
-    fog(r, g, b, poly.av ?? 0);
+    fog(shade[0], shade[1], shade[2], poly.av ?? 0);
     fillPolygon(SX, SY, n, color[0], color[1], color[2]);
   }
+  if (camera && spots.length < 7) {
+    spots.push({
+      x: matrix[12] * 10,
+      z: matrix[14] * 10,
+      reach: Math.trunc(rad.maxR * 0.8),
+    });
+  }
+};
+
+// the middle of the polygon just placed, between its farthest corners along x and along
+// z, in the world (see surfaceUnderPoly)
+const middle = { x: 0, z: 0 };
+
+// The surface under the middle of the polygon just placed, in the world.
+const surfaceUnderPoly = (n, camera) => {
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minZ = Infinity;
+  let maxZ = -Infinity;
+  for (let i = 0; i < n; i++) {
+    minX = Math.min(minX, GX[i]);
+    maxX = Math.max(maxX, GX[i]);
+    minZ = Math.min(minZ, GZ[i]);
+    maxZ = Math.max(maxZ, GZ[i]);
+  }
+  middle.x = (minX + maxX) / 20 + camera.x;
+  middle.z = (minZ + maxZ) / 20 + camera.z;
+  return surfaceUnder(middle.x, middle.z);
 };
 
 // randomness that stays the same through a logic tick: the original flickered about as
@@ -683,8 +762,9 @@ export const tickRandom = (a, b) => {
 const clamp = (v) => Math.min(255, Math.max(0, Math.trunc(v)));
 
 // A wrecked car's polygon (the original's embos, from Plane.d), counting up a step each
-// tick: first it flashes white and swells, greys, and from step 16 on it burns, two
-// flickering flame triangles over two of its corners, until the car is fixed.
+// tick the replay does not hold still (there it goes on flashing, as in the original):
+// first it flashes white and swells, greys, and from step 16 on it burns, two flickering
+// flame triangles over two of its corners, until the car is fixed.
 const wreck = (poly, index, matrix, angles) => {
   const r = (k) => tickRandom(index, k);
   const step = poly.embos;
@@ -792,7 +872,9 @@ const wreck = (poly, index, matrix, angles) => {
   poly.bloat = bloat;
   if (poly.embosTick != medium.tick) {
     poly.embosTick = medium.tick;
-    poly.embos = step == 70 ? 16 : step + 1;
+    if (!medium.frozen) {
+      poly.embos = step == 70 ? 16 : step + 1;
+    }
   }
 };
 
@@ -810,6 +892,8 @@ export const drawObject = (
     nextCheckpoint = false,
     groundY = 0,
     ground = null,
+    // a car on a stage: the camera, its shadow lies on the stage's surfaces
+    shadowCamera = null,
     angles = null,
     beforePolygons = null,
   } = {},
@@ -857,7 +941,7 @@ export const drawObject = (
     startObject(depth - maxR, depth + maxR);
   }
   if (rad.shadow && depth < 2000) {
-    drawShadow(rad, matrix, groundY);
+    drawShadow(rad, matrix, groundY, shadowCamera, ground ?? 0);
   }
   // drawn before its polygons: the fix hoop's electricity, the bubble round a car being
   // fixed

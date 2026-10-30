@@ -70,38 +70,50 @@ const shapeRandom = () => {
   return shapeSeed / 2147483647;
 };
 
-// the puff's eight corners round its middle, and how far each reaches
+// the puff's eight corners round its middle, on the ground (the original's x and z), and
+// how far each reaches
 const CORNERS = [
-  [0.9238 * 1.5, 0.3826 * 1.5],
-  [0.9238 * 1.5, -0.3826 * 1.5],
-  [0.3826, -0.9238],
-  [-0.3826, -0.9238],
-  [-0.9238 * 1.5, -0.3826 * 1.5],
-  [-0.9238 * 1.5, 0.3826 * 1.5],
-  [-0.3826 * 1.7, 0.9238],
-  [0.3826 * 1.7, 0.9238],
+  [-0.7071, 0.7071],
+  [0, 1],
+  [0.7071, 0.7071],
+  [1, 0],
+  [0.7071, -0.7071],
+  [0, -1],
+  [-0.7071, -0.7071],
+  [-1, 0],
 ];
+// how much wider than our cloud's size: lying flat, seen from the side, it looks thinner
+const SPREAD = 2.5;
 const SX = new Float64Array(8);
 const SY = new Float64Array(8);
 
-// A dust cloud: a ragged octagon in the ground's colour mixed with white, growing and
-// fading over its stages.
+// A dust cloud: a ragged octagon lying flat where it rose (the original's pdust: not
+// facing the camera, so seen from behind a car it stays low beside it instead of
+// standing up over it), in the ground's colour mixed with white, growing and fading
+// over its stages.
 const drawDust = (cloud) => {
   if (!cloud.classic) {
     const reach = CORNERS.map(() => shapeRandom());
     cloud.classic = { reach };
   }
-  const [x, y, z] = relative(cloud);
+  const [x, , z] = relative(cloud);
+  // (y: where it rose, not raised as the modern look's clouds are)
+  const y = cloud.dy - drawCamera.y;
   placeSeen(0, x, y, z);
-  if (Z[0] < 10) {
+  const depth = Z[0];
+  if (depth < 10) {
     return;
   }
-  // in the original's units: the cloud's size (ours) times ten, a little ragged
-  const size = cloud.mag * 18;
+  // our units: the cloud's size, a little ragged
+  const size = cloud.mag * 1.8 * SPREAD;
   for (let k = 0; k < 8; k++) {
     const r = size * (0.6 + 0.8 * cloud.classic.reach[k]);
-    SX[k] = xs(X[0] + r * CORNERS[k][0], Z[0]);
-    SY[k] = ys(Y[0] + r * CORNERS[k][1] - size * 0.5, Z[0]);
+    placeSeen(k, x - r * CORNERS[k][0], y, z + r * CORNERS[k][1]);
+    if (Z[k] < 10) {
+      return;
+    }
+    SX[k] = xs(X[k], Z[k]);
+    SY[k] = ys(Y[k], Z[k]);
   }
   const white = medium.snap.map((s) =>
     Math.min(255, Math.max(0, Math.trunc(255 + 255 * (s / 100)))),
@@ -110,7 +122,7 @@ const drawDust = (cloud) => {
   const kind = [DUST.road, DUST.sand, DUST.ground][ground];
   const color = fogged(
     medium.crgrnd.map((c, i) => Math.trunc((c + white[i]) / 2)),
-    Z[0],
+    depth,
   );
   // the original's seven stages over our ten ticks
   const stage = (cloud.stg * 7) / 10;
