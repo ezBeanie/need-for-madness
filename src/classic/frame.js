@@ -18,6 +18,7 @@ import { canvas3D } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 import { PIECE_FILES } from "../loading/assets.js";
 import { bodyDamage } from "../race/physics.js";
+import { recording } from "../race/recording.js";
 import { flushBatch, setPixelSize, startBatch } from "./batch.js";
 import { dentClassic, hitOn } from "./damage.js";
 import { electrify, fixBubble, fixStep, startFixing } from "./fixing.js";
@@ -189,6 +190,7 @@ const startFrame = (colors = scene.colors ?? NO_STAGE) => {
   medium.depth = look.depth;
   medium.frame++;
   medium.tick = interpolation.tick;
+  medium.frozen = recording.frozen;
   medium.lastCheck = raceEvents.onlastcheck;
   clearShadowSpots();
 };

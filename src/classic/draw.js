@@ -762,8 +762,9 @@ export const tickRandom = (a, b) => {
 const clamp = (v) => Math.min(255, Math.max(0, Math.trunc(v)));
 
 // A wrecked car's polygon (the original's embos, from Plane.d), counting up a step each
-// tick: first it flashes white and swells, greys, and from step 16 on it burns, two
-// flickering flame triangles over two of its corners, until the car is fixed.
+// tick the replay does not hold still (there it goes on flashing, as in the original):
+// first it flashes white and swells, greys, and from step 16 on it burns, two flickering
+// flame triangles over two of its corners, until the car is fixed.
 const wreck = (poly, index, matrix, angles) => {
   const r = (k) => tickRandom(index, k);
   const step = poly.embos;
@@ -871,7 +872,9 @@ const wreck = (poly, index, matrix, angles) => {
   poly.bloat = bloat;
   if (poly.embosTick != medium.tick) {
     poly.embosTick = medium.tick;
-    poly.embos = step == 70 ? 16 : step + 1;
+    if (!medium.frozen) {
+      poly.embos = step == 70 ? 16 : step + 1;
+    }
   }
 };
 

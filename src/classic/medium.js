@@ -43,6 +43,8 @@ export const medium = {
   // counts the frames drawn, and the logic tick they show
   frame: 0,
   tick: 0,
+  // the replay holds still (its highlight's peak): a wreck flashes on without burning
+  frozen: false,
   // an object's nearer polygons cover its farther ones, whatever their order (look.depth)
   depth: false,
 };
