@@ -13,6 +13,8 @@ export const MESSAGE = {
   start: "start",
   tick: "tick",
   end: "end",
+  // the guest left the race for the menus
+  left: "left",
 };
 
 // the car the guest drives: the one beside the player's on the start grid

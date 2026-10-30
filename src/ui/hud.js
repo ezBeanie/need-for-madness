@@ -1120,7 +1120,9 @@ const drawToggle = (id, y, muted, toggle, onImage) => {
 };
 
 // Top right corner: pause, sound and music.
-const drawCornerButtons = (raceOver) => {
+// onMenu: what the menu button does (in a race with a host, see net/guest.js, the race
+// cannot pause)
+const drawCornerButtons = (raceOver, onMenu = pause) => {
   // narrow screens leave the meters room above the buttons
   const shift = view.width / view.height < 1.3 ? 76 * view.scale : 0;
   const pauseX = view.width - 87 * view.scale;
@@ -1141,7 +1143,7 @@ const drawCornerButtons = (raceOver) => {
       53 * view.scale,
     );
   } else if (!raceOver) {
-    pause();
+    onMenu();
   }
   drawToggle(
     3,
@@ -1633,8 +1635,13 @@ const drawGuestOutcome = ({ outcome, winner }) => {
 };
 
 // A guest's HUD: the race as the host sent it (see net/guest.js).
-export function drawGuestHud(hud, notice, ping) {
+// onContinue: leaves the race, once it is over (or the host left it)
+export function drawGuestHud(hud, notice, ping, onMenu, onContinue) {
   rd.clearRect(0, 0, view.width, view.height);
+  if (touchControlsShown()) {
+    drawTouchControls();
+    pressTouchControls();
+  }
   const raceOver = hud != null && hud.outcome != OUTCOME.none;
   if (raceOver) {
     drawGuestOutcome(hud);
@@ -1652,6 +1659,31 @@ export function drawGuestHud(hud, notice, ping) {
   if (raceEvents.countdown <= COUNTDOWN.behindTheCar) {
     drawStanding();
     drawMeters();
+    // (the menu button leaves a race that is over too, see net/guest.js)
+    drawCornerButtons(false, onMenu);
+  }
+  if (
+    onContinue &&
+    drawButton({
+      id: 7,
+      x: 640 * view.scaleX,
+      y: view.height - 60 * view.scale - 40 * view.scaleY,
+      width: 250,
+      height: 60,
+      faceTop: "#019DFF",
+      faceBottom: "#01BAFF",
+      shadowTop: "#004A78",
+      shadowBottom: "#015777",
+      layout: BUTTON.textThenImage,
+      text: "Continue ",
+      fontSize: 20,
+      textOpacity: 0.8,
+      image: images.buttons[1],
+      imageOpacity: 0.8,
+      pulsing: false,
+    })
+  ) {
+    onContinue();
   }
   if (!raceOver) {
     drawCountdown();

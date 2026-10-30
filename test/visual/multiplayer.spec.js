@@ -234,10 +234,9 @@ test("leaving the room ends the link", async ({ page }) => {
   await expect(page.getByRole("button", { name: "Multiplayer" })).toBeVisible();
 });
 
-test("the guest's keys go to the host at once, not only with its next tick", async ({
-  context,
-}) => {
-  await context.addInitScript(() => {
+// Every message a page sends to the relay, in window.sentMessages.
+const recordSentMessages = (context) =>
+  context.addInitScript(() => {
     window.sentMessages = [];
     const send = WebSocket.prototype.send;
     WebSocket.prototype.send = function (data) {
@@ -245,6 +244,18 @@ test("the guest's keys go to the host at once, not only with its next tick", asy
       return send.call(this, data);
     };
   });
+
+const sentKeys = (page) =>
+  page.evaluate(() =>
+    window.sentMessages
+      .filter((message) => message.type == "keys")
+      .map((message) => message.keys),
+  );
+
+test("the guest's keys go to the host at once, not only with its next tick", async ({
+  context,
+}) => {
+  await recordSentMessages(context);
   const { guestPage } = await raceTogether(context, "keys");
   await guestPage.evaluate(() => (window.sentMessages = []));
   // (no tick of the guest's in between)
@@ -256,6 +267,87 @@ test("the guest's keys go to the host at once, not only with its next tick", asy
       keys: expect.objectContaining({ up: true }),
     }),
   );
+});
+
+test.describe("on a phone", () => {
+  test.use({ hasTouch: true });
+
+  test("the guest drives with the touch controls, and leaves the race with the menu button", async ({
+    context,
+  }) => {
+    await recordSentMessages(context);
+    const { host, guest, hostPage, guestPage } = await raceTogether(
+      context,
+      "touch",
+    );
+    const both = [
+      { game: host, page: hostPage },
+      { game: guest, page: guestPage },
+    ];
+    await advanceBoth(...both, 300);
+    // (the accelerator, bottom right, held for a tick)
+    await guestPage.evaluate(() => (window.sentMessages = []));
+    await guestPage.mouse.move(1150, 558);
+    await guestPage.mouse.down();
+    await guest.advance();
+    expect(await sentKeys(guestPage)).toContainEqual(
+      expect.objectContaining({ up: true }),
+    );
+    await guestPage.mouse.up();
+    await guest.advance();
+
+    // the menu button, top right: a first tap asks, a second one leaves
+    const tapMenu = async () => {
+      await guestPage.mouse.move(1231, 36);
+      await guestPage.mouse.down();
+      await guest.advance();
+      await guestPage.mouse.up();
+      await guest.advance();
+    };
+    await tapMenu();
+    expect(await guestState(guestPage)).toMatchObject({
+      phase: PHASE.guestRace,
+      notice: "Tap the menu again to leave the race",
+    });
+    await tapMenu();
+    expect((await guestState(guestPage)).phase).toBe(PHASE.mainMenu);
+    await guest.advance();
+    await hostPage.waitForTimeout(DELIVERY_MS);
+    await host.advance();
+    // the host's AI drives the guest's car on
+    expect(await hostPage.evaluate(() => window.gameState.game.humans)).toEqual(
+      [],
+    );
+  });
+  test("the guest goes back to its menu with Continue when the host left the race", async ({
+    context,
+  }) => {
+    const { host, guest, hostPage, guestPage } = await raceTogether(
+      context,
+      "continue",
+    );
+    const both = [
+      { game: host, page: hostPage },
+      { game: guest, page: guestPage },
+    ];
+    await advanceBoth(...both, 100);
+    await hostPage.evaluate(() => {
+      const { game, PHASE } = window.gameState;
+      game.phase = PHASE.mainMenu;
+    });
+    await advanceBoth(...both, 3);
+    expect((await guestState(guestPage)).notice).toBe("The host left the race");
+    // (the Continue button, bottom middle)
+    await guestPage.mouse.move(640, 654);
+    await guestPage.mouse.down();
+    await guest.advance();
+    await guestPage.mouse.up();
+    await guest.advance();
+    expect(await guestState(guestPage)).toMatchObject({
+      phase: PHASE.mainMenu,
+      carType: Number(GUEST_TYPE),
+    });
+  });
 });
 
 // Every text a page draws on its canvas, to see what its HUD shows.

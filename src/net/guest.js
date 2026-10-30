@@ -44,10 +44,13 @@ const HOST_QUIET_TICKS = 15;
 const HOST_GONE_TICKS = 100;
 // how often the guest measures the time to the host and back
 const PING_EVERY_TICKS = 30;
+// how long a tap on the menu button waits for the second one that leaves the race
+const LEAVE_ASK_TICKS = 100;
 
 export const NOTICE = {
   waiting: "Waiting for the host...",
   hostLeft: "The host left the race",
+  leave: "Tap the menu again to leave the race",
 };
 
 // (with the store of the host's ticks not shown yet, see tickStore.js)
@@ -72,6 +75,10 @@ export const guest = emptyStore({
   ended: false,
   // what the guest's HUD tells about the host, if anything
   notice: null,
+  // ticks left to tap the menu button again to leave the race
+  leaveTicks: 0,
+  // whether the race is over for the guest (or the host left it): it can leave at once
+  over: false,
 });
 
 const isStart = ({ stage, carTypes, car }) =>
@@ -125,6 +132,8 @@ const loadHostedRace = (start) => {
   guest.ownPlayer = game.player;
   guest.hud = null;
   guest.ended = false;
+  guest.over = false;
+  guest.leaveTicks = 0;
   guest.ping = null;
   track.stage = start.stage;
   field.replayCars = start.carTypes;
@@ -181,7 +190,7 @@ const showHud = (hud) => {
   }
 };
 
-const leaveHostedRace = () => {
+export const leaveHostedRace = () => {
   stopStageMusic();
   stopReplaySounds();
   game.carTypes[0] = guest.ownCarType;
@@ -189,6 +198,7 @@ const leaveHostedRace = () => {
   menu.animation = 0;
   menu.continuesToCarSelect = false;
   game.phase = PHASE.mainMenu;
+  link.send({ type: MESSAGE.left });
 };
 
 // The guest's keys to the host: each tick, and at once when a key is pressed or let go (see
@@ -203,7 +213,24 @@ export const sendGuestKeys = (ping) => {
   });
 };
 
-// A tick of the guest's race: what the host sent shows, the keys go to the host.
+// After the guest's HUD took the touch controls: this tick's keys to the host.
+export const sendGuestTickKeys = () =>
+  sendGuestKeys(
+    guest.pingTicks++ % PING_EVERY_TICKS == 0 ? performance.now() : undefined,
+  );
+
+// The menu button of the guest's HUD: the race goes on for the host, so a first tap asks and
+// a second one leaves it (the host's AI drives the guest's car on, see host.js).
+export const guestMenu = () => {
+  if (guest.leaveTicks > 0 || guest.over) {
+    leaveHostedRace();
+    return;
+  }
+  guest.leaveTicks = LEAVE_ASK_TICKS;
+  guest.notice = NOTICE.leave;
+};
+
+// A tick of the guest's race: what the host sent shows.
 export const guestRaceTick = () => {
   const countdown = raceEvents.countdown;
   for (const message of ticksToShow(guest)) {
@@ -225,19 +252,22 @@ export const guestRaceTick = () => {
   }
   guest.quietTicks++;
   const raceOver = guest.hud != null && guest.hud.outcome != OUTCOME.none;
+  if (guest.leaveTicks > 0) {
+    guest.leaveTicks--;
+  }
   guest.notice =
-    guest.ended && !raceOver
-      ? NOTICE.hostLeft
-      : !guest.ended && guest.quietTicks > HOST_QUIET_TICKS
-        ? NOTICE.waiting
-        : null;
+    guest.leaveTicks > 0
+      ? NOTICE.leave
+      : guest.ended && !raceOver
+        ? NOTICE.hostLeft
+        : !guest.ended && guest.quietTicks > HOST_QUIET_TICKS
+          ? NOTICE.waiting
+          : null;
   if (raceTape.length > 0) {
     followLive();
   }
-  sendGuestKeys(
-    guest.pingTicks++ % PING_EVERY_TICKS == 0 ? performance.now() : undefined,
-  );
-  if ((raceOver || guest.ended) && confirm.state == CONFIRM.pressed) {
+  guest.over = raceOver || guest.ended;
+  if (guest.over && confirm.state == CONFIRM.pressed) {
     confirm.state = CONFIRM.used;
     leaveHostedRace();
   }

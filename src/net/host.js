@@ -49,6 +49,11 @@ export const guestThere = () => host.quietTicks < GUEST_GONE_TICKS;
 
 const receive = (message) => {
   host.quietTicks = 0;
+  if (message.type == MESSAGE.left && host.racing) {
+    // the AI drives the guest's car on
+    host.racing = false;
+    game.humans = [];
+  }
   if (
     message.type == MESSAGE.join &&
     isIndex(message.carType, carStats.names.length)

@@ -74,9 +74,12 @@ import {
 } from "./net/host.js";
 import {
   guest,
+  guestMenu,
   guestRaceTick,
   sendGuestKeys,
+  sendGuestTickKeys,
   guestWaitingTick,
+  leaveHostedRace,
   startGuesting,
 } from "./net/guest.js";
 
@@ -116,7 +119,17 @@ function raceTick() {
     if (raceTape.length > 0) {
       replaySoundsTick(from, viewer.frame, true);
     }
-    drawGuestHud(guest.hud, guest.notice, guest.ping);
+    drawGuestHud(
+      guest.hud,
+      guest.notice,
+      guest.ping,
+      guestMenu,
+      guest.over ? leaveHostedRace : null,
+    );
+    // (unless the guest just left the race)
+    if (game.phase == PHASE.guestRace) {
+      sendGuestTickKeys();
+    }
   }
   if (game.phase == PHASE.replay) {
     const from = viewer.frame;
@@ -290,7 +303,8 @@ installMultiplayerMenu();
 installPointer(canvas2D, {
   // a click or touch allows audio (see unlockAudio)
   onRelease: () => unlockAudio(game.phase == PHASE.race),
-  keepPressedWhileTouching: () => game.phase == PHASE.race,
+  keepPressedWhileTouching: () =>
+    game.phase == PHASE.race || game.phase == PHASE.guestRace,
 });
 installKeyboard((action, pressed) => {
   onKey(action, pressed);
