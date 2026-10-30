@@ -292,6 +292,12 @@ document.addEventListener("visibilitychange", () => {
   }
 });
 
+// Installed as an app, the game starts without the network too (see public/sw.js); not in
+// the dev server, whose files change with every edit.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  navigator.serviceWorker.register("sw.js");
+}
+
 window.addEventListener("load", () => {
   lookForGamepads();
   document.getElementById("loading").style.visibility = "hidden";
