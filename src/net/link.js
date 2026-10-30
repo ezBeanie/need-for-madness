@@ -15,6 +15,8 @@ export const MESSAGE = {
   end: "end",
   // the guest left the race for the menus
   left: "left",
+  // the host's answer to a ping, at once: the time to the host and back
+  pong: "pong",
 };
 
 // the car the guest drives: the one beside the player's on the start grid

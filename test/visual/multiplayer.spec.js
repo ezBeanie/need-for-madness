@@ -285,6 +285,19 @@ test("the guest's own car answers its keys at once, ahead of the host's ticks", 
   await guestPage.keyboard.up("ArrowUp");
 });
 
+test("the host answers the guest's ping at once, not with its next tick", async ({
+  context,
+}) => {
+  const { guest, guestPage } = await raceTogether(context, "ping");
+  await guestPage.evaluate(() => (window.gameState.guest.ping = null));
+  // (the host's game ticks no more; the guest pings once in so many ticks)
+  await guest.advance(31);
+  await guestPage.waitForTimeout(DELIVERY_MS);
+  expect(await guestPage.evaluate(() => window.gameState.guest.ping)).toEqual(
+    expect.any(Number),
+  );
+});
+
 test.describe("on a phone", () => {
   test.use({ hasTouch: true });
 

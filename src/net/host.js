@@ -40,14 +40,12 @@ const RACE_GOES_ON = [
 
 // sent: how many ticks of the race tape the guest has; quietTicks: since the guest's
 // last message
-// pong: the guest's last ping, sent back with the next tick
 // inputs: the guest's keys of each of its ticks, numbered, not driven yet; driven: the
 // number of the last one driven, which the guest's prediction drives on from (see guest.js)
 const host = {
   racing: false,
   sent: 0,
   quietTicks: GUEST_GONE_TICKS,
-  pong: null,
   inputs: [],
   driven: -1,
 };
@@ -82,7 +80,8 @@ const receive = (message) => {
       ),
     });
     if (Number.isFinite(message.ping)) {
-      host.pong = message.ping;
+      // (at once, not with the next tick: the ping measures the network alone)
+      link.send({ type: MESSAGE.pong, ping: message.ping });
     }
   }
 };
@@ -197,7 +196,6 @@ export const sendHostTick = () => {
   link.send({
     type: MESSAGE.tick,
     countdown: raceEvents.countdown,
-    pong: host.pong,
     // the guest's car as driven up to that input, for the guest's prediction
     own: { input: host.driven, state: copyCarState(GUEST_CAR) },
     tape,
@@ -216,5 +214,4 @@ export const sendHostTick = () => {
       ...guestOutcome(),
     },
   });
-  host.pong = null;
 };

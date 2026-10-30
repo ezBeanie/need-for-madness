@@ -122,9 +122,9 @@ const receive = (message) => {
     ) {
       guest.own = message.own;
     }
-    if (Number.isFinite(message.pong)) {
-      guest.ping = Math.round(performance.now() - message.pong);
-    }
+  }
+  if (message.type == MESSAGE.pong && Number.isFinite(message.ping)) {
+    guest.ping = Math.round(performance.now() - message.ping);
   }
 };
 
@@ -219,8 +219,8 @@ export const leaveHostedRace = () => {
 };
 
 // Each tick of the guest's race: its keys to the host, numbered, so the host drives them
-// one each tick and the guest knows which it has driven (see host.js); ping, now and
-// then, the host sends back with its next tick.
+// one each tick and the guest knows which it has driven (see host.js); now and then a
+// ping, which the host answers at once.
 export const sendGuestTickKeys = () => {
   const { up, down, left, right, handb } = racers[game.player].u;
   const keys = { up, down, left, right, handb };
