@@ -216,12 +216,27 @@ export function runTick() {
   interpolation.tick++;
 }
 
+// The game fills what is on screen: the visual viewport, which is smaller than the window
+// in a zoomed page (Samsung Internet may keep a page zoomed in, even an installed game,
+// whose zoom cannot be undone), and lies where the zoom has panned to.
 const fitToWindow = () => {
-  if (view.width == window.innerWidth && view.height == window.innerHeight) {
+  const seen = window.visualViewport ?? {
+    width: window.innerWidth,
+    height: window.innerHeight,
+    pageLeft: 0,
+    pageTop: 0,
+  };
+  for (const canvas of [canvas3D, canvas2D]) {
+    canvas.style.left = `${seen.pageLeft}px`;
+    canvas.style.top = `${seen.pageTop}px`;
+  }
+  const width = Math.round(seen.width);
+  const height = Math.round(seen.height);
+  if (view.width == width && view.height == height) {
     return;
   }
-  view.width = window.innerWidth;
-  view.height = window.innerHeight;
+  view.width = width;
+  view.height = height;
   view.aspect = view.width / view.height;
   view.scaleX = view.width / 1280;
   view.scaleY = view.height / 720;
