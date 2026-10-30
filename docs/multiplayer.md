@@ -136,7 +136,18 @@ weiterhin.
 - Verbindungsabbruch: KI übernimmt das Auto (dafür `rivalOf(c)` in ai.js).
 - KI-Autos im MP-Feld, Namen über den Autos, Ergebnisliste für alle.
 
-### Später, falls nötig: Lockstep
+### Schritt 5: Rollback-Netcode
 
-Braucht deterministische `sin/cos/atan/acos` über alle Browser (ändert die Golden Masters) und
-`random.fx`, das in `effects.js` ins Rennen wirkt, als Teil der Simulation.
+Beide Spiele rechnen das ganze Rennen und tauschen nur Tasten aus. Kommen Tasten des anderen
+zu spät, spult ein Spiel zum Tick zurück, an dem sie gedrückt wurden, und rechnet neu.
+
+- Harter Determinismus: `sin/cos/atan/acos` aus `core/exactMath.js` (fdlibm), über `?determinism`
+  zwischen Geräten vergleichbar.
+- Rennzustand speichern und zurückholen (`net/raceState.js`): Autos (inklusive Matrix, die die
+  Physik im nächsten Tick liest), Tasten (die KI drückt sie einen Tick vorher), Beulen der
+  Karosserie (sie bestimmen den Schaden des nächsten Treffers), KI, Wertung, Rennereignisse,
+  `random.sim`, `random.wreck` und der Takt. Was nur zu sehen oder zu hören ist, bleibt außen
+  vor. `random.wreck` ist der eine Zug aus den Effekten, der ins Rennen wirkt (Streckung des
+  Wracks); er ist von `random.fx` getrennt, weil das Zeichnen `random.fx` je nach
+  Bildwiederholrate unterschiedlich oft zieht. Test: `test/raceState.test.js`.
+- Offen: nur Tasten austauschen, Zurückspulen und Neurechnen, Desync-Prüfung per Fingerabdruck.

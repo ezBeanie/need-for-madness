@@ -30,7 +30,9 @@ import { acos } from "../core/exactMath.js";
 
 // While predicting the guest's own car (see net/prediction.js) the physics only moves it:
 // what the car sounds, throws, shows and records comes with the host's ticks.
-export const physics = { predicting: false };
+// flipWhenGrounded: the player's capsized car, auto-corrected, left the ground and turns
+// upright when it touches it again; part of the race (see net/raceState.js).
+export const physics = { predicting: false, flipWhenGrounded: false };
 const unlessPredicting =
   (act) =>
   (...args) =>
@@ -160,7 +162,6 @@ export function inishmad() {
     lonorm[i] = 0;
   }
 }
-let flipont = false;
 export function drive() {
   if (game.carCount != 1) {
     for (let c = 0; c < game.carCount; c++) {
@@ -174,12 +175,12 @@ export function drive() {
   if (raceEvents.onautocorrect) {
     if (racers[0].capsized) {
       if (racers[0].wheelsTouch) {
-        if (flipont) {
+        if (physics.flipWhenGrounded) {
           racers[0].roll += 180;
-          flipont = false;
+          physics.flipWhenGrounded = false;
         }
       } else {
-        flipont = true;
+        physics.flipWhenGrounded = true;
       }
     }
   }
@@ -1124,11 +1125,11 @@ function burnWhenWasted(c, type, avgSpeedX, avgSpeedZ) {
       if (racers[c].cntdest < 6) {
         if (racers[c].embos == 0) {
           racers[c].body.alpha = BLEND.alpha;
-          racers[c].embodir = Math.floor(random.fx() * 3);
+          racers[c].embodir = Math.floor(random.wreck() * 3);
           if (racers[c].embodir == 3) {
             racers[c].embodir = 0;
           }
-          racers[c].embomag = 1.2 + random.fx() * 0.2;
+          racers[c].embomag = 1.2 + random.wreck() * 0.2;
         }
         if (racers[c].embos == 1) {
           racers[c].body.alpha = BLEND.glow;

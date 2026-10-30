@@ -6,7 +6,7 @@
 
 import { stopStageMusic } from "../audio/audio.js";
 import { atan } from "../core/exactMath.js";
-import { random } from "../core/random.js";
+import { random, seededRandom } from "../core/random.js";
 import { PHASE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
@@ -21,18 +21,6 @@ const CAR_TYPE = 5;
 const RACE_CARS = 7;
 // fingerprints after these ticks of the race: where races part, if they do
 export const FINGERPRINT_TICKS = [250, 500, 1000, 2000];
-
-// mulberry32, as the tests seed the game
-const seeded = (seed) => {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-};
 
 // FNV-1a over the bits of every number
 const bytes = new DataView(new ArrayBuffer(8));
@@ -87,7 +75,7 @@ const mixRace = (hash) => {
 
 // From the main menu: the stage of the fixed race loads, with its field drawn from the seed.
 export const startFingerprintRace = () => {
-  random.sim = seeded(SEED);
+  random.sim = seededRandom(SEED);
   game.carTypes[0] = CAR_TYPE;
   game.unlocked = 17;
   game.raceCars = RACE_CARS;
@@ -98,21 +86,31 @@ export const startFingerprintRace = () => {
   game.phase = PHASE.stageLoading;
 };
 
-// In the stage select it led to: the race, run at once by runTick; returns the fingerprints.
-export const finishFingerprintRace = (runTick) => {
+// In the stage select it led to: the fixed race begins.
+export const beginFingerprintRace = () => {
   // (again: the stage select may have drawn some, as many as it had ticks)
-  random.sim = seeded(SEED);
-  random.fx = seeded(SEED);
+  random.sim = seededRandom(SEED);
+  random.fx = seededRandom(SEED);
+  random.wreck = seededRandom(SEED);
   // (where the original's ticks fall among this game's runs on from the game's start: it
   // is part of the race, see tick.js)
   tick.fraction = 0;
   game.mode = 0;
   flashIntoRace();
+};
+
+export const fingerprintRaceTick = (runTick) => {
+  steerAlongTrack();
+  runTick();
+};
+
+// the fixed race from the stage select, run at once by runTick; returns the fingerprints
+export const finishFingerprintRace = (runTick) => {
+  beginFingerprintRace();
   const prints = [];
   let hash = 2166136261;
   for (let t = 1; t <= FINGERPRINT_TICKS.at(-1); t++) {
-    steerAlongTrack();
-    runTick();
+    fingerprintRaceTick(runTick);
     hash = mixRace(hash);
     if (FINGERPRINT_TICKS.includes(t)) {
       prints.push(hash.toString(16).padStart(8, "0"));
@@ -151,6 +149,7 @@ export const checkDeterminism = async (runTick) => {
     stage: track.stage,
     sim: random.sim,
     fx: random.fx,
+    wreck: random.wreck,
   };
   startFingerprintRace();
   await until(() => game.phase == PHASE.stageSelect);
@@ -170,6 +169,7 @@ export const checkDeterminism = async (runTick) => {
   track.stage = kept.stage;
   random.sim = kept.sim;
   random.fx = kept.fx;
+  random.wreck = kept.wreck;
   menu.animation = 0;
   menu.continuesToCarSelect = false;
   game.phase = PHASE.mainMenu;

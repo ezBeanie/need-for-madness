@@ -4,15 +4,28 @@
 
 import { car, racers } from "../race/racers.js";
 
-// what the physics does not drive on from: the keys (sent apart), and what is placed
-// or drawn every tick
-const NOT_STATE = { racer: ["u", "wheels", "shadow", "body"], car: ["mat"] };
+// what the physics does not drive on from: the keys (sent apart), what is placed or drawn
+// every tick, and the chips flying off the car. (The car's matrix is: the physics turns
+// the car by the last tick's before it places it anew.)
+const NOT_STATE = {
+  racer: ["u", "wheels", "shadow", "body", "carnchp"],
+  car: ["ctxl"],
+};
+
+// (a matrix as a plain array, which goes through JSON as it is; restored into the car's
+// own, which the drawing holds)
+const copyOfValue = (value) =>
+  ArrayBuffer.isView(value)
+    ? Array.from(value)
+    : Array.isArray(value)
+      ? value.slice()
+      : value;
 
 const copyOf = (from, skipped) => {
   const copy = {};
   for (const [key, value] of Object.entries(from)) {
     if (!skipped.includes(key)) {
-      copy[key] = Array.isArray(value) ? value.slice() : value;
+      copy[key] = copyOfValue(value);
     }
   }
   return copy;
@@ -26,8 +39,13 @@ const restore = (to, from, skipped) => {
     }
   }
   for (const [key, value] of Object.entries(from)) {
-    if (!skipped.includes(key)) {
-      to[key] = Array.isArray(value) ? value.slice() : value;
+    if (skipped.includes(key)) {
+      continue;
+    }
+    if (ArrayBuffer.isView(to[key]) && Array.isArray(value)) {
+      to[key].set(value);
+    } else {
+      to[key] = copyOfValue(value);
     }
   }
 };

@@ -105,6 +105,8 @@ export const loadGame = async ({
   }
   ctx.random.sim = seededRandom(seed);
   ctx.random.fx = fxrandom;
+  // (one source, as the game's two are: the golden masters recorded them as one)
+  ctx.random.wreck = fxrandom;
   ctx.random.scratch = seededRandom(fxSeed + 500);
   ctx.random.sound = seededRandom(fxSeed + 700);
   // the drawing helpers of the game's own module instance, for the drawing tests
