@@ -32,7 +32,7 @@ import {
   openLink,
   urlRoom,
 } from "./link.js";
-import { ticksToShow } from "./tickStore.js";
+import { emptyStore, ticksToShow } from "./tickStore.js";
 
 // how often a guest not in a race tells the host it is there
 const JOIN_EVERY_TICKS = 30;
@@ -50,12 +50,10 @@ export const NOTICE = {
   hostLeft: "The host left the race",
 };
 
-export const guest = {
+// (with the store of the host's ticks not shown yet, see tickStore.js)
+export const guest = emptyStore({
   // the race the host started, until its stage loads
   start: null,
-  // ticks of the host's race not shown yet, and whether they are shown (see tickStore.js)
-  ticks: [],
-  playing: false,
   // the time to the host and back, in ms (null until measured)
   ping: null,
   pingTicks: 0,
@@ -74,7 +72,7 @@ export const guest = {
   ended: false,
   // what the guest's HUD tells about the host, if anything
   notice: null,
-};
+});
 
 const isStart = ({ stage, carTypes, car }) =>
   isIndex(stage, STAGE_COUNT + 1) &&
@@ -91,7 +89,7 @@ const receive = (message) => {
   }
   if (message.type == MESSAGE.start && isStart(message)) {
     guest.start = message;
-    guest.ticks = [];
+    emptyStore(guest);
   }
   if (
     message.type == MESSAGE.tick &&
@@ -127,7 +125,6 @@ const loadHostedRace = (start) => {
   guest.ownPlayer = game.player;
   guest.hud = null;
   guest.ended = false;
-  guest.playing = false;
   guest.ping = null;
   track.stage = start.stage;
   field.replayCars = start.carTypes;
@@ -194,6 +191,18 @@ const leaveHostedRace = () => {
   game.phase = PHASE.mainMenu;
 };
 
+// The guest's keys to the host: each tick, and at once when a key is pressed or let go (see
+// game.js), so the host's next tick drives with them; ping, if given, the host sends back
+// with its next tick.
+export const sendGuestKeys = (ping) => {
+  const { up, down, left, right, handb } = racers[game.player].u;
+  link.send({
+    type: MESSAGE.keys,
+    keys: { up, down, left, right, handb },
+    ping,
+  });
+};
+
 // A tick of the guest's race: what the host sent shows, the keys go to the host.
 export const guestRaceTick = () => {
   const countdown = raceEvents.countdown;
@@ -225,14 +234,9 @@ export const guestRaceTick = () => {
   if (raceTape.length > 0) {
     followLive();
   }
-  const { up, down, left, right, handb } = racers[game.player].u;
-  link.send({
-    type: MESSAGE.keys,
-    keys: { up, down, left, right, handb },
-    // (the host sends it back with its next tick)
-    ping:
-      guest.pingTicks++ % PING_EVERY_TICKS == 0 ? performance.now() : undefined,
-  });
+  sendGuestKeys(
+    guest.pingTicks++ % PING_EVERY_TICKS == 0 ? performance.now() : undefined,
+  );
   if ((raceOver || guest.ended) && confirm.state == CONFIRM.pressed) {
     confirm.state = CONFIRM.used;
     leaveHostedRace();

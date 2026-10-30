@@ -6,8 +6,8 @@ import { PHASE } from "../../src/core/state.js";
 const GUEST_CAR = 1;
 // time for a message between the tabs
 const DELIVERY_MS = 20;
-// how many of the host's ticks the guest keeps in store
-const STORE_TICKS = 3;
+// the most of the host's ticks the guest keeps in store (see src/net/tickStore.js)
+const STORE_TICKS = 4;
 // the car types host and guest chose
 const HOST_TYPE = "5";
 const GUEST_TYPE = "9";
@@ -232,6 +232,30 @@ test("leaving the room ends the link", async ({ page }) => {
   await page.getByRole("button", { name: "Close" }).click();
   await game.advance();
   await expect(page.getByRole("button", { name: "Multiplayer" })).toBeVisible();
+});
+
+test("the guest's keys go to the host at once, not only with its next tick", async ({
+  context,
+}) => {
+  await context.addInitScript(() => {
+    window.sentMessages = [];
+    const send = WebSocket.prototype.send;
+    WebSocket.prototype.send = function (data) {
+      window.sentMessages.push(JSON.parse(data));
+      return send.call(this, data);
+    };
+  });
+  const { guestPage } = await raceTogether(context, "keys");
+  await guestPage.evaluate(() => (window.sentMessages = []));
+  // (no tick of the guest's in between)
+  await guestPage.keyboard.down("ArrowUp");
+  const sent = await guestPage.evaluate(() => window.sentMessages);
+  expect(sent).toContainEqual(
+    expect.objectContaining({
+      type: "keys",
+      keys: expect.objectContaining({ up: true }),
+    }),
+  );
 });
 
 // Every text a page draws on its canvas, to see what its HUD shows.

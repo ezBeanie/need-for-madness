@@ -75,6 +75,7 @@ import {
 import {
   guest,
   guestRaceTick,
+  sendGuestKeys,
   guestWaitingTick,
   startGuesting,
 } from "./net/guest.js";
@@ -291,7 +292,12 @@ installPointer(canvas2D, {
   onRelease: () => unlockAudio(game.phase == PHASE.race),
   keepPressedWhileTouching: () => game.phase == PHASE.race,
 });
-installKeyboard(onKey);
+installKeyboard((action, pressed) => {
+  onKey(action, pressed);
+  if (game.phase == PHASE.guestRace) {
+    sendGuestKeys();
+  }
+});
 
 // A hidden tab is silent and gets its sound settings back when it shows again.
 let mutedBeforeHiding = { music: false, sound: false };
