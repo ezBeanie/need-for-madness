@@ -118,6 +118,7 @@ const receive = (message) => {
     if (
       message.own &&
       Number.isInteger(message.own.input) &&
+      Number.isFinite(message.own.fraction) &&
       isCarState(message.own.state)
     ) {
       guest.own = message.own;

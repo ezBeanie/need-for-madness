@@ -4,6 +4,7 @@
 // race/physics.js). Only the car's pose comes of it: the rest of the car stays as the
 // host's ticks show it, for the HUD.
 
+import { nextFraction, tick } from "../core/tick.js";
 import { predictCar } from "../race/physics.js";
 import { turnCarAfterItsAngles } from "../race/recording.js";
 import { car, racers } from "../race/racers.js";
@@ -11,17 +12,21 @@ import { copyCarState, restoreCarState } from "./carState.js";
 
 const POSE = ["x", "y", "z", "xy", "xz", "zy", "wxz", "wzy"];
 
-// own: the host's state of car c, driven up to the guest's input own.input; inputs: the
-// guest's numbered inputs since.
+// own: the host's state of car c, driven up to the guest's input own.input in a tick of
+// the host's fraction own.fraction; inputs: the guest's numbered inputs since.
 export const predictOwnCar = (c, own, inputs) => {
   const shown = copyCarState(c);
+  const fraction = tick.fraction;
   restoreCarState(c, own.state);
+  tick.fraction = own.fraction;
   for (const { input, keys } of inputs) {
     if (input > own.input) {
       Object.assign(racers[c].u, keys);
+      tick.fraction = nextFraction(tick.fraction);
       predictCar(c);
     }
   }
+  tick.fraction = fraction;
   const pose = POSE.map((field) => car[c][field]);
   const heading = racers[c].cameraHeading;
   restoreCarState(c, shown);

@@ -197,7 +197,11 @@ export const sendHostTick = () => {
     type: MESSAGE.tick,
     countdown: raceEvents.countdown,
     // the guest's car as driven up to that input, for the guest's prediction
-    own: { input: host.driven, state: copyCarState(GUEST_CAR) },
+    own: {
+      input: host.driven,
+      fraction: tick.fraction,
+      state: copyCarState(GUEST_CAR),
+    },
     tape,
     hud: {
       positions: track.pos.slice(0, game.carCount),

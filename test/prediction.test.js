@@ -21,32 +21,53 @@ test("the guest drives its car on from the host's state as the host drives it", 
     step();
   };
   // (past the countdown, in which no car drives)
-  for (let t = 0; t < 300; t++) {
+  for (let t = 0; t < 299; t++) {
     drive();
   }
-  // the state as it reaches the guest
-  const sent = JSON.parse(JSON.stringify(ctx.copyCarState(GUEST_CAR)));
+  // the state after a tick, as it reaches the guest, with that tick's fraction
+  const fraction = ctx.tick.fraction;
+  drive();
+  const own = JSON.parse(
+    JSON.stringify({ input: 0, fraction, state: ctx.copyCarState(GUEST_CAR) }),
+  );
   const inputs = [];
-  for (let t = 0; t < 6; t++) {
-    inputs.push({ ...steerAlongPath(ctx, GUEST_CAR) });
+  // the fraction of each of the host's ticks: where the original's ticks fell, on which
+  // landing, stunts and wall hits count
+  const hostFractions = [];
+  for (let input = 1; input <= 7; input++) {
+    inputs.push({ input, keys: { ...steerAlongPath(ctx, GUEST_CAR) } });
+    hostFractions.push(ctx.tick.fraction);
     drive();
   }
   const onHost = poseOf(ctx, GUEST_CAR);
 
-  // the guest, whose player the car is, drives on from the sent state with the same keys
+  // the guest, whose player the car is, in a tick of its own fraction, drives on from the
+  // sent state with the same keys
   ctx.game.player = GUEST_CAR;
-  ctx.restoreCarState(GUEST_CAR, sent);
-  for (const keys of inputs) {
-    Object.assign(ctx.racers[GUEST_CAR].u, keys);
-    ctx.predictCar(GUEST_CAR);
-  }
+  ctx.tick.fraction = 0.3;
+  const guestFractions = [];
+  let fractionNow = ctx.tick.fraction;
+  Object.defineProperty(ctx.tick, "fraction", {
+    configurable: true,
+    get: () => fractionNow,
+    set: (value) => {
+      fractionNow = value;
+      guestFractions.push(value);
+    },
+  });
+  ctx.predictOwnCar(GUEST_CAR, own, inputs);
+  delete ctx.tick.fraction;
+  ctx.tick.fraction = fractionNow;
+  // (set to the host's, one for each tick driven, and back to the guest's own)
+  expect(guestFractions.slice(1, -1)).toEqual(hostFractions);
   const predicted = poseOf(ctx, GUEST_CAR);
   for (const f of POSE) {
     expect(predicted[f]).toBeCloseTo(onHost[f], 6);
   }
+  expect(ctx.tick.fraction).toBe(0.3);
   // (and it moved: the test drives, not stands)
   expect(
-    Math.hypot(onHost.x - sent.car.x, onHost.z - sent.car.z),
+    Math.hypot(onHost.x - own.state.car.x, onHost.z - own.state.car.z),
   ).toBeGreaterThan(20);
 });
 

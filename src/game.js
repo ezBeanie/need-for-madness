@@ -33,7 +33,7 @@ import { carSelectTick, scatterMenuSmoke } from "./screens/carSelect.js";
 import { stageLoadingTick, stageSelectTick } from "./screens/stageSelect.js";
 import { instructionsTick } from "./screens/instructions.js";
 import { PHASE, RACE_PHASES, game } from "./core/state.js";
-import { tick } from "./core/tick.js";
+import { nextFraction, tick } from "./core/tick.js";
 import {
   highlightTick,
   recordTick,
@@ -221,10 +221,7 @@ export function runTick() {
     resumeMusic();
     musicPaused = false;
   }
-  if (tick.fraction >= tick.scale) {
-    tick.fraction -= 1;
-  }
-  tick.fraction += tick.scale;
+  tick.fraction = nextFraction(tick.fraction);
   placeOptionsButton();
   placeMultiplayerButton();
   interpolation.tick++;
