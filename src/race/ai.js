@@ -7,6 +7,7 @@ import { tick } from "../core/tick.js";
 import { CAR, carStats } from "../data/carStats.js";
 import { MISSED, car, racers } from "./racers.js";
 import { PIECE, pieceModels, pieces, track } from "./track.js";
+import { atan } from "../core/exactMath.js";
 
 // path points marked "pr" in the stage file lie on ramps (see pathType)
 const RAMP_POINT = -2;
@@ -418,7 +419,7 @@ function aimAtPathPoint(c, point) {
       ai[c].aimHeading = Math.floor(
         90 +
           behind +
-          Math.atan((track.z[point] - car[c].z) / (track.x[point] - car[c].x)) /
+          atan((track.z[point] - car[c].z) / (track.x[point] - car[c].x)) /
             0.017453292519943295,
       );
     } else {
@@ -429,7 +430,7 @@ function aimAtPathPoint(c, point) {
       ai[c].aimHeading = Math.floor(
         90 +
           behind +
-          Math.atan((ai[c].waitZ - car[c].z) / (ai[c].waitX - car[c].x)) /
+          atan((ai[c].waitZ - car[c].z) / (ai[c].waitX - car[c].x)) /
             0.017453292519943295,
       );
     }
@@ -466,7 +467,7 @@ function chaseTarget(c) {
   ai[c].aimHeading =
     90 +
     behind +
-    Math.atan((aimZ - car[c].z) / (aimX - car[c].x)) / 0.017453292519943295;
+    atan((aimZ - car[c].z) / (aimX - car[c].x)) / 0.017453292519943295;
   if (tick.fraction >= tick.scale) {
     ai[c].attackTicks--;
   }
@@ -1344,7 +1345,7 @@ function routeOnStage16(c, pnt) {
       let pnxz = Math.floor(
         90 +
           ad +
-          Math.atan(
+          atan(
             (car[game.player].z - car[c].z) / (car[game.player].x - car[c].x),
           ) /
             0.017453292519943295,
@@ -1400,7 +1401,7 @@ function nearlyWastedInSwitchMode(c, type) {
           let pnxz = Math.floor(
             90 +
               ad +
-              Math.atan((car[i].z - car[c].z) / (car[i].x - car[c].x)) /
+              atan((car[i].z - car[c].z) / (car[i].x - car[c].x)) /
                 0.017453292519943295,
           );
           while (pnxz < 0) {
@@ -2426,7 +2427,7 @@ function considerAttacking(
   let headingToOther =
     90 +
     halfTurn +
-    Math.atan((car[other].z - car[c].z) / (car[other].x - car[c].x)) /
+    atan((car[other].z - car[c].z) / (car[other].x - car[c].x)) /
       0.017453292519943295;
   while (headingToOther < 0) {
     headingToOther += 360;

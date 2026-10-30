@@ -1,9 +1,11 @@
+import { cos, sin } from "./exactMath.js";
+
 // Angles in the game are in degrees. Distance helpers take their coordinates
 // pairwise per axis: (x1, x2, z1, z2), not point by point.
 
-export const sinDeg = (angle) => Math.sin((angle * Math.PI) / 180);
+export const sinDeg = (angle) => sin((angle * Math.PI) / 180);
 
-export const cosDeg = (angle) => Math.cos((angle * Math.PI) / 180);
+export const cosDeg = (angle) => cos((angle * Math.PI) / 180);
 
 export const distanceSquaredXZ = (x1, x2, z1, z2) =>
   (x1 - x2) * (x1 - x2) + (z1 - z2) * (z1 - z2);

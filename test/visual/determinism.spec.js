@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { FINGERPRINTS } from "../fixtures/fingerprints.js";
 
 const fingerprints = async (browser, baseURL, options) => {
   const context = await browser.newContext({ ...options, baseURL });
@@ -11,10 +12,10 @@ const fingerprints = async (browser, baseURL, options) => {
   return prints;
 };
 
-// ?determinism compares browsers, not window sizes: whatever the screen, a browser races
-// alike. (Node's V8 races otherwise, see test/determinism.test.js: its Math.cos differs from
-// Chromium's in the last bit.)
-test("the determinism check races alike in a desktop window and on a phone", async ({
+// Every browser races the fixed race of ?determinism as Node does, whatever the screen:
+// the game's own sin, cos, atan and acos (see src/core/exactMath.js) round alike everywhere,
+// where the engines' own differ in the last bit (Node's Math.cos from Chromium's).
+test("the determinism check races as Node does, in a desktop window and on a phone", async ({
   browser,
   baseURL,
 }) => {
@@ -27,6 +28,9 @@ test("the determinism check races alike in a desktop window and on a phone", asy
     hasTouch: true,
     deviceScaleFactor: 3,
   });
-  expect(desktop).toHaveLength(4);
-  expect(phone).toEqual(desktop);
+  const expected = FINGERPRINTS.map(
+    (print, i) => `tick ${[250, 500, 1000, 2000][i]}: ${print}`,
+  );
+  expect(desktop).toEqual(expected);
+  expect(phone).toEqual(expected);
 });

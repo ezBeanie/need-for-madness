@@ -1,6 +1,6 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`the engine sound of stage 1 1`] = `"c87cebe9d147338caee7219abf9d0808ccf0a304"`;
+exports[`the engine sound of stage 1 1`] = `"267efdf3e44156966473085cada5a91552fa604d"`;
 
 exports[`the engine sound of stage 2 1`] = `"b6c7b5cc3a2abef8a944f9ad76530d956f1f2a72"`;
 

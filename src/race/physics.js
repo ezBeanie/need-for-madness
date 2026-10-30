@@ -26,6 +26,7 @@ import {
   recording,
 } from "./recording.js";
 import { PIECE, pieceModels, pieces, track } from "./track.js";
+import { acos } from "../core/exactMath.js";
 
 // While predicting the guest's own car (see net/prediction.js) the physics only moves it:
 // what the car sounds, throws, shows and records comes with the host's ticks.
@@ -1732,7 +1733,7 @@ function landOnSlope(tri, c, k, type, o, coly, colz, colx, i, step) {
       }
     }
   }
-  let trzy = Math.acos(Math.abs(tri.ny)) / 0.017453292519943295;
+  let trzy = acos(Math.abs(tri.ny)) / 0.017453292519943295;
   let arct = 1 + (50 - Math.abs(trzy)) / 30;
   if (arct < 1) {
     arct = 1;
@@ -2205,7 +2206,7 @@ function gripGround(type, c, turnedRound, step) {
   if (totalX != 0 || totalZ != 0) {
     cos = totalZ / Math.sqrt(totalX * totalX + totalZ * totalZ);
   }
-  racers[c].motionHeading = (Math.acos(cos) / 0.017453292519943295) * side;
+  racers[c].motionHeading = (acos(cos) / 0.017453292519943295) * side;
   if (racers[c].skid == SKID.takeSpeedFromMotion) {
     if (!racers[c].capsized) {
       totalX = totalX / 4;
@@ -2420,7 +2421,7 @@ function tiltBetween(c, a, b, span, step) {
   if (cos >= 0.9998) {
     return sign;
   }
-  return (Math.acos(cos) / 0.017453292519943295) * sign;
+  return (acos(cos) / 0.017453292519943295) * sign;
 }
 
 // the last track piece with its own surface the car is above, or -1

@@ -1,9 +1,7 @@
 import { expect, test } from "vitest";
 import { PHASE } from "../src/core/state.js";
+import { FINGERPRINTS } from "./fixtures/fingerprints.js";
 import { loadGame } from "./harness/loadGame.js";
-
-// The fixed race of ?determinism (see src/net/determinism.js), as Node's V8 computes it.
-const FINGERPRINTS = ["960c1fb5", "53514a92", "ff2012ca", "7d6cd087"];
 
 // seed: the game's randomness before the check, waited: ticks in the stage select before
 // the race (in the browser, as many as the screen gets): neither may matter

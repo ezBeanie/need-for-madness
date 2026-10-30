@@ -5,6 +5,7 @@
 // to compare between browsers and devices.
 
 import { stopStageMusic } from "../audio/audio.js";
+import { atan } from "../core/exactMath.js";
 import { random } from "../core/random.js";
 import { PHASE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
@@ -50,7 +51,7 @@ const steerAlongTrack = () => {
   const target = (racers[0].point + 2) % track.n;
   const dx = track.x[target] - car[0].x;
   const dz = track.z[target] - car[0].z;
-  let towards = 90 + (dx >= 0 ? 180 : 0) + Math.atan(dz / dx) / DEGREE;
+  let towards = 90 + (dx >= 0 ? 180 : 0) + atan(dz / dx) / DEGREE;
   let heading = car[0].xz;
   while (heading < 0) heading += 360;
   while (heading > 180) heading -= 360;
