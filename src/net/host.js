@@ -10,6 +10,7 @@ import { raceTape, tapeTick } from "../race/raceTape.js";
 import { car, racers } from "../race/racers.js";
 import { track } from "../race/track.js";
 import { tick } from "../core/tick.js";
+import { copyCarState } from "./carState.js";
 import {
   GUEST_CAR,
   GUEST_HUD_FIELDS,
@@ -23,6 +24,9 @@ import {
 } from "./link.js";
 
 const GUEST_KEYS = ["up", "down", "left", "right", "handb"];
+// the most of the guest's inputs waiting to be driven: more (after the host stalled) would
+// only delay the guest's car on the host
+const MOST_INPUTS_WAITING = 3;
 // a guest silent for this many ticks has gone (it sends every tick in a race, and every
 // 30 outside one)
 const GUEST_GONE_TICKS = 100;
@@ -37,11 +41,15 @@ const RACE_GOES_ON = [
 // sent: how many ticks of the race tape the guest has; quietTicks: since the guest's
 // last message
 // pong: the guest's last ping, sent back with the next tick
+// inputs: the guest's keys of each of its ticks, numbered, not driven yet; driven: the
+// number of the last one driven, which the guest's prediction drives on from (see guest.js)
 const host = {
   racing: false,
   sent: 0,
   quietTicks: GUEST_GONE_TICKS,
   pong: null,
+  inputs: [],
+  driven: -1,
 };
 const guestKeys = Object.fromEntries(GUEST_KEYS.map((key) => [key, false]));
 
@@ -61,10 +69,18 @@ const receive = (message) => {
     field.guestCarType = message.carType;
     link.send({ type: MESSAGE.here });
   }
-  if (message.type == MESSAGE.keys && message.keys) {
-    for (const key of GUEST_KEYS) {
-      guestKeys[key] = message.keys[key] === true;
-    }
+  if (
+    message.type == MESSAGE.keys &&
+    message.keys &&
+    Number.isInteger(message.input) &&
+    message.input > (host.inputs.at(-1)?.input ?? host.driven)
+  ) {
+    host.inputs.push({
+      input: message.input,
+      keys: Object.fromEntries(
+        GUEST_KEYS.map((key) => [key, message.keys[key] === true]),
+      ),
+    });
     if (Number.isFinite(message.ping)) {
       host.pong = message.ping;
     }
@@ -116,6 +132,12 @@ export const startHostedRace = () => {
   }
   game.humans = host.racing ? [game.player, GUEST_CAR] : [];
   host.sent = 0;
+  host.inputs = [];
+  host.driven = -1;
+  Object.assign(
+    guestKeys,
+    Object.fromEntries(GUEST_KEYS.map((k) => [k, false])),
+  );
   if (host.racing) {
     link.send({
       type: MESSAGE.start,
@@ -126,11 +148,19 @@ export const startHostedRace = () => {
   }
 };
 
-// Before the cars drive: the guest's car gets the keys the guest pressed last.
+// Before the cars drive: the guest's car drives with the guest's next input, one each
+// tick as the guest's own ticks pressed them (or on with the last, while none came).
 export const applyGuestKeys = () => {
-  if (host.racing) {
-    Object.assign(racers[GUEST_CAR].u, guestKeys);
+  if (!host.racing) {
+    return;
   }
+  host.inputs.splice(0, Math.max(0, host.inputs.length - MOST_INPUTS_WAITING));
+  const next = host.inputs.shift();
+  if (next) {
+    Object.assign(guestKeys, next.keys);
+    host.driven = next.input;
+  }
+  Object.assign(racers[GUEST_CAR].u, guestKeys);
 };
 
 const guestOutcome = () => {
@@ -168,6 +198,8 @@ export const sendHostTick = () => {
     type: MESSAGE.tick,
     countdown: raceEvents.countdown,
     pong: host.pong,
+    // the guest's car as driven up to that input, for the guest's prediction
+    own: { input: host.driven, state: copyCarState(GUEST_CAR) },
     tape,
     hud: {
       positions: track.pos.slice(0, game.carCount),

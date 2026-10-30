@@ -125,7 +125,14 @@ weiterhin.
 
 ### Schritt 4: Feinschliff
 
-- Vorhersage fürs eigene Auto beim Gast, Abgleich mit dem Host.
+- Vorhersage fürs eigene Auto beim Gast, Abgleich mit dem Host. Umgesetzt so: Der Gast
+  nummeriert seine Tasten pro Tick, der Host fährt genau eine Eingabe pro Tick
+  (`applyGuestKeys`) und schickt den vollen Zustand des Gast-Autos mit der Nummer der zuletzt
+  gefahrenen Eingabe (`carState.js`). Der Gast setzt sein Auto darauf und fährt die noch
+  offenen Eingaben selbst nach (`prediction.js`, `predictCar` ohne Sound, Effekte und
+  Ereignisse). Nur die Lage des Autos kommt aus der Vorhersage, das HUD weiter vom Host.
+  Offen: Zusammenstöße mit anderen Autos sagt der Gast nicht voraus (die sieht er verzögert),
+  dort zieht das Auto nach; weiches Nachziehen statt Springen.
 - Verbindungsabbruch: KI übernimmt das Auto (dafür `rivalOf(c)` in ai.js).
 - KI-Autos im MP-Feld, Namen über den Autos, Ergebnisliste für alle.
 

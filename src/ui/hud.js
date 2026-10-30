@@ -1634,13 +1634,20 @@ const drawGuestOutcome = ({ outcome, winner }) => {
   }
 };
 
+// The guest's touch controls press its keys before they go to the host (and drive its
+// car ahead, see net/prediction.js), not after as in the host's HUD: a tick earlier.
+export const pressGuestTouchControls = () => {
+  if (touchControlsShown()) {
+    pressTouchControls();
+  }
+};
+
 // A guest's HUD: the race as the host sent it (see net/guest.js).
 // onContinue: leaves the race, once it is over (or the host left it)
 export function drawGuestHud(hud, notice, ping, onMenu, onContinue) {
   rd.clearRect(0, 0, view.width, view.height);
   if (touchControlsShown()) {
     drawTouchControls();
-    pressTouchControls();
   }
   const raceOver = hud != null && hud.outcome != OUTCOME.none;
   if (raceOver) {

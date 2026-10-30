@@ -1,13 +1,7 @@
 // How cars drive, hit the stage and each other, and take damage.
 
-import { playSound } from "../audio/audio.js";
-import {
-  bumpSound,
-  crashSound,
-  groundScrapeSound,
-  scrapeSound,
-  skidSound,
-} from "../audio/carSounds.js";
+import { playSound as playAnySound } from "../audio/audio.js";
+import * as carSounds from "../audio/carSounds.js";
 import {
   cosDeg,
   distanceSquared,
@@ -23,20 +17,37 @@ import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
 import { BLEND, gl, keepDamageTexture } from "../render/renderer.js";
 import { carModels, carTextures, scene } from "../render/scene.js";
-import {
-  DUST,
-  burn,
-  chipaway,
-  chipburn,
-  dustup,
-  effects,
-  firexp,
-  sprks,
-} from "./effects.js";
+import * as allEffects from "./effects.js";
 import { raceEvents } from "./events.js";
 import { MISSED, SKID, STUNT, car, racers } from "./racers.js";
-import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
+import {
+  HIGHLIGHT,
+  catchHighlight as catchAnyHighlight,
+  recording,
+} from "./recording.js";
 import { PIECE, pieceModels, pieces, track } from "./track.js";
+
+// While predicting the guest's own car (see net/prediction.js) the physics only moves it:
+// what the car sounds, throws, shows and records comes with the host's ticks.
+export const physics = { predicting: false };
+const unlessPredicting =
+  (act) =>
+  (...args) =>
+    physics.predicting ? undefined : act(...args);
+const playSound = unlessPredicting(playAnySound);
+const bumpSound = unlessPredicting(carSounds.bumpSound);
+const crashSound = unlessPredicting(carSounds.crashSound);
+const groundScrapeSound = unlessPredicting(carSounds.groundScrapeSound);
+const scrapeSound = unlessPredicting(carSounds.scrapeSound);
+const skidSound = unlessPredicting(carSounds.skidSound);
+const { DUST, effects } = allEffects;
+const burn = unlessPredicting(allEffects.burn);
+const chipaway = unlessPredicting(allEffects.chipaway);
+const chipburn = unlessPredicting(allEffects.chipburn);
+const dustup = unlessPredicting(allEffects.dustup);
+const firexp = unlessPredicting(allEffects.firexp);
+const sprks = unlessPredicting(allEffects.sprks);
+const catchHighlight = unlessPredicting(catchAnyHighlight);
 
 const drag = 0.05;
 const lonorm = [];
@@ -175,6 +186,16 @@ export function drive() {
     driveCar(c);
   }
 }
+
+// A tick of the guest's own car alone, ahead of the host (see net/prediction.js).
+export const predictCar = (c) => {
+  physics.predicting = true;
+  try {
+    driveCar(c);
+  } finally {
+    physics.predicting = false;
+  }
+};
 
 function driveCar(c) {
   let type = car[c].typ;
@@ -341,6 +362,9 @@ function driveCar(c) {
 }
 
 function reportCheckpoints(c) {
+  if (physics.predicting) {
+    return;
+  }
   if (c == game.player) {
     raceEvents.oncheckpoint = racers[c].clear;
     while (raceEvents.oncheckpoint >= track.nsp) {
@@ -466,6 +490,9 @@ function pathPointAhead(c, pnt) {
 }
 
 function passFixHoops(c) {
+  if (physics.predicting) {
+    return;
+  }
   if (game.mode != MODE.switchCars) {
     if (!car[c].fcnt) {
       for (let i = 0; i < pieces.fixCount; i++) {
@@ -615,6 +642,9 @@ function countStuntInAir(c) {
 
 // Turns the stunt into power some ticks after landing it.
 function rewardStunt(c) {
+  if (physics.predicting) {
+    return;
+  }
   racers[c].stuntPower = 0;
   if (Math.abs(racers[c].rolled) > 90) {
     racers[c].stuntPower += Math.abs(racers[c].rolled) / 24;
@@ -756,6 +786,9 @@ function drainPower(c, type) {
 }
 
 function recordHowWasted(c) {
+  if (physics.predicting) {
+    return;
+  }
   if (racers[c].wasted) {
     if (track.dested[c] == 0) {
       if (racers[c].lastcolido == 0) {
@@ -772,6 +805,9 @@ function recordHowWasted(c) {
 }
 
 function countDownStuntHighlight(c) {
+  if (physics.predicting) {
+    return;
+  }
   if (
     c == game.player &&
     recording.stuntCatchTicks != 0 &&
@@ -1073,6 +1109,9 @@ function shakeOnRoughGround(c, type, step) {
 }
 
 function burnWhenWasted(c, type, avgSpeedX, avgSpeedZ) {
+  if (physics.predicting) {
+    return;
+  }
   if (tick.fraction >= tick.scale) {
     if (racers[c].damage >= carStats.maxmag[type]) {
       if (recording.tape.cars[c].wastedAt == 700) {
@@ -3315,6 +3354,9 @@ export function paintDents(maxSteps) {
 export const HIT = { alongX: 0, alongZ: 1, fromBelow: 2, onRoof: 3 };
 
 export function regn(hitSide, k, mag, c) {
+  if (physics.predicting) {
+    return;
+  }
   if (game.phase == PHASE.race) {
     mag *= carStats.dammult[car[c].typ];
   }

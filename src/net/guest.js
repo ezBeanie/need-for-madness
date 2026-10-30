@@ -32,6 +32,8 @@ import {
   openLink,
   urlRoom,
 } from "./link.js";
+import { isCarState } from "./carState.js";
+import { predictOwnCar } from "./prediction.js";
 import { emptyStore, ticksToShow } from "./tickStore.js";
 
 // how often a guest not in a race tells the host it is there
@@ -79,6 +81,11 @@ export const guest = emptyStore({
   leaveTicks: 0,
   // whether the race is over for the guest (or the host left it): it can leave at once
   over: false,
+  // the guest's inputs, one each tick and numbered, that the host has not driven yet; the
+  // host's newest state of the guest's car, driven up to own.input (see prediction.js)
+  input: 0,
+  inputs: [],
+  own: null,
 });
 
 const isStart = ({ stage, carTypes, car }) =>
@@ -97,6 +104,9 @@ const receive = (message) => {
   if (message.type == MESSAGE.start && isStart(message)) {
     guest.start = message;
     emptyStore(guest);
+    guest.input = 0;
+    guest.inputs = [];
+    guest.own = null;
   }
   if (
     message.type == MESSAGE.tick &&
@@ -105,6 +115,13 @@ const receive = (message) => {
     Array.isArray(message.hud.positions)
   ) {
     guest.ticks.push(message);
+    if (
+      message.own &&
+      Number.isInteger(message.own.input) &&
+      isCarState(message.own.state)
+    ) {
+      guest.own = message.own;
+    }
     if (Number.isFinite(message.pong)) {
       guest.ping = Math.round(performance.now() - message.pong);
     }
@@ -201,23 +218,37 @@ export const leaveHostedRace = () => {
   link.send({ type: MESSAGE.left });
 };
 
-// The guest's keys to the host: each tick, and at once when a key is pressed or let go (see
-// game.js), so the host's next tick drives with them; ping, if given, the host sends back
-// with its next tick.
-export const sendGuestKeys = (ping) => {
+// Each tick of the guest's race: its keys to the host, numbered, so the host drives them
+// one each tick and the guest knows which it has driven (see host.js); ping, now and
+// then, the host sends back with its next tick.
+export const sendGuestTickKeys = () => {
   const { up, down, left, right, handb } = racers[game.player].u;
+  const keys = { up, down, left, right, handb };
+  guest.input++;
+  guest.inputs = guest.inputs.filter(
+    ({ input }) => input > (guest.own?.input ?? -1),
+  );
+  guest.inputs.push({ input: guest.input, keys });
   link.send({
     type: MESSAGE.keys,
-    keys: { up, down, left, right, handb },
-    ping,
+    input: guest.input,
+    keys,
+    ping:
+      guest.pingTicks++ % PING_EVERY_TICKS == 0 ? performance.now() : undefined,
   });
 };
 
-// After the guest's HUD took the touch controls: this tick's keys to the host.
-export const sendGuestTickKeys = () =>
-  sendGuestKeys(
-    guest.pingTicks++ % PING_EVERY_TICKS == 0 ? performance.now() : undefined,
-  );
+// The guest's own car, driven ahead of the host while the race runs and the host is there.
+export const predictGuestCar = () => {
+  if (
+    guest.own &&
+    raceEvents.countdown == 0 &&
+    !guest.over &&
+    guest.quietTicks <= HOST_QUIET_TICKS
+  ) {
+    predictOwnCar(game.player, guest.own, guest.inputs);
+  }
+};
 
 // The menu button of the guest's HUD: the race goes on for the host, so a first tap asks and
 // a second one leaves it (the host's AI drives the guest's car on, see host.js).

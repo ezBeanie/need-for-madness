@@ -107,12 +107,18 @@ test("a guest in another tab drives a car in the host's race", async ({
 
   const onHost = await hostPage.evaluate((c) => {
     const { car, raceTape } = window.gameState;
-    return { z: car[c].z, frames: raceTape.length, zs: raceTape.cars[c].z };
+    return {
+      z: car[c].z,
+      frames: raceTape.length,
+      zs: raceTape.cars[c].z,
+      hostZs: raceTape.cars[0].z,
+    };
   }, GUEST_CAR);
   const onGuest = await guestPage.evaluate((c) => {
     const { camera, car, game, viewer } = window.gameState;
     return {
       z: car[c].z,
+      hostZ: car[0].z,
       frame: viewer.frame,
       phase: game.phase,
       player: game.player,
@@ -123,12 +129,16 @@ test("a guest in another tab drives a car in the host's race", async ({
   // the guest's car drove off the grid, on the guest's keys
   expect(onHost.frames).toBeGreaterThan(50);
   expect(Math.abs(onHost.z - start)).toBeGreaterThan(500);
-  // the guest shows the host's race where the host's game drove it
+  // the guest shows the host's race where the host's game drove it, and its own car ahead
+  // of it, as the guest's keys drive it on (see src/net/prediction.js)
   expect(onGuest.phase).toBe(PHASE.guestRace);
   expect(onGuest.player).toBe(GUEST_CAR);
   expect(onGuest.followed).toBe(GUEST_CAR);
   expect(onGuest.frame).toBe(onHost.frames - 1);
-  expect(onGuest.z).toBe(onHost.zs[onGuest.frame]);
+  expect(onGuest.hostZ).toBe(onHost.hostZs[onGuest.frame]);
+  expect(Math.abs(onGuest.z - start)).toBeGreaterThan(
+    Math.abs(onHost.zs[onGuest.frame] - start),
+  );
 
   // the host pauses: the guest waits for it
   await host.tap("Escape");
@@ -252,21 +262,27 @@ const sentKeys = (page) =>
       .map((message) => message.keys),
   );
 
-test("the guest's keys go to the host at once, not only with its next tick", async ({
+test("the guest's own car answers its keys at once, ahead of the host's ticks", async ({
   context,
 }) => {
-  await recordSentMessages(context);
-  const { guestPage } = await raceTogether(context, "keys");
-  await guestPage.evaluate(() => (window.sentMessages = []));
-  // (no tick of the guest's in between)
-  await guestPage.keyboard.down("ArrowUp");
-  const sent = await guestPage.evaluate(() => window.sentMessages);
-  expect(sent).toContainEqual(
-    expect.objectContaining({
-      type: "keys",
-      keys: expect.objectContaining({ up: true }),
-    }),
+  const { host, guest, hostPage, guestPage } = await raceTogether(
+    context,
+    "ahead",
   );
+  const both = [
+    { game: host, page: hostPage },
+    { game: guest, page: guestPage },
+  ];
+  // past the countdown, standing
+  await advanceBoth(...both, 220);
+  const where = () =>
+    guestPage.evaluate((c) => window.gameState.car[c].z, GUEST_CAR);
+  const standing = await where();
+  // the host's game ticks no more: only the guest's prediction can move its car
+  await guestPage.keyboard.down("ArrowUp");
+  await guest.advance(10);
+  expect(Math.abs((await where()) - standing)).toBeGreaterThan(5);
+  await guestPage.keyboard.up("ArrowUp");
 });
 
 test.describe("on a phone", () => {

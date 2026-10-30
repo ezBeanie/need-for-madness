@@ -26,6 +26,7 @@ import {
   drawSwitchScreen,
   drawGuestHud,
   drawHud,
+  pressGuestTouchControls,
 } from "./ui/hud.js";
 import { menu } from "./screens/menuState.js";
 import { carSelectTick, scatterMenuSmoke } from "./screens/carSelect.js";
@@ -76,7 +77,7 @@ import {
   guest,
   guestMenu,
   guestRaceTick,
-  sendGuestKeys,
+  predictGuestCar,
   sendGuestTickKeys,
   guestWaitingTick,
   leaveHostedRace,
@@ -112,6 +113,9 @@ function raceTick() {
   if (game.phase == PHASE.guestRace) {
     const from = viewer.frame;
     guestRaceTick();
+    pressGuestTouchControls();
+    sendGuestTickKeys();
+    predictGuestCar();
     if (!atReplayPace(() => moveScenery(true))) {
       placeWheels();
       castShadows();
@@ -126,10 +130,6 @@ function raceTick() {
       guestMenu,
       guest.over ? leaveHostedRace : null,
     );
-    // (unless the guest just left the race)
-    if (game.phase == PHASE.guestRace) {
-      sendGuestTickKeys();
-    }
   }
   if (game.phase == PHASE.replay) {
     const from = viewer.frame;
@@ -306,12 +306,7 @@ installPointer(canvas2D, {
   keepPressedWhileTouching: () =>
     game.phase == PHASE.race || game.phase == PHASE.guestRace,
 });
-installKeyboard((action, pressed) => {
-  onKey(action, pressed);
-  if (game.phase == PHASE.guestRace) {
-    sendGuestKeys();
-  }
-});
+installKeyboard(onKey);
 
 // A hidden tab is silent and gets its sound settings back when it shows again.
 let mutedBeforeHiding = { music: false, sound: false };
