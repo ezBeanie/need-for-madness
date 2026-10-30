@@ -120,6 +120,7 @@ const keepRace = () => ({
   phase: game.phase,
   sim: random.sim,
   fx: random.fx,
+  wreck: random.wreck,
   effects: { ...effects },
 });
 
@@ -175,6 +176,7 @@ const restoreRace = (race) => {
   raceEvents.onlastcheck = race.onlastcheck;
   random.sim = race.sim;
   random.fx = race.fx;
+  random.wreck = race.wreck;
   freeChips();
   Object.assign(effects, race.effects);
 };
@@ -276,6 +278,7 @@ export const openReplay = (from, frame) => {
     // on after
     random.sim = replayRandom;
     random.fx = replayRandom;
+    random.wreck = replayRandom;
     clearEffects();
   }
   viewer.speed = NORMAL_SPEED;

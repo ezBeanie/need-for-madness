@@ -96,6 +96,8 @@ export const openGame = async (page, { storage = {}, url = "/" } = {}) => {
       await page.evaluate(() => {
         window.gameState.random.sim = window.seededRandom(1);
         window.gameState.random.fx = window.seededRandom(1001);
+        // (one source, as the game's two are: the screenshots were taken with one)
+        window.gameState.random.wreck = window.gameState.random.fx;
         window.gameState.random.scratch = window.seededRandom(1501);
         window.gameState.random.sound = window.seededRandom(1701);
         window.gameState.tick.fraction = 0;
