@@ -11,7 +11,7 @@ import {
 } from "./batch.js";
 import { hsbToRgb, rgbToHsb } from "./color.js";
 import { cosDeg, medium, sinDeg, xs, ys } from "./medium.js";
-import { shadowHeight, surfaceUnder, surfacesNear } from "./surfaces.js";
+import { cornerHeight, surfaceUnder, surfacesNear } from "./surfaces.js";
 
 // --- a model's polygons for a stage (Plane's constructor) ---
 
@@ -695,8 +695,8 @@ const drawShadow = (rad, matrix, groundY, camera, wheels) => {
       for (let i = 0; i < n; i++) {
         const x = GX[i] / 10;
         const z = GZ[i] / 10;
-        const y = shadowHeight(x + camera.x, z + camera.z) - camera.y;
-        placeSeen(i, x, y, z);
+        const y = cornerHeight(x + camera.x, z + camera.z, middle, surface);
+        placeSeen(i, x, y - camera.y, z);
       }
     }
     let off0 = 0;
@@ -727,8 +727,11 @@ const drawShadow = (rad, matrix, groundY, camera, wheels) => {
   }
 };
 
-// The surface under the middle of the polygon just placed (between its farthest corners
-// along x and along z), in the world.
+// the middle of the polygon just placed, between its farthest corners along x and along
+// z, in the world (see surfaceUnderPoly)
+const middle = { x: 0, z: 0 };
+
+// The surface under the middle of the polygon just placed, in the world.
 const surfaceUnderPoly = (n, camera) => {
   let minX = Infinity;
   let maxX = -Infinity;
@@ -740,10 +743,9 @@ const surfaceUnderPoly = (n, camera) => {
     minZ = Math.min(minZ, GZ[i]);
     maxZ = Math.max(maxZ, GZ[i]);
   }
-  return surfaceUnder(
-    (minX + maxX) / 20 + camera.x,
-    (minZ + maxZ) / 20 + camera.z,
-  );
+  middle.x = (minX + maxX) / 20 + camera.x;
+  middle.z = (minZ + maxZ) / 20 + camera.z;
+  return surfaceUnder(middle.x, middle.z);
 };
 
 // randomness that stays the same through a logic tick: the original flickered about as

@@ -101,3 +101,17 @@ export const shadowHeight = (x, z) => {
   const s = surfaceUnder(x, z);
   return s ? Math.max(0, heightOn(s, x, z)) : 0;
 };
+
+// The steepest a shadow drapes, as a rise per unit across (about 50 degrees): steeper
+// than the stage's slopes (at most 40), not the drop at a ramp's end or a wall's foot.
+const STEEPEST = 1.2;
+
+// Where a shadow polygon's corner at (x, z) lies: on the surface under it, unless that
+// is a drop from the one under the polygon's middle (surface, null: the ground) steeper
+// than any slope; then on the middle's, reaching over the edge as the original's did.
+export const cornerHeight = (x, z, middle, surface) => {
+  const own = shadowHeight(x, z);
+  const base = surface ? Math.max(0, heightOn(surface, x, z)) : 0;
+  const across = Math.hypot(x - middle.x, z - middle.z);
+  return Math.abs(own - base) > across * STEEPEST ? base : own;
+};

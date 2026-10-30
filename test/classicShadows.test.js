@@ -74,3 +74,21 @@ test("a car's classic shadow lies on a rock pile's top and down its sides", () =
   expect(heights[2]).toBeLessThan(heights[1]);
   expect(shadowAt(along(1.5), 0)).toBe(0);
 });
+
+test("a classic shadow reaches over a ramp's end instead of down its wall", () => {
+  const ramp = placeRamp(0);
+  // a polygon's middle on top near the end (95.3 high), a corner past the end
+  const middle = { x: ramp.x, z: ramp.z + 91 };
+  ctx.surfacesNear(middle.x, middle.z, 10, Infinity);
+  const top = ctx.surfaceUnder(middle.x, middle.z);
+  const past = ctx.cornerHeight(middle.x, ramp.z + 105, middle, top);
+  expect(past).toBeGreaterThan(90);
+  // up the slope it follows the ramp as before
+  const below = { x: ramp.x, z: ramp.z + 40 };
+  ctx.surfacesNear(below.x, below.z, 10, Infinity);
+  const slope = ctx.surfaceUnder(below.x, below.z);
+  expect(ctx.cornerHeight(below.x, ramp.z + 44, below, slope)).toBeCloseTo(
+    shadowAt(below.x, ramp.z + 44),
+    5,
+  );
+});
