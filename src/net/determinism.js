@@ -34,13 +34,13 @@ const mix = (hash, value) => {
 
 const DEGREE = Math.PI / 180;
 
-// The player's car heads for the path point after next, as the tests' autopilot does.
-const steerAlongTrack = () => {
-  const target = (racers[0].point + 2) % track.n;
-  const dx = track.x[target] - car[0].x;
-  const dz = track.z[target] - car[0].z;
+// Car c heads for the path point after next, as the tests' autopilot does.
+const steerAlongTrack = (c) => {
+  const target = (racers[c].point + 2) % track.n;
+  const dx = track.x[target] - car[c].x;
+  const dz = track.z[target] - car[c].z;
   let towards = 90 + (dx >= 0 ? 180 : 0) + atan(dz / dx) / DEGREE;
-  let heading = car[0].xz;
+  let heading = car[c].xz;
   while (heading < 0) heading += 360;
   while (heading > 180) heading -= 360;
   while (towards < 0) towards += 360;
@@ -49,7 +49,7 @@ const steerAlongTrack = () => {
   if (Math.abs(off) >= 180) {
     off = -off;
   }
-  Object.assign(racers[0].u, {
+  Object.assign(racers[c].u, {
     up: true,
     down: false,
     left: off > 5,
@@ -99,8 +99,11 @@ export const beginFingerprintRace = () => {
   flashIntoRace();
 };
 
+// (the cars people drive steered, see isHuman)
 export const fingerprintRaceTick = (runTick) => {
-  steerAlongTrack();
+  for (const c of game.humans.length == 0 ? [game.player] : game.humans) {
+    steerAlongTrack(c);
+  }
   runTick();
 };
 

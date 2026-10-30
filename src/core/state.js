@@ -66,3 +66,9 @@ export const game = {
 // Whether people drive car c: then the AI leaves it alone and it races by the player's rules.
 export const isHuman = (c) =>
   game.humans.length == 0 ? c == game.player : game.humans.includes(c);
+
+// The car the computer drivers race against, wait for and chase: the player's, and in a
+// race people drive together the first of theirs (the host's), so that every game of it
+// computes the same race.
+export const aiRival = () =>
+  game.humans.length == 0 ? game.player : game.humans[0];

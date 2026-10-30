@@ -61,6 +61,48 @@ export const MISSED = {
   warned: -2,
 };
 
+// A tick of the warning of a missed checkpoint, until it ends.
+export const countMissedCheckpoint = (racer) => {
+  racer.missedCheckpoint++;
+  if (racer.missedCheckpoint == MISSED.ends) {
+    racer.missedCheckpoint = MISSED.warned;
+  }
+};
+
+// The whole loops, roll spins and half turns of a landed stunt, which naming it uses up (see
+// nameStunt in ui/hud.js): the original named only the player's, and a car taking off
+// again before its stunt is forgotten counts on from what is left. Racing together, the
+// race uses up every human car's (see countStuntInAir), so every game counts on alike.
+export const useUpStuntTurns = (racer) => {
+  let loops = 0;
+  while (racer.flipped > 225) {
+    racer.flipped -= 360;
+    loops++;
+  }
+  while (racer.flipped < -225) {
+    racer.flipped += 360;
+    loops--;
+  }
+  let rolls = 0;
+  racer.rolled = Math.abs(racer.rolled);
+  while (racer.rolled > 270) {
+    racer.rolled -= 360;
+    rolls++;
+  }
+  let degrees = 0;
+  racer.spun = Math.abs(racer.spun);
+  while (racer.spun > 90) {
+    racer.spun -= 180;
+    degrees += 180;
+  }
+  return {
+    loops,
+    rolls,
+    degrees: Math.min(degrees, 900),
+    beyond: degrees > 900,
+  };
+};
+
 export const racers = Array.from({ length: MAX_CARS }, newRacer);
 
 const newCar = () => ({

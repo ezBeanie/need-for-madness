@@ -19,7 +19,7 @@ import { BLEND, gl, keepDamageTexture } from "../render/renderer.js";
 import { carModels, carTextures, scene } from "../render/scene.js";
 import * as allEffects from "./effects.js";
 import { raceEvents } from "./events.js";
-import { MISSED, SKID, STUNT, car, racers } from "./racers.js";
+import { MISSED, SKID, STUNT, car, racers, useUpStuntTurns } from "./racers.js";
 import {
   HIGHLIGHT,
   catchHighlight as catchAnyHighlight,
@@ -607,6 +607,12 @@ function trackStunt(c, type) {
 // on the way up.
 function countStuntInAir(c) {
   if (racers[c].countingStunt != 1) {
+    // Taking off again before the landed stunt is forgotten, the car counts on from what
+    // naming it left (see useUpStuntTurns): racing together, the race uses it up here, for
+    // every human car, and the HUD names it unchanged.
+    if (racers[c].countingStunt == 10 && game.humans.length > 0 && isHuman(c)) {
+      useUpStuntTurns(racers[c]);
+    }
     racers[c].countingStunt = 1;
     racers[c].lastHeading = car[c].xz;
   }

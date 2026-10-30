@@ -32,7 +32,14 @@ import { CONFIRM, confirm } from "../input/confirm.js";
 import { pointer } from "../input/pointer.js";
 import { COUNTDOWN } from "../race/countdown.js";
 import { raceEvents } from "../race/events.js";
-import { MISSED, STUNT, car, racers } from "../race/racers.js";
+import {
+  MISSED,
+  STUNT,
+  car,
+  countMissedCheckpoint,
+  racers,
+  useUpStuntTurns,
+} from "../race/racers.js";
 import { HIGHLIGHT, startHighlight, recording } from "../race/recording.js";
 import { VIEWER_FROM, openReplay } from "../race/replayViewer.js";
 import { track } from "../race/track.js";
@@ -914,11 +921,9 @@ const drawTrackWarnings = () => {
         );
       }
     }
-    if (once()) {
-      player.missedCheckpoint++;
-      if (player.missedCheckpoint == MISSED.ends) {
-        player.missedCheckpoint = MISSED.warned;
-      }
+    // (racing together, the race counts it, see updateStandings)
+    if (once() && game.humans.length == 0) {
+      countMissedCheckpoint(player);
     }
   } else if (player.grounded && wrongWayShown < 70) {
     if (once()) {
@@ -1364,23 +1369,15 @@ const nameStunt = (player) => {
   let loopName = "";
   let spinName = "";
   let text = "";
-  let turns = 0;
-  while (player.flipped > 225) {
-    player.flipped -= 360;
-    turns++;
-  }
-  while (player.flipped < -225) {
-    player.flipped += 360;
-    turns--;
-  }
-  loopName = LOOPS[turns] ?? "";
-  if (turns >= 4) {
+  const { loops, rolls, degrees, beyond } = useUpStuntTurns(player);
+  loopName = LOOPS[loops] ?? "";
+  if (loops >= 4) {
     loopName = "massive Forward looping";
   }
-  if (turns <= -4) {
+  if (loops <= -4) {
     loopName = "massive Back looping";
   }
-  if (turns == 0) {
+  if (loops == 0) {
     if (player.flippedFarForward && player.flippedFarBack) {
       loopName = "Tabletop and reversed Tabletop";
     } else if (player.flippedFarForward || player.flippedFarBack) {
@@ -1388,37 +1385,20 @@ const nameStunt = (player) => {
     }
   }
   if (
-    (turns > 0 && player.flippedFarBack) ||
-    (turns < 0 && player.flippedFarForward)
+    (loops > 0 && player.flippedFarBack) ||
+    (loops < 0 && player.flippedFarForward)
   ) {
     loopName = "Hanged " + loopName;
   }
   if (loopName != "") {
     text += " " + loopName;
   }
-  turns = 0;
-  player.rolled = Math.abs(player.rolled);
-  while (player.rolled > 270) {
-    player.rolled -= 360;
-    turns++;
-  }
-  if (turns == 0 && player.rolledFar) {
+  if (rolls == 0 && player.rolledFar) {
     spinName = loopName == "" ? "Tabletop" : "Flipside";
   }
-  spinName = SPINS[turns] ?? spinName;
-  if (turns >= 4) {
+  spinName = SPINS[rolls] ?? spinName;
+  if (rolls >= 4) {
     spinName = "massive Roll spinning";
-  }
-  let degrees = 0;
-  let beyond = false;
-  player.spun = Math.abs(player.spun);
-  while (player.spun > 90) {
-    player.spun -= 180;
-    degrees += 180;
-    if (degrees > 900) {
-      degrees = 900;
-      beyond = true;
-    }
   }
   if (degrees != 0) {
     if (loopName == "" && spinName == "") {
@@ -1453,7 +1433,8 @@ const nameStunt = (player) => {
 // Praises a landed stunt, more for the more power it gave, and tells the power up.
 export const praiseStunt = () => {
   const player = racers[game.player];
-  stuntText = nameStunt(player);
+  // (racing together, the race uses the turns up, see useUpStuntTurns)
+  stuntText = nameStunt(game.humans.length == 0 ? player : { ...player });
   if (raceEvents.stuntTicks >= 45) {
     return;
   }

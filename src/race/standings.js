@@ -4,7 +4,9 @@
 import { distanceSquaredXZ } from "../core/math.js";
 import { game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
-import { car, racers } from "./racers.js";
+import { tick } from "../core/tick.js";
+import { raceEvents } from "./events.js";
+import { MISSED, car, countMissedCheckpoint, racers } from "./racers.js";
 import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
 import { track } from "./track.js";
 
@@ -28,6 +30,35 @@ export function updateStandings() {
   for (let i = 0; i < game.carCount; i++) {
     if (game.player != i && racers[i].wasted) {
       track.wasted++;
+    }
+  }
+  // The HUD stops the race as the player sees it end (see raceOutcome in ui/hud.js);
+  // racing together, it stops alike in every game: one car left, or one finished.
+  if (game.humans.length > 0) {
+    const cars = racers.slice(0, game.carCount);
+    if (
+      cars.filter((racer) => !racer.wasted).length <= 1 ||
+      cars.some(
+        (_, c) =>
+          track.clear[c] == track.nlaps * track.nsp && track.pos[c] == 0,
+      )
+    ) {
+      track.haltall = true;
+    }
+  }
+  // The original counts a missed checkpoint's warning while the HUD shows it (see
+  // drawTrackWarnings), which depends on the view; racing together, every game counts
+  // every human car's alike.
+  if (game.humans.length > 0 && tick.fraction >= tick.scale) {
+    for (const c of game.humans) {
+      if (
+        racers[c].missedCheckpoint >= MISSED.started &&
+        raceEvents.countdown == 0 &&
+        track.stage != 16 &&
+        racers[c].capcnt == 0
+      ) {
+        countMissedCheckpoint(racers[c]);
+      }
     }
   }
   if (recording.finishCatchTicks != 0) {
