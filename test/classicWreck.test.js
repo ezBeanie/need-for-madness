@@ -36,3 +36,19 @@ test("a classic wreck flashes on while the highlight holds still, and burns once
   // past the flashing, burning
   expect(Math.min(...steps())).toBeGreaterThanOrEqual(16);
 });
+
+test("a classic wreck is not stretched along one axis as the modern one is", async () => {
+  const { ctx } = await startRace({ stage: 1, car: 5 });
+  const racer = ctx.racers[0];
+  racer.embodir = 2;
+  racer.embomag = 1.3;
+  const turned = Float32Array.from([
+    0.6, 0, -0.8, 0, 0, 1, 0, 0, 0.8, 0, 0.6, 0, 5, 6, 7, 1,
+  ]);
+  const stretched = Float32Array.from(turned);
+  for (let i = 0; i < 3; i++) {
+    stretched[8 + i] *= 1.3;
+  }
+  const drawn = ctx.unstretched(0, stretched);
+  turned.forEach((v, i) => expect(drawn[i]).toBeCloseTo(v, 5));
+});

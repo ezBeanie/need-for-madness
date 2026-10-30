@@ -269,6 +269,22 @@ const wreckAndFix = (c, rad, type) => {
   return null;
 };
 
+// The modern look stretches a wreck about to burst along one axis (racer.embodir); the
+// original only swelled its polygons (see wreck in draw.js). That axis scaled back to
+// the others' length, between ticks too.
+export const unstretched = (c, matrix) => {
+  const axis = c < game.carCount ? racers[c].embodir : 0;
+  if (axis) {
+    const length = (k) =>
+      Math.hypot(matrix[k * 4], matrix[k * 4 + 1], matrix[k * 4 + 2]);
+    const by = length((axis + 1) % 3) / length(axis);
+    for (let i = 0; i < 3; i++) {
+      matrix[axis * 4 + i] *= by;
+    }
+  }
+  return matrix;
+};
+
 // Car c's own copy of its model (the order its polygons are drawn in is its own).
 const carObject = (c, instance, type) => {
   const file = CAR_FILES[type];
@@ -284,7 +300,7 @@ const carObject = (c, instance, type) => {
     rad && {
       key: instance,
       rad,
-      place: () => matrixOf(instance),
+      place: () => unstretched(c, matrixOf(instance)),
       car: instance,
       beforePolygons: c < game.carCount ? wreckAndFix(c, rad, type) : null,
       // how far below the car its wheels touch the ground, as our physics has it
