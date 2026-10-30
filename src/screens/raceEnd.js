@@ -33,6 +33,7 @@ import { BUTTON, blink, drawButton } from "../ui/widgets.js";
 import { menu } from "./menuState.js";
 import { poseShowcaseCar, showcase } from "./showcase.js";
 import { insano, pickTalkingPicture } from "../ui/insano.js";
+import { ROLE, link } from "../net/link.js";
 import {
   camera,
   faceCamera,
@@ -54,8 +55,12 @@ let unlockedCar = -1;
 const confetti = { frame: 0, side: -1, pause: 0, bursts: 0 };
 let confettiLoaded = false;
 
+// (not the host's stage for a guest)
 const unlocksStage = () =>
-  raceEvents.winner && game.unlocked == track.stage && game.carCount != 1;
+  raceEvents.winner &&
+  game.unlocked == track.stage &&
+  game.carCount != 1 &&
+  link.role != ROLE.guest;
 
 // Colours the stage backdrop dark in the stage's hue, behind the unlocked car.
 const colorBackdropForUnlockedCar = () => {

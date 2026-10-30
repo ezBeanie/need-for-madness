@@ -1,128 +1,101 @@
-// The guest's side of a race with a host: the guest's game does not drive the race, it
-// shows the ticks the host's game sends (as the replay viewer shows a race tape, see
-// raceTape.js) and sends the keys of its car back (see host.js).
+// The guest's side of a race with a host: the host's race starts in the guest's game from
+// the whole state the host sends, then both games compute it, each sending only its keys
+// (see lockstep.js and host.js). The guest drives its car in it as the player.
 
-import {
-  pauseMenuMusic,
-  playStageMusic,
-  stopStageMusic,
-} from "../audio/audio.js";
-import { stopReplaySounds } from "../audio/replaySounds.js";
+import { pauseMenuMusic, playStageMusic } from "../audio/audio.js";
+import { random, seededRandom } from "../core/random.js";
 import { MAX_CARS, PHASE, game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { STAGE_COUNT } from "../data/stages.js";
-import { CONFIRM, confirm } from "../input/confirm.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
-import { COUNTDOWN, circleTheField, dropBehindCar } from "../race/countdown.js";
-import { raceEvents } from "../race/events.js";
+import { circleTheField } from "../race/countdown.js";
 import { field } from "../race/field.js";
-import { addTapeTick, raceTape } from "../race/raceTape.js";
-import { car, racers } from "../race/racers.js";
-import { followLive, viewer } from "../race/replayViewer.js";
 import { track } from "../race/track.js";
 import { menu } from "../screens/menuState.js";
-import { praiseStunt } from "../ui/hud.js";
 import {
-  GUEST_HUD_FIELDS,
   MESSAGE,
-  OUTCOME,
+  RACE_GOES_ON,
   ROLE,
   isIndex,
   link,
   openLink,
   urlRoom,
 } from "./link.js";
-import { isCarState } from "./carState.js";
-import { predictOwnCar } from "./prediction.js";
-import { emptyStore, ticksToShow } from "./tickStore.js";
+import {
+  lockstep,
+  receiveKeys,
+  startLockstep,
+  stopLockstep,
+} from "./lockstep.js";
+import { isRaceState, restoreRace } from "./raceState.js";
 
-// how often a guest not in a race tells the host it is there
+// how often a guest not in a race tells the host it is there, and one in a race (its keys
+// stop while it pauses)
 const JOIN_EVERY_TICKS = 30;
+const PING_EVERY_TICKS = 30;
 // the screens a race of the host's takes the guest away from
 const WAITING_PHASES = [PHASE.mainMenu, PHASE.carSelect, PHASE.stageSelect];
-// a host silent this long in a race has paused it, or gone
-const HOST_QUIET_TICKS = 15;
 // a host not answering this long to joins is not in the room
 const HOST_GONE_TICKS = 100;
-// how often the guest measures the time to the host and back
-const PING_EVERY_TICKS = 30;
-// how long a tap on the menu button waits for the second one that leaves the race
-const LEAVE_ASK_TICKS = 100;
+// how long the guest is told the host left
+const HOST_LEFT_SHOWN_TICKS = 100;
 
-export const NOTICE = {
-  waiting: "Waiting for the host...",
-  hostLeft: "The host left the race",
-  leave: "Tap the menu again to leave the race",
-};
+export const NOTICE = { hostLeft: "The host left the race" };
 
-// (with the store of the host's ticks not shown yet, see tickStore.js)
-export const guest = emptyStore({
+export const guest = {
   // the race the host started, until its stage loads
   start: null,
   // the time to the host and back, in ms (null until measured)
   ping: null,
   pingTicks: 0,
-  // what the guest's HUD shows, as the host sent it last
-  hud: null,
   // the car the guest drives in the host's race
   car: 0,
-  // the guest's own car type and car, given back after the race
+  racing: false,
+  // the guest's own car type, car and stage, given back after the race
   ownCarType: 0,
   ownPlayer: 0,
+  ownStage: 0,
+  ownBack: true,
   joinTicks: 0,
   // ticks since the host last answered
   hostAnsweredTicks: HOST_GONE_TICKS,
-  // ticks since the host's last message, and whether the host left the race
-  quietTicks: 0,
-  ended: false,
-  // what the guest's HUD tells about the host, if anything
-  notice: null,
-  // ticks left to tap the menu button again to leave the race
-  leaveTicks: 0,
-  // whether the race is over for the guest (or the host left it): it can leave at once
-  over: false,
-  // the guest's inputs, one each tick and numbered, that the host has not driven yet; the
-  // host's newest state of the guest's car, driven up to own.input (see prediction.js)
-  input: 0,
-  inputs: [],
-  own: null,
-});
+  // ticks the guest has been told the host left
+  hostLeftTicks: 0,
+};
 
-const isStart = ({ stage, carTypes, car }) =>
+const isStart = ({ stage, carTypes, car, state }) =>
   isIndex(stage, STAGE_COUNT + 1) &&
   Array.isArray(carTypes) &&
   carTypes.length <= MAX_CARS &&
   carTypes.every((type) => isIndex(type, carStats.names.length)) &&
-  isIndex(car, carTypes.length);
+  isIndex(car, carTypes.length) &&
+  isRaceState(state, carTypes.length);
+
+// The host's car is the AI's from now on, and the race goes on.
+const raceOnWithoutHost = () => {
+  guest.racing = false;
+  game.humans = [];
+  stopLockstep();
+};
 
 const receive = (message) => {
-  guest.quietTicks = 0;
   guest.hostAnsweredTicks = 0;
-  if (message.type == MESSAGE.end) {
-    guest.ended = true;
+  if (message.type == MESSAGE.end && guest.racing) {
+    raceOnWithoutHost();
+    guest.hostLeftTicks = HOST_LEFT_SHOWN_TICKS;
   }
   if (message.type == MESSAGE.start && isStart(message)) {
     guest.start = message;
-    emptyStore(guest);
-    guest.input = 0;
-    guest.inputs = [];
-    guest.own = null;
+    // (the host's keys come on while the stage loads)
+    const { state } = message;
+    startLockstep(message.car, 0, () => {
+      random.sim = seededRandom(0);
+      random.wreck = seededRandom(0);
+      restoreRace(state);
+    });
   }
-  if (
-    message.type == MESSAGE.tick &&
-    Array.isArray(message.tape) &&
-    message.hud &&
-    Array.isArray(message.hud.positions)
-  ) {
-    guest.ticks.push(message);
-    if (
-      message.own &&
-      Number.isInteger(message.own.input) &&
-      Number.isFinite(message.own.fraction) &&
-      isCarState(message.own.state)
-    ) {
-      guest.own = message.own;
-    }
+  if (message.type == MESSAGE.keys && lockstep.active) {
+    receiveKeys(message);
   }
   if (message.type == MESSAGE.pong && Number.isFinite(message.ping)) {
     guest.ping = Math.round(performance.now() - message.ping);
@@ -146,13 +119,14 @@ export const startGuesting = () => {
 };
 
 const loadHostedRace = (start) => {
-  guest.ownCarType = game.carTypes[0];
-  guest.ownPlayer = game.player;
-  guest.hud = null;
-  guest.ended = false;
-  guest.over = false;
-  guest.leaveTicks = 0;
+  if (guest.ownBack) {
+    guest.ownCarType = game.carTypes[0];
+    guest.ownPlayer = game.player;
+    guest.ownStage = track.stage;
+    guest.ownBack = false;
+  }
   guest.ping = null;
+  guest.hostLeftTicks = 0;
   track.stage = start.stage;
   field.replayCars = start.carTypes;
   guest.car = start.car;
@@ -162,11 +136,17 @@ const loadHostedRace = (start) => {
   game.phase = PHASE.stageLoading;
 };
 
-// Every tick, outside the race: tells the host the guest is there, and goes to the race
-// the host starts.
+// Every tick, outside the race: tells the host the guest is there, goes to the race the
+// host starts, and is back to its own car after one.
 export const guestWaitingTick = () => {
   if (link.role != ROLE.guest || !WAITING_PHASES.includes(game.phase)) {
     return;
+  }
+  if (!guest.ownBack) {
+    game.carTypes[0] = guest.ownCarType;
+    game.player = guest.ownPlayer;
+    track.stage = guest.ownStage;
+    guest.ownBack = true;
   }
   guest.hostAnsweredTicks++;
   if (guest.joinTicks++ % JOIN_EVERY_TICKS == 0) {
@@ -174,133 +154,41 @@ export const guestWaitingTick = () => {
   }
   if (guest.start) {
     loadHostedRace(guest.start);
-    guest.start = null;
   }
 };
 
-// Its stage loaded: the host's race shows.
+// Its stage loaded: the host's race begins, its first frame as the host's was (see
+// startHostedRace). The countdown is the host's too.
 export const showHostedRace = () => {
+  guest.start = null;
   field.replayCars = null;
   // (loading the stage made car 0 the player's again)
   game.player = guest.car;
-  viewer.race = null;
-  viewer.frame = 0;
+  game.humans = [0, guest.car];
+  guest.racing = true;
   playStageMusic(track.stage);
-  if (raceEvents.countdown > COUNTDOWN.behindTheCar) {
-    circleTheField();
-  } else {
-    dropBehindCar(game.player);
+  circleTheField();
+  menu.redraw = false;
+  game.phase = PHASE.race;
+};
+
+// Every tick of a race with the host: the guest says it is there (and measures the time to
+// the host and back), and leaving the race tells the host.
+export const guestTick = () => {
+  if (guest.hostLeftTicks > 0) {
+    guest.hostLeftTicks--;
   }
-  game.phase = PHASE.guestRace;
-};
-
-const showHud = (hud) => {
-  const player = racers[game.player];
-  hud.positions.forEach((position, c) => (track.pos[c] = position));
-  track.wasted = hud.wasted;
-  for (const field of GUEST_HUD_FIELDS) {
-    player[field] = hud[field];
-  }
-  car[game.player].fcnt = hud.fcnt;
-  if (Array.isArray(hud.dested) && Array.isArray(hud.lastHitBy)) {
-    hud.dested.forEach((dested, c) => (track.dested[c] = dested));
-    hud.lastHitBy.forEach((by, c) => (racers[c].lastHitBy = by));
-  }
-};
-
-export const leaveHostedRace = () => {
-  stopStageMusic();
-  stopReplaySounds();
-  game.carTypes[0] = guest.ownCarType;
-  game.player = guest.ownPlayer;
-  menu.animation = 0;
-  menu.continuesToCarSelect = false;
-  game.phase = PHASE.mainMenu;
-  link.send({ type: MESSAGE.left });
-};
-
-// Each tick of the guest's race: its keys to the host, numbered, so the host drives them
-// one each tick and the guest knows which it has driven (see host.js); now and then a
-// ping, which the host answers at once.
-export const sendGuestTickKeys = () => {
-  const { up, down, left, right, handb } = racers[game.player].u;
-  const keys = { up, down, left, right, handb };
-  guest.input++;
-  guest.inputs = guest.inputs.filter(
-    ({ input }) => input > (guest.own?.input ?? -1),
-  );
-  guest.inputs.push({ input: guest.input, keys });
-  link.send({
-    type: MESSAGE.keys,
-    input: guest.input,
-    keys,
-    ping:
-      guest.pingTicks++ % PING_EVERY_TICKS == 0 ? performance.now() : undefined,
-  });
-};
-
-// The guest's own car, driven ahead of the host while the race runs and the host is there.
-export const predictGuestCar = () => {
-  if (
-    guest.own &&
-    raceEvents.countdown == 0 &&
-    !guest.over &&
-    guest.quietTicks <= HOST_QUIET_TICKS
-  ) {
-    predictOwnCar(game.player, guest.own, guest.inputs);
-  }
-};
-
-// The menu button of the guest's HUD: the race goes on for the host, so a first tap asks and
-// a second one leaves it (the host's AI drives the guest's car on, see host.js).
-export const guestMenu = () => {
-  if (guest.leaveTicks > 0 || guest.over) {
-    leaveHostedRace();
+  if (link.role != ROLE.guest || !guest.racing) {
     return;
   }
-  guest.leaveTicks = LEAVE_ASK_TICKS;
-  guest.notice = NOTICE.leave;
+  if (guest.pingTicks++ % PING_EVERY_TICKS == 0) {
+    link.send({ type: MESSAGE.ping, ping: performance.now() });
+  }
+  if (!RACE_GOES_ON.includes(game.phase)) {
+    link.send({ type: MESSAGE.left });
+    raceOnWithoutHost();
+  }
 };
 
-// A tick of the guest's race: what the host sent shows.
-export const guestRaceTick = () => {
-  const countdown = raceEvents.countdown;
-  for (const message of ticksToShow(guest)) {
-    raceEvents.countdown = message.countdown;
-    message.tape.forEach(addTapeTick);
-    guest.hud = message.hud;
-    // (each of the host's ticks, so a stunt is praised as it was landed, even in a tick
-    // that shows two of them)
-    showHud(message.hud);
-    if (message.hud.stunted === true) {
-      praiseStunt();
-    }
-  }
-  if (
-    countdown > COUNTDOWN.behindTheCar &&
-    raceEvents.countdown <= COUNTDOWN.behindTheCar
-  ) {
-    dropBehindCar(game.player);
-  }
-  guest.quietTicks++;
-  const raceOver = guest.hud != null && guest.hud.outcome != OUTCOME.none;
-  if (guest.leaveTicks > 0) {
-    guest.leaveTicks--;
-  }
-  guest.notice =
-    guest.leaveTicks > 0
-      ? NOTICE.leave
-      : guest.ended && !raceOver
-        ? NOTICE.hostLeft
-        : !guest.ended && guest.quietTicks > HOST_QUIET_TICKS
-          ? NOTICE.waiting
-          : null;
-  if (raceTape.length > 0) {
-    followLive();
-  }
-  guest.over = raceOver || guest.ended;
-  if (guest.over && confirm.state == CONFIRM.pressed) {
-    confirm.state = CONFIRM.used;
-    leaveHostedRace();
-  }
-};
+export const guestNotice = () =>
+  guest.hostLeftTicks > 0 ? NOTICE.hostLeft : null;

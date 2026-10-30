@@ -11,7 +11,7 @@ import { raceEvents } from "../race/events.js";
 import { physics } from "../race/physics.js";
 import { racers } from "../race/racers.js";
 import { track } from "../race/track.js";
-import { copyCarState, restoreCarState } from "./carState.js";
+import { copyCarState, isCarState, restoreCarState } from "./carState.js";
 
 // the standings on the track (see track.insih)
 const STANDINGS = ["pos", "clear", "dested", "magperc"];
@@ -71,3 +71,20 @@ export const restoreRace = (state) => {
   tick.fraction = state.fraction;
   physics.flipWhenGrounded = state.flipWhenGrounded;
 };
+
+// whether what another game sent can be the state of a race of so many cars
+export const isRaceState = (state, cars) =>
+  state != null &&
+  Array.isArray(state.cars) &&
+  state.cars.length == cars &&
+  state.cars.every(
+    (saved) =>
+      isCarState(saved) &&
+      typeof saved.keys == "object" &&
+      typeof saved.driver == "object",
+  ) &&
+  Array.isArray(state.standings) &&
+  state.standings.length == STANDINGS.length &&
+  state.standings.every(Array.isArray) &&
+  typeof state.events == "object" &&
+  Number.isFinite(state.fraction);

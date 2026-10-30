@@ -3,49 +3,37 @@
 // the server the game came from (see server/relay.js), which passes the messages on to the
 // other game in the room.
 
+import { PHASE } from "../core/state.js";
+
 export const ROLE = { none: 0, host: 1, guest: 2 };
 
 export const MESSAGE = {
   join: "join",
   // the host's answer to a join: it is there
   here: "here",
-  keys: "keys",
+  // the race the host starts, its whole state as of its first frame (see raceState.js)
   start: "start",
-  tick: "tick",
+  // a game's keys of a frame (see lockstep.js)
+  keys: "keys",
+  // the host left the race
   end: "end",
-  // the guest left the race for the menus
+  // the guest left the race
   left: "left",
-  // the host's answer to a ping, at once: the time to the host and back
+  // the guest's ping, which the host answers at once: the time to the host and back
+  ping: "ping",
   pong: "pong",
 };
 
 // the car the guest drives: the one beside the player's on the start grid
 export const GUEST_CAR = 1;
 
-// What the host sends of the guest's car each tick besides the race tape, for the guest's
-// HUD: its meters, checkpoints and stunts (see ui/hud.js).
-export const GUEST_HUD_FIELDS = [
-  "nlaps",
-  "damage",
-  "power",
-  "point",
-  "missedCheckpoint",
-  "clear",
-  "capcnt",
-  "grounded",
-  "stunt",
-  "stuntPower",
-  "surfed",
-  "flipped",
-  "flippedFarBack",
-  "flippedFarForward",
-  "rolled",
-  "rolledFar",
-  "spun",
+// the phases a race together goes on in; any other one leaves it
+export const RACE_GOES_ON = [
+  PHASE.race,
+  PHASE.paused,
+  PHASE.replay,
+  PHASE.replayRewind,
 ];
-
-// How the race ended for the guest, as the guest's HUD shows it.
-export const OUTCOME = { none: 0, won: 1, wastedThem: 2, wasted: 3, lost: 4 };
 
 // whether n is a whole number from 0 up to below `below`: what another game sends is checked
 export const isIndex = (n, below) => Number.isInteger(n) && n >= 0 && n < below;
@@ -59,6 +47,42 @@ const RECONNECT_MS = 2000;
 const params = new URLSearchParams(globalThis.location?.search);
 // the room of the URL, if any
 export const urlRoom = { host: params.get("host"), join: params.get("join") };
+
+// JSON knows no -0, NaN or infinities, and no undefined in lists: they would come as 0 or
+// null, but a race's state has them, and both games must have it to the bit (see
+// raceState.js). They go as {"$": name}.
+const SPECIAL = {
+  "-0": -0,
+  NaN: NaN,
+  Infinity: Infinity,
+  "-Infinity": -Infinity,
+  undefined: undefined,
+};
+const nameOf = (value, inList) =>
+  Object.is(value, -0)
+    ? "-0"
+    : (value === undefined && inList) ||
+        (typeof value == "number" && !Number.isFinite(value))
+      ? String(value)
+      : null;
+
+// (an undefined field is left out, as JSON leaves it: as one never set)
+export const encode = (message) =>
+  JSON.stringify(message, function (key, value) {
+    const name = nameOf(value, Array.isArray(this));
+    return name == null ? value : { $: name };
+  });
+
+export const decode = (text) =>
+  JSON.parse(text, (key, value) =>
+    value != null &&
+    typeof value == "object" &&
+    Object.keys(value).length == 1 &&
+    typeof value.$ == "string" &&
+    Object.hasOwn(SPECIAL, value.$)
+      ? SPECIAL[value.$]
+      : value,
+  );
 
 export const link = {
   role: ROLE.none,
@@ -83,13 +107,13 @@ export const openLink = (role, room, receive) => {
     socket = own;
     own.onopen = () => {
       link.open = true;
-      link.send = (message) => own.send(JSON.stringify(message));
+      link.send = (message) => own.send(encode(message));
     };
     own.onmessage = (event) => {
       // (whatever another game sends is checked before it is used)
       let message;
       try {
-        message = JSON.parse(event.data);
+        message = decode(event.data);
       } catch {
         return;
       }

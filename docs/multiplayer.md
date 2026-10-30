@@ -125,14 +125,7 @@ weiterhin.
 
 ### Schritt 4: Feinschliff
 
-- Vorhersage fürs eigene Auto beim Gast, Abgleich mit dem Host. Umgesetzt so: Der Gast
-  nummeriert seine Tasten pro Tick, der Host fährt genau eine Eingabe pro Tick
-  (`applyGuestKeys`) und schickt den vollen Zustand des Gast-Autos mit der Nummer der zuletzt
-  gefahrenen Eingabe (`carState.js`). Der Gast setzt sein Auto darauf und fährt die noch
-  offenen Eingaben selbst nach (`prediction.js`, `predictCar` ohne Sound, Effekte und
-  Ereignisse). Nur die Lage des Autos kommt aus der Vorhersage, das HUD weiter vom Host.
-  Offen: Zusammenstöße mit anderen Autos sagt der Gast nicht voraus (die sieht er verzögert),
-  dort zieht das Auto nach; weiches Nachziehen statt Springen.
+- Vorhersage fürs eigene Auto beim Gast (`prediction.js`): ersetzt durch Schritt 5.
 - Verbindungsabbruch: KI übernimmt das Auto (dafür `rivalOf(c)` in ai.js).
 - KI-Autos im MP-Feld, Namen über den Autos, Ergebnisliste für alle.
 
@@ -150,4 +143,18 @@ zu spät, spult ein Spiel zum Tick zurück, an dem sie gedrückt wurden, und rec
   vor. `random.wreck` ist der eine Zug aus den Effekten, der ins Rennen wirkt (Streckung des
   Wracks); er ist von `random.fx` getrennt, weil das Zeichnen `random.fx` je nach
   Bildwiederholrate unterschiedlich oft zieht. Test: `test/raceState.test.js`.
-- Offen: nur Tasten austauschen, Zurückspulen und Neurechnen, Desync-Prüfung per Fingerabdruck.
+- Ein Rennen mit zwei Menschen rechnet in beiden Spielen gleich (`test/sharedRace.test.js`): Die
+  KI fährt gegen das Auto des Hosts (`aiRival()`), und was das Original im HUD des Spielers
+  erledigt (Zähler von „Check Point Missed!“, Verbrauch der Stunt-Drehungen, Rennende), erledigt
+  bei mehreren Menschen das Rennen für jedes menschliche Auto. Im Einzelspiel bleibt alles beim
+  Original, die Golden Masters sind unverändert.
+- Lockstep (`net/lockstep.js`): Mit dem ersten Tick des Rennens schickt der Host dessen ganzen
+  Zustand (`start`), der Gast lädt die Strecke und setzt ihn ein. Danach schicken beide pro Tick
+  nur ihre Tasten (`keys`), die 3 Ticks (105 ms) später wirken, in beiden Spielen gleich. Fehlen
+  die Tasten des anderen, wartet der Tick („Waiting for the guest/host...“, Pause geht weiter).
+  Der Gast fährt ein echtes Rennen mit eigenem HUD, Warnungen, Sounds und Rennende; seine eigene
+  Phase und Vorhersage sind weg. Geht einer, fährt die KI dessen Auto, der andere fährt weiter.
+- Nachrichten gehen bitgenau (`encode`/`decode` in `link.js`): JSON verliert sonst -0, NaN,
+  Unendlich und undefined in Listen.
+- Offen: Zurückspulen und Neurechnen statt Warten (Rollback, dann kürzere Verzögerung),
+  Desync-Prüfung per Fingerabdruck, mehr als ein Gast.

@@ -43,7 +43,6 @@ import {
 import { HIGHLIGHT, startHighlight, recording } from "../race/recording.js";
 import { VIEWER_FROM, openReplay } from "../race/replayViewer.js";
 import { track } from "../race/track.js";
-import { OUTCOME } from "../net/link.js";
 import { CAMERA, camera, faceCamera } from "../render/camera.js";
 import { LOOK, look } from "../render/look.js";
 import { newParticleModel } from "../render/models.js";
@@ -1125,9 +1124,7 @@ const drawToggle = (id, y, muted, toggle, onImage) => {
 };
 
 // Top right corner: pause, sound and music.
-// onMenu: what the menu button does (in a race with a host, see net/guest.js, the race
-// cannot pause)
-const drawCornerButtons = (raceOver, onMenu = pause) => {
+const drawCornerButtons = (raceOver) => {
   // narrow screens leave the meters room above the buttons
   const shift = view.width / view.height < 1.3 ? 76 * view.scale : 0;
   const pauseX = view.width - 87 * view.scale;
@@ -1148,7 +1145,7 @@ const drawCornerButtons = (raceOver, onMenu = pause) => {
       53 * view.scale,
     );
   } else if (!raceOver) {
-    onMenu();
+    pause();
   }
   drawToggle(
     3,
@@ -1431,7 +1428,7 @@ const nameStunt = (player) => {
 };
 
 // Praises a landed stunt, more for the more power it gave, and tells the power up.
-export const praiseStunt = () => {
+const praiseStunt = () => {
   const player = racers[game.player];
   // (racing together, the race uses the turns up, see useUpStuntTurns)
   stuntText = nameStunt(game.humans.length == 0 ? player : { ...player });
@@ -1596,98 +1593,29 @@ export function drawHud() {
     announceEvents();
   }
 }
-// How a race with a host ended for the guest (see net/guest.js), as the host's game decided.
-const drawGuestOutcome = ({ outcome, winner }) => {
-  if (outcome == OUTCOME.won) {
-    drawOutcome("You Won!", "youwon");
-    drawBlinking(192, "You finished first, nice job!", 0, 128, 255);
+
+// A race waiting for the other game's keys (see net/lockstep.js) stands as it was drawn
+// last, and can be paused, to be left.
+export const drawWaitingHud = () => {
+  if (confirm.state == CONFIRM.pressed && raceEvents.countdown <= 65) {
+    confirm.state = CONFIRM.used;
+    pause();
   }
-  if (outcome == OUTCOME.wastedThem) {
-    drawOutcome("You Wasted'em!", "youwastedem");
-    drawBlinking(192, "You Won, all cars have been wasted!", 0, 128, 255);
-  }
-  if (outcome == OUTCOME.wasted) {
-    drawOutcome("You're Wasted!", "yourwasted");
-  }
-  if (outcome == OUTCOME.lost) {
-    drawOutcome("You Lost!", "youlost");
-    drawBlinking(192, "" + winner + " finished first, race over!", 0, 128, 255);
+  if (raceEvents.countdown <= 65) {
+    drawCornerButtons(false);
   }
 };
 
-// The guest's touch controls press its keys before they go to the host (and drive its
-// car ahead, see net/prediction.js), not after as in the host's HUD: a tick earlier.
-export const pressGuestTouchControls = () => {
-  if (touchControlsShown()) {
-    pressTouchControls();
-  }
-};
-
-// A guest's HUD: the race as the host sent it (see net/guest.js).
-// onContinue: leaves the race, once it is over (or the host left it)
-export function drawGuestHud(hud, notice, ping, onMenu, onContinue) {
-  rd.clearRect(0, 0, view.width, view.height);
-  if (touchControlsShown()) {
-    drawTouchControls();
-  }
-  const raceOver = hud != null && hud.outcome != OUTCOME.none;
-  if (raceOver) {
-    drawGuestOutcome(hud);
-  } else if (
-    raceEvents.countdown == 0 &&
-    camera.mode == CAMERA.behind &&
-    track.stage != 16
-  ) {
-    arrow(
-      racers[game.player].point,
-      racers[game.player].missedCheckpoint,
-      racers[game.player].u.arrace,
-    );
-  }
-  if (raceEvents.countdown <= COUNTDOWN.behindTheCar) {
-    drawStanding();
-    drawMeters();
-    // (the menu button leaves a race that is over too, see net/guest.js)
-    drawCornerButtons(false, onMenu);
-  }
-  if (
-    onContinue &&
-    drawButton({
-      id: 7,
-      x: 640 * view.scaleX,
-      y: view.height - 60 * view.scale - 40 * view.scaleY,
-      width: 250,
-      height: 60,
-      faceTop: "#019DFF",
-      faceBottom: "#01BAFF",
-      shadowTop: "#004A78",
-      shadowBottom: "#015777",
-      layout: BUTTON.textThenImage,
-      text: "Continue ",
-      fontSize: 20,
-      textOpacity: 0.8,
-      image: images.buttons[1],
-      imageOpacity: 0.8,
-      pulsing: false,
-    })
-  ) {
-    onContinue();
-  }
-  if (!raceOver) {
-    drawCountdown();
-    learnStunts();
-    drawPowerHint();
-    drawMessages();
-    announceEvents();
-  }
+// Racing together: what the HUD tells about the other game, and how long a message takes
+// to the host and back (the first thing to know when the race waits).
+export const drawNetNotice = (notice, ping) => {
   if (notice) {
     drawCenteredText(192, notice, 0, 0, 0, TEXT.label);
   }
-  // (how far the guest's race is behind the host's, the first thing to know when it lags)
   if (ping != null) {
     drawCenteredText(706, `Ping ${ping} ms`, 0, 0, 0, TEXT.small);
   }
-}
+};
 
 const darken = (alpha) => {
   rd.globalAlpha = alpha;

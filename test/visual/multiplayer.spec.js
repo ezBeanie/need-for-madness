@@ -6,8 +6,6 @@ import { PHASE } from "../../src/core/state.js";
 const GUEST_CAR = 1;
 // time for a message between the tabs
 const DELIVERY_MS = 20;
-// the most of the host's ticks the guest keeps in store (see src/net/tickStore.js)
-const STORE_TICKS = 4;
 // the car types host and guest chose
 const HOST_TYPE = "5";
 const GUEST_TYPE = "9";
@@ -22,18 +20,67 @@ const advanceBoth = async (host, guest, ticks) => {
   }
 };
 
-const guestState = (page) =>
+const frameOf = (page) => page.evaluate(() => window.gameState.lockstep.frame);
+
+// Brings both games to the same tick of their race (one may be ahead by the keys' delay,
+// see src/net/lockstep.js).
+const inStep = async (host, guest) => {
+  for (let tries = 0; tries < 20; tries++) {
+    const hostFrame = await frameOf(host.page);
+    const guestFrame = await frameOf(guest.page);
+    if (hostFrame == guestFrame) {
+      return hostFrame;
+    }
+    const behind = hostFrame < guestFrame ? host : guest;
+    await behind.game.advance();
+    await behind.page.waitForTimeout(DELIVERY_MS);
+  }
+  throw new Error(
+    `the games did not get in step: ${await frameOf(host.page)}, ${await frameOf(guest.page)}`,
+  );
+};
+
+// The race as a game computes it: what both games must have alike, but for the keys the
+// player holds and what only the player is told (see src/net/raceState.js).
+const raceOf = (page) =>
   page.evaluate(() => {
-    const { game, guest } = window.gameState;
+    const { cars, events, wasted, ...race } = window.gameState.saveRace();
     return {
-      phase: game.phase,
-      notice: guest.notice,
-      carType: game.carTypes[0],
+      ...race,
+      countdown: events.countdown,
+      cars: cars.map(({ keys, ...car }) => car),
     };
   });
 
-// Two tabs, linked by the relay of the dev server: the host's game races, the guest's shows
-// that race and drives a car in it.
+const guestState = (page) =>
+  page.evaluate(() => {
+    const { game } = window.gameState;
+    return {
+      phase: game.phase,
+      carType: game.carTypes[0],
+      humans: game.humans,
+    };
+  });
+
+// Every text a page draws on its canvas, to see what its HUD shows.
+const recordDrawnTexts = (context) =>
+  context.addInitScript(() => {
+    window.drawnTexts = new Set();
+    const fillText = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function (text, ...rest) {
+      window.drawnTexts.add(String(text));
+      return fillText.call(this, text, ...rest);
+    };
+  });
+
+const drawnTexts = async (page) => {
+  const texts = await page.evaluate(() => [...window.drawnTexts]);
+  await page.evaluate(() => window.drawnTexts.clear());
+  return texts;
+};
+
+// Two tabs, linked by the relay of the dev server: the host's game starts the race, and
+// both compute it.
 const openTwoGames = async (context, hostUrl, guestUrl) => {
   const hostPage = await context.newPage();
   const guestPage = await context.newPage();
@@ -63,103 +110,137 @@ const hostStartsRace = async ({ host, guest, hostPage, guestPage }) => {
   await hostPage.waitForTimeout(DELIVERY_MS);
   await host.tap("Enter");
   await host.advanceUntil(PHASE.race);
+  // (the race's first tick sends it to the guest)
+  await host.advance();
   await guestPage.waitForTimeout(DELIVERY_MS);
-  await guest.advanceUntil(PHASE.guestRace);
+  await guest.advanceUntil(PHASE.race);
 };
 
 // Host and guest, each in a tab of its own, in a race the host started.
 const raceTogether = async (context, room) => {
   const games = await openTwoGames(context, `/?host=${room}`, `/?join=${room}`);
   await hostStartsRace(games);
-  return games;
+  const { host, guest, hostPage, guestPage } = games;
+  return {
+    ...games,
+    both: [
+      { game: host, page: hostPage },
+      { game: guest, page: guestPage },
+    ],
+  };
 };
 
-test("a guest in another tab drives a car in the host's race", async ({
+test("host and guest race the same race in two tabs, each driving its car with its keys", async ({
   context,
 }) => {
-  const { host, guest, hostPage, guestPage } = await raceTogether(
-    context,
-    "test",
-  );
-  const both = [
-    { game: host, page: hostPage },
-    { game: guest, page: guestPage },
-  ];
-
-  const start = await hostPage.evaluate(
-    (c) => window.gameState.car[c].z,
-    GUEST_CAR,
-  );
-  // the guest drives the car it chose
+  const { hostPage, guestPage, both } = await raceTogether(context, "test");
+  const startOf = (page) =>
+    page.evaluate(() => window.gameState.car.map(({ z }) => z));
+  const start = await startOf(hostPage);
+  // the guest drives the car it chose, as the player
   expect(
-    await hostPage.evaluate(
-      (c) => window.gameState.game.carTypes[c],
-      GUEST_CAR,
-    ),
-  ).toBe(Number(GUEST_TYPE));
+    await guestPage.evaluate((c) => {
+      const { camera, game } = window.gameState;
+      return [game.carTypes[c], game.player, game.humans];
+    }, GUEST_CAR),
+  ).toEqual([Number(GUEST_TYPE), GUEST_CAR, [0, GUEST_CAR]]);
+
   await guestPage.keyboard.down("ArrowUp");
   await advanceBoth(...both, 300);
-  await guestPage.waitForTimeout(DELIVERY_MS);
-  // (the guest plays the host's ticks from a small store, see src/net/guest.js)
-  await guest.advance(STORE_TICKS + 3);
+  await inStep(...both);
+  // (behind its car since the countdown)
+  expect(await guestPage.evaluate(() => window.gameState.camera.target)).toBe(
+    GUEST_CAR,
+  );
   await guestPage.screenshot({ path: "test-results/multiplayer-guest.png" });
   await hostPage.screenshot({ path: "test-results/multiplayer-host.png" });
+  const onHost = await raceOf(hostPage);
+  expect(await raceOf(guestPage)).toEqual(onHost);
+  // the guest's car drove off the grid on the guest's keys, the host's stood
+  const now = await startOf(hostPage);
+  expect(Math.abs(now[GUEST_CAR] - start[GUEST_CAR])).toBeGreaterThan(500);
+  expect(now[0]).toBe(start[0]);
+  await guestPage.keyboard.up("ArrowUp");
+});
 
-  const onHost = await hostPage.evaluate((c) => {
-    const { car, raceTape } = window.gameState;
-    return {
-      z: car[c].z,
-      frames: raceTape.length,
-      zs: raceTape.cars[c].z,
-      hostZs: raceTape.cars[0].z,
-    };
-  }, GUEST_CAR);
-  const onGuest = await guestPage.evaluate((c) => {
-    const { camera, car, game, viewer } = window.gameState;
-    return {
-      z: car[c].z,
-      hostZ: car[0].z,
-      frame: viewer.frame,
-      phase: game.phase,
-      player: game.player,
-      followed: camera.target,
-    };
-  }, GUEST_CAR);
-
-  // the guest's car drove off the grid, on the guest's keys
-  expect(onHost.frames).toBeGreaterThan(50);
-  expect(Math.abs(onHost.z - start)).toBeGreaterThan(500);
-  // the guest shows the host's race where the host's game drove it, and its own car ahead
-  // of it, as the guest's keys drive it on (see src/net/prediction.js)
-  expect(onGuest.phase).toBe(PHASE.guestRace);
-  expect(onGuest.player).toBe(GUEST_CAR);
-  expect(onGuest.followed).toBe(GUEST_CAR);
-  expect(onGuest.frame).toBe(onHost.frames - 1);
-  expect(onGuest.hostZ).toBe(onHost.hostZs[onGuest.frame]);
-  expect(Math.abs(onGuest.z - start)).toBeGreaterThan(
-    Math.abs(onHost.zs[onGuest.frame] - start),
+test("a game waits for the other's keys, and says so", async ({ context }) => {
+  await recordDrawnTexts(context);
+  const { host, guest, hostPage, guestPage, both } = await raceTogether(
+    context,
+    "wait",
   );
-
+  // (past the countdown, which cannot pause)
+  await advanceBoth(...both, 200);
+  const frame = await inStep(...both);
+  // the guest's keys stop: the host runs on as far as the keys it has
+  await host.advance(30);
+  expect(await frameOf(hostPage)).toBe(frame + 3);
+  expect(await drawnTexts(hostPage)).toContain("Waiting for the guest...");
   // the host pauses: the guest waits for it
   await host.tap("Escape");
   await host.advanceUntil(PHASE.paused);
-  await advanceBoth(...both, 20);
-  expect((await guestState(guestPage)).notice).toBe("Waiting for the host...");
+  await drawnTexts(guestPage);
+  await advanceBoth(...both, 30);
+  expect(await drawnTexts(guestPage)).toContain("Waiting for the host...");
+});
 
-  // the host leaves the race: the guest is told, and goes back to its menu with its own car
+test("a guest whose host left races on, the host's car the AI's, and gets its own car back after", async ({
+  context,
+}) => {
+  await recordDrawnTexts(context);
+  const { hostPage, guestPage, both } = await raceTogether(context, "left");
+  await advanceBoth(...both, 10);
+  // the host leaves the race
   await hostPage.evaluate(() => {
     const { game, PHASE } = window.gameState;
     game.phase = PHASE.mainMenu;
   });
   await advanceBoth(...both, 3);
-  expect((await guestState(guestPage)).notice).toBe("The host left the race");
-  await guestPage.keyboard.up("ArrowUp");
-  await guest.tap("Enter");
-  await guest.advance();
+  expect(await drawnTexts(guestPage)).toContain("The host left the race");
+  expect((await guestState(guestPage)).humans).toEqual([]);
+  const hostCar = () => guestPage.evaluate(() => window.gameState.car[0].z);
+  const standing = await hostCar();
+  // past the countdown: the AI drives the host's car
+  await both[1].game.advance(300);
+  expect(Math.abs((await hostCar()) - standing)).toBeGreaterThan(500);
+
+  // the guest quits the race: back to its menu with its own car
+  await guestPage.evaluate(() => {
+    const { game, PHASE } = window.gameState;
+    game.phase = PHASE.mainMenu;
+  });
+  await both[1].game.advance();
   expect(await guestState(guestPage)).toMatchObject({
     phase: PHASE.mainMenu,
     carType: Number(GUEST_TYPE),
   });
+});
+
+test("the guest leaving the race leaves its car to the host's AI", async ({
+  context,
+}) => {
+  const { host, guest, hostPage, guestPage, both } = await raceTogether(
+    context,
+    "quit",
+  );
+  await advanceBoth(...both, 10);
+  await guestPage.evaluate(() => {
+    const { game, PHASE } = window.gameState;
+    game.phase = PHASE.mainMenu;
+  });
+  await guest.advance();
+  await hostPage.waitForTimeout(DELIVERY_MS);
+  await host.advance();
+  expect(await hostPage.evaluate(() => window.gameState.game.humans)).toEqual(
+    [],
+  );
+  // the host's race waits no more
+  const frame = await frameOf(hostPage);
+  await host.advance(10);
+  expect(await frameOf(hostPage)).toBe(frame);
+  expect(await hostPage.evaluate(() => window.gameState.lockstep.active)).toBe(
+    false,
+  );
 });
 
 test("the AI drives on the car of a guest whose connection is lost", async ({
@@ -227,7 +308,7 @@ test("the multiplayer dialog opens a room, and a guest joins it with its code", 
     hostPage.getByRole("button", { name: `Room ${room}` }),
   ).toBeVisible();
   await hostStartsRace(games);
-  expect((await guestState(guestPage)).phase).toBe(PHASE.guestRace);
+  expect((await guestState(guestPage)).phase).toBe(PHASE.race);
 });
 
 test("leaving the room ends the link", async ({ page }) => {
@@ -255,39 +336,7 @@ const recordSentMessages = (context) =>
     };
   });
 
-const sentKeys = (page) =>
-  page.evaluate(() =>
-    window.sentMessages
-      .filter((message) => message.type == "keys")
-      .map((message) => message.keys),
-  );
-
-test("the guest's own car answers its keys at once, ahead of the host's ticks", async ({
-  context,
-}) => {
-  const { host, guest, hostPage, guestPage } = await raceTogether(
-    context,
-    "ahead",
-  );
-  const both = [
-    { game: host, page: hostPage },
-    { game: guest, page: guestPage },
-  ];
-  // past the countdown, standing
-  await advanceBoth(...both, 220);
-  const where = () =>
-    guestPage.evaluate((c) => window.gameState.car[c].z, GUEST_CAR);
-  const standing = await where();
-  // the host's game ticks no more: only the guest's prediction can move its car
-  await guestPage.keyboard.down("ArrowUp");
-  await guest.advance(10);
-  expect(Math.abs((await where()) - standing)).toBeGreaterThan(5);
-  await guestPage.keyboard.up("ArrowUp");
-});
-
-test("the host answers the guest's ping at once, not with its next tick", async ({
-  context,
-}) => {
+test("the host answers the guest's ping at once", async ({ context }) => {
   const { guest, guestPage } = await raceTogether(context, "ping");
   await guestPage.evaluate(() => (window.gameState.guest.ping = null));
   // (the host's game ticks no more; the guest pings once in so many ticks)
@@ -301,113 +350,30 @@ test("the host answers the guest's ping at once, not with its next tick", async 
 test.describe("on a phone", () => {
   test.use({ hasTouch: true });
 
-  test("the guest drives with the touch controls, and leaves the race with the menu button", async ({
-    context,
-  }) => {
+  test("the guest drives with the touch controls", async ({ context }) => {
     await recordSentMessages(context);
-    const { host, guest, hostPage, guestPage } = await raceTogether(
-      context,
-      "touch",
-    );
-    const both = [
-      { game: host, page: hostPage },
-      { game: guest, page: guestPage },
-    ];
+    const { guest, guestPage, both } = await raceTogether(context, "touch");
     await advanceBoth(...both, 300);
     // (the accelerator, bottom right, held for a tick)
     await guestPage.evaluate(() => (window.sentMessages = []));
     await guestPage.mouse.move(1150, 558);
     await guestPage.mouse.down();
-    await guest.advance();
-    expect(await sentKeys(guestPage)).toContainEqual(
-      expect.objectContaining({ up: true }),
+    await guest.advance(2);
+    const sent = await guestPage.evaluate(() =>
+      window.sentMessages
+        .filter((message) => message.type == "keys")
+        .map((message) => message.keys),
     );
+    expect(sent).toContainEqual(expect.objectContaining({ up: true }));
     await guestPage.mouse.up();
-    await guest.advance();
-
-    // the menu button, top right: a first tap asks, a second one leaves
-    const tapMenu = async () => {
-      await guestPage.mouse.move(1231, 36);
-      await guestPage.mouse.down();
-      await guest.advance();
-      await guestPage.mouse.up();
-      await guest.advance();
-    };
-    await tapMenu();
-    expect(await guestState(guestPage)).toMatchObject({
-      phase: PHASE.guestRace,
-      notice: "Tap the menu again to leave the race",
-    });
-    await tapMenu();
-    expect((await guestState(guestPage)).phase).toBe(PHASE.mainMenu);
-    await guest.advance();
-    await hostPage.waitForTimeout(DELIVERY_MS);
-    await host.advance();
-    // the host's AI drives the guest's car on
-    expect(await hostPage.evaluate(() => window.gameState.game.humans)).toEqual(
-      [],
-    );
-  });
-  test("the guest goes back to its menu with Continue when the host left the race", async ({
-    context,
-  }) => {
-    const { host, guest, hostPage, guestPage } = await raceTogether(
-      context,
-      "continue",
-    );
-    const both = [
-      { game: host, page: hostPage },
-      { game: guest, page: guestPage },
-    ];
-    await advanceBoth(...both, 100);
-    await hostPage.evaluate(() => {
-      const { game, PHASE } = window.gameState;
-      game.phase = PHASE.mainMenu;
-    });
-    await advanceBoth(...both, 3);
-    expect((await guestState(guestPage)).notice).toBe("The host left the race");
-    // (the Continue button, bottom middle)
-    await guestPage.mouse.move(640, 654);
-    await guestPage.mouse.down();
-    await guest.advance();
-    await guestPage.mouse.up();
-    await guest.advance();
-    expect(await guestState(guestPage)).toMatchObject({
-      phase: PHASE.mainMenu,
-      carType: Number(GUEST_TYPE),
-    });
   });
 });
 
-// Every text a page draws on its canvas, to see what its HUD shows.
-const recordDrawnTexts = (context) =>
-  context.addInitScript(() => {
-    window.drawnTexts = new Set();
-    const fillText = CanvasRenderingContext2D.prototype.fillText;
-    CanvasRenderingContext2D.prototype.fillText = function (text, ...rest) {
-      window.drawnTexts.add(String(text));
-      return fillText.call(this, text, ...rest);
-    };
-  });
-
-const drawnTexts = async (page) => {
-  const texts = await page.evaluate(() => [...window.drawnTexts]);
-  await page.evaluate(() => window.drawnTexts.clear());
-  return texts;
-};
-
-test("the guest's HUD tells of its stunts and of the car it wasted, the host's of a car wasted", async ({
+test("each game's HUD tells its player of the stunts it landed and the cars it wasted", async ({
   context,
 }) => {
   await recordDrawnTexts(context);
-  const { host, guest, hostPage, guestPage } = await raceTogether(
-    context,
-    "events",
-  );
-  const both = [
-    { game: host, page: hostPage },
-    { game: guest, page: guestPage },
-  ];
+  const { hostPage, guestPage, both } = await raceTogether(context, "events");
   // past the countdown
   while (
     await hostPage.evaluate(() => window.gameState.raceEvents.countdown != 0)
@@ -415,27 +381,29 @@ test("the guest's HUD tells of its stunts and of the car it wasted, the host's o
     await advanceBoth(...both, 10);
   }
   await advanceBoth(...both, 10);
+  await inStep(...both);
   await drawnTexts(hostPage);
   await drawnTexts(guestPage);
 
-  // the guest's car lands a stunt, and wastes the car beside it (wasted with no dent,
-  // that car gets the body the hits wasting it would have given it)
+  // in the same tick of both games: the guest's car lands a stunt, and wastes the car
+  // beside it (wasted with no dent, that car gets the body the hits wasting it would have
+  // given it)
   for (const page of [hostPage, guestPage]) {
-    await page.evaluate((c) => window.gameState.fixcar(c + 1), GUEST_CAR);
+    await page.evaluate((c) => {
+      const { fixcar, racers } = window.gameState;
+      fixcar(c + 1);
+      // a forward looping, landed
+      racers[c].countingStunt = 9;
+      racers[c].flipped = 360;
+      racers[c].stuntPower = 30;
+      racers[c + 1].lastcolido = 70;
+      racers[c + 1].lastHitBy = c;
+      racers[c + 1].damage = 1e6;
+    }, GUEST_CAR);
   }
-  await hostPage.evaluate((c) => {
-    const { racers } = window.gameState;
-    // a forward looping, landed
-    racers[c].countingStunt = 9;
-    racers[c].flipped = 360;
-    racers[c].stuntPower = 30;
-    racers[c + 1].lastcolido = 70;
-    racers[c + 1].lastHitBy = c;
-    racers[c + 1].damage = 1e6;
-  }, GUEST_CAR);
   await advanceBoth(...both, 20);
-  await guestPage.waitForTimeout(DELIVERY_MS);
-  await guest.advance(STORE_TICKS + 3);
+  await inStep(...both);
+  expect(await raceOf(guestPage)).toEqual(await raceOf(hostPage));
 
   const onGuest = await drawnTexts(guestPage);
   const onHost = await drawnTexts(hostPage);
@@ -445,7 +413,8 @@ test("the guest's HUD tells of its stunts and of the car it wasted, the host's o
   );
   expect(onGuest.some((text) => /Forward loop/.test(text))).toBe(true);
   expect(onGuest.some((text) => /^You wasted .+!$/.test(text))).toBe(true);
-  // the host did not waste it
+  // the host did not waste it, nor land the stunt
   expect(onHost.some((text) => /^You wasted /.test(text))).toBe(false);
   expect(onHost.some((text) => / has been wasted!$/.test(text))).toBe(true);
+  expect(onHost.some((text) => /Forward loop/.test(text))).toBe(false);
 });

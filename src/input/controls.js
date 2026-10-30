@@ -41,11 +41,7 @@ export function onKey(action, pressed) {
   if (action == "handbrake") {
     input.handb = pressed;
     // outside races the space bar confirms (the replay viewer has keys of its own)
-    if (
-      game.phase != PHASE.race &&
-      game.phase != PHASE.replay &&
-      game.phase != PHASE.guestRace
-    ) {
+    if (game.phase != PHASE.race && game.phase != PHASE.replay) {
       pressConfirm(pressed);
     }
   }
@@ -87,11 +83,7 @@ export function onKey(action, pressed) {
   if (action == "lookBackRight") {
     camera.lookBack = pressed ? 1 : 0;
   }
-  if (
-    !pressed &&
-    action == "nextCamera" &&
-    (game.phase == PHASE.race || game.phase == PHASE.guestRace)
-  ) {
+  if (!pressed && action == "nextCamera" && game.phase == PHASE.race) {
     camera.mode++;
     if (camera.mode == CAMERA.flyTo) {
       camera.mode = CAMERA.behind;

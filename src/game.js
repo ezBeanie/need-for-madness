@@ -24,9 +24,9 @@ import {
   drawHighlightOverlay,
   drawRewindOverlay,
   drawSwitchScreen,
-  drawGuestHud,
   drawHud,
-  pressGuestTouchControls,
+  drawNetNotice,
+  drawWaitingHud,
 } from "./ui/hud.js";
 import { menu } from "./screens/menuState.js";
 import { carSelectTick, scatterMenuSmoke } from "./screens/carSelect.js";
@@ -40,7 +40,7 @@ import {
   recording,
   timeRewindTick,
 } from "./race/recording.js";
-import { cutRaceTape, raceTape, recordRaceTick } from "./race/raceTape.js";
+import { cutRaceTape, recordRaceTick } from "./race/raceTape.js";
 import {
   atReplayPace,
   flyCamera,
@@ -67,68 +67,67 @@ import { updateStandings } from "./race/standings.js";
 import { animateTrack, castShadows, placeWheels } from "./render/raceScene.js";
 import { countDown, flashTick } from "./race/countdown.js";
 import { onKey } from "./input/controls.js";
-import {
-  applyGuestKeys,
-  hostTick,
-  sendHostTick,
-  startHosting,
-} from "./net/host.js";
+import { hostTick, startHosting } from "./net/host.js";
 import {
   guest,
-  guestMenu,
-  guestRaceTick,
-  predictGuestCar,
-  sendGuestTickKeys,
+  guestNotice,
+  guestTick,
   guestWaitingTick,
-  leaveHostedRace,
   startGuesting,
 } from "./net/guest.js";
+import { ROLE, link } from "./net/link.js";
+import {
+  WAITING,
+  lockstep,
+  lockstepWaits,
+  pressFrameKeys,
+  releaseFrameKeys,
+} from "./net/lockstep.js";
 
 // The logic runs in fixed ticks, whatever the display's refresh rate (see tick.js).
 const TICK_MS = 35;
 // how much time is caught up after a stall, e.g. while the tab was in the background
 const MAX_CATCH_UP_MS = 250;
 
+// a race waiting this many ticks for the other game's keys says so (a few are the
+// network's unevenness)
+const WAIT_SHOWN_TICKS = 15;
+let waitedTicks = 0;
+// whether a tick of the race ran in this logic tick
+let raceRan = false;
+
 // The race and everything that replays it: the cars drive (or replay), wheels, shadows,
-// effects and the track follow, the overlay is drawn over it, the camera moves.
+// effects and the track follow, the overlay is drawn over it, the camera moves. Racing
+// together, the race waits for the other game's keys (see net/lockstep.js).
 function raceTick() {
   startProjection();
   raceEvents.onelec = false;
   if (game.phase == PHASE.race) {
-    if (raceEvents.countdown == 0) {
-      applyGuestKeys();
-      drive();
-      moveScenery(true);
-      recordTick();
-      recordRaceTick();
-      updateStandings();
-      control();
-      drawHud();
-      updateEngineSound();
+    if (lockstepWaits()) {
+      waitedTicks++;
+      drawWaitingHud();
     } else {
-      countDown();
+      waitedTicks = 0;
+      raceRan = true;
+      pressFrameKeys();
+      if (raceEvents.countdown == 0) {
+        drive();
+        moveScenery(true);
+        recordTick();
+        recordRaceTick();
+        updateStandings();
+        control();
+        releaseFrameKeys();
+        drawHud();
+        updateEngineSound();
+      } else {
+        releaseFrameKeys();
+        countDown();
+      }
     }
-    sendHostTick();
-  }
-  if (game.phase == PHASE.guestRace) {
-    const from = viewer.frame;
-    guestRaceTick();
-    pressGuestTouchControls();
-    sendGuestTickKeys();
-    predictGuestCar();
-    if (!atReplayPace(() => moveScenery(true))) {
-      placeWheels();
-      castShadows();
-    }
-    if (raceTape.length > 0) {
-      replaySoundsTick(from, viewer.frame, true);
-    }
-    drawGuestHud(
-      guest.hud,
-      guest.notice,
-      guest.ping,
-      guestMenu,
-      guest.over ? leaveHostedRace : null,
+    drawNetNotice(
+      waitedTicks > WAIT_SHOWN_TICKS ? WAITING[link.role] : guestNotice(),
+      link.role == ROLE.guest ? guest.ping : null,
     );
   }
   if (game.phase == PHASE.replay) {
@@ -208,6 +207,8 @@ export function runTick() {
   pollGamepads();
   guestWaitingTick();
   hostTick();
+  guestTick();
+  raceRan = false;
   for (const [phases, run] of TICKS) {
     if (phases.includes(game.phase)) {
       run();
@@ -221,7 +222,10 @@ export function runTick() {
     resumeMusic();
     musicPaused = false;
   }
-  tick.fraction = nextFraction(tick.fraction);
+  // (racing together, where the original's ticks fall is part of the race, which may wait)
+  if (!lockstep.active || raceRan) {
+    tick.fraction = nextFraction(tick.fraction);
+  }
   placeOptionsButton();
   placeMultiplayerButton();
   interpolation.tick++;
@@ -300,8 +304,7 @@ installMultiplayerMenu();
 installPointer(canvas2D, {
   // a click or touch allows audio (see unlockAudio)
   onRelease: () => unlockAudio(game.phase == PHASE.race),
-  keepPressedWhileTouching: () =>
-    game.phase == PHASE.race || game.phase == PHASE.guestRace,
+  keepPressedWhileTouching: () => game.phase == PHASE.race,
 });
 installKeyboard(onKey);
 

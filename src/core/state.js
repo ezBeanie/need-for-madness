@@ -21,8 +21,6 @@ export const PHASE = {
   switchScreen: 16,
   // the player winding back time during a race
   timeRewind: 18,
-  // a guest's view of the race the host's game drives (see net/guest.js)
-  guestRace: 19,
 };
 
 // the phases that show the race (live, replayed or rewinding)
@@ -33,7 +31,6 @@ export const RACE_PHASES = [
   PHASE.highlights,
   PHASE.switchScreen,
   PHASE.timeRewind,
-  PHASE.guestRace,
 ];
 
 // The most cars a race can have; the championship races with 7.

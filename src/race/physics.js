@@ -28,8 +28,9 @@ import {
 import { PIECE, pieceModels, pieces, track } from "./track.js";
 import { acos } from "../core/exactMath.js";
 
-// While predicting the guest's own car (see net/prediction.js) the physics only moves it:
-// what the car sounds, throws, shows and records comes with the host's ticks.
+// While predicting, the physics only moves the cars: what they sound, throw, show and
+// record is left out. (Racing together, a game that learns the other's keys late will
+// compute the race again with them, quietly.)
 // flipWhenGrounded: the player's capsized car, auto-corrected, left the ground and turns
 // upright when it touches it again; part of the race (see net/raceState.js).
 export const physics = { predicting: false, flipWhenGrounded: false };
@@ -188,16 +189,6 @@ export function drive() {
     driveCar(c);
   }
 }
-
-// A tick of the guest's own car alone, ahead of the host (see net/prediction.js).
-export const predictCar = (c) => {
-  physics.predicting = true;
-  try {
-    driveCar(c);
-  } finally {
-    physics.predicting = false;
-  }
-};
 
 function driveCar(c) {
   let type = car[c].typ;

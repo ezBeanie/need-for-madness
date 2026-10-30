@@ -2,14 +2,14 @@ import { expect, test } from "vitest";
 import { PHASE } from "../src/core/state.js";
 import { loadGame } from "./harness/loadGame.js";
 
-// (through JSON, as it would go to the other game)
-const stateOf = (ctx) => JSON.stringify(ctx.saveRace());
+// (as it goes to the other game)
+const stateOf = (ctx) => ctx.encode(ctx.saveRace());
 
 // all but the dents, which stay: compared after the last of the ticks, they show (and the
 // thousands of numbers of every tick's would make the test slow)
 const stateWithoutDents = (ctx) => {
   const { cars, ...rest } = ctx.saveRace();
-  return JSON.stringify({
+  return ctx.encode({
     ...rest,
     cars: cars.map(({ dents, ...car }) => car),
   });
@@ -40,10 +40,10 @@ test("a race restored to a kept tick runs on exactly as it did from there, wreck
   expect(ctx.game.phase).toBe(PHASE.race);
   // every tick of the race run again, from the countdown on: kept every 100 ticks
   for (let point = 0; point < 55; point++) {
-    const kept = JSON.parse(stateOf(ctx));
+    const kept = ctx.decode(stateOf(ctx));
     const ranOn = runTicks(ctx, 100);
     ctx.restoreRace(kept);
-    expect(stateOf(ctx)).toEqual(JSON.stringify(kept));
+    expect(stateOf(ctx)).toEqual(ctx.encode(kept));
     const ranAgain = runTicks(ctx, 100, 1);
     ranAgain.forEach((state, t) =>
       expect(state, `tick ${point * 100 + t + 1}`).toEqual(ranOn[t]),

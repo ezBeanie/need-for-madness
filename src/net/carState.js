@@ -1,31 +1,24 @@
-// The whole state of a car the physics drives on from (racers[c] and car[c]): the host
-// sends the guest's car's each tick, and the guest drives its own car on from it ahead of
-// the host (see prediction.js).
+// The whole state of a car the physics drives on from (racers[c] and car[c]), part of the
+// race's (see raceState.js).
 
 import { car, racers } from "../race/racers.js";
 
 // what the physics does not drive on from: the keys (sent apart), what is placed or drawn
-// every tick, and the chips flying off the car. (The car's matrix is: the physics turns
-// the car by the last tick's before it places it anew.)
+// every tick, and the chips flying off the car
 const NOT_STATE = {
   racer: ["u", "wheels", "shadow", "body", "carnchp"],
-  car: ["ctxl"],
+  car: ["ctxl", "mat"],
 };
-
-// (a matrix as a plain array, which goes through JSON as it is; restored into the car's
-// own, which the drawing holds)
-const copyOfValue = (value) =>
-  ArrayBuffer.isView(value)
-    ? Array.from(value)
-    : Array.isArray(value)
-      ? value.slice()
-      : value;
+// The car's matrix is, but for where it is drawn (relative to the camera, see
+// render/interpolation.js): the physics turns the car by the last tick's turn before it
+// turns it anew.
+const TURN = 12;
 
 const copyOf = (from, skipped) => {
   const copy = {};
   for (const [key, value] of Object.entries(from)) {
     if (!skipped.includes(key)) {
-      copy[key] = copyOfValue(value);
+      copy[key] = Array.isArray(value) ? value.slice() : value;
     }
   }
   return copy;
@@ -39,13 +32,8 @@ const restore = (to, from, skipped) => {
     }
   }
   for (const [key, value] of Object.entries(from)) {
-    if (skipped.includes(key)) {
-      continue;
-    }
-    if (ArrayBuffer.isView(to[key]) && Array.isArray(value)) {
-      to[key].set(value);
-    } else {
-      to[key] = copyOfValue(value);
+    if (!skipped.includes(key)) {
+      to[key] = Array.isArray(value) ? value.slice() : value;
     }
   }
 };
@@ -53,11 +41,14 @@ const restore = (to, from, skipped) => {
 export const copyCarState = (c) => ({
   racer: copyOf(racers[c], NOT_STATE.racer),
   car: copyOf(car[c], NOT_STATE.car),
+  turn: Array.from(car[c].mat.subarray(0, TURN)),
 });
 
+// (the turn into the car's own matrix, which the drawing holds)
 export const restoreCarState = (c, state) => {
   restore(racers[c], state.racer, NOT_STATE.racer);
   restore(car[c], state.car, NOT_STATE.car);
+  car[c].mat.set(state.turn);
 };
 
 // whether what another game sent can be a car's state
@@ -66,4 +57,7 @@ export const isCarState = (state) =>
   typeof state.racer == "object" &&
   state.racer != null &&
   typeof state.car == "object" &&
-  state.car != null;
+  state.car != null &&
+  Array.isArray(state.turn) &&
+  state.turn.length == TURN &&
+  state.turn.every(Number.isFinite);

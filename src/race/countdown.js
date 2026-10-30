@@ -127,8 +127,10 @@ export function countDown() {
   ) {
     drawStartHint();
   }
+  // (racing together, the countdown runs alike in every game)
   if (
     flying &&
+    game.humans.length == 0 &&
     (confirm.state == CONFIRM.pressed || racers[0].u.handb || pointer.down)
   ) {
     raceEvents.countdown = COUNTDOWN.behindTheCar;
