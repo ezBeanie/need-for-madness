@@ -328,6 +328,13 @@ if (import.meta.env.PROD && "serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
 }
 
+// (a check for racing together, see net/determinism.js)
+if (new URLSearchParams(globalThis.location?.search).has("determinism")) {
+  import("./net/determinism.js").then(({ checkDeterminism }) =>
+    checkDeterminism(runTick),
+  );
+}
+
 window.addEventListener("load", () => {
   lookForGamepads();
   document.getElementById("loading").style.visibility = "hidden";
