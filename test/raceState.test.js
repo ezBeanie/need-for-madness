@@ -38,6 +38,10 @@ test("a race restored to a kept tick runs on exactly as it did from there, wreck
   // (the two white frames it flashes in with, which set it up)
   runTicks(ctx, 2);
   expect(ctx.game.phase).toBe(PHASE.race);
+  // raced together, as the host starts it (see host.js): the HUD of each player keeps what
+  // it alone is told
+  ctx.game.humans = [0, 1];
+  ctx.raceEvents.onautocorrect = 0;
   // every tick of the race run again, from the countdown on: kept every 100 ticks
   for (let point = 0; point < 55; point++) {
     const kept = ctx.decode(stateOf(ctx));

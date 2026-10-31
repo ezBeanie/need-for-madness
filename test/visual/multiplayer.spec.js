@@ -168,15 +168,19 @@ test("a game waits for the other's keys, and says so", async ({ context }) => {
   // (past the countdown, which cannot pause)
   await advanceBoth(...both, 200);
   const frame = await inStep(...both);
-  // the guest's keys stop: the host runs on as far as the keys it has
+  // the guest's keys stop: the host runs on as far as it may guess them
   await host.advance(30);
-  expect(await frameOf(hostPage)).toBe(frame + 3);
+  const ahead = await hostPage.evaluate(
+    () => window.gameState.INPUT_DELAY + window.gameState.MAX_GUESSED,
+  );
+  expect(await frameOf(hostPage)).toBe(frame + ahead);
   expect(await drawnTexts(hostPage)).toContain("Waiting for the guest...");
   // the host pauses: the guest waits for it
   await host.tap("Escape");
   await host.advanceUntil(PHASE.paused);
   await drawnTexts(guestPage);
-  await advanceBoth(...both, 30);
+  // (it guesses the host's keys a while first)
+  await advanceBoth(...both, 50);
   expect(await drawnTexts(guestPage)).toContain("Waiting for the host...");
 });
 

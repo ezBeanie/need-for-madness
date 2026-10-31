@@ -126,6 +126,25 @@ export const recording = {
   held: 0,
 };
 
+// A copy of the recording's lists and records (lists of numbers copied whole, which is
+// quick, where structuredClone takes milliseconds).
+const copyOf = (value) =>
+  Array.isArray(value)
+    ? typeof value[0] == "object" && value[0] !== null
+      ? value.map(copyOf)
+      : value.slice()
+    : typeof value == "object" && value !== null
+      ? Object.fromEntries(
+          Object.entries(value).map(([key, field]) => [key, copyOf(field)]),
+        )
+      : value;
+
+// The recording as it is, to go back to (see net/lockstep.js): what it keeps of the race
+// goes back with the race.
+export const keepRecording = () => copyOf(recording);
+export const restoreRecording = (kept) =>
+  Object.assign(recording, copyOf(kept));
+
 // Keeps the tape as the highlight of the given kind; before the tape is full there is
 // nothing worth keeping yet.
 export function catchHighlight(kind) {

@@ -15,6 +15,9 @@ import { copyCarState, isCarState, restoreCarState } from "./carState.js";
 
 // the standings on the track (see track.insih)
 const STANDINGS = ["pos", "clear", "dested", "magperc"];
+// of the race's events, what the race itself goes by; the rest is the HUD's, each
+// player's own, which a race wound back leaves as it is
+const EVENTS = ["countdown", "onautocorrect"];
 
 // (only seeded sources keep a state: racing together, both games seed theirs alike)
 const randomState = (source) => source.state;
@@ -44,7 +47,9 @@ export const saveRace = () => {
     standings: STANDINGS.map((field) => track[field].slice()),
     wasted: track.wasted,
     haltall: track.haltall,
-    events: { ...raceEvents },
+    events: Object.fromEntries(
+      EVENTS.map((event) => [event, raceEvents[event]]),
+    ),
     sim: randomState(random.sim),
     wreck: randomState(random.wreck),
     fraction: tick.fraction,
@@ -53,15 +58,11 @@ export const saveRace = () => {
 };
 
 // The race as every game of a race together computes it alike: between frames, a game's
-// own car has the keys its player holds, and the HUD's events and its count of the wasted
-// cars (all but the player's) are each player's own.
+// own car has the keys its player holds, and the count of the wasted cars (all but the
+// player's) is each player's own.
 export const sharedRace = () => {
-  const { cars, events, wasted, ...race } = saveRace();
-  return {
-    ...race,
-    countdown: events.countdown,
-    cars: cars.map(({ keys, ...car }) => car),
-  };
+  const { cars, wasted, ...race } = saveRace();
+  return { ...race, cars: cars.map(({ keys, ...car }) => car) };
 };
 
 export const restoreRace = (state) => {

@@ -188,8 +188,11 @@ const cutEvents = (tape, fields, count, length) => {
 
 // Time wound back: the race goes on from frame of recording's tape, what came after it
 // never happened.
-export const cutRaceTape = (frame) => {
-  const length = raceTape.length - NEWEST + frame;
+export const cutRaceTape = (frame) =>
+  cutRaceTapeTo(raceTape.length - NEWEST + frame);
+
+// Only the first length ticks happened.
+export const cutRaceTapeTo = (length) => {
   if (length < 0 || length >= raceTape.length) {
     return;
   }

@@ -20,38 +20,33 @@ import { carModels, carTextures, scene } from "../render/scene.js";
 import * as allEffects from "./effects.js";
 import { raceEvents } from "./events.js";
 import { MISSED, SKID, STUNT, car, racers, useUpStuntTurns } from "./racers.js";
-import {
-  HIGHLIGHT,
-  catchHighlight as catchAnyHighlight,
-  recording,
-} from "./recording.js";
+import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
 import { PIECE, pieceModels, pieces, track } from "./track.js";
 import { acos } from "../core/exactMath.js";
 
-// While predicting, the physics only moves the cars: what they sound, throw, show and
-// record is left out. (Racing together, a game that learns the other's keys late will
-// compute the race again with them, quietly.)
+// Run again quietly, the race is computed as ever, but nothing of it is heard or thrown
+// about: racing together, a game that guessed the other's keys wrong computes the frames
+// since again with the right ones (see net/lockstep.js).
 // flipWhenGrounded: the player's capsized car, auto-corrected, left the ground and turns
 // upright when it touches it again; part of the race (see net/raceState.js).
-export const physics = { predicting: false, flipWhenGrounded: false };
-const unlessPredicting =
+export const physics = { quiet: false, flipWhenGrounded: false };
+const unlessQuiet =
   (act) =>
   (...args) =>
-    physics.predicting ? undefined : act(...args);
-const playSound = unlessPredicting(playAnySound);
-const bumpSound = unlessPredicting(carSounds.bumpSound);
-const crashSound = unlessPredicting(carSounds.crashSound);
-const groundScrapeSound = unlessPredicting(carSounds.groundScrapeSound);
-const scrapeSound = unlessPredicting(carSounds.scrapeSound);
-const skidSound = unlessPredicting(carSounds.skidSound);
+    physics.quiet ? undefined : act(...args);
+const playSound = unlessQuiet(playAnySound);
+const bumpSound = unlessQuiet(carSounds.bumpSound);
+const crashSound = unlessQuiet(carSounds.crashSound);
+const groundScrapeSound = unlessQuiet(carSounds.groundScrapeSound);
+const scrapeSound = unlessQuiet(carSounds.scrapeSound);
+const skidSound = unlessQuiet(carSounds.skidSound);
 const { DUST, effects } = allEffects;
-const burn = unlessPredicting(allEffects.burn);
-const chipaway = unlessPredicting(allEffects.chipaway);
-const chipburn = unlessPredicting(allEffects.chipburn);
-const dustup = unlessPredicting(allEffects.dustup);
-const firexp = unlessPredicting(allEffects.firexp);
-const sprks = unlessPredicting(allEffects.sprks);
-const catchHighlight = unlessPredicting(catchAnyHighlight);
+const burn = unlessQuiet(allEffects.burn);
+const chipaway = unlessQuiet(allEffects.chipaway);
+const chipburn = unlessQuiet(allEffects.chipburn);
+const dustup = unlessQuiet(allEffects.dustup);
+const firexp = unlessQuiet(allEffects.firexp);
+const sprks = unlessQuiet(allEffects.sprks);
 
 const drag = 0.05;
 const lonorm = [];
@@ -355,9 +350,6 @@ function driveCar(c) {
 }
 
 function reportCheckpoints(c) {
-  if (physics.predicting) {
-    return;
-  }
   if (c == game.player) {
     raceEvents.oncheckpoint = racers[c].clear;
     while (raceEvents.oncheckpoint >= track.nsp) {
@@ -483,9 +475,6 @@ function pathPointAhead(c, pnt) {
 }
 
 function passFixHoops(c) {
-  if (physics.predicting) {
-    return;
-  }
   if (game.mode != MODE.switchCars) {
     if (!car[c].fcnt) {
       for (let i = 0; i < pieces.fixCount; i++) {
@@ -641,9 +630,6 @@ function countStuntInAir(c) {
 
 // Turns the stunt into power some ticks after landing it.
 function rewardStunt(c) {
-  if (physics.predicting) {
-    return;
-  }
   racers[c].stuntPower = 0;
   if (Math.abs(racers[c].rolled) > 90) {
     racers[c].stuntPower += Math.abs(racers[c].rolled) / 24;
@@ -785,9 +771,6 @@ function drainPower(c, type) {
 }
 
 function recordHowWasted(c) {
-  if (physics.predicting) {
-    return;
-  }
   if (racers[c].wasted) {
     if (track.dested[c] == 0) {
       if (racers[c].lastcolido == 0) {
@@ -804,9 +787,6 @@ function recordHowWasted(c) {
 }
 
 function countDownStuntHighlight(c) {
-  if (physics.predicting) {
-    return;
-  }
   if (
     c == game.player &&
     recording.stuntCatchTicks != 0 &&
@@ -1108,9 +1088,6 @@ function shakeOnRoughGround(c, type, step) {
 }
 
 function burnWhenWasted(c, type, avgSpeedX, avgSpeedZ) {
-  if (physics.predicting) {
-    return;
-  }
   if (tick.fraction >= tick.scale) {
     if (racers[c].damage >= carStats.maxmag[type]) {
       if (recording.tape.cars[c].wastedAt == 700) {
@@ -3353,9 +3330,6 @@ export function paintDents(maxSteps) {
 export const HIT = { alongX: 0, alongZ: 1, fromBelow: 2, onRoof: 3 };
 
 export function regn(hitSide, k, mag, c) {
-  if (physics.predicting) {
-    return;
-  }
   if (game.phase == PHASE.race) {
     mag *= carStats.dammult[car[c].typ];
   }

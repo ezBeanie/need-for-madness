@@ -159,5 +159,15 @@ zu spät, spult ein Spiel zum Tick zurück, an dem sie gedrückt wurden, und rec
 - Desync-Prüfung: Jede Sekunde (30 Frames) schicken beide einen FNV-Fingerabdruck des gemeinsamen
   Rennzustands (`sync`, `sharedRace()` in `raceState.js`). Weichen sie ab, zeigen beide
   „Out of sync!“ und die Konsole den ersten abweichenden Frame (`lockstep.apartAt`).
-- Offen: Zurückspulen und Neurechnen statt Warten (Rollback, dann kürzere Verzögerung),
-  mehr als ein Gast.
+- Rollback: Die Tasten wirken nur noch 1 Frame (35 ms) später. Fehlen die Tasten des anderen,
+  rät das Spiel sie (die zuletzt gedrückten) und fährt weiter, bis zu 8 Frames (280 ms), erst dann
+  wartet es. Vor jedem geratenen Frame hält es Rennen, Aufnahme und Länge des Replay-Bands fest.
+  Kommen die echten Tasten anders, spult es zum ersten falsch geratenen Frame zurück und rechnet
+  bis jetzt still neu (`physics.quiet`: keine Sounds, keine Effekte; Regeln und Aufnahme laufen).
+  Im Countdown zählen Tasten nicht, dort wird nie zurückgespult. Fingerabdrücke gehen erst raus,
+  wenn ihr Frame nicht mehr auf geratenen Tasten steht.
+- Gesichert werden von den Rennereignissen nur noch `countdown` und `onautocorrect`; der Rest
+  gehört dem HUD des jeweiligen Spielers und bleibt beim Zurückspulen stehen.
+- Staub, Funken und Rutschgeräusche im Replay kommen aus dem Effekt-Zufall und sind ohnehin in
+  jedem Spiel anders; Staub und Funken neu gerechneter Frames fehlen im Replay.
+- Offen: mehr als ein Gast.

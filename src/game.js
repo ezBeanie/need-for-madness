@@ -98,6 +98,17 @@ let waitedTicks = 0;
 // whether a tick of the race ran in this logic tick
 let raceRan = false;
 
+// A frame of the race computed again, quietly (see net/lockstep.js): it was seen and heard
+// already, as the game guessed it.
+const runRaceFrameAgain = () => {
+  drive();
+  recordTick();
+  recordRaceTick();
+  updateStandings();
+  control();
+  tick.fraction = nextFraction(tick.fraction);
+};
+
 // The race and everything that replays it: the cars drive (or replay), wheels, shadows,
 // effects and the track follow, the overlay is drawn over it, the camera moves. Racing
 // together, the race waits for the other game's keys (see net/lockstep.js).
@@ -111,7 +122,7 @@ function raceTick() {
     } else {
       waitedTicks = 0;
       raceRan = true;
-      pressFrameKeys();
+      pressFrameKeys(runRaceFrameAgain);
       if (raceEvents.countdown == 0) {
         drive();
         moveScenery(true);

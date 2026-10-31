@@ -6,8 +6,8 @@ const HUMANS = [0, 1];
 const TICKS = 6000;
 
 // The fixed race (see net/determinism.js) with two people driving, in the game of the one
-// driving `player`: the state of the race after each tick, but for what only the player
-// is told (the race events, the wasted opponents); the dents after the last.
+// driving `player`: the state of the race after each tick (see sharedRace); the dents
+// after the last.
 const raceAs = async (player) => {
   const { ctx, stepUntil } = await loadGame({ seed: 5 });
   stepUntil(() => ctx.game.phase === PHASE.mainMenu, 400, "main menu");
@@ -19,6 +19,8 @@ const raceAs = async (player) => {
   ctx.runTick();
   ctx.game.humans = HUMANS;
   ctx.game.player = player;
+  // (as the host starts it, see host.js)
+  ctx.raceEvents.onautocorrect = 0;
   const states = [];
   // whether a missed checkpoint's warning counted on, for a car of either (coming back to
   // the checkpoint jumps ahead without counting)
@@ -30,13 +32,9 @@ const raceAs = async (player) => {
         ctx.racers[c].missedCheckpoint > ctx.MISSED.started &&
         ctx.racers[c].missedCheckpoint < ctx.MISSED.comingBack,
     );
-    const { cars, events, wasted, ...race } = ctx.saveRace();
+    const { cars, ...race } = ctx.sharedRace();
     states.push(
-      JSON.stringify({
-        ...race,
-        countdown: events.countdown,
-        cars: cars.map(({ dents, ...car }) => car),
-      }),
+      JSON.stringify({ ...race, cars: cars.map(({ dents, ...car }) => car) }),
     );
   }
   expect(ctx.game.player).toBe(player);
