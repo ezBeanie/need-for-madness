@@ -35,6 +35,9 @@ export const attachRelay = (httpServer) => {
     let sentThisSecond = 0;
     socket.alive = true;
     socket.on("pong", () => (socket.alive = true));
+    // a broken message (e.g. data that does not inflate) closes only its game's
+    // connection; unheard, the error would end the whole server
+    socket.on("error", () => socket.terminate());
     socket.on("message", (data, isBinary) => {
       const now = Date.now();
       if (now - second >= 1000) {

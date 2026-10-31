@@ -56,3 +56,16 @@ test("a room takes eight games at most", async () => {
   }
   await expect(enter("/net?room=full")).rejects.toThrow();
 });
+
+test("a game sending a broken message is dropped, and the relay goes on", async () => {
+  const host = await enter("/net?room=broken");
+  const guest = await enter("/net?room=broken");
+  const broken = await enter("/net?room=broken");
+  // a masked text frame marked compressed whose data does not inflate
+  broken._socket.write(Buffer.from([0xc1, 0x82, 0, 0, 0, 0, 0xff, 0xff]));
+  await delivered();
+  host.send("still there");
+  await delivered();
+  expect(guest.received).toEqual(["still there"]);
+  expect(broken.readyState).not.toBe(WebSocket.OPEN);
+});
