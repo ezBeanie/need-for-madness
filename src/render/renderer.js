@@ -520,9 +520,10 @@ export const keepDamageTexture = (model, pixels) => {
 const uploadDamage = (model) => {
   if (model.damagedVertices) {
     gl.bindBuffer(gl.ARRAY_BUFFER, model.vbuf);
+    // (a race restored to before a car's first hit takes its dents away: its body as made)
     gl.bufferData(
       gl.ARRAY_BUFFER,
-      new Float32Array(model.dvert),
+      new Float32Array(model.dvert ?? model.positions),
       gl.DYNAMIC_DRAW,
     );
     model.damagedVertices = false;
