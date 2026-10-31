@@ -38,14 +38,27 @@ test("hud: countdown numbers", async ({ page }) => {
   await expect.soft(page).toHaveScreenshot("hud-countdown-go.png");
 });
 
-test("hud: classic countdown numbers", async ({ page }) => {
-  const game = await racing(page, 0, { look: "1" });
-  // (the classic pictures load once the HUD first asks for them)
+// (the classic pictures load once the HUD first asks for them)
+const classicCountdown = async (page, storage) => {
+  const game = await racing(page, 0, storage);
   for (let i = 0; i < 15; i++) {
     await game.advance(10);
     await page.waitForTimeout(100);
   }
+};
+
+test("hud: classic countdown numbers", async ({ page }) => {
+  await classicCountdown(page, { look: "1", classicMenus: "1" });
   await expect.soft(page).toHaveScreenshot("hud-classic-countdown-two.png");
+});
+
+test("hud: the game's own countdown in the classic look, with the original's Insano", async ({
+  page,
+}) => {
+  await classicCountdown(page, { look: "1" });
+  await expect
+    .soft(page)
+    .toHaveScreenshot("hud-classic-world-countdown-two.png");
 });
 
 test("hud: the replay viewer", async ({ page }) => {

@@ -21,6 +21,11 @@ test("the options switch the look and the classic polygons without a keyboard", 
   const depth = (await look()).depth;
   await page.locator("#option-toggleDepth").click();
   expect((await look()).depth).toBe(!depth);
+  const menus = page.locator("#option-toggleClassicMenus");
+  await expect(menus.locator(".state")).toHaveText("Modern");
+  await menus.click();
+  expect((await look()).menus).toBe(true);
+  await expect(menus.locator(".state")).toHaveText("Classic");
   await page.locator("#optionsClose").click();
   await expect(page.locator("#options")).toBeHidden();
 });

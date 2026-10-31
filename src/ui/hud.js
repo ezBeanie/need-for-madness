@@ -17,6 +17,7 @@ import {
 import {
   drawClassicCountdown,
   drawClassicHighlight,
+  classicInsanoPicture,
   drawClassicInsano,
   drawClassicOutcome,
   drawClassicMeters,
@@ -44,7 +45,7 @@ import { HIGHLIGHT, startHighlight, recording } from "../race/recording.js";
 import { VIEWER_FROM, openReplay } from "../race/replayViewer.js";
 import { track } from "../race/track.js";
 import { CAMERA, camera, faceCamera } from "../render/camera.js";
-import { LOOK, look } from "../render/look.js";
+import { LOOK, classicMenus, look } from "../render/look.js";
 import { newParticleModel } from "../render/models.js";
 import { gl } from "../render/renderer.js";
 import { scene, timeTube } from "../render/scene.js";
@@ -214,18 +215,36 @@ const insanoFace = (ticks) => {
   return ticks >= 10 ? 5 : 0;
 };
 
-const drawInsanoAside = (face) => {
-  if (look.current == LOOK.classic) {
+// the modern Insano's size on screen, at the design's scale 1
+const INSANO_WIDTH = 274 * 0.7;
+const INSANO_HEIGHT = 341 * 0.7;
+
+// Insano's face, faint, beside a message (at x = 490 of the design) or the countdown (640).
+// In the classic look he is the original's Insano, as high as the modern one and centred
+// where that stands.
+const drawInsanoAside = (face, x = 490) => {
+  if (classicMenus()) {
     drawClassicInsano(face);
     return;
   }
+  const classic = look.current == LOOK.classic;
+  const picture = classic ? classicInsanoPicture(face) : images.insano[face];
+  if (!picture) {
+    return;
+  }
+  const height = INSANO_HEIGHT * view.scale;
+  const width = classic
+    ? (picture.width / picture.height) * height
+    : INSANO_WIDTH * view.scale;
   rd.globalAlpha = 0.6;
   rd.drawImage(
-    images.insano[face],
-    490 * view.scaleX - 230 * view.scale,
+    picture,
+    x * view.scaleX -
+      230 * view.scale +
+      (INSANO_WIDTH * view.scale - width) / 2,
     10 * view.scaleY,
-    274 * view.scale * 0.7,
-    341 * view.scale * 0.7,
+    width,
+    height,
   );
   rd.globalAlpha = 1;
 };
@@ -678,7 +697,7 @@ const pressTouchControls = () => {
 // and stops the race.
 // The race's end in big letters: the original's pictures in the classic look.
 const drawOutcome = (text, picture) => {
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     drawClassicOutcome(picture);
   } else {
     drawCenteredText(132, text, 0, 0, 0, TEXT.title);
@@ -950,7 +969,7 @@ const drawTrackWarnings = () => {
 
 // Top left: lap, wasted opponents and the position.
 const drawStanding = () => {
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     drawClassicStanding(
       racers[game.player].nlaps + 1,
       track.nlaps,
@@ -1033,7 +1052,7 @@ const drawArrowButton = () => {
 // Top right: the damage meter (yellow to red, blinking when nearly wasted) and the power
 // meter (blinking while stunt praise is shown).
 const drawMeters = () => {
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     drawClassicMeters(
       racers[game.player].damage / carStats.maxmag[car[game.player].typ],
       racers[game.player].power,
@@ -1217,17 +1236,9 @@ const drawCountdown = () => {
     if (countdown == 0 && countdownNumberTicks < 7) {
       face = 1;
     }
-    rd.globalAlpha = 0.6;
-    rd.drawImage(
-      images.insano[face],
-      640 * view.scaleX - 230 * view.scale,
-      10 * view.scaleY,
-      274 * view.scale * 0.7,
-      341 * view.scale * 0.7,
-    );
-    rd.globalAlpha = 1;
+    drawInsanoAside(face, 640);
   }
-  if (countdownNumberTicks != 0 && look.current == LOOK.classic) {
+  if (countdownNumberTicks != 0 && classicMenus()) {
     drawClassicCountdown(countdownNumber);
     countdownNumberTicks--;
   } else if (countdownNumberTicks != 0) {
@@ -1502,7 +1513,7 @@ const announceEvents = () => {
   }
   if (raceEvents.checkpointsAnnounced != player.clear && player.clear != 0) {
     if (!messageImportant) {
-      message = look.current == LOOK.classic ? "Checkpoint!" : "Check Point";
+      message = classicMenus() ? "Checkpoint!" : "Check Point";
       raceEvents.messageTicks = 15;
     }
     raceEvents.checkpointsAnnounced = player.clear;
@@ -1739,7 +1750,7 @@ const tourCars = ({ rests, flights, holdFrom }) => {
 // What the highlight shows, under its title: in the classic look as the original's
 // (flickering while it starts).
 const caption = (text) => {
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     drawClassicHighlight(text, recording.frame < 50);
   } else {
     drawCenteredText(90, text, 0, 32, 64, TEXT.label);
@@ -1807,7 +1818,7 @@ const toRaceEnd = () => {
 export function drawHighlightOverlay() {
   rd.clearRect(0, 0, view.width, view.height);
   // the original's title is a picture, and it goes on with Enter or a click
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     showHighlight();
     if (
       (highlightPlays == 2 && recording.frame == 427) ||
@@ -1990,7 +2001,7 @@ const turnArrowTowards = (heading) => {
 
 // the outline is one of the original's pixels in the classic look
 const arrowOutline = () =>
-  look.current == LOOK.classic ? view.height / 450 : 2.6 * view.scale;
+  classicMenus() ? view.height / 450 : 2.6 * view.scale;
 
 const projectArrow = (xs, ys, zs) => {
   for (let i = 0; i < 7; i++) {

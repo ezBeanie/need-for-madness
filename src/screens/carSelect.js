@@ -19,7 +19,7 @@ import { racers } from "../race/racers.js";
 import { track } from "../race/track.js";
 import { camera, startProjection, turnView } from "../render/camera.js";
 import { interpolation, resetMatrix } from "../render/interpolation.js";
-import { LOOK, look } from "../render/look.js";
+import { classicMenus } from "../render/look.js";
 import {
   carModels,
   carShadows,
@@ -91,7 +91,7 @@ const newSpin = (puff) => {
 };
 
 export function carSelectTick() {
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     classicTick();
     return;
   }

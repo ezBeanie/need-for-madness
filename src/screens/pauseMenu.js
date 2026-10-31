@@ -14,7 +14,7 @@ import { raceTape } from "../race/raceTape.js";
 import { TAPE_TICKS } from "../race/recording.js";
 import { VIEWER_FROM, openReplay } from "../race/replayViewer.js";
 import { interpolation } from "../render/interpolation.js";
-import { LOOK, look } from "../render/look.js";
+import { classicMenus } from "../render/look.js";
 import { backdropHue, cssRgb, hslToRgb } from "../ui/color.js";
 import { hud } from "../ui/hud.js";
 import { images } from "../ui/images.js";
@@ -77,7 +77,7 @@ let classicTick = -2;
 
 export function pauseMenuTick() {
   stopEngine();
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     classicPauseTick();
     return;
   }
@@ -195,10 +195,9 @@ const choose = (entry) => {
       musicPlayingForReplay = true;
       tooShortTicks = 0;
     } else {
-      tooShortTicks =
-        look.current == LOOK.classic
-          ? CLASSIC_TOO_SHORT_TICKS
-          : TOO_SHORT_TICKS;
+      tooShortTicks = classicMenus()
+        ? CLASSIC_TOO_SHORT_TICKS
+        : TOO_SHORT_TICKS;
     }
   }
   if (entry == INSTRUCTIONS) {

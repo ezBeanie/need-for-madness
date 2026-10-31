@@ -11,7 +11,7 @@ import { lookForGamepads } from "../input/gamepad.js";
 import { racers } from "../race/racers.js";
 import { track } from "../race/track.js";
 import { interpolation } from "../render/interpolation.js";
-import { LOOK, look } from "../render/look.js";
+import { classicMenus } from "../render/look.js";
 import { setWorld } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 import { images } from "../ui/images.js";
@@ -67,7 +67,7 @@ let subtitle = -1;
 let subtitleWait = 0;
 
 export function mainMenuTick() {
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     classicTick();
     return;
   }
@@ -353,7 +353,7 @@ const openCarSelect = () => {
 let classicQuestionTick = -2;
 
 export function resetQuestionTick() {
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     const answer = drawClassicResetQuestion(
       classicQuestionTick != interpolation.tick - 1,
     );

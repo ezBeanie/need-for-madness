@@ -11,7 +11,7 @@ import { PHASE, game } from "../core/state.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { pointer } from "../input/pointer.js";
 import { interpolation } from "../render/interpolation.js";
-import { LOOK, look } from "../render/look.js";
+import { classicMenus } from "../render/look.js";
 import { backdropHue, cssRgb, hslToRgb } from "../ui/color.js";
 import { images } from "../ui/images.js";
 import {
@@ -56,7 +56,7 @@ export const TALK_TICKS = 250;
 let classicTick = -2;
 
 export function instructionsTick() {
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     if (classicTick != interpolation.tick - 1) {
       startClassicInstructions();
     }

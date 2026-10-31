@@ -1,4 +1,4 @@
-// The options: the switches that otherwise have only keys (L, K, J, N, M, O), for
+// The options: the switches that otherwise have only keys (L, K, J, U, N, M, O), for
 // phones and tablets without a keyboard. A button with a gear opens them (outside races:
 // in a race, the pause menu leads there), each one does what its key does.
 
@@ -15,6 +15,7 @@ const SWITCHES = [
   ["toggleLook", () => look.current == LOOK.classic, "Classic", "Modern"],
   ["toggleSharp", () => look.sharp, "Sharp", "Original pixels"],
   ["toggleDepth", () => look.depth, "By depth", "As the original"],
+  ["toggleClassicMenus", () => look.menus, "Classic", "Modern"],
   ["muteSound", () => !audio.muteSound, "On", "Off"],
   ["muteMusic", () => !audio.muteMusic, "On", "Off"],
   ["otherCarSounds", () => audio.otherCars, "On", "Off"],

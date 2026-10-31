@@ -354,11 +354,16 @@ export const drawClassicHighlight = (caption, starting) => {
   flicker = !flicker;
 };
 
+// The original's Coach Insano for one of the modern Insano's faces: his mouth moves with
+// them (0 at rest). Null until the picture has loaded.
+export const classicInsanoPicture = (face) =>
+  plainPicture(`d${(face % 3) + 1}.png`);
+
 // Coach Insano beside a message (this game's switching cars and reversing time, which
 // the original never had): faint, as on the original's instruction pages, his mouth
 // moving with the face given (0 at rest).
 export const drawClassicInsano = (face) => {
-  const insano = plainPicture(`d${(face % 3) + 1}.png`);
+  const insano = classicInsanoPicture(face);
   if (insano) {
     rd.globalAlpha = 0.6;
     rd.drawImage(

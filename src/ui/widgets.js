@@ -6,7 +6,7 @@ import { drawClassicMessage } from "../classic/hud.js";
 import { interfaceResolution, isFirefox } from "../core/platform.js";
 import { RACE_PHASES, game } from "../core/state.js";
 import { pointer } from "../input/pointer.js";
-import { LOOK, look } from "../render/look.js";
+import { classicMenus } from "../render/look.js";
 import { images } from "./images.js";
 import { rd, view } from "./view.js";
 
@@ -246,7 +246,7 @@ export const TEXT = { small: 0, label: 1, faintLabel: 2, title: 3, heading: 4 };
 // Text centered horizontally at the design height y.
 export const drawCenteredText = (y, text, r, g, b, style) => {
   // in a race in the classic look: the original's bold Arial (see classic/hud.js)
-  if (look.current == LOOK.classic && RACE_PHASES.includes(game.phase)) {
+  if (classicMenus() && RACE_PHASES.includes(game.phase)) {
     drawClassicMessage(y, text, r, g, b);
     return;
   }

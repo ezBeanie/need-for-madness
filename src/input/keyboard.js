@@ -24,6 +24,7 @@ const ACTIONS = {
   76: "toggleLook", // L: the modern or the classic look (see render/look.js)
   75: "toggleSharp", // K: the classic look sharp or in the original's pixels
   74: "toggleDepth", // J: the classic look's polygons covering each other by depth or not
+  85: "toggleClassicMenus", // U: the classic look with the original's menus and race HUD or not
 };
 
 export const actionFor = (keyCode) => ACTIONS[keyCode];

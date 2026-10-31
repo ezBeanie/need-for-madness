@@ -20,7 +20,7 @@ import { raceEvents } from "../race/events.js";
 import { fixcar } from "../race/physics.js";
 import { track } from "../race/track.js";
 import { interpolation } from "../render/interpolation.js";
-import { LOOK, look } from "../render/look.js";
+import { classicMenus } from "../render/look.js";
 import {
   carModels,
   colorStageBackdrop,
@@ -326,7 +326,7 @@ const classicRaceEnd = () => {
 
 // Every tick of the race end screen.
 export const raceEndScreen = () => {
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     classicRaceEnd();
     return;
   }
@@ -371,7 +371,7 @@ const leaveRaceEnd = () => {
 
 // The unlocked car turns in front of the stage backdrop, rocking its nose up and down.
 export function unlockedCarTick() {
-  if (menu.animation == UNLOCKED_CAR_SHOWN && look.current == LOOK.classic) {
+  if (menu.animation == UNLOCKED_CAR_SHOWN && classicMenus()) {
     classicUnlockedCarTick();
     return;
   }

@@ -19,7 +19,7 @@ import { UNLOCKED_CAR_SHOWN } from "../screens/raceEnd.js";
 import { stageSelect } from "../screens/stageSelect.js";
 import { camera } from "./camera.js";
 import { attachTo, interpolation, placeCamera } from "./interpolation.js";
-import { LOOK, look } from "./look.js";
+import { LOOK, classicMenus, look } from "./look.js";
 import { CLASSIC_FLOOR } from "../classic/carSelect.js";
 import { CLASSIC_UNLOCKED_FLOOR } from "../classic/raceEnd.js";
 import {
@@ -27,7 +27,7 @@ import {
   frozenWanted,
   presentScreen,
 } from "../classic/screen.js";
-import { drawModel, drawParticle, gl } from "./renderer.js";
+import { drawModel, drawParticle, fitCanvas3D, gl } from "./renderer.js";
 import {
   carModels,
   carShadows,
@@ -88,7 +88,7 @@ export function render() {
     drawWhenDue(drawUnlockedCar);
   }
   // the race stood still for the classic pause or race end
-  if (look.current == LOOK.classic && frozenWanted()) {
+  if (classicMenus() && frozenWanted()) {
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.disable(gl.DEPTH_TEST);
@@ -102,9 +102,10 @@ export function render() {
 const drawWhenDue = (drawScene) => {
   if (menu.redraw || drawnPhase == game.phase) {
     drawnPhase = game.phase;
+    // the classic look's few pixels only where it is drawn (see look.drawsClassic)
+    fitCanvas3D();
     // the classic menus show their pictures through it
-    const seeThrough =
-      look.current == LOOK.classic && !RACE_PHASES.includes(game.phase);
+    const seeThrough = classicMenus() && !RACE_PHASES.includes(game.phase);
     gl.clearColor(0.0, 0.0, 0.0, seeThrough ? 0.0 : 1.0);
     gl.clearDepth(1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -185,7 +186,7 @@ const drawWheeledCar = (type, parent, wheels, body, near) => {
 
 const drawShowcaseCar = (classicFloor = null) => {
   const type = game.carTypes[0];
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     drawClassicCar(carModels[type], type, classicFloor);
     return;
   }
@@ -314,7 +315,7 @@ const drawRace = () => {
 
 const drawCarSelect = () => {
   // the classic look's car select has its pictures behind (see classic/carSelect.js)
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     drawShowcaseCar(CLASSIC_FLOOR);
     return;
   }
@@ -325,16 +326,14 @@ const drawCarSelect = () => {
     drawModel(dustSprite);
   });
   startDepth();
-  if (look.current != LOOK.classic) {
-    drawModel(carShadows[game.carTypes[0]]);
-  }
+  drawModel(carShadows[game.carTypes[0]]);
   drawShowcaseCar();
 };
 
 // The stage up to its last path piece and its addons, without the walls.
 const drawStageSelect = () => {
   // the classic look's stage select has its pictures behind (see classic/stageSelect.js)
-  const classic = look.current == LOOK.classic;
+  const classic = classicMenus();
   if (!classic) {
     drawParticle(stageBackdrop);
     startDepth();
@@ -358,7 +357,7 @@ const drawStageSelect = () => {
 
 const drawUnlockedCar = () => {
   // the classic look's race end has its picture behind (see classic/raceEnd.js)
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     drawShowcaseCar(CLASSIC_UNLOCKED_FLOOR);
     return;
   }

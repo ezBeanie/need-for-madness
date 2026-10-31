@@ -2,7 +2,7 @@
 
 import { view } from "../ui/view.js";
 import { drawCamera, drawMatrix, placeModel } from "./interpolation.js";
-import { LOOK, look } from "./look.js";
+import { drawsClassic, look } from "./look.js";
 
 export const canvas3D = document.querySelector("#canvas3D");
 export const gl =
@@ -14,7 +14,7 @@ const CLASSIC_HEIGHT = 450;
 // Sizes the 3D canvas's pixels for the look; on screen it always fills the window.
 export const fitCanvas3D = () => {
   // the classic look in the original's few pixels, unless sharp
-  const classic = look.current == LOOK.classic && !look.sharp;
+  const classic = drawsClassic() && !look.sharp;
   const height = classic ? CLASSIC_HEIGHT : view.height;
   const width = classic ? Math.round(CLASSIC_HEIGHT * view.aspect) : view.width;
   if (canvas3D.width == width && canvas3D.height == height) {
@@ -554,7 +554,7 @@ export const drawModel = (model) => {
     gl.enable(gl.BLEND);
     BLENDING[model.alpha]?.();
   }
-  if (look.current == LOOK.classic) {
+  if (drawsClassic()) {
     drawClassicModel(model);
     if (model.alpha) {
       gl.disable(gl.BLEND);

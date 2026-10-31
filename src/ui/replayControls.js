@@ -25,7 +25,7 @@ import {
   viewer,
 } from "../race/replayViewer.js";
 import { stopReplaySounds } from "../audio/replaySounds.js";
-import { LOOK, look } from "../render/look.js";
+import { classicMenus } from "../render/look.js";
 import { leaveOpenedReplay, saveReplay } from "../screens/replays.js";
 import { CAMERA, camera } from "../render/camera.js";
 import { isPhone } from "../core/platform.js";
@@ -123,10 +123,9 @@ const font = (classic, size, bold = false) => {
 // a font so many pixels high: the classic look's the original's bold Arial
 const pixelFont = (size, bold = false) => {
   rd.letterSpacing = "0px";
-  rd.font =
-    look.current == LOOK.classic
-      ? `bold ${Math.round(size)}px Arial`
-      : `${bold ? "bold " : ""}${Math.round(size)}px verd`;
+  rd.font = classicMenus()
+    ? `bold ${Math.round(size)}px Arial`
+    : `${bold ? "bold " : ""}${Math.round(size)}px verd`;
 };
 
 // the looks' colours: the classic one the original's menu blue and black
@@ -628,7 +627,7 @@ const drawControls = (colors) => {
 
 export function drawReplayOverlay() {
   rd.clearRect(0, 0, view.width, view.height);
-  const classic = look.current == LOOK.classic;
+  const classic = classicMenus();
   const colors = classic ? COLORS.classic : COLORS.modern;
   watchPointer();
   drawTitle(classic, colors);

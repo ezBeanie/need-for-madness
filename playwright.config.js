@@ -1,6 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
-const PORT = 5181;
+// another port for a second checkout testing at the same time
+const PORT = Number(process.env.PLAYWRIGHT_PORT ?? 5181);
 
 export default defineConfig({
   testDir: "test/visual",

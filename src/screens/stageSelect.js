@@ -43,7 +43,7 @@ import {
   startProjection,
   turnView,
 } from "../render/camera.js";
-import { LOOK, look } from "../render/look.js";
+import { classicMenus } from "../render/look.js";
 import { setWorld } from "../render/renderer.js";
 import { colorStageBackdrop, scene, stageBackdrop } from "../render/scene.js";
 import { backdropHue, cssRgb, hslToRgb, rgbToHsl } from "../ui/color.js";
@@ -113,7 +113,7 @@ const colorBackdrop = () => {
 };
 
 export function stageSelectTick() {
-  const classic = look.current == LOOK.classic;
+  const classic = classicMenus();
   if (classic) {
     classicProjection();
   } else {
@@ -233,7 +233,7 @@ export function stageLoadingTick() {
     loadingFade = 0.2;
     stageLoad.progress = STAGE_LOAD.screenShown;
   }
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     // the original shows its title only when loading for the stage select
     drawClassicLoading(stageLoad.after != AFTER_LOAD.race);
   } else if (stageLoad.after == AFTER_LOAD.nextStage) {
@@ -297,7 +297,7 @@ const openStageSelect = () => {
 };
 
 function drawStageSelect() {
-  if (look.current == LOOK.classic) {
+  if (classicMenus()) {
     drawClassic();
     return;
   }

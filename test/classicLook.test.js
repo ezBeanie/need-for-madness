@@ -38,7 +38,7 @@ test("L switches a race to the original game's look and back", async () => {
   expect(classicVertices()).toBe(0);
 });
 
-test("the car select and the stage select show the original game's models too", async () => {
+test("with the original's menus the car select and the stage select show its models too", async () => {
   for (const open of [
     () => openCarSelect(),
     () => openStageSelect({ stage: 3, car: 5 }),
@@ -46,6 +46,8 @@ test("the car select and the stage select show the original game's models too", 
     const { ctx, step, key } = await open();
     key(76, true);
     key(76, false);
+    key(85, true);
+    key(85, false);
     expect(ctx.look.current).toBe(ctx.LOOK.classic);
     // menus are drawn again only when something moves: the biggest draw over a while
     let vertices = 0;
@@ -153,7 +155,7 @@ test("in the classic look a wrecked car burns and a car being fixed shows its bu
   expect(colored(flame, 25)).toBeGreaterThan(0);
 });
 
-test("in the classic look a race shows the original's HUD", async () => {
+test("with the original's menus a race in the classic look shows its HUD", async () => {
   const { ctx, step, key } = await startRace({ stage: 1, car: 5 });
   for (let i = 0; i < 300 && ctx.raceEvents.countdown > 0; i++) {
     step();
@@ -175,13 +177,15 @@ test("in the classic look a race shows the original's HUD", async () => {
   expect(texts()).toContain(`1/${ctx.track.nlaps}`);
   key(76, true);
   key(76, false);
+  key(85, true);
+  key(85, false);
   const classic = texts();
   expect(classic).toContain(laps);
   // its labels are pictures
   expect(classic).not.toContain("Lap");
 });
 
-test("in the classic look the car select and the stage select are the original's screens", async () => {
+test("with the original's menus the car select and the stage select are its screens", async () => {
   const texts = (step, ticks) => {
     const drawn = [];
     canvasCalls.listener = (name, args, call) => {
@@ -200,6 +204,8 @@ test("in the classic look the car select and the stage select are the original's
     const { ctx, step, key } = await openCarSelect();
     key(76, true);
     key(76, false);
+    key(85, true);
+    key(85, false);
     // the strengths show once the smoke has blown through
     const drawn = texts(step, 60);
     expect(drawn).toContain(ctx.carStats.names[ctx.game.carTypes[0]]);
@@ -209,8 +215,86 @@ test("in the classic look the car select and the stage select are the original's
     const { ctx, step, key } = await openStageSelect({ stage: 3, car: 5 });
     key(76, true);
     key(76, false);
+    key(85, true);
+    key(85, false);
     const drawn = texts(step, 5);
     expect(drawn).toContain("Stage 3  >");
     expect(drawn).toContain(`| ${ctx.track.name} |`);
   }
+});
+
+test("in the classic look the menus and the race HUD stay the game's own, the races' 3D world being the original's", async () => {
+  const classicVertices = (ctx, step, ticks) => {
+    let vertices = 0;
+    glCalls.listener = (name, args) => {
+      if (name === "drawArrays") {
+        vertices = Math.max(vertices, args[2]);
+      }
+    };
+    for (let i = 0; i < ticks; i++) {
+      step();
+    }
+    glCalls.listener = null;
+    return vertices;
+  };
+  for (const open of [
+    () => openCarSelect(),
+    () => openStageSelect({ stage: 3, car: 5 }),
+  ]) {
+    const { ctx, step, key } = await open();
+    key(76, true);
+    key(76, false);
+    expect(ctx.look.current).toBe(ctx.LOOK.classic);
+    expect(classicVertices(ctx, step, 40)).toBe(0);
+    expect(ctx.canvas3D.height).toBe(ctx.view.height);
+  }
+  const { ctx, step, key } = await startRace({ stage: 1, car: 5 });
+  key(76, true);
+  key(76, false);
+  for (let i = 0; i < 300 && ctx.raceEvents.countdown > 0; i++) {
+    step();
+  }
+  expect(classicVertices(ctx, step, 5)).toBeGreaterThan(1000);
+  expect(ctx.canvas3D.height).toBe(450);
+  const drawn = [];
+  canvasCalls.listener = (name, args, call) => {
+    if (name === "fillText") {
+      drawn.push(args[0]);
+    }
+    return call();
+  };
+  step();
+  canvasCalls.listener = null;
+  expect(drawn).toContain(`1/${ctx.track.nlaps}`);
+});
+
+test("in the classic look the countdown shows the original's Insano", async () => {
+  const insanoPictures = async (classic) => {
+    const { ctx, step, key } = await startRace({ stage: 1, car: 5 });
+    if (classic) {
+      key(76, true);
+      key(76, false);
+    }
+    const drawn = new Set();
+    canvasCalls.listener = (name, args, call) => {
+      if (name === "drawImage") {
+        drawn.add(args[0]);
+      }
+      return call();
+    };
+    for (let i = 0; i < 300 && ctx.raceEvents.countdown > 0; i++) {
+      step();
+    }
+    canvasCalls.listener = null;
+    const pictures = [];
+    if (ctx.images.insano.some((picture) => drawn.has(picture))) {
+      pictures.push("modern");
+    }
+    if ([0, 1, 2].some((face) => drawn.has(ctx.classicInsanoPicture(face)))) {
+      pictures.push("classic");
+    }
+    return pictures;
+  };
+  expect(await insanoPictures(false)).toEqual(["modern"]);
+  expect(await insanoPictures(true)).toEqual(["classic"]);
 });

@@ -14,7 +14,13 @@ import { nextRaceSize } from "../race/field.js";
 import { racers } from "../race/racers.js";
 import { startTimeRewind } from "../race/recording.js";
 import { CAMERA, camera } from "../render/camera.js";
-import { look, toggleDepth, toggleLook, toggleSharp } from "../render/look.js";
+import {
+  look,
+  toggleClassicMenus,
+  toggleDepth,
+  toggleLook,
+  toggleSharp,
+} from "../render/look.js";
 import { fitCanvas3D } from "../render/renderer.js";
 import { buttons } from "../ui/widgets.js";
 import { pressConfirm } from "./confirm.js";
@@ -121,5 +127,12 @@ export function onKey(action, pressed) {
   if (!pressed && action == "toggleSharp") {
     toggleSharp();
     fitCanvas3D();
+  }
+  if (!pressed && action == "toggleClassicMenus") {
+    toggleClassicMenus();
+    fitCanvas3D();
+    announce(
+      look.menus ? "Classic menus and HUD: on" : "Classic menus and HUD: off",
+    );
   }
 }
