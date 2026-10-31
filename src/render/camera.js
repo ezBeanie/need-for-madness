@@ -1,3 +1,4 @@
+import { loadSetting, saveSetting } from "../core/storage.js";
 import { view } from "../ui/view.js";
 import { resetMatrix } from "./interpolation.js";
 
@@ -35,6 +36,21 @@ export const camera = {
   relocate: false,
   // flyTo: progress from target to nextTarget, 0..30
   transition: 0,
+  // behind: whether the camera turns to the car the arrow points at (T), that car (-1
+  // while the arrow points along the track) and how far the camera has turned from
+  // behind the car towards it
+  aims: false,
+  aimedCar: -1,
+  aimYaw: 0,
+};
+
+export const loadAiming = () => {
+  camera.aims = loadSetting("targetCamera") == 1;
+};
+
+export const toggleAiming = () => {
+  camera.aims = !camera.aims;
+  saveSetting("targetCamera", camera.aims ? 1 : 0);
 };
 
 // Where a point is heard from the camera: how far, and how far to the side (-1 left,

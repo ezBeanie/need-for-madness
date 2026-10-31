@@ -13,7 +13,7 @@ import { raceEvents } from "../race/events.js";
 import { nextRaceSize } from "../race/field.js";
 import { racers } from "../race/racers.js";
 import { startTimeRewind } from "../race/recording.js";
-import { CAMERA, camera } from "../render/camera.js";
+import { CAMERA, camera, toggleAiming } from "../render/camera.js";
 import {
   look,
   toggleClassicMenus,
@@ -131,6 +131,10 @@ export function onKey(action, pressed) {
   }
   if (!pressed && action == "toggleCareer" && game.phase == PHASE.mainMenu) {
     toggleCareer();
+  }
+  if (!pressed && action == "toggleAiming") {
+    toggleAiming();
+    announce(camera.aims ? "Target camera: on" : "Target camera: off");
   }
   if (!pressed && action == "toggleClassicMenus") {
     toggleClassicMenus();

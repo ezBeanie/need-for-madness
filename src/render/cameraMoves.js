@@ -2,6 +2,7 @@
 
 import { cosDeg, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
+import { PHASE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { car, racers } from "../race/racers.js";
 import { CAMERA, camera } from "./camera.js";
@@ -74,13 +75,43 @@ const followBehind = () => {
   } else if (camera.lookBackYaw != 0) {
     camera.lookBackYaw = 0;
   }
+  const behindCar = racers[camera.target].cameraHeading - 180;
+  turnToAimedCar(behindCar);
   const target = car[camera.target];
-  const heading =
-    racers[camera.target].cameraHeading - 180 + camera.lookBackYaw;
+  const heading = behindCar + camera.aimYaw + camera.lookBackYaw;
   camera.yaw = heading;
   camera.x = target.x - 80 * sinDeg(heading);
   camera.z = target.z + 80 * cosDeg(heading);
   camera.y = target.y + 25;
+};
+
+// how much of the turn left to the aimed car the camera makes in a tick
+const AIM_EASE = 0.2;
+
+const halfTurn = (degrees) => degrees - 360 * Math.round(degrees / 360);
+
+// Behind the player's car in a race, with the arrow at the cars: the camera turns around
+// the car until it looks past it at the car the arrow points at (the ball cam of Rocket
+// League), and back behind the car once it no longer aims.
+const turnToAimedCar = (behindCar) => {
+  let aim = 0;
+  const aimed = car[camera.aimedCar];
+  if (
+    camera.aims &&
+    aimed &&
+    camera.target == game.player &&
+    game.phase == PHASE.race
+  ) {
+    const own = car[camera.target];
+    // (the camera behind a car at yaw h looks along sin h, -cos h)
+    const toAimed =
+      (Math.atan2(aimed.x - own.x, own.z - aimed.z) * 180) / Math.PI;
+    aim = halfTurn(toAimed - behindCar);
+  }
+  const left = halfTurn(aim - camera.aimYaw);
+  camera.aimYaw = halfTurn(
+    camera.aimYaw + left * Math.min(1, AIM_EASE * tick.scale),
+  );
 };
 
 // The orbit's height rises to 90 and sinks to -50, over and over.

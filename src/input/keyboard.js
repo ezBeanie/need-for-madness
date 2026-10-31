@@ -17,6 +17,7 @@ const ACTIONS = {
   90: "lookBackLeft", // Z: swing the camera behind the car to the left
   88: "lookBackRight", // X: ... or to the right
   86: "nextCamera", // V: the camera, in races
+  84: "toggleAiming", // T: the camera behind the car turning to the car the arrow points at
   78: "muteSound", // N
   77: "muteMusic", // M
   79: "otherCarSounds", // O: the other cars' crashes, scrapes and skids heard or not

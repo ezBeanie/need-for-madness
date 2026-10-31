@@ -16,7 +16,7 @@ import { interpolation } from "./render/interpolation.js";
 import { canvas3D, fitCanvas3D } from "./render/renderer.js";
 import { loadLook } from "./render/look.js";
 import { canvas2D, view } from "./ui/view.js";
-import { startProjection, turnView } from "./render/camera.js";
+import { loadAiming, startProjection, turnView } from "./render/camera.js";
 import { moveCamera } from "./render/cameraMoves.js";
 import { render } from "./render/drawFrame.js";
 import { lookForGamepads, pollGamepads } from "./input/gamepad.js";
@@ -284,6 +284,7 @@ const fitToWindow = () => {
 };
 
 loadLook();
+loadAiming();
 // (the window may already be the size the canvases start with)
 fitCanvas3D();
 

@@ -1,4 +1,4 @@
-// The options: the switches that otherwise have only keys (L, K, J, U, N, M, O), for
+// The options: the switches that otherwise have only keys (L, K, J, U, T, N, M, O), for
 // phones and tablets without a keyboard. A button with a gear opens them (outside races:
 // in a race, the pause menu leads there), each one does what its key does.
 
@@ -6,6 +6,7 @@ import { audio } from "../audio/audio.js";
 import { PHASE, game } from "../core/state.js";
 import { onKey } from "../input/controls.js";
 import { career } from "../race/career.js";
+import { camera } from "../render/camera.js";
 import { LOOK, look } from "../render/look.js";
 
 const button = document.getElementById("optionsButton");
@@ -21,6 +22,7 @@ const SWITCHES = [
   ["toggleSharp", () => look.sharp, "Sharp", "Original pixels"],
   ["toggleDepth", () => look.depth, "By depth", "As the original"],
   ["toggleClassicMenus", () => look.menus, "Classic", "Modern"],
+  ["toggleAiming", () => camera.aims, "On", "Off"],
   ["muteSound", () => !audio.muteSound, "On", "Off"],
   ["muteMusic", () => !audio.muteMusic, "On", "Off"],
   ["otherCarSounds", () => audio.otherCars, "On", "Off"],

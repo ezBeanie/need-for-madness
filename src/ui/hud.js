@@ -2072,10 +2072,12 @@ export function arrow(pathPoint, missed, atCars) {
   const ys = Array(7).fill(ARROW_Y);
   const zs = [...ARROW_Z];
   let heading = 0;
+  camera.aimedCar = -1;
   if (!atCars) {
     heading = headingTo(track.x[pathPoint], track.z[pathPoint]);
   } else {
     const target = closestOpponent();
+    camera.aimedCar = target;
     heading = headingTo(car[target].x, car[target].z);
     drawTargetName(target);
   }
