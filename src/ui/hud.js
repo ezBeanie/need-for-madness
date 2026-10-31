@@ -52,6 +52,7 @@ import { scene, timeTube } from "../render/scene.js";
 import { pauseMenu } from "../screens/pauseMenu.js";
 import { startRaceEnd } from "../screens/raceEnd.js";
 import { images } from "./images.js";
+import { drawMinimap } from "./minimap.js";
 import { rd, view } from "./view.js";
 import {
   AREA,
@@ -1581,6 +1582,7 @@ export function drawHud() {
       }
     }
     drawStanding();
+    drawMinimap();
     if (!isPhone && arrowButtonShown()) {
       drawArrowButton();
     }

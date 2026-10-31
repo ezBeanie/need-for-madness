@@ -23,6 +23,7 @@ import {
 } from "../render/look.js";
 import { toggleCareer } from "../race/career.js";
 import { fitCanvas3D } from "../render/renderer.js";
+import { minimap, toggleMinimap } from "../ui/minimap.js";
 import { buttons } from "../ui/widgets.js";
 import { pressConfirm } from "./confirm.js";
 
@@ -131,6 +132,10 @@ export function onKey(action, pressed) {
   }
   if (!pressed && action == "toggleCareer" && game.phase == PHASE.mainMenu) {
     toggleCareer();
+  }
+  if (!pressed && action == "toggleMinimap") {
+    toggleMinimap();
+    announce(minimap.shown ? "Minimap: on" : "Minimap: off");
   }
   if (!pressed && action == "toggleAiming") {
     toggleAiming();

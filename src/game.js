@@ -15,6 +15,7 @@ import { installPointer } from "./input/pointer.js";
 import { interpolation } from "./render/interpolation.js";
 import { canvas3D, fitCanvas3D } from "./render/renderer.js";
 import { loadLook } from "./render/look.js";
+import { loadMinimap } from "./ui/minimap.js";
 import { canvas2D, view } from "./ui/view.js";
 import { loadAiming, startProjection, turnView } from "./render/camera.js";
 import { moveCamera } from "./render/cameraMoves.js";
@@ -285,6 +286,7 @@ const fitToWindow = () => {
 
 loadLook();
 loadAiming();
+loadMinimap();
 // (the window may already be the size the canvases start with)
 fitCanvas3D();
 

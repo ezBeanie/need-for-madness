@@ -124,3 +124,8 @@ test("hud: player wasted", async ({ page }) => {
   await game.advance(60);
   await expect.soft(page).toHaveScreenshot("hud-player-wasted.png");
 });
+
+test("hud: the minimap", async ({ page }) => {
+  await racing(page, 300, { minimap: "1" });
+  await expect.soft(page).toHaveScreenshot("hud-minimap.png");
+});
