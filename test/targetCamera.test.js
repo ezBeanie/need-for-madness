@@ -37,7 +37,7 @@ const race = async (aiming) => {
       states.push(JSON.stringify(raceState(ctx)));
     }
   }
-  return { ctx, views, states };
+  return { ...game, ctx, views, states };
 };
 
 test("T turns the camera behind the car to the car the arrow points at", async () => {
@@ -54,4 +54,13 @@ test("the target camera leaves the race as it is", async () => {
   expect(behind.ctx.camera.aimYaw).toBe(0);
   expect(Math.min(...behind.views.slice(60))).toBeLessThan(Math.cos(0.15));
   expect(aiming.states).toEqual(behind.states);
+});
+
+test("the target camera aims at no car while the arrow is not drawn", async () => {
+  const { ctx, step, key } = await race(true);
+  expect(ctx.camera.aimedCar).not.toBe(-1);
+  // another camera than the one behind the car: no arrow
+  press(key, 86);
+  step();
+  expect(ctx.camera.aimedCar).toBe(-1);
 });

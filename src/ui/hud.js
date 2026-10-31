@@ -1528,6 +1528,8 @@ const announceEvents = () => {
 // Everything drawn over the race, every tick.
 export function drawHud() {
   rd.clearRect(0, 0, view.width, view.height);
+  // (the arrow names it again whenever it is drawn)
+  camera.aimedCar = -1;
   if (touchControlsShown()) {
     drawTouchControls();
     pressTouchControls();
@@ -2072,7 +2074,6 @@ export function arrow(pathPoint, missed, atCars) {
   const ys = Array(7).fill(ARROW_Y);
   const zs = [...ARROW_Z];
   let heading = 0;
-  camera.aimedCar = -1;
   if (!atCars) {
     heading = headingTo(track.x[pathPoint], track.z[pathPoint]);
   } else {
