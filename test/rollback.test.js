@@ -6,13 +6,14 @@ const FRAMES = 1500;
 // how many frames late the other's keys come where they are guessed
 const LATE = 5;
 
-// the other's keys of each frame: held a while, then others
+// the other's keys of each frame: held a while, then others (a while that the frames
+// fingerprinted, every SYNC_EVERY, fall in the frames computed again now and then)
 const otherKeys = () => {
   const random = seededRandom(9);
   const keys = [];
   let held;
   for (let frame = 0; frame <= FRAMES; frame++) {
-    if (frame % 12 == 0) {
+    if (frame % 7 == 0) {
       held = {
         up: random() > 0.2,
         down: random() > 0.8,

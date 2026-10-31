@@ -106,7 +106,6 @@ const runRaceFrameAgain = () => {
   recordRaceTick();
   updateStandings();
   control();
-  tick.fraction = nextFraction(tick.fraction);
 };
 
 // The race and everything that replays it: the cars drive (or replay), wheels, shadows,

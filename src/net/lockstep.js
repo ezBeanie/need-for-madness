@@ -7,12 +7,13 @@
 // ahead of the other's keys waits for them. Every so many frames, the games compare
 // fingerprints of their races: a race that went apart in one stays apart.
 
+import { nextFraction, tick } from "../core/tick.js";
 import { raceEvents } from "../race/events.js";
 import { physics } from "../race/physics.js";
 import { cutRaceTapeTo, raceTape } from "../race/raceTape.js";
 import { racers } from "../race/racers.js";
 import { keepRecording, restoreRecording } from "../race/recording.js";
-import { MESSAGE, ROLE, decode, encode, link } from "./link.js";
+import { MESSAGE, ROLE, decode, encode, isIndex, link } from "./link.js";
 import { restoreRace, saveRace, sharedRace } from "./raceState.js";
 
 // 35 ms for the keys to reach the other game before they drive
@@ -39,7 +40,8 @@ export const WAITING = {
 // unsentPrints: the fingerprints of frames that ran on guessed keys, by frame, sent once
 // the guesses were right; ownPrints and otherPrints: the fingerprints by frame, until
 // compared; apartAt: the first frame the fingerprints differed at (-1 none), apartRace:
-// this game's race then, and differences: what differs in the other's (once it came)
+// this game's race then, otherApart: the parts of the other's that came, and differences:
+// what differs in it (once all came)
 export const lockstep = {
   active: false,
   frame: 0,
@@ -56,6 +58,7 @@ export const lockstep = {
   otherPrints: new Map(),
   apartAt: -1,
   apartRace: null,
+  otherApart: [],
   differences: [],
 };
 
@@ -88,6 +91,7 @@ export const startLockstep = (own, other, atFirstFrame) =>
     otherPrints: new Map(),
     apartAt: -1,
     apartRace: null,
+    otherApart: [],
     differences: [],
   });
 
@@ -117,6 +121,10 @@ const fingerprint = (text) => {
   return hash >>> 0;
 };
 
+// a race of 20 dented cars is about 500 kB, the relay takes 256 kB a message at most
+const APART_PART_LENGTH = 64 * 1024;
+const MOST_APART_PARTS = 64;
+
 // Both fingerprints of a frame there: whether the races went apart.
 const compare = (frame) => {
   const own = lockstep.ownPrints.get(frame);
@@ -129,7 +137,12 @@ const compare = (frame) => {
   if (own.print != other && lockstep.apartAt < 0) {
     lockstep.apartAt = frame;
     lockstep.apartRace = own.race;
-    link.send({ type: MESSAGE.apart, frame, race: own.race });
+    const parts = Math.ceil(own.race.length / APART_PART_LENGTH);
+    for (let part = 0; part < parts; part++) {
+      const start = part * APART_PART_LENGTH;
+      const race = own.race.slice(start, start + APART_PART_LENGTH);
+      link.send({ type: MESSAGE.apart, frame, part, parts, race });
+    }
     console.warn(`The races went apart at frame ${frame}`);
   }
 };
@@ -152,13 +165,24 @@ export const differencesOf = (own, other, path = "", found = []) => {
   return found;
 };
 
-// The other game's race at the frame the races went apart (checked: another game sent
-// it): what differs is told, to find what computes apart.
-export const receiveApart = ({ frame, race }) => {
-  if (frame === lockstep.apartAt && typeof race == "string") {
+// A part of the other game's race at the frame the races went apart (checked: another
+// game sent it): once all came, what differs is told, to find what computes apart.
+export const receiveApart = ({ frame, part, parts, race }) => {
+  const { otherApart } = lockstep;
+  if (
+    frame !== lockstep.apartAt ||
+    !Number.isInteger(parts) ||
+    parts > MOST_APART_PARTS ||
+    !isIndex(part, parts) ||
+    typeof race != "string"
+  ) {
+    return;
+  }
+  otherApart[part] = race;
+  if (otherApart.filter((given) => given !== undefined).length == parts) {
     lockstep.differences = differencesOf(
       decode(lockstep.apartRace),
-      decode(race),
+      decode(otherApart.join("")),
     );
     console.warn(
       `At frame ${frame}, the races differ in:\n${lockstep.differences.join("\n")}`,
@@ -267,7 +291,9 @@ const checkGuesses = (runFrameAgain) => {
   for (let frame = wrongAt; frame < now; frame++) {
     driveWithKeys(frame);
     runFrameAgain();
+    // (as a frame run first: its fingerprint taken before the next one's fraction)
     takePrint(frame);
+    tick.fraction = nextFraction(tick.fraction);
   }
   physics.quiet = false;
 };
