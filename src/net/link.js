@@ -15,6 +15,8 @@ export const MESSAGE = {
   start: "start",
   // a game's keys of a frame (see lockstep.js)
   keys: "keys",
+  // a fingerprint of a game's race at a frame, to tell whether the races went apart
+  sync: "sync",
   // the host left the race
   end: "end",
   // the guest left the race

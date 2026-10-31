@@ -15,8 +15,12 @@ export default [
     },
     rules: {
       "no-undef": "error",
-      // legacy functions keep unused parameters and empty catch bindings of the original
-      "no-unused-vars": ["error", { args: "none", caughtErrors: "none" }],
+      // legacy functions keep unused parameters and empty catch bindings of the original;
+      // a rest leaves out its unused siblings
+      "no-unused-vars": [
+        "error",
+        { args: "none", caughtErrors: "none", ignoreRestSiblings: true },
+      ],
       "no-restricted-properties": [
         "error",
         {

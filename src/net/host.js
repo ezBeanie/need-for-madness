@@ -10,7 +10,12 @@ import { field, setUpField } from "../race/field.js";
 import { raceCarTextures } from "../render/generated.js";
 import { track } from "../race/track.js";
 import { saveRace } from "./raceState.js";
-import { receiveKeys, startLockstep, stopLockstep } from "./lockstep.js";
+import {
+  receiveKeys,
+  receivePrint,
+  startLockstep,
+  stopLockstep,
+} from "./lockstep.js";
 import {
   GUEST_CAR,
   MESSAGE,
@@ -52,6 +57,9 @@ const receive = (message) => {
   }
   if (message.type == MESSAGE.keys && host.racing) {
     receiveKeys(message);
+  }
+  if (message.type == MESSAGE.sync && host.racing) {
+    receivePrint(message);
   }
   if (message.type == MESSAGE.ping && Number.isFinite(message.ping)) {
     link.send({ type: MESSAGE.pong, ping: message.ping });

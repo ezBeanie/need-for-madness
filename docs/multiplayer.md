@@ -156,5 +156,8 @@ zu spät, spult ein Spiel zum Tick zurück, an dem sie gedrückt wurden, und rec
   Phase und Vorhersage sind weg. Geht einer, fährt die KI dessen Auto, der andere fährt weiter.
 - Nachrichten gehen bitgenau (`encode`/`decode` in `link.js`): JSON verliert sonst -0, NaN,
   Unendlich und undefined in Listen.
+- Desync-Prüfung: Jede Sekunde (30 Frames) schicken beide einen FNV-Fingerabdruck des gemeinsamen
+  Rennzustands (`sync`, `sharedRace()` in `raceState.js`). Weichen sie ab, zeigen beide
+  „Out of sync!“ und die Konsole den ersten abweichenden Frame (`lockstep.apartAt`).
 - Offen: Zurückspulen und Neurechnen statt Warten (Rollback, dann kürzere Verzögerung),
-  Desync-Prüfung per Fingerabdruck, mehr als ein Gast.
+  mehr als ein Gast.

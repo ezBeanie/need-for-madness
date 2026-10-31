@@ -77,9 +77,11 @@ import {
 } from "./net/guest.js";
 import { ROLE, link } from "./net/link.js";
 import {
+  OUT_OF_SYNC,
   WAITING,
   lockstep,
   lockstepWaits,
+  outOfSync,
   pressFrameKeys,
   releaseFrameKeys,
 } from "./net/lockstep.js";
@@ -126,7 +128,11 @@ function raceTick() {
       }
     }
     drawNetNotice(
-      waitedTicks > WAIT_SHOWN_TICKS ? WAITING[link.role] : guestNotice(),
+      waitedTicks > WAIT_SHOWN_TICKS
+        ? WAITING[link.role]
+        : outOfSync()
+          ? OUT_OF_SYNC
+          : guestNotice(),
       link.role == ROLE.guest ? guest.ping : null,
     );
   }

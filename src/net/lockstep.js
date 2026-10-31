@@ -2,15 +2,21 @@
 // alike (see raceState.js and test/sharedRace.test.js), the cars of its people driven by
 // their keys. The keys pressed in a tick of the race (a frame) drive INPUT_DELAY frames
 // later, in every game alike, so they have that long to reach the other one; a game
-// missing the other's keys of a frame waits for them.
+// missing the other's keys of a frame waits for them. Every so many frames, the games
+// compare fingerprints of their races: a race that went apart in one stays apart.
 
 import { racers } from "../race/racers.js";
-import { MESSAGE, ROLE, link } from "./link.js";
+import { MESSAGE, ROLE, encode, link } from "./link.js";
+import { sharedRace } from "./raceState.js";
 
 // 105 ms for the keys to reach the other game
 export const INPUT_DELAY = 3;
 export const KEYS = ["up", "down", "left", "right", "handb"];
 const NONE = Object.fromEntries(KEYS.map((key) => [key, false]));
+
+// 1 s of the race between fingerprints
+export const SYNC_EVERY = 30;
+export const OUT_OF_SYNC = "Out of sync!";
 
 // what a game waiting for the other one's keys says
 export const WAITING = {
@@ -19,7 +25,9 @@ export const WAITING = {
 };
 
 // own and other: the cars of this game's player and of the other's; ownKeys and
-// otherKeys: their keys by frame; atFirstFrame: what starts the race alike in both games
+// otherKeys: their keys by frame; atFirstFrame: what starts the race alike in both games;
+// ownPrints and otherPrints: the fingerprints by frame, until compared; apartAt: the
+// first frame the fingerprints differed at (-1 none)
 export const lockstep = {
   active: false,
   frame: 0,
@@ -28,6 +36,9 @@ export const lockstep = {
   ownKeys: new Map(),
   otherKeys: new Map(),
   atFirstFrame: null,
+  ownPrints: new Map(),
+  otherPrints: new Map(),
+  apartAt: -1,
 };
 
 // the own car's keys as the player holds them, while the car drives with the frame's
@@ -48,6 +59,9 @@ export const startLockstep = (own, other, atFirstFrame) =>
     ownKeys: new Map(),
     otherKeys: new Map(),
     atFirstFrame,
+    ownPrints: new Map(),
+    otherPrints: new Map(),
+    apartAt: -1,
   });
 
 export const stopLockstep = () => {
@@ -65,6 +79,41 @@ export const receiveKeys = ({ frame, keys }) => {
     lockstep.otherKeys.set(frame, keysOf(keys));
   }
 };
+
+// FNV-1a over the race's every bit (encode keeps -0, NaN and the infinities apart)
+const fingerprint = () => {
+  const text = encode(sharedRace());
+  let hash = 2166136261;
+  for (let i = 0; i < text.length; i++) {
+    hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
+  }
+  return hash >>> 0;
+};
+
+// Both fingerprints of a frame there: whether the races went apart.
+const compare = (frame) => {
+  const own = lockstep.ownPrints.get(frame);
+  const other = lockstep.otherPrints.get(frame);
+  if (own === undefined || other === undefined) {
+    return;
+  }
+  lockstep.ownPrints.delete(frame);
+  lockstep.otherPrints.delete(frame);
+  if (own != other && lockstep.apartAt < 0) {
+    lockstep.apartAt = frame;
+    console.warn(`The races went apart at frame ${frame}`);
+  }
+};
+
+// The other game's fingerprint of a frame (checked: another game sent it).
+export const receivePrint = ({ frame, print }) => {
+  if (Number.isInteger(frame) && Number.isInteger(print)) {
+    lockstep.otherPrints.set(frame, print);
+    compare(frame);
+  }
+};
+
+export const outOfSync = () => lockstep.active && lockstep.apartAt >= 0;
 
 export const lockstepWaits = () =>
   lockstep.active && keysAt(lockstep.otherKeys, lockstep.frame) === undefined;
@@ -86,11 +135,18 @@ export const pressFrameKeys = () => {
   Object.assign(racers[other].u, keysAt(lockstep.otherKeys, frame));
 };
 
-// After the race has used them: the own car's keys are the player's again, for the HUD's
-// touch controls and the keyboard to press, and the next frame comes.
+// After the race has used them (and its fingerprint taken now and then): the own car's keys are the player's again, for the HUD's touch
+// controls and the keyboard to press, and the next frame comes.
 export const releaseFrameKeys = () => {
   if (!lockstep.active) {
     return;
+  }
+  const { frame } = lockstep;
+  if (frame % SYNC_EVERY == 0) {
+    const print = fingerprint();
+    lockstep.ownPrints.set(frame, print);
+    link.send({ type: MESSAGE.sync, frame, print });
+    compare(frame);
   }
   Object.assign(racers[lockstep.own].u, held);
   lockstep.ownKeys.delete(lockstep.frame);

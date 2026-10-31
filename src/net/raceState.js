@@ -52,6 +52,18 @@ export const saveRace = () => {
   };
 };
 
+// The race as every game of a race together computes it alike: between frames, a game's
+// own car has the keys its player holds, and the HUD's events and its count of the wasted
+// cars (all but the player's) are each player's own.
+export const sharedRace = () => {
+  const { cars, events, wasted, ...race } = saveRace();
+  return {
+    ...race,
+    countdown: events.countdown,
+    cars: cars.map(({ keys, ...car }) => car),
+  };
+};
+
 export const restoreRace = (state) => {
   state.cars.forEach((saved, c) => {
     restoreCarState(c, saved);

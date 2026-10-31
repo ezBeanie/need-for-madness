@@ -21,6 +21,8 @@ const advanceBoth = async (host, guest, ticks) => {
 };
 
 const frameOf = (page) => page.evaluate(() => window.gameState.lockstep.frame);
+const apartAt = (page) =>
+  page.evaluate(() => window.gameState.lockstep.apartAt);
 
 // Brings both games to the same tick of their race (one may be ahead by the keys' delay,
 // see src/net/lockstep.js).
@@ -40,17 +42,8 @@ const inStep = async (host, guest) => {
   );
 };
 
-// The race as a game computes it: what both games must have alike, but for the keys the
-// player holds and what only the player is told (see src/net/raceState.js).
-const raceOf = (page) =>
-  page.evaluate(() => {
-    const { cars, events, wasted, ...race } = window.gameState.saveRace();
-    return {
-      ...race,
-      countdown: events.countdown,
-      cars: cars.map(({ keys, ...car }) => car),
-    };
-  });
+// what both games must have alike (see src/net/raceState.js)
+const raceOf = (page) => page.evaluate(() => window.gameState.sharedRace());
 
 const guestState = (page) =>
   page.evaluate(() => {
@@ -156,6 +149,9 @@ test("host and guest race the same race in two tabs, each driving its car with i
   await hostPage.screenshot({ path: "test-results/multiplayer-host.png" });
   const onHost = await raceOf(hostPage);
   expect(await raceOf(guestPage)).toEqual(onHost);
+  // (their fingerprints said so too)
+  expect(await apartAt(hostPage)).toBe(-1);
+  expect(await apartAt(guestPage)).toBe(-1);
   // the guest's car drove off the grid on the guest's keys, the host's stood
   const now = await startOf(hostPage);
   expect(Math.abs(now[GUEST_CAR] - start[GUEST_CAR])).toBeGreaterThan(500);
@@ -182,6 +178,21 @@ test("a game waits for the other's keys, and says so", async ({ context }) => {
   await drawnTexts(guestPage);
   await advanceBoth(...both, 30);
   expect(await drawnTexts(guestPage)).toContain("Waiting for the host...");
+});
+
+test("the games tell a race gone apart by its fingerprints, and say so", async ({
+  context,
+}) => {
+  await recordDrawnTexts(context);
+  const { guestPage, both } = await raceTogether(context, "sync");
+  await advanceBoth(...both, 40);
+  // a car of the guest's race moves a little, as a race computed apart would
+  await guestPage.evaluate(() => (window.gameState.car[3].x += 0.5));
+  await advanceBoth(...both, 40);
+  for (const { page } of both) {
+    expect(await apartAt(page)).toBeGreaterThan(0);
+    expect(await drawnTexts(page)).toContain("Out of sync!");
+  }
 });
 
 test("a guest whose host left races on, the host's car the AI's, and gets its own car back after", async ({

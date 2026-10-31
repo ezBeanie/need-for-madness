@@ -24,6 +24,7 @@ import {
 import {
   lockstep,
   receiveKeys,
+  receivePrint,
   startLockstep,
   stopLockstep,
 } from "./lockstep.js";
@@ -96,6 +97,9 @@ const receive = (message) => {
   }
   if (message.type == MESSAGE.keys && lockstep.active) {
     receiveKeys(message);
+  }
+  if (message.type == MESSAGE.sync && lockstep.active) {
+    receivePrint(message);
   }
   if (message.type == MESSAGE.pong && Number.isFinite(message.ping)) {
     guest.ping = Math.round(performance.now() - message.ping);
