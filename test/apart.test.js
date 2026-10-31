@@ -5,7 +5,7 @@ test("a race gone apart goes to the other game in parts the relay takes, and wha
   const { ctx } = await loadGame({ seed: 1 });
   const sent = [];
   ctx.link.send = (message) => sent.push(message);
-  ctx.startLockstep(0, [0, 1], null);
+  ctx.startLockstep(0, ["host0000", "guest001"], 0, null);
   // as big as a race of many dented cars
   const dents = Array.from({ length: 40000 }, (_, i) => i / 7);
   const race = (laps) => ctx.encode({ dents, laps });

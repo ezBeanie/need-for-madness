@@ -174,7 +174,7 @@ test("a game waits for the other's keys, and says so", async ({ context }) => {
     () => window.gameState.INPUT_DELAY + window.gameState.MAX_GUESSED,
   );
   expect(await frameOf(hostPage)).toBe(frame + ahead);
-  expect(await drawnTexts(hostPage)).toContain("Waiting for the guest...");
+  expect(await drawnTexts(hostPage)).toContain("Waiting for player 2...");
   // the host pauses: the guest waits for it
   await host.tap("Escape");
   await host.advanceUntil(PHASE.paused);
@@ -216,7 +216,7 @@ test("a guest whose host left races on, the host's car the AI's, and gets its ow
   });
   await advanceBoth(...both, 3);
   expect(await drawnTexts(guestPage)).toContain("The host left the race");
-  expect((await guestState(guestPage)).humans).toEqual([]);
+  expect((await guestState(guestPage)).humans).toEqual([GUEST_CAR]);
   const hostCar = () => guestPage.evaluate(() => window.gameState.car[0].z);
   const standing = await hostCar();
   // past the countdown: the AI drives the host's car
@@ -249,17 +249,15 @@ test("the guest leaving the race leaves its car to the host's AI", async ({
   });
   await guest.advance();
   await hostPage.waitForTimeout(DELIVERY_MS);
-  await host.advance();
-  expect(await hostPage.evaluate(() => window.gameState.game.humans)).toEqual(
-    [],
-  );
+  // (from the frame after the guest's last keys)
+  await host.advance(3);
+  expect(await hostPage.evaluate(() => window.gameState.game.humans)).toEqual([
+    0,
+  ]);
   // the host's race waits no more
   const frame = await frameOf(hostPage);
-  await host.advance(10);
-  expect(await frameOf(hostPage)).toBe(frame);
-  expect(await hostPage.evaluate(() => window.gameState.lockstep.active)).toBe(
-    false,
-  );
+  await host.advance(30);
+  expect(await frameOf(hostPage)).toBe(frame + 30);
 });
 
 test("the AI drives on the car of a guest whose connection is lost", async ({
@@ -280,7 +278,7 @@ test("the AI drives on the car of a guest whose connection is lost", async ({
     }),
     GUEST_CAR,
   );
-  expect(onHost.humans).toEqual([]);
+  expect(onHost.humans).toEqual([0]);
   expect(Math.abs(onHost.z - start)).toBeGreaterThan(500);
 });
 
@@ -299,7 +297,7 @@ test("the multiplayer dialog opens a room, and a guest joins it with its code", 
   await hostPage.getByRole("button", { name: "Host a race" }).click();
   const room = await hostPage.locator("#multiplayerRoomName").textContent();
   expect(room).toMatch(/^[a-z0-9]{5}$/);
-  await expect(hostPage.getByLabel("Link for your guest")).toHaveValue(
+  await expect(hostPage.getByLabel("Link for your guests")).toHaveValue(
     new RegExp(`\\?join=${room}$`),
   );
 
@@ -317,10 +315,12 @@ test("the multiplayer dialog opens a room, and a guest joins it with its code", 
   // each one sees the other is there
   await guestPage.waitForTimeout(DELIVERY_MS);
   await advanceBoth(...both, 35);
-  await expect(hostPage.getByRole("status")).toContainText(
-    "Your guest is here",
-  );
-  await expect(guestPage.getByRole("status")).toContainText("The host is here");
+  await expect(hostPage.getByRole("status")).toContainText("start a race");
+  await expect(guestPage.getByRole("status")).toContainText("Choose your car");
+  // and who drives which car
+  await expect(
+    guestPage.getByRole("list", { name: "Players" }).getByRole("listitem"),
+  ).toHaveText([/^Player 1 \(host\): /, /^Player 2 \(you\): /]);
   await hostPage.getByRole("button", { name: "Close" }).click();
   await guestPage.getByRole("button", { name: "Close" }).click();
   await expect(
@@ -436,4 +436,155 @@ test("each game's HUD tells its player of the stunts it landed and the cars it w
   expect(onHost.some((text) => /^You wasted /.test(text))).toBe(false);
   expect(onHost.some((text) => / has been wasted!$/.test(text))).toBe(true);
   expect(onHost.some((text) => /Forward loop/.test(text))).toBe(false);
+});
+
+// Ticks of every game, each tick's messages delivered before the next game's tick.
+const advanceAll = async (games, ticks) => {
+  for (let tick = 0; tick < ticks; tick++) {
+    for (const { game, page } of games) {
+      await game.advance();
+      await page.waitForTimeout(1);
+    }
+  }
+};
+
+// Brings every game to the same tick of the race.
+const allInStep = async (games) => {
+  for (let tries = 0; tries < 40; tries++) {
+    const frames = await Promise.all(games.map(({ page }) => frameOf(page)));
+    const ahead = Math.max(...frames);
+    if (frames.every((frame) => frame == ahead)) {
+      return ahead;
+    }
+    const behind = games[frames.indexOf(Math.min(...frames))];
+    await behind.game.advance();
+    await behind.page.waitForTimeout(DELIVERY_MS);
+  }
+  throw new Error("the games did not get in step");
+};
+
+const sameRaces = async (games) => {
+  await allInStep(games);
+  const races = await Promise.all(games.map(({ page }) => raceOf(page)));
+  for (const race of races.slice(1)) {
+    expect(race).toEqual(races[0]);
+  }
+  for (const { page } of games) {
+    expect(await apartAt(page)).toBe(-1);
+  }
+};
+
+// (as the pause menu's "Exit to main menu" does)
+const backToMainMenu = (page) =>
+  page.evaluate(() => {
+    const { game, menu, PHASE } = window.gameState;
+    menu.animation = 0;
+    menu.continuesToCarSelect = false;
+    game.phase = PHASE.mainMenu;
+  });
+
+test("three race together, one leaves the race to the AI while the others race on alike, and all three race again", async ({
+  context,
+}) => {
+  const { host, guest, hostPage, guestPage } = await openTwoGames(
+    context,
+    "/?host=trio",
+    "/?join=trio",
+  );
+  const thirdPage = await context.newPage();
+  const third = await openGame(thirdPage, {
+    storage: { carsel: "2", unlocked: "3" },
+    url: "/?join=trio",
+  });
+  await third.advanceUntil(PHASE.mainMenu);
+  const all = [
+    { game: host, page: hostPage },
+    { game: guest, page: guestPage },
+    { game: third, page: thirdPage },
+  ];
+  const raceAll = async () => {
+    await host.tap("Enter");
+    await host.advanceUntil(PHASE.carSelect);
+    await host.advance(40);
+    await host.tap("Enter");
+    await host.advanceUntil(PHASE.stageSelect);
+    await host.advance(190);
+    // the guests say they are there
+    await guest.advance(30);
+    await third.advance(30);
+    await hostPage.waitForTimeout(DELIVERY_MS);
+    await host.tap("Enter");
+    await host.advanceUntil(PHASE.race);
+    await host.advance();
+    await guestPage.waitForTimeout(DELIVERY_MS);
+    await guest.advanceUntil(PHASE.race);
+    await third.advanceUntil(PHASE.race);
+  };
+  await raceAll();
+  // each drives the car beside the one before, the one it chose
+  for (const [car, { page }] of all.entries()) {
+    expect(
+      await page.evaluate(() => {
+        const { game } = window.gameState;
+        return [game.player, game.humans];
+      }),
+    ).toEqual([car, [0, 1, 2]]);
+  }
+  // (the guests' cars: the host's comes from the storage all tabs share)
+  expect(
+    await hostPage.evaluate(() => window.gameState.game.carTypes.slice(1, 3)),
+  ).toEqual([Number(GUEST_TYPE), 2]);
+  await guestPage.keyboard.down("ArrowUp");
+  await advanceAll(all, 250);
+  await sameRaces(all);
+
+  // the third leaves the race: the AI drives its car on in both other games alike
+  await backToMainMenu(thirdPage);
+  await advanceAll(all, 100);
+  const racing = all.slice(0, 2);
+  await sameRaces(racing);
+  for (const { page } of racing) {
+    expect(await page.evaluate(() => window.gameState.game.humans)).toEqual([
+      0, 1,
+    ]);
+  }
+  await guestPage.keyboard.up("ArrowUp");
+
+  // back in the menus, all three are in the host's next race
+  await backToMainMenu(hostPage);
+  await backToMainMenu(guestPage);
+  // (the main menu opens up before it takes keys)
+  await advanceAll(all, 40);
+  await raceAll();
+  await advanceAll(all, 60);
+  await sameRaces(all);
+  expect(await thirdPage.evaluate(() => window.gameState.game.humans)).toEqual([
+    0, 1, 2,
+  ]);
+});
+
+test("the host leaving the room ends it for its guests, who are told so", async ({
+  context,
+}) => {
+  const { host, guest, hostPage, guestPage } = await openTwoGames(
+    context,
+    "/?host=gone",
+    "/?join=gone",
+  );
+  const both = [
+    { game: host, page: hostPage },
+    { game: guest, page: guestPage },
+  ];
+  await advanceBoth(...both, 35);
+  await hostPage.getByRole("button", { name: "Room gone" }).click();
+  await hostPage.getByRole("button", { name: "Leave the room" }).click();
+  await hostPage.waitForTimeout(DELIVERY_MS);
+  await guest.advance(2);
+  await expect(guestPage.getByRole("dialog")).toBeVisible();
+  await expect(guestPage.getByRole("status")).toHaveText(
+    "The host left the room.",
+  );
+  await expect(
+    guestPage.getByRole("button", { name: "Join the race" }),
+  ).toBeVisible();
 });

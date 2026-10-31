@@ -120,7 +120,7 @@ Deployment auf beanie (seit 29.10.2026 live):
 Im Menü: Der Knopf „Multiplayer“ neben dem Zahnrad (Hauptmenü, Auto- und Streckenwahl) öffnet
 einen Dialog (`src/ui/multiplayerMenu.js`). „Host a race“ öffnet einen Raum mit einem Code aus
 5 Zeichen und zeigt den Link für den Gast; der Gast gibt den Code ein. Der Host antwortet auf
-jedes `join` mit `here`, so sieht jede Seite, ob die andere da ist. `?host=`/`?join=` gehen
+jedes `join` mit `players` (siehe Schritt 6), so sieht jede Seite, ob die andere da ist. `?host=`/`?join=` gehen
 weiterhin.
 
 ### Schritt 4: Feinschliff
@@ -151,7 +151,7 @@ zu spät, spult ein Spiel zum Tick zurück, an dem sie gedrückt wurden, und rec
 - Lockstep (`net/lockstep.js`): Mit dem ersten Tick des Rennens schickt der Host dessen ganzen
   Zustand (`start`), der Gast lädt die Strecke und setzt ihn ein. Danach schicken beide pro Tick
   nur ihre Tasten (`keys`), die 3 Ticks (105 ms) später wirken, in beiden Spielen gleich. Fehlen
-  die Tasten des anderen, wartet der Tick („Waiting for the guest/host...“, Pause geht weiter).
+  die Tasten des anderen, wartet der Tick („Waiting for player 2/the host...“, Pause geht weiter).
   Der Gast fährt ein echtes Rennen mit eigenem HUD, Warnungen, Sounds und Rennende; seine eigene
   Phase und Vorhersage sind weg. Geht einer, fährt die KI dessen Auto, der andere fährt weiter.
 - Nachrichten gehen bitgenau (`encode`/`decode` in `link.js`): JSON verliert sonst -0, NaN,
@@ -170,4 +170,25 @@ zu spät, spult ein Spiel zum Tick zurück, an dem sie gedrückt wurden, und rec
   gehört dem HUD des jeweiligen Spielers und bleibt beim Zurückspulen stehen.
 - Staub, Funken und Rutschgeräusche im Replay kommen aus dem Effekt-Zufall und sind ohnehin in
   jedem Spiel anders; Staub und Funken neu gerechneter Frames fehlen im Replay.
-- Offen: mehr als ein Gast.
+
+### Schritt 6: Raum für bis zu 8 Spieler, Lobby, mehrere Rennen
+
+- Jedes Spiel bekommt beim Betreten eines Raums eine zufällige ID aus 8 Zeichen (`link.id`),
+  jede Nachricht trägt sie als `from`. Sie sagt nichts über den Spieler aus.
+- Lobby: Gäste schicken im Menü alle 30 Ticks `join` mit ihrem Auto, der Host antwortet mit
+  `players` (alle Spieler mit Auto, Host zuerst). Der Dialog listet sie. Höchstens 8 pro Raum
+  (wie das Relay). Ein Gast, der 100 Ticks schweigt oder `bye` schickt, fliegt aus der Liste.
+- Rennstart: Der Host nimmt die Gäste mit, die gerade im Menü sind (`join` in den letzten 60
+  Ticks). Spieler i fährt Auto i (Host 0); ist das Feld kleiner, wächst es. `start` trägt die
+  IDs nach Auto und eine `raceId`; Rennnachrichten tragen sie mit, so stören Nachrichten eines
+  alten Rennens kein neues.
+- Lockstep für N Spieler: Tasten, Raten und Warten pro Spieler; zurückgespult wird zum frühesten
+  falsch geratenen Frame. Fingerabdrücke gehen an alle, verglichen wird mit jedem.
+- Aussteigen: Wer das Rennen verlässt, schickt `left` mit dem Frame nach seinen letzten Tasten;
+  ab da fährt die KI sein Auto, in jedem Spiel gleich (`game.humans` pro Frame). Wer schon weiter
+  gerechnet hat, spult zurück. Ein Spieler, von dem 100 Ticks nichts kommt (alle Spiele pingen
+  im Rennen alle 30 Ticks), gilt als ausgestiegen ab dem Frame nach seinen letzten Tasten.
+  Test: `test/rollback.test.js`.
+- Nach dem Rennen sind alle wieder im Menü und im Raum; der Host startet das nächste.
+- Verlässt der Host den Raum (`bye`, oder er schweigt 100 Ticks), endet der Raum für die Gäste,
+  sobald sie wieder im Menü sind: Der Dialog öffnet sich mit „The host left the room.“

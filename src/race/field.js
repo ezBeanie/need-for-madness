@@ -13,7 +13,6 @@ import { car } from "./racers.js";
 import { resetRaceTape } from "./raceTape.js";
 import { resetRecording } from "./recording.js";
 import { track } from "./track.js";
-import { GUEST_CAR } from "../net/link.js";
 
 const CAR_TYPES = 19;
 // the original's field; beyond it there are not enough car types to have no twins
@@ -27,8 +26,9 @@ const gridZ = Array.from(
 );
 
 // a replay's cars (see screens/replays.js): the field it was raced in, not new opponents;
-// guestCarType: the car a guest chose (see net/host.js), in place of an opponent
-export const field = { replayCars: null, guestCarType: null };
+// guestCarTypes: the cars the guests of a room chose (see net/host.js), in place of
+// opponents
+export const field = { replayCars: null, guestCarTypes: [] };
 
 // Chooses the opponents and puts all cars on the start grid.
 export function setUpField() {
@@ -38,9 +38,9 @@ export function setUpField() {
     field.replayCars.forEach((type, c) => (game.carTypes[c] = type));
   } else {
     chooseOpponents(track.stage);
-    if (field.guestCarType != null && game.carCount > GUEST_CAR) {
-      game.carTypes[GUEST_CAR] = field.guestCarType;
-    }
+    // (the guests drive the cars after the player's, a field too small for all grown)
+    game.carCount = Math.max(game.carCount, 1 + field.guestCarTypes.length);
+    field.guestCarTypes.forEach((type, i) => (game.carTypes[i + 1] = type));
   }
   resetHud();
   placeOnGrid();

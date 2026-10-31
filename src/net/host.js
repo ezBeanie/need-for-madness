@@ -1,6 +1,6 @@
-// The host's side of a race with a guest: the host starts the race and sends its whole
-// state to the guest, then both games compute it, each sending only its keys (see
-// lockstep.js and guest.js).
+// The host's side of racing together: the room's players come to the host's game (see
+// guest.js), which starts the race with them and sends its whole state to them, then every
+// game computes it, each sending only its keys (see lockstep.js).
 
 import { carStats } from "../data/carStats.js";
 import { random, seededRandom } from "../core/random.js";
@@ -10,17 +10,10 @@ import { field, setUpField } from "../race/field.js";
 import { raceCarTextures } from "../render/generated.js";
 import { track } from "../race/track.js";
 import { saveRace } from "./raceState.js";
+import { receiveRaceMessage, startLockstep } from "./lockstep.js";
 import {
-  receiveKeys,
-  receiveApart,
-  receivePrint,
-  startLockstep,
-  stopLockstep,
-} from "./lockstep.js";
-import {
-  GUEST_CAR,
   MESSAGE,
-  RACE_GOES_ON,
+  MOST_PLAYERS,
   ROLE,
   isIndex,
   link,
@@ -28,71 +21,78 @@ import {
   urlRoom,
 } from "./link.js";
 
-// a guest silent for this many ticks has gone (it sends every tick in a race, and every
-// 30 outside one)
+// a guest silent for this many ticks has gone (it says it is there every 30 ticks)
 const GUEST_GONE_TICKS = 100;
+// a guest that joined this many ticks ago is in the menus (it joins every 30 ticks there),
+// not in a race of its own still
+const GUEST_WAITING_TICKS = 60;
 
-// quietTicks: since the guest's last message
-const host = { racing: false, quietTicks: GUEST_GONE_TICKS };
+// guests: the players in the room but the host, in the order they came, each with its id,
+// the car it chose, and the ticks since it was last heard and since it last joined
+const host = { guests: [] };
 
-export const guestThere = () => host.quietTicks < GUEST_GONE_TICKS;
+export const roomGuests = () => host.guests;
 
-// The guest's car is the AI's from now on.
-const raceOnWithoutGuest = () => {
-  host.racing = false;
-  game.humans = [];
-  stopLockstep();
-};
+// the guests a race the host starts takes along
+const waitingGuests = () =>
+  host.guests.filter(({ joinedTicks }) => joinedTicks < GUEST_WAITING_TICKS);
+
+// (the host's own car first: the room's players as every game lists them)
+const sendPlayers = () =>
+  link.send({
+    type: MESSAGE.players,
+    players: [{ id: link.id, carType: game.carTypes[0] }, ...host.guests].map(
+      ({ id, carType }) => ({ id, carType }),
+    ),
+  });
 
 const receive = (message) => {
-  host.quietTicks = 0;
-  if (message.type == MESSAGE.left && host.racing) {
-    raceOnWithoutGuest();
-  }
+  receiveRaceMessage(message);
+  let guest = host.guests.find(({ id }) => id == message.from);
   if (
     message.type == MESSAGE.join &&
     isIndex(message.carType, carStats.names.length)
   ) {
-    field.guestCarType = message.carType;
-    link.send({ type: MESSAGE.here });
+    if (!guest && host.guests.length < MOST_PLAYERS - 1) {
+      guest = { id: message.from };
+      host.guests.push(guest);
+    }
+    if (guest) {
+      guest.carType = message.carType;
+      guest.joinedTicks = 0;
+      // (the answer that tells the guest the host is there)
+      sendPlayers();
+    }
   }
-  if (message.type == MESSAGE.keys && host.racing) {
-    receiveKeys(message);
-  }
-  if (message.type == MESSAGE.sync && host.racing) {
-    receivePrint(message);
-  }
-  if (message.type == MESSAGE.apart && host.racing) {
-    receiveApart(message);
-  }
-  if (message.type == MESSAGE.ping && Number.isFinite(message.ping)) {
-    link.send({ type: MESSAGE.pong, ping: message.ping });
-  }
-};
-
-// Every tick: a guest gone is forgotten (its car driven by the AI), and a race the host
-// left ends for the guest too.
-export const hostTick = () => {
-  if (link.role != ROLE.host) {
+  if (!guest) {
     return;
   }
-  host.quietTicks++;
-  if (!guestThere()) {
-    field.guestCarType = null;
+  guest.quietTicks = 0;
+  if (message.type == MESSAGE.bye) {
+    host.guests = host.guests.filter((other) => other != guest);
   }
-  if (host.racing && !guestThere()) {
-    raceOnWithoutGuest();
-  }
-  if (host.racing && !RACE_GOES_ON.includes(game.phase)) {
-    link.send({ type: MESSAGE.end });
-    raceOnWithoutGuest();
+  if (message.type == MESSAGE.ping && Number.isFinite(message.ping)) {
+    link.send({ type: MESSAGE.pong, to: guest.id, ping: message.ping });
   }
 };
 
-// Opens a room for a guest to join.
+// Every tick: guests gone are forgotten, and the field is chosen with the cars of those
+// there.
+export const hostTick = () => {
+  for (const guest of host.guests) {
+    guest.quietTicks++;
+    guest.joinedTicks++;
+  }
+  host.guests = host.guests.filter(
+    ({ quietTicks }) => quietTicks < GUEST_GONE_TICKS,
+  );
+  field.guestCarTypes =
+    link.role == ROLE.host ? waitingGuests().map(({ carType }) => carType) : [];
+};
+
+// Opens a room for guests to join.
 export const hostRoom = (room) => {
-  host.quietTicks = GUEST_GONE_TICKS;
-  field.guestCarType = null;
+  host.guests = [];
   openLink(ROLE.host, room, receive);
 };
 
@@ -102,32 +102,43 @@ export const startHosting = () => {
   }
 };
 
-// A race begins: a guest who joined drives the car beside the player's, and gets the
-// race's whole state with its first frame. Its random numbers come from sources whose
-// state goes along, and the help for new players, which only the host's car would get,
-// is off.
+// A race begins: the guests drive the cars after the host's, in the order they came, and
+// get the race's whole state with its first frame. Its random numbers come from sources
+// whose state goes along, and the help for new players, which only the host's car would
+// get, is off.
 export const startHostedRace = () => {
-  host.racing =
-    guestThere() && game.carCount > GUEST_CAR && game.mode == MODE.championship;
-  if (!host.racing) {
+  const guests = waitingGuests();
+  if (
+    link.role != ROLE.host ||
+    guests.length == 0 ||
+    game.mode != MODE.championship
+  ) {
     game.humans = [];
     return;
   }
-  if (game.carTypes[GUEST_CAR] != field.guestCarType) {
-    // (the guest joined after the field was chosen)
+  if (
+    game.carCount <= guests.length ||
+    guests.some(({ carType }, i) => game.carTypes[i + 1] != carType)
+  ) {
+    // (a guest came, or chose another car, after the field was chosen)
     setUpField();
     raceCarTextures();
   }
-  game.humans = [game.player, GUEST_CAR];
+  // (the players by car: the host's is the player's car, 0)
+  const players = [link.id, ...guests.map(({ id }) => id)];
+  game.humans = players.map((_, car) => car);
   random.sim = seededRandom(random.fx() * 2 ** 32);
   random.wreck = seededRandom(random.fx() * 2 ** 32);
   raceEvents.onautocorrect = 0;
-  startLockstep(game.player, game.humans, () =>
+  // (that tells this race's messages from those of a race before, see lockstep.js)
+  const raceId = Math.floor(random.fx() * 2 ** 32);
+  startLockstep(game.player, players, raceId, () =>
     link.send({
       type: MESSAGE.start,
       stage: track.stage,
       carTypes: game.carTypes.slice(0, game.carCount),
-      car: GUEST_CAR,
+      players,
+      raceId,
       state: saveRace(),
     }),
   );

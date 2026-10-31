@@ -1,11 +1,12 @@
-// The multiplayer dialog: hosting a race (a room with a code and a link for the guest) or
-// joining one with the host's code. A button beside the options' gear opens it, in the
-// menus a race of the host's can take the guest away from.
+// The multiplayer dialog: hosting a race (a room with a code and a link for the guests) or
+// joining one with the host's code, and the room's players with their cars. A button beside
+// the options' gear opens it, in the menus a race of the host's can take a guest away from.
 
 import { PHASE, game } from "../core/state.js";
-import { guestThere, hostRoom } from "../net/host.js";
-import { hostThere, joinRoom } from "../net/guest.js";
-import { ROLE, ROOM_NAME, closeLink, link } from "../net/link.js";
+import { carStats } from "../data/carStats.js";
+import { hostRoom, roomGuests } from "../net/host.js";
+import { guest, hostThere, joinRoom } from "../net/guest.js";
+import { ROLE, ROOM_NAME, leaveRoom, link } from "../net/link.js";
 
 const button = document.getElementById("multiplayerButton");
 const dialog = document.getElementById("multiplayer");
@@ -16,6 +17,8 @@ const SHOWN_IN = [PHASE.mainMenu, PHASE.carSelect, PHASE.stageSelect];
 // (no letters and digits that look alike, for codes read out or typed on a phone)
 const CODE_LETTERS = "abcdefghjkmnpqrstuvwxyz23456789";
 const CODE_LENGTH = 5;
+
+export const ROOM_ENDED = "The host left the room.";
 
 const newRoomCode = () =>
   Array.from(
@@ -31,13 +34,43 @@ const status = () => {
     return "Connecting...";
   }
   if (link.role == ROLE.host) {
-    return guestThere()
-      ? "Your guest is here. Close this and start a race: they drive the car beside yours."
-      : "Waiting for a guest to join...";
+    return roomGuests().length > 0
+      ? "Close this and start a race: the others drive the cars beside yours."
+      : "Waiting for others to join...";
   }
   return hostThere()
-    ? "The host is here. The race starts when the host starts it."
+    ? "Choose your car. The race starts when the host starts it."
     : "Waiting for the host...";
+};
+
+// The room's players, the host first, each with its car (the own one as chosen now).
+const players = () =>
+  link.role == ROLE.host
+    ? [{ carType: game.carTypes[0], you: true }, ...roomGuests()]
+    : guest.players.map((player) => ({
+        ...player,
+        you: player.id == link.id,
+      }));
+
+const playerLine = ({ carType, you }, i) => {
+  const roles = [i == 0 && " (host)", you && " (you)"].filter(Boolean).join("");
+  return `Player ${i + 1}${roles}: ${carStats.names[carType]}`;
+};
+
+const showPlayers = () => {
+  const lines = players().map(playerLine);
+  const list = element("multiplayerPlayers");
+  // (changed only when it changes, so screen readers announce each change once)
+  if (list.dataset.lines != lines.join("\n")) {
+    list.dataset.lines = lines.join("\n");
+    list.replaceChildren(
+      ...lines.map((line) => {
+        const item = document.createElement("li");
+        item.textContent = line;
+        return item;
+      }),
+    );
+  }
 };
 
 // What the dialog and its button show: the choice, or the room the game is in.
@@ -57,10 +90,16 @@ const showRoom = () => {
   element("multiplayerLink").value = joinLink(link.room);
   const text = status();
   const line = element("multiplayerStatus");
-  // (set only when it changes, so screen readers announce each change once)
   if (line.textContent != text) {
     line.textContent = text;
   }
+  showPlayers();
+};
+
+const showNotice = (text) => {
+  const notice = element("multiplayerNotice");
+  notice.textContent = text;
+  notice.hidden = !text;
 };
 
 const showCodeError = (text) => {
@@ -79,6 +118,7 @@ export const installMultiplayerMenu = () => {
     dialog.showModal?.();
   });
   element("multiplayerHost").addEventListener("click", () => {
+    showNotice("");
     hostRoom(newRoomCode());
     showRoom();
   });
@@ -92,6 +132,7 @@ export const installMultiplayerMenu = () => {
       return;
     }
     showCodeError("");
+    showNotice("");
     joinRoom(room);
     showRoom();
   });
@@ -104,14 +145,15 @@ export const installMultiplayerMenu = () => {
     }),
   );
   element("multiplayerLeave").addEventListener("click", () => {
-    closeLink();
+    leaveRoom();
     copy.textContent = "Copy";
     showRoom();
   });
   element("multiplayerClose").addEventListener("click", () => dialog.close?.());
 };
 
-// Every tick: the button only where it belongs, and the dialog up to date.
+// Every tick: the button only where it belongs, and the dialog up to date. A room the
+// host left opens it, to say so.
 export const placeMultiplayerButton = () => {
   const hidden = !SHOWN_IN.includes(game.phase);
   if (button.hidden != hidden) {
@@ -120,7 +162,15 @@ export const placeMultiplayerButton = () => {
       dialog.close?.();
     }
   }
-  if (!hidden) {
-    showRoom();
+  if (hidden) {
+    return;
+  }
+  showRoom();
+  if (guest.roomEnded) {
+    guest.roomEnded = false;
+    showNotice(ROOM_ENDED);
+    if (!dialog.open) {
+      dialog.showModal?.();
+    }
   }
 };

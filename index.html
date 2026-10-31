@@ -104,7 +104,8 @@ src: url(data/verdana.ttf);
 <dialog id="multiplayer" class="menu-dialog" aria-labelledby="multiplayerTitle">
 <h2 id="multiplayerTitle">Multiplayer</h2>
 <div id="multiplayerChoose">
-<p>Race a friend: one of you hosts, the other joins with the host's code.</p>
+<p>Race friends: one of you hosts, up to seven others join with the host's code.</p>
+<p id="multiplayerNotice" role="status" hidden></p>
 <button type="button" id="multiplayerHost">Host a race</button>
 <form id="multiplayerJoinForm" novalidate>
 <label for="multiplayerCode">Code of the host's room</label>
@@ -116,11 +117,13 @@ src: url(data/verdana.ttf);
 <div id="multiplayerRoom" hidden>
 <p>Room <strong id="multiplayerRoomName" class="room"></strong></p>
 <div id="multiplayerShare">
-<label for="multiplayerLink">Link for your guest</label>
+<label for="multiplayerLink">Link for your guests</label>
 <input id="multiplayerLink" readonly>
 <button type="button" id="multiplayerCopy">Copy</button>
 </div>
 <p id="multiplayerStatus" role="status"></p>
+<h3 id="multiplayerPlayersTitle">Players</h3>
+<ul id="multiplayerPlayers" aria-labelledby="multiplayerPlayersTitle"></ul>
 <button type="button" id="multiplayerLeave">Leave the room</button>
 </div>
 <button type="button" id="multiplayerClose" class="close">Close</button>

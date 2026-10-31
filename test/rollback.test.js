@@ -29,11 +29,15 @@ const otherKeys = (car) => {
   return keys;
 };
 
+const PLAYERS = ["host0000", "guest001", "guest002"];
+// the player who leaves the race, and the frame it leaves the keys of
+const LEAVING = { car: 1, frame: 900 };
+
 // The fixed race (see net/determinism.js) raced together by three, in the game of the
-// player of car 0, each other's keys coming late[car] frames after they were pressed: the
-// fingerprints it sent, and, every key there and the race run on one frame, the race and
-// its recordings.
-const raceWithKeysLate = async (late) => {
+// player of car 0, each other's keys coming late[car] frames after they were pressed (and
+// the leaving player's left as late after its last keys): the fingerprints it sent, and,
+// every key there and the race run on one frame, the race and its recordings.
+const raceWithKeysLate = async (late, leaving = null) => {
   const { ctx, stepUntil } = await loadGame({ seed: 5 });
   stepUntil(() => ctx.game.phase === PHASE.mainMenu, 400, "main menu");
   ctx.startFingerprintRace();
@@ -49,15 +53,25 @@ const raceWithKeysLate = async (late) => {
   ctx.game.humans = [0, 1, 2];
   const sent = [];
   ctx.link.send = (message) => sent.push(message);
-  ctx.startLockstep(0, ctx.game.humans, null);
+  ctx.startLockstep(0, PLAYERS, 0, null);
   const others = Object.keys(late).map(Number);
   const keys = Object.fromEntries(others.map((car) => [car, otherKeys(car)]));
   const press = (car, frame) =>
-    ctx.receiveKeys({
-      car,
-      frame: frame + ctx.INPUT_DELAY,
-      keys: keys[car][frame],
-    });
+    car == leaving?.car && frame >= leaving.frame
+      ? frame == leaving.frame &&
+        ctx.receiveRaceMessage({
+          type: "left",
+          from: PLAYERS[car],
+          raceId: 0,
+          frame: frame + ctx.INPUT_DELAY,
+        })
+      : ctx.receiveRaceMessage({
+          type: "keys",
+          from: PLAYERS[car],
+          raceId: 0,
+          frame: frame + ctx.INPUT_DELAY,
+          keys: keys[car][frame],
+        });
   for (let frame = 0; frame < FRAMES; frame++) {
     for (const car of others) {
       if (frame >= late[car]) {
@@ -73,6 +87,7 @@ const raceWithKeysLate = async (late) => {
   }
   ctx.fingerprintRaceTick(ctx.runTick);
   expect(ctx.lockstep.frame).toBe(FRAMES + 1);
+  expect(ctx.game.humans).toEqual(leaving ? [0, 2] : [0, 1, 2]);
   // (but for the dust, sparks and skids, thrown and heard at random by every game its own
   // way, see random.fx)
   const withoutDust = (tape) =>
@@ -107,5 +122,13 @@ test("a game guessing others' keys wrong goes back and races on as with them fro
   expect(late.prints).toEqual(onTime.prints);
   expect(late.race).toEqual(onTime.race);
   expect(late.recording).toEqual(onTime.recording);
+  expect(late.raceTape).toEqual(onTime.raceTape);
+}, 60000);
+
+test("a player leaving the race leaves its car to the AI from the frame after its last keys, in a game told late as in one told at once", async () => {
+  const onTime = await raceWithKeysLate(ON_TIME, LEAVING);
+  const late = await raceWithKeysLate(LATE, LEAVING);
+  expect(late.prints).toEqual(onTime.prints);
+  expect(late.race).toEqual(onTime.race);
   expect(late.raceTape).toEqual(onTime.raceTape);
 }, 60000);

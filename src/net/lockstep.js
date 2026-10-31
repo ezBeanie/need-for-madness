@@ -5,15 +5,25 @@
 // yet guesses them (the ones pressed last) and races on; guessed wrong, it goes back to that
 // frame and computes the frames since again, quietly, with the right ones (rollback). A game
 // too far ahead of another's keys waits for them. Every so many frames, the games compare
-// fingerprints of their races: a race that went apart in one stays apart.
+// fingerprints of their races: a race that went apart in one stays apart. A player who
+// leaves the race (or whose game is gone) leaves its car to the AI from a frame on, in
+// every game alike.
 
+import { PHASE, game } from "../core/state.js";
 import { nextFraction, tick } from "../core/tick.js";
 import { raceEvents } from "../race/events.js";
 import { physics } from "../race/physics.js";
 import { cutRaceTapeTo, raceTape } from "../race/raceTape.js";
 import { racers } from "../race/racers.js";
 import { keepRecording, restoreRecording } from "../race/recording.js";
-import { MESSAGE, ROLE, decode, encode, isIndex, link } from "./link.js";
+import {
+  MESSAGE,
+  RACE_GOES_ON,
+  decode,
+  encode,
+  isIndex,
+  link,
+} from "./link.js";
 import { restoreRace, saveRace, sharedRace } from "./raceState.js";
 
 // 35 ms for the keys to reach the other game before they drive
@@ -29,24 +39,38 @@ export const SYNC_EVERY = 30;
 const PRINT_KEPT_FRAMES = 10 * SYNC_EVERY;
 export const OUT_OF_SYNC = "Out of sync!";
 
-// what a game waiting for the other one's keys says
-export const WAITING = {
-  [ROLE.host]: "Waiting for the guest...",
-  [ROLE.guest]: "Waiting for the host...",
-};
+// a player silent this long (no keys, no pings) has left the race: its game is gone
+const PLAYER_GONE_TICKS = 100;
+// how often a game in a race says it is there, also while it pauses and sends no keys
+const PING_EVERY_TICKS = 30;
+// how long a player leaving the race is told
+const LEFT_SHOWN_TICKS = 100;
 
-// own: the car of this game's player; ownKeys: its keys by frame; otherKeys: the other
-// players' keys by car, by frame; lastOther: their last keys there, and their frame, by
-// car; guessed: the others' keys guessed, by frame, by car, until they come; kept: the race
-// as it was before each of those frames; atFirstFrame: what starts the race alike in all
-// games; unsentPrints: the fingerprints of frames that ran on guessed keys, by frame, sent
-// once the guesses were right; ownPrints: the fingerprints by frame, and otherPrints: the
-// others', by frame, by car, until compared; apartAt: the first frame the fingerprints
-// differed at (-1 none), apartWith: the car of the game whose differed, apartRace: this
-// game's race then, otherApart: the parts of that game's that came, and differences: what
-// differs in it (once all came)
+// the phases a game stays in the race in: a guest's begins it while its stage loads
+const IN_RACE = [...RACE_GOES_ON, PHASE.stageLoading];
+
+// (the host drives car 0, the guests the cars after it, see net/host.js)
+const playerName = (car) => (car == 0 ? "the host" : `player ${car + 1}`);
+
+// players: the ids of the players' games by car (see link.js); raceId: what tells this
+// race's messages from those of a race before; own: the car of this game's player;
+// ownKeys: its keys by frame; otherKeys: the other players' keys by car, by frame;
+// lastOther: their last keys there, and their frame, by car; guessed: the others' keys
+// guessed, by frame, by car, until they come; kept: the race as it was before each of
+// those frames; atFirstFrame: what starts the race alike in all games; unsentPrints: the
+// fingerprints of frames that ran on guessed keys, by frame, sent once the guesses were
+// right; ownPrints: the fingerprints by frame, and otherPrints: the others', by frame, by
+// car, until compared; apartAt: the first frame the fingerprints differed at (-1 none),
+// apartWith: the car of the game whose differed, apartRace: this game's race then,
+// otherApart: the parts of that game's that came, and differences: what differs in it
+// (once all came); leftAt: the frame each player who left the race left it at, by car;
+// goBackTo: the first frame that ran with a car whose player had left it (the race goes
+// back to it); quietTicks: the ticks since each player was heard, by car; notice: what
+// the HUD tells of a player leaving, and for how many ticks more
 export const lockstep = {
   active: false,
+  players: [],
+  raceId: 0,
   frame: 0,
   own: 0,
   ownKeys: new Map(),
@@ -63,6 +87,11 @@ export const lockstep = {
   apartRace: null,
   otherApart: [],
   differences: [],
+  leftAt: new Map(),
+  goBackTo: Infinity,
+  quietTicks: new Map(),
+  pingTicks: 0,
+  notice: { text: null, ticks: 0 },
 };
 
 // the own car's keys as the player holds them, while the car drives with the frame's
@@ -78,10 +107,12 @@ const sameKeys = (keys, others) =>
 const keysAt = (keys, frame) => (frame < INPUT_DELAY ? NONE : keys.get(frame));
 
 // The race begins, own the player's car among the cars of all players.
-export const startLockstep = (own, cars, atFirstFrame) => {
-  const others = cars.filter((car) => car != own);
+export const startLockstep = (own, players, raceId, atFirstFrame) => {
+  const others = players.map((_, car) => car).filter((car) => car != own);
   Object.assign(lockstep, {
     active: true,
+    players,
+    raceId,
     frame: 0,
     own,
     ownKeys: new Map(),
@@ -100,8 +131,19 @@ export const startLockstep = (own, cars, atFirstFrame) => {
     apartRace: null,
     otherApart: [],
     differences: [],
+    leftAt: new Map(),
+    goBackTo: Infinity,
+    quietTicks: new Map(others.map((car) => [car, 0])),
+    pingTicks: 0,
   });
 };
+
+// (each message tells the race it is of)
+const send = (message) => link.send({ ...message, raceId: lockstep.raceId });
+
+// whether the player of a car is in the race at a frame
+const inRace = (car, frame) =>
+  car == lockstep.own || !(lockstep.leftAt.get(car) <= frame);
 
 export const stopLockstep = () => {
   lockstep.active = false;
@@ -120,6 +162,78 @@ export const receiveKeys = ({ car, frame, keys }) => {
     const given = { frame, keys: keysOf(keys) };
     lockstep.lastOther.set(car, given);
     lockstep.otherKeys.get(car).set(frame, given.keys);
+  }
+};
+
+// The player of a car leaves the race from a frame on (checked: another game sent it): the
+// AI drives the car from then on, and frames that ran with the player go again.
+export const receiveLeft = ({ car, frame }) => {
+  if (
+    !lockstep.otherKeys.has(car) ||
+    lockstep.leftAt.has(car) ||
+    !Number.isInteger(frame) ||
+    frame < 0
+  ) {
+    return;
+  }
+  lockstep.leftAt.set(car, frame);
+  lockstep.quietTicks.delete(car);
+  lockstep.goBackTo = Math.min(lockstep.goBackTo, frame);
+  const name = playerName(car);
+  lockstep.notice = {
+    text: `${name[0].toUpperCase()}${name.slice(1)} left the race`,
+    ticks: LEFT_SHOWN_TICKS,
+  };
+};
+
+const RECEIVE = {
+  [MESSAGE.keys]: (message) => receiveKeys(message),
+  [MESSAGE.sync]: (message) => receivePrint(message),
+  [MESSAGE.apart]: (message) => receiveApart(message),
+  [MESSAGE.left]: (message) => receiveLeft(message),
+};
+
+// A message of another game of the race (checked: another game sent it), the car its
+// player drives the one it tells of.
+export const receiveRaceMessage = (message) => {
+  const car = lockstep.players.indexOf(message.from);
+  if (
+    !lockstep.active ||
+    message.raceId !== lockstep.raceId ||
+    car < 0 ||
+    car == lockstep.own
+  ) {
+    return;
+  }
+  if (lockstep.quietTicks.has(car)) {
+    lockstep.quietTicks.set(car, 0);
+  }
+  RECEIVE[message.type]?.({ ...message, car });
+};
+
+// Every tick of a race together: the game says it is there now and then, a player silent
+// too long has left the race (from the frame after its last keys, in every game alike, as
+// every game got them), and the player leaving the race tells the others.
+export const lockstepTick = () => {
+  if (lockstep.notice.ticks > 0) {
+    lockstep.notice.ticks--;
+  }
+  if (!lockstep.active) {
+    return;
+  }
+  if (lockstep.pingTicks++ % PING_EVERY_TICKS == 0) {
+    send({ type: MESSAGE.ping, ping: performance.now() });
+  }
+  for (const [car, ticks] of lockstep.quietTicks) {
+    lockstep.quietTicks.set(car, ticks + 1);
+    if (ticks + 1 >= PLAYER_GONE_TICKS) {
+      receiveLeft({ car, frame: lockstep.lastOther.get(car).frame + 1 });
+    }
+  }
+  if (!IN_RACE.includes(game.phase)) {
+    send({ type: MESSAGE.left, frame: lockstep.frame + INPUT_DELAY });
+    stopLockstep();
+    game.humans = [];
   }
 };
 
@@ -153,9 +267,8 @@ const compare = (frame) => {
       for (let part = 0; part < parts; part++) {
         const start = part * APART_PART_LENGTH;
         const race = own.race.slice(start, start + APART_PART_LENGTH);
-        link.send({
+        send({
           type: MESSAGE.apart,
-          car: lockstep.own,
           frame,
           part,
           parts,
@@ -227,13 +340,23 @@ export const receivePrint = ({ car, frame, print }) => {
 
 export const outOfSync = () => lockstep.active && lockstep.apartAt >= 0;
 
-export const lockstepWaits = () =>
-  lockstep.active &&
-  [...lockstep.lastOther].some(
+// the car of a player whose keys the race waits for, if any
+const waitedFor = () =>
+  [...lockstep.lastOther].find(
     ([car, last]) =>
+      inRace(car, lockstep.frame) &&
       keysAt(lockstep.otherKeys.get(car), lockstep.frame) === undefined &&
       lockstep.frame - last.frame > MAX_GUESSED,
-  );
+  )?.[0];
+
+export const lockstepWaits = () => lockstep.active && waitedFor() !== undefined;
+
+// what a game waiting for another one's keys says
+export const waitingNotice = () => `Waiting for ${playerName(waitedFor())}...`;
+
+// what a game whose player left the race says, a while
+export const leftNotice = () =>
+  lockstep.notice.ticks > 0 ? lockstep.notice.text : null;
 
 // (a deep copy: the race runs on from the one it was kept from)
 const keepRace = () => ({
@@ -251,8 +374,12 @@ const restoreKept = ({ race, recording, tapeLength }) => {
 // The cars drive with the frame's keys, others' guessed if they are not there yet, the
 // race kept to go back to. (In the countdown, the cars stand whatever the keys.)
 const driveWithKeys = (frame) => {
+  game.humans = lockstep.players
+    .map((_, car) => car)
+    .filter((car) => inRace(car, frame));
+  const others = [...lockstep.otherKeys].filter(([car]) => inRace(car, frame));
   const guess = new Map();
-  for (const [car, keys] of lockstep.otherKeys) {
+  for (const [car, keys] of others) {
     if (keysAt(keys, frame) === undefined) {
       guess.set(car, lockstep.lastOther.get(car).keys);
     }
@@ -262,7 +389,7 @@ const driveWithKeys = (frame) => {
     lockstep.guessed.set(frame, guess);
   }
   Object.assign(racers[lockstep.own].u, keysAt(lockstep.ownKeys, frame));
-  for (const [car, keys] of lockstep.otherKeys) {
+  for (const [car, keys] of others) {
     Object.assign(racers[car].u, guess.get(car) ?? keysAt(keys, frame));
   }
 };
@@ -303,9 +430,8 @@ const settle = () => {
     if (frame < settled) {
       lockstep.unsentPrints.delete(frame);
       lockstep.ownPrints.set(frame, own);
-      link.send({
+      send({
         type: MESSAGE.sync,
-        car: lockstep.own,
         frame,
         print: own.print,
       });
@@ -317,11 +443,16 @@ const settle = () => {
 // Others' keys came for frames that ran on guessed ones: guessed wrong, the race goes back
 // to the first such frame and runs again quietly up to this one (runFrameAgain: a frame of
 // it, without what is seen and heard of it). (A player's keys come in order, but one's may
-// come further than another's.)
+// come further than another's.) So too where a car ran with a player who had left the
+// race.
 const checkGuesses = (runFrameAgain) => {
-  let wrongAt = -1;
+  let wrongAt = Infinity;
   for (const [frame, guess] of lockstep.guessed) {
     for (const [car, keys] of guess) {
+      if (!inRace(car, frame)) {
+        guess.delete(car);
+        continue;
+      }
       const given = lockstep.otherKeys.get(car).get(frame);
       if (given !== undefined && !sameKeys(given, keys)) {
         wrongAt = frame;
@@ -331,14 +462,20 @@ const checkGuesses = (runFrameAgain) => {
         guess.delete(car);
       }
     }
-    if (wrongAt >= 0) {
+    if (wrongAt < Infinity) {
       break;
     }
     if (guess.size == 0) {
       lockstep.guessed.delete(frame);
     }
   }
-  if (wrongAt < 0) {
+  // (a car runs with its player only on guessed keys: those it left the race at are kept)
+  const left = [...lockstep.kept.keys()].find(
+    (frame) => frame >= lockstep.goBackTo,
+  );
+  lockstep.goBackTo = Infinity;
+  wrongAt = Math.min(wrongAt, left ?? Infinity);
+  if (wrongAt == Infinity) {
     return;
   }
   const now = lockstep.frame;
@@ -374,9 +511,8 @@ export const pressFrameKeys = (runFrameAgain) => {
     lockstep.atFirstFrame?.();
   }
   lockstep.ownKeys.set(frame + INPUT_DELAY, held);
-  link.send({
+  send({
     type: MESSAGE.keys,
-    car: own,
     frame: frame + INPUT_DELAY,
     keys: held,
   });

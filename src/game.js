@@ -68,22 +68,18 @@ import { animateTrack, castShadows, placeWheels } from "./render/raceScene.js";
 import { countDown, flashTick } from "./race/countdown.js";
 import { onKey } from "./input/controls.js";
 import { hostTick, startHosting } from "./net/host.js";
-import {
-  guest,
-  guestNotice,
-  guestTick,
-  guestWaitingTick,
-  startGuesting,
-} from "./net/guest.js";
+import { guest, guestWaitingTick, startGuesting } from "./net/guest.js";
 import { ROLE, link } from "./net/link.js";
 import {
   OUT_OF_SYNC,
-  WAITING,
+  leftNotice,
   lockstep,
+  lockstepTick,
   lockstepWaits,
   outOfSync,
   pressFrameKeys,
   releaseFrameKeys,
+  waitingNotice,
 } from "./net/lockstep.js";
 
 // The logic runs in fixed ticks, whatever the display's refresh rate (see tick.js).
@@ -139,10 +135,10 @@ function raceTick() {
     }
     drawNetNotice(
       waitedTicks > WAIT_SHOWN_TICKS
-        ? WAITING[link.role]
+        ? waitingNotice()
         : outOfSync()
           ? OUT_OF_SYNC
-          : guestNotice(),
+          : leftNotice(),
       link.role == ROLE.guest ? guest.ping : null,
     );
   }
@@ -223,7 +219,7 @@ export function runTick() {
   pollGamepads();
   guestWaitingTick();
   hostTick();
-  guestTick();
+  lockstepTick();
   raceRan = false;
   for (const [phases, run] of TICKS) {
     if (phases.includes(game.phase)) {
