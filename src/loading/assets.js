@@ -7,6 +7,7 @@ import { interfaceResolution, isPhone } from "../core/platform.js";
 import { random } from "../core/random.js";
 import { PHASE, RACE_SIZES, game } from "../core/state.js";
 import { loadSetting } from "../core/storage.js";
+import { career, loadCareer } from "../race/career.js";
 import { raceEvents } from "../race/events.js";
 import { pieceModels, track } from "../race/track.js";
 import { menuCarTextures, createDustTextures } from "../render/generated.js";
@@ -143,19 +144,18 @@ const readSettings = () => {
     menu.continuesToCarSelect = true;
     raceEvents.onautocorrect = 2;
   }
-  game.unlocked = loadSetting("unlocked");
-  if (game.unlocked == -1) {
-    game.unlocked = 1;
-  }
+  loadCareer();
   game.raceCars = loadSetting("racecars");
   if (!RACE_SIZES.includes(game.raceCars)) {
     game.raceCars = 7;
   }
-  track.stage = game.unlocked;
-  if (game.unlocked >= 5) {
+  // without the career the first stage, everything being open
+  track.stage = career.on ? game.unlocked : 1;
+  // (the keys' hint is for players new to the game)
+  if (career.progress >= 5) {
     hud.keyHintTicks = 200;
   }
-  // after the last stage was won, a random stage is shown and the game can be reset
+  // after the career's last stage was won, a random stage is shown and the game can be reset
   if (track.stage == LAST_STAGE) {
     track.stage = Math.floor(3 + random.sim() * 13);
     menu.resetOffered = true;

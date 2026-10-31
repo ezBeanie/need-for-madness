@@ -5,7 +5,7 @@ import { PHASE } from "../../src/core/state.js";
 // Starts a race on stage and ends it right away as given, at the race end screen.
 const endRace = async (page, { stage, unlocked, winner, cars = 7 }) => {
   const game = await openGame(page, {
-    storage: { carsel: "5", unlocked: String(unlocked) },
+    storage: { carsel: "5", unlocked: String(unlocked), career: "1" },
   });
   await game.advanceUntil(PHASE.mainMenu);
   await game.settle();

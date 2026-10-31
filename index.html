@@ -54,6 +54,8 @@ src: url(data/verdana.ttf);
   text-align: left; cursor: pointer;
 }
 .menu-dialog button:hover { background: rgba(1, 234, 255, 0.25); }
+.menu-dialog button:disabled { opacity: 0.55; cursor: not-allowed; background: transparent; }
+#options .hint { display: block; color: rgba(160, 230, 255, 0.8); font-size: 12px; }
 .menu-dialog label { display: block; margin: 16px 0 6px; font-size: 14px; }
 .menu-dialog input {
   box-sizing: border-box; width: 100%; min-height: 44px; padding: 8px 14px;
@@ -97,6 +99,7 @@ src: url(data/verdana.ttf);
 <li><button type="button" id="option-muteSound" aria-pressed="false"><span>Sound <span class="key">N</span></span><span class="state"></span></button></li>
 <li><button type="button" id="option-muteMusic" aria-pressed="false"><span>Music <span class="key">M</span></span><span class="state"></span></button></li>
 <li><button type="button" id="option-otherCarSounds" aria-pressed="false"><span>Other cars' sounds <span class="key">O</span></span><span class="state"></span></button></li>
+<li><button type="button" id="option-toggleCareer" aria-pressed="false" aria-describedby="careerHint"><span>Career<span class="hint" id="careerHint">Stages and cars open one by one; switched in the main menu</span></span><span class="state"></span></button></li>
 </ul>
 <button type="button" id="optionsClose" class="close">Close</button>
 </dialog>

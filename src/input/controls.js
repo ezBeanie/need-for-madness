@@ -21,6 +21,7 @@ import {
   toggleLook,
   toggleSharp,
 } from "../render/look.js";
+import { toggleCareer } from "../race/career.js";
 import { fitCanvas3D } from "../render/renderer.js";
 import { buttons } from "../ui/widgets.js";
 import { pressConfirm } from "./confirm.js";
@@ -127,6 +128,9 @@ export function onKey(action, pressed) {
   if (!pressed && action == "toggleSharp") {
     toggleSharp();
     fitCanvas3D();
+  }
+  if (!pressed && action == "toggleCareer" && game.phase == PHASE.mainMenu) {
+    toggleCareer();
   }
   if (!pressed && action == "toggleClassicMenus") {
     toggleClassicMenus();
