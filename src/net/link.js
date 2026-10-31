@@ -51,6 +51,9 @@ export const isIndex = (n, below) => Number.isInteger(n) && n >= 0 && n < below;
 // the room names the relay takes
 export const ROOM_NAME = /^[a-z0-9-]{1,32}$/i;
 
+// what the relay closes the link to a full room with (see server/relay.js)
+const ROOM_FULL = 4001;
+
 // how long a lost connection waits before it tries again
 const RECONNECT_MS = 2000;
 
@@ -101,6 +104,8 @@ export const link = {
   id: null,
   // whether the relay is reached
   open: false,
+  // whether the last room was full, until the multiplayer dialog says so
+  full: false,
   send: () => {},
 };
 
@@ -140,9 +145,14 @@ export const openLink = (role, room, receive) => {
         receive(message);
       }
     };
-    own.onclose = () => {
+    own.onclose = (event) => {
       // (a link closed on purpose, or replaced by another, stays closed)
       if (socket != own) {
+        return;
+      }
+      if (event.code == ROOM_FULL) {
+        closeLink();
+        link.full = true;
         return;
       }
       link.open = false;

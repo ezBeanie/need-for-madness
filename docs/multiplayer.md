@@ -177,7 +177,8 @@ zu spät, spult ein Spiel zum Tick zurück, an dem sie gedrückt wurden, und rec
   jede Nachricht trägt sie als `from`. Sie sagt nichts über den Spieler aus.
 - Lobby: Gäste schicken im Menü alle 30 Ticks `join` mit ihrem Auto, der Host antwortet mit
   `players` (alle Spieler mit Auto, Host zuerst). Der Dialog listet sie. Höchstens 8 pro Raum
-  (wie das Relay). Ein Gast, der 100 Ticks schweigt oder `bye` schickt, fliegt aus der Liste.
+  (wie das Relay; einen neunten schließt es mit Code 4001, der Dialog sagt „The room is full“).
+  Ein Gast, der 100 Ticks schweigt oder `bye` schickt, fliegt aus der Liste.
 - Rennstart: Der Host nimmt die Gäste mit, die gerade im Menü sind (`join` in den letzten 60
   Ticks). Spieler i fährt Auto i (Host 0); ist das Feld kleiner, wächst es. `start` trägt die
   IDs nach Auto und eine `raceId`; Rennnachrichten tragen sie mit, so stören Nachrichten eines
@@ -192,3 +193,6 @@ zu spät, spult ein Spiel zum Tick zurück, an dem sie gedrückt wurden, und rec
 - Nach dem Rennen sind alle wieder im Menü und im Raum; der Host startet das nächste.
 - Verlässt der Host den Raum (`bye`, oder er schweigt 100 Ticks), endet der Raum für die Gäste,
   sobald sie wieder im Menü sind: Der Dialog öffnet sich mit „The host left the room.“
+- Echtzeit-Test gegen den Dev-Server (drei bzw. acht Browser-Kontexte, je eigenes Spiel):
+  zwei Rennen zu dritt, einer steigt aus, der Host geht; acht in einem Rennen, einem reißt die
+  Verbindung ab. Alle Fingerabdrücke gleich, das abgerissene Auto ab demselben Frame bei der KI.

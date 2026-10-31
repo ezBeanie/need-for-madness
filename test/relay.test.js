@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { WebSocket } from "ws";
-import { attachRelay } from "../server/relay.js";
+import { ROOM_FULL, attachRelay } from "../server/relay.js";
 
 let server;
 let url;
@@ -50,11 +50,13 @@ test("rooms with odd names are turned away", async () => {
   await expect(enter("/net?room=" + "x".repeat(33))).rejects.toThrow();
 });
 
-test("a room takes eight games at most", async () => {
+test("a room takes eight games at most, and tells the ninth it is full", async () => {
   for (let i = 0; i < 8; i++) {
     await enter("/net?room=full");
   }
-  await expect(enter("/net?room=full")).rejects.toThrow();
+  const ninth = await enter("/net?room=full");
+  const code = await new Promise((resolve) => ninth.on("close", resolve));
+  expect(code).toBe(ROOM_FULL);
 });
 
 test("a game sending a broken message is dropped, and the relay goes on", async () => {

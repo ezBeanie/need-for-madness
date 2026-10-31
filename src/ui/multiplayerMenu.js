@@ -19,6 +19,7 @@ const CODE_LETTERS = "abcdefghjkmnpqrstuvwxyz23456789";
 const CODE_LENGTH = 5;
 
 export const ROOM_ENDED = "The host left the room.";
+export const ROOM_FULL = "The room is full: eight race in it already.";
 
 const newRoomCode = () =>
   Array.from(
@@ -153,7 +154,7 @@ export const installMultiplayerMenu = () => {
 };
 
 // Every tick: the button only where it belongs, and the dialog up to date. A room the
-// host left opens it, to say so.
+// host left, or one full, opens it, to say so.
 export const placeMultiplayerButton = () => {
   const hidden = !SHOWN_IN.includes(game.phase);
   if (button.hidden != hidden) {
@@ -166,9 +167,10 @@ export const placeMultiplayerButton = () => {
     return;
   }
   showRoom();
-  if (guest.roomEnded) {
+  if (guest.roomEnded || link.full) {
+    showNotice(guest.roomEnded ? ROOM_ENDED : ROOM_FULL);
     guest.roomEnded = false;
-    showNotice(ROOM_ENDED);
+    link.full = false;
     if (!dialog.open) {
       dialog.showModal?.();
     }

@@ -7,6 +7,8 @@ import { WebSocket, WebSocketServer } from "ws";
 export const RELAY_PATH = "/net";
 const ROOM_NAME = /^[a-z0-9-]{1,32}$/i;
 const MOST_IN_ROOM = 8;
+// what a game coming into a full room is closed with, to tell it so (see src/net/link.js)
+export const ROOM_FULL = 4001;
 const MOST_ROOMS = 200;
 // a tick of a race with 20 cars is far below this
 const MOST_BYTES = 256 * 1024;
@@ -71,14 +73,17 @@ export const attachRelay = (httpServer) => {
       return;
     }
     const name = url.searchParams.get("room") ?? "";
-    const full =
-      (rooms.get(name)?.size ?? 0) >= MOST_IN_ROOM ||
-      (!rooms.has(name) && rooms.size >= MOST_ROOMS);
-    if (!ROOM_NAME.test(name) || full) {
+    if (
+      !ROOM_NAME.test(name) ||
+      (!rooms.has(name) && rooms.size >= MOST_ROOMS)
+    ) {
       socket.destroy();
       return;
     }
-    relay.handleUpgrade(request, socket, head, (ws) => join(ws, name));
+    const full = (rooms.get(name)?.size ?? 0) >= MOST_IN_ROOM;
+    relay.handleUpgrade(request, socket, head, (ws) =>
+      full ? ws.close(ROOM_FULL, "full") : join(ws, name),
+    );
   });
 
   // games gone without closing (a laptop shut) are dropped
