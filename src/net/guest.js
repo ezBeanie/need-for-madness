@@ -24,6 +24,7 @@ import {
 import {
   lockstep,
   receiveKeys,
+  receiveApart,
   receivePrint,
   startLockstep,
   stopLockstep,
@@ -100,6 +101,9 @@ const receive = (message) => {
   }
   if (message.type == MESSAGE.sync && lockstep.active) {
     receivePrint(message);
+  }
+  if (message.type == MESSAGE.apart && lockstep.active) {
+    receiveApart(message);
   }
   if (message.type == MESSAGE.pong && Number.isFinite(message.ping)) {
     guest.ping = Math.round(performance.now() - message.ping);

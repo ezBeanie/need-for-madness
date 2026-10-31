@@ -17,6 +17,8 @@ export const MESSAGE = {
   keys: "keys",
   // a fingerprint of a game's race at a frame, to tell whether the races went apart
   sync: "sync",
+  // a game's race at the frame the fingerprints first differed at, to tell what differs
+  apart: "apart",
   // the host left the race
   end: "end",
   // the guest left the race

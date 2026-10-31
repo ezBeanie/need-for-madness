@@ -12,6 +12,7 @@ import { track } from "../race/track.js";
 import { saveRace } from "./raceState.js";
 import {
   receiveKeys,
+  receiveApart,
   receivePrint,
   startLockstep,
   stopLockstep,
@@ -60,6 +61,9 @@ const receive = (message) => {
   }
   if (message.type == MESSAGE.sync && host.racing) {
     receivePrint(message);
+  }
+  if (message.type == MESSAGE.apart && host.racing) {
+    receiveApart(message);
   }
   if (message.type == MESSAGE.ping && Number.isFinite(message.ping)) {
     link.send({ type: MESSAGE.pong, ping: message.ping });

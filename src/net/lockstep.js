@@ -12,7 +12,7 @@ import { physics } from "../race/physics.js";
 import { cutRaceTapeTo, raceTape } from "../race/raceTape.js";
 import { racers } from "../race/racers.js";
 import { keepRecording, restoreRecording } from "../race/recording.js";
-import { MESSAGE, ROLE, encode, link } from "./link.js";
+import { MESSAGE, ROLE, decode, encode, link } from "./link.js";
 import { restoreRace, saveRace, sharedRace } from "./raceState.js";
 
 // 35 ms for the keys to reach the other game before they drive
@@ -38,7 +38,8 @@ export const WAITING = {
 // before each of those frames; atFirstFrame: what starts the race alike in both games;
 // unsentPrints: the fingerprints of frames that ran on guessed keys, by frame, sent once
 // the guesses were right; ownPrints and otherPrints: the fingerprints by frame, until
-// compared; apartAt: the first frame the fingerprints differed at (-1 none)
+// compared; apartAt: the first frame the fingerprints differed at (-1 none), apartRace:
+// this game's race then, and differences: what differs in the other's (once it came)
 export const lockstep = {
   active: false,
   frame: 0,
@@ -54,6 +55,8 @@ export const lockstep = {
   ownPrints: new Map(),
   otherPrints: new Map(),
   apartAt: -1,
+  apartRace: null,
+  differences: [],
 };
 
 // the own car's keys as the player holds them, while the car drives with the frame's
@@ -84,6 +87,8 @@ export const startLockstep = (own, other, atFirstFrame) =>
     ownPrints: new Map(),
     otherPrints: new Map(),
     apartAt: -1,
+    apartRace: null,
+    differences: [],
   });
 
 export const stopLockstep = () => {
@@ -104,8 +109,7 @@ export const receiveKeys = ({ frame, keys }) => {
 };
 
 // FNV-1a over the race's every bit (encode keeps -0, NaN and the infinities apart)
-const fingerprint = () => {
-  const text = encode(sharedRace());
+const fingerprint = (text) => {
   let hash = 2166136261;
   for (let i = 0; i < text.length; i++) {
     hash = Math.imul(hash ^ text.charCodeAt(i), 16777619);
@@ -122,9 +126,43 @@ const compare = (frame) => {
   }
   lockstep.ownPrints.delete(frame);
   lockstep.otherPrints.delete(frame);
-  if (own != other && lockstep.apartAt < 0) {
+  if (own.print != other && lockstep.apartAt < 0) {
     lockstep.apartAt = frame;
+    lockstep.apartRace = own.race;
+    link.send({ type: MESSAGE.apart, frame, race: own.race });
     console.warn(`The races went apart at frame ${frame}`);
+  }
+};
+
+const MOST_DIFFERENCES = 20;
+
+// The paths of the values that differ between two races, with both values.
+export const differencesOf = (own, other, path = "", found = []) => {
+  if (found.length >= MOST_DIFFERENCES) {
+    return found;
+  }
+  if (own && other && typeof own == "object" && typeof other == "object") {
+    const keys = new Set([...Object.keys(own), ...Object.keys(other)]);
+    for (const key of keys) {
+      differencesOf(own[key], other[key], path ? `${path}.${key}` : key, found);
+    }
+  } else if (!Object.is(own, other)) {
+    found.push(`${path}: ${own} here, ${other} there`);
+  }
+  return found;
+};
+
+// The other game's race at the frame the races went apart (checked: another game sent
+// it): what differs is told, to find what computes apart.
+export const receiveApart = ({ frame, race }) => {
+  if (frame === lockstep.apartAt && typeof race == "string") {
+    lockstep.differences = differencesOf(
+      decode(lockstep.apartRace),
+      decode(race),
+    );
+    console.warn(
+      `At frame ${frame}, the races differ in:\n${lockstep.differences.join("\n")}`,
+    );
   }
 };
 
@@ -176,7 +214,8 @@ const firstGuessed = () => lockstep.guessed.keys().next().value ?? Infinity;
 
 const takePrint = (frame) => {
   if (frame % SYNC_EVERY == 0) {
-    lockstep.unsentPrints.set(frame, fingerprint());
+    const race = encode(sharedRace());
+    lockstep.unsentPrints.set(frame, { print: fingerprint(race), race });
   }
 };
 
@@ -191,11 +230,11 @@ const settle = () => {
       }
     }
   }
-  for (const [frame, print] of lockstep.unsentPrints) {
+  for (const [frame, own] of lockstep.unsentPrints) {
     if (frame < settled) {
       lockstep.unsentPrints.delete(frame);
-      lockstep.ownPrints.set(frame, print);
-      link.send({ type: MESSAGE.sync, frame, print });
+      lockstep.ownPrints.set(frame, own);
+      link.send({ type: MESSAGE.sync, frame, print: own.print });
       compare(frame);
     }
   }

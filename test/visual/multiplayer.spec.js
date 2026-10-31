@@ -184,7 +184,7 @@ test("a game waits for the other's keys, and says so", async ({ context }) => {
   expect(await drawnTexts(guestPage)).toContain("Waiting for the host...");
 });
 
-test("the games tell a race gone apart by its fingerprints, and say so", async ({
+test("the games tell a race gone apart by its fingerprints, say so, and tell what differs", async ({
   context,
 }) => {
   await recordDrawnTexts(context);
@@ -196,6 +196,10 @@ test("the games tell a race gone apart by its fingerprints, and say so", async (
   for (const { page } of both) {
     expect(await apartAt(page)).toBeGreaterThan(0);
     expect(await drawnTexts(page)).toContain("Out of sync!");
+    const differences = await page.evaluate(
+      () => window.gameState.lockstep.differences,
+    );
+    expect(differences.some((line) => line.startsWith("cars.3."))).toBe(true);
   }
 });
 
