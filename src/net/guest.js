@@ -90,7 +90,7 @@ const receive = (message) => {
     guest.start = message;
     // (the host's keys come on while the stage loads)
     const { state } = message;
-    startLockstep(message.car, 0, () => {
+    startLockstep(message.car, [0, message.car], () => {
       random.sim = seededRandom(0);
       random.wreck = seededRandom(0);
       restoreRace(state);

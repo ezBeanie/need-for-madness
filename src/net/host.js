@@ -122,7 +122,7 @@ export const startHostedRace = () => {
   random.sim = seededRandom(random.fx() * 2 ** 32);
   random.wreck = seededRandom(random.fx() * 2 ** 32);
   raceEvents.onautocorrect = 0;
-  startLockstep(game.player, GUEST_CAR, () =>
+  startLockstep(game.player, game.humans, () =>
     link.send({
       type: MESSAGE.start,
       stage: track.stage,
