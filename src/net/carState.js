@@ -4,9 +4,10 @@
 import { car, racers } from "../race/racers.js";
 
 // what the physics does not drive on from: the keys (sent apart), what is placed or drawn
-// every tick, and the chips flying off the car
+// every tick, the chips flying off the car, and which of a wreck's pixels burn next (a
+// race computed again quietly does not burn, see lockstep.js)
 const NOT_STATE = {
-  racer: ["u", "wheels", "shadow", "body", "carnchp"],
+  racer: ["u", "wheels", "shadow", "body", "carnchp", "bshft"],
   car: ["ctxl", "mat"],
 };
 // The car's matrix is, but for where it is drawn (relative to the camera, see
