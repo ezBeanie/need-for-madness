@@ -223,7 +223,7 @@ test("with the original's menus the car select and the stage select are its scre
   }
 });
 
-test("in the classic look the menus and the race HUD stay the game's own, the races' 3D world being the original's", async () => {
+test("in the classic look the menus and the race HUD stay the game's own, the 3D world and the menus' models being the original's", async () => {
   const classicVertices = (ctx, step, ticks) => {
     let vertices = 0;
     glCalls.listener = (name, args) => {
@@ -245,7 +245,8 @@ test("in the classic look the menus and the race HUD stay the game's own, the ra
     key(76, true);
     key(76, false);
     expect(ctx.look.current).toBe(ctx.LOOK.classic);
-    expect(classicVertices(ctx, step, 40)).toBe(0);
+    // the original's car or stage over the game's own backdrop, in the window's pixels
+    expect(classicVertices(ctx, step, 40)).toBeGreaterThan(100);
     expect(ctx.canvas3D.height).toBe(ctx.view.height);
   }
   const { ctx, step, key } = await startRace({ stage: 1, car: 5 });

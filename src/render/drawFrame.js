@@ -184,9 +184,10 @@ const drawWheeledCar = (type, parent, wheels, body, near) => {
   });
 };
 
+// classicFloor: where the classic menus' floor is, null over the game's own backdrop
 const drawShowcaseCar = (classicFloor = null) => {
   const type = game.carTypes[0];
-  if (classicMenus()) {
+  if (look.current == LOOK.classic) {
     drawClassicCar(carModels[type], type, classicFloor);
     return;
   }
@@ -325,17 +326,22 @@ const drawCarSelect = () => {
     dustSprite.texture = spriteTextures[i % 3];
     drawModel(dustSprite);
   });
-  startDepth();
-  drawModel(carShadows[game.carTypes[0]]);
+  // the classic car brings its own shadow and orders its polygons itself
+  if (look.current != LOOK.classic) {
+    startDepth();
+    drawModel(carShadows[game.carTypes[0]]);
+  }
   drawShowcaseCar();
 };
 
 // The stage up to its last path piece and its addons, without the walls.
 const drawStageSelect = () => {
   // the classic look's stage select has its pictures behind (see classic/stageSelect.js)
-  const classic = classicMenus();
-  if (!classic) {
+  if (!classicMenus()) {
     drawParticle(stageBackdrop);
+  }
+  const classic = look.current == LOOK.classic;
+  if (!classic) {
     startDepth();
   }
   if (stageSelect.hiddenTicks) {
@@ -362,6 +368,8 @@ const drawUnlockedCar = () => {
     return;
   }
   drawParticle(stageBackdrop);
-  startDepth();
+  if (look.current != LOOK.classic) {
+    startDepth();
+  }
   drawShowcaseCar();
 };
