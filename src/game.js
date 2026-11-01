@@ -113,7 +113,7 @@ function raceTick() {
   if (game.phase == PHASE.race) {
     if (lockstepWaits()) {
       waitedTicks++;
-      drawWaitingHud();
+      drawWaitingHud(waitedTicks == 1);
     } else {
       waitedTicks = 0;
       raceRan = true;
@@ -134,11 +134,10 @@ function raceTick() {
       }
     }
     drawNetNotice(
-      waitedTicks > WAIT_SHOWN_TICKS
-        ? waitingNotice()
-        : outOfSync()
-          ? OUT_OF_SYNC
-          : leftNotice(),
+      [
+        outOfSync() ? OUT_OF_SYNC : leftNotice(),
+        waitedTicks > WAIT_SHOWN_TICKS ? waitingNotice() : null,
+      ],
       link.role == ROLE.guest ? guest.ping : null,
     );
   }

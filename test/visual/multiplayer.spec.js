@@ -175,6 +175,14 @@ test("a game waits for the other's keys, and says so", async ({ context }) => {
   );
   expect(await frameOf(hostPage)).toBe(frame + ahead);
   expect(await drawnTexts(hostPage)).toContain("Waiting for player 2...");
+  // its HUD stands as drawn, not drawn over itself again tick by tick
+  const hud = () =>
+    hostPage.evaluate(() =>
+      document.querySelector("#canvas2D").toDataURL("image/png"),
+    );
+  const waiting = await hud();
+  await host.advance(20);
+  expect(await hud()).toBe(waiting);
   // the host pauses: the guest waits for it
   await host.tap("Escape");
   await host.advanceUntil(PHASE.paused);
