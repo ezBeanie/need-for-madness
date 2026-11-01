@@ -18,3 +18,12 @@ export const loadSetting = (name) => {
     return -1;
   }
 };
+
+// The stored text, or "" when nothing is stored.
+export const loadText = (name) => {
+  try {
+    return localStorage.getItem(name) ?? "";
+  } catch {
+    return "";
+  }
+};

@@ -21,6 +21,8 @@ export const PHASE = {
   switchScreen: 16,
   // the player winding back time during a race
   timeRewind: 18,
+  // the stage editor, over the game (see editor/stageEditor.js)
+  stageEditor: 19,
 };
 
 // the phases that show the race (live, replayed or rewinding)

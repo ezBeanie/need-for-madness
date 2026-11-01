@@ -56,6 +56,10 @@ import {
   placeMultiplayerButton,
 } from "./ui/multiplayerMenu.js";
 import { installOptionsMenu, placeOptionsButton } from "./ui/optionsMenu.js";
+import {
+  installStageEditor,
+  placeStageEditorButton,
+} from "./editor/stageEditor.js";
 import { raceEvents } from "./race/events.js";
 import { control } from "./race/ai.js";
 import { chipsfly, dustfly, expburn, sprksfly } from "./race/effects.js";
@@ -246,6 +250,7 @@ export function runTick() {
   }
   placeOptionsButton();
   placeMultiplayerButton();
+  placeStageEditorButton();
   interpolation.tick++;
 }
 
@@ -320,6 +325,7 @@ startHosting();
 startGuesting();
 installOptionsMenu();
 installMultiplayerMenu();
+installStageEditor();
 
 installPointer(canvas2D, {
   // a click or touch allows audio (see unlockAudio)
