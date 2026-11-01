@@ -67,6 +67,15 @@ src: url(data/verdana.ttf);
 #options .state { color: #01eaff; font-weight: bold; white-space: nowrap; }
 #options .key { color: rgba(160, 230, 255, 0.8); font-size: 12px; }
 .menu-dialog .close { justify-content: center; margin-top: 14px; }
+/* phones and tablets held upright: iOS lets no page keep itself sideways */
+#turnDevice { display: none; }
+@media (orientation: portrait) and (pointer: coarse) {
+  #turnDevice {
+    display: flex; position: fixed; inset: 0; z-index: 10; align-items: center;
+    justify-content: center; padding: 24px; background: #15190D; color: #ffffff;
+    font-family: Verdana, Arial, sans-serif; font-size: 20px; text-align: center;
+  }
+}
 </style>
 <script src="gl-matrix-min.js"></script>
 
@@ -83,6 +92,7 @@ src: url(data/verdana.ttf);
 </table>
 
 <canvas id="canvas3D" style="position: absolute; left: 0px; top: 0px; padding-left: 0; padding-right: 0; margin-right: auto; margin-left: auto; display: block; width: 1280px; height: 720px;" width=1280 height=720></canvas>
+<p id="turnDevice">Turn your device sideways to play.</p>
 <canvas id="canvas2D" style="position: absolute; left: 0px; top: 0px; padding-left: 0; padding-right: 0; margin-right: auto; margin-left: auto; display: block; width: 1280px; height: 720px;" width=1280 height=720></canvas>
 
 

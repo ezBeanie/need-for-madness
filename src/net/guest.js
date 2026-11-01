@@ -2,7 +2,12 @@
 // whole state the host sends, then every game computes it, each sending only its keys (see
 // lockstep.js and host.js). The guest drives its car in it as the player.
 
-import { pauseMenuMusic, playStageMusic } from "../audio/audio.js";
+import {
+  isEngineLoaded,
+  loadEngine,
+  pauseMenuMusic,
+  playStageMusic,
+} from "../audio/audio.js";
 import { random, seededRandom } from "../core/random.js";
 import { MAX_CARS, MODE, PHASE, game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
@@ -190,6 +195,10 @@ export const showHostedRace = () => {
   // (loading the stage made car 0 the player's again)
   game.player = guest.car;
   game.humans = players.map((_, car) => car);
+  // (the stage select loads it, which a guest does not go through)
+  if (!isEngineLoaded(game.carTypes[game.player])) {
+    loadEngine(game.carTypes[game.player]);
+  }
   playStageMusic(track.stage);
   circleTheField();
   menu.redraw = false;

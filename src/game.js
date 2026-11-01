@@ -16,6 +16,7 @@ import { interpolation } from "./render/interpolation.js";
 import { canvas3D, fitCanvas3D } from "./render/renderer.js";
 import { loadLook } from "./render/look.js";
 import { canvas2D, view } from "./ui/view.js";
+import { keepScreenOn } from "./ui/screenAwake.js";
 import { startProjection, turnView } from "./render/camera.js";
 import { moveCamera } from "./render/cameraMoves.js";
 import { render } from "./render/drawFrame.js";
@@ -322,10 +323,22 @@ installMultiplayerMenu();
 
 installPointer(canvas2D, {
   // a click or touch allows audio (see unlockAudio)
-  onRelease: () => unlockAudio(game.phase == PHASE.race),
+  onRelease: () => {
+    unlockAudio(game.phase == PHASE.race);
+    keepScreenOn();
+  },
   keepPressedWhileTouching: () => game.phase == PHASE.race,
 });
 installKeyboard(onKey);
+document.addEventListener("keydown", keepScreenOn);
+// (so too the buttons and dialogs over the game: a guest may join and wait for the race
+// without touching the game itself)
+document.addEventListener("click", (event) => {
+  if (event.target != canvas2D) {
+    unlockAudio(false);
+    keepScreenOn();
+  }
+});
 
 // A hidden tab is silent and gets its sound settings back when it shows again.
 let mutedBeforeHiding = { music: false, sound: false };
@@ -333,6 +346,7 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState == "visible") {
     audio.muteMusic = mutedBeforeHiding.music;
     audio.muteSound = mutedBeforeHiding.sound;
+    keepScreenOn();
   } else {
     mutedBeforeHiding = { music: audio.muteMusic, sound: audio.muteSound };
     audio.muteMusic = true;
