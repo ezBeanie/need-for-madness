@@ -10,7 +10,13 @@ import {
   pathType,
   valueOf,
 } from "../data/stageFormat.js";
-import { originalOf, stageFile } from "../data/stages.js";
+import {
+  CUSTOM_STAGE,
+  LAST_STAGE,
+  customStage,
+  originalOf,
+  stageFile,
+} from "../data/stages.js";
 import { setUpField } from "../race/field.js";
 import { effects } from "../race/effects.js";
 import { pieceModels, pieces, track } from "../race/track.js";
@@ -61,6 +67,12 @@ const WALL_SPACING = 480;
 
 export function loadStage() {
   stageLoad.progress = STAGE_LOAD.loading;
+  if (track.stage == CUSTOM_STAGE) {
+    readStage(customStage.text);
+    prepareStage();
+    stageLoad.progress = STAGE_LOAD.loaded;
+    return;
+  }
   const request = new XMLHttpRequest();
   request.open("GET", stageFile(track.stage), true);
   request.onreadystatechange = () => {
@@ -112,6 +124,8 @@ const readStage = (text) => {
   scene.light[2] = 0;
   bounds = null;
   track.tips = [];
+  customStage.level = 8;
+  customStage.music = 1;
   const original = originalOf(track.stage) != 0;
   if (original) {
     scene.colors.original = { commands: [], pathObjects: 0, bounds: {} };
@@ -170,6 +184,12 @@ const COMMANDS = {
   },
   nlaps: (e, v) => {
     track.nlaps = v("laps");
+  },
+  level: (e, v) => {
+    customStage.level = Math.min(Math.max(v("level"), 1), LAST_STAGE);
+  },
+  music: (e, v) => {
+    customStage.music = Math.min(Math.max(v("stage"), 1), LAST_STAGE);
   },
   addon: (e, v) => {
     track.addons = v("count");

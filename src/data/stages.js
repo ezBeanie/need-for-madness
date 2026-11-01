@@ -35,6 +35,15 @@ const SETS = [
 
 export const STAGE_COUNT = LAST_STAGE + 33;
 
+// A stage of the player's own (made in the stage editor), raced from its text: how hard its
+// opponents are and its music (one of this game's stages' tracks) its file says (see
+// loading/stageLoad.js).
+export const CUSTOM_STAGE = STAGE_COUNT + 1;
+export const customStage = { text: "", level: 8, music: 1 };
+
+// whether the stage is one of this game's own, not one of the original's or the player's
+export const ownStage = (stage) => stage <= LAST_STAGE;
+
 const setOf = (stage) => SETS.find((set) => set.stages.includes(stage));
 
 // The stage select's collections of stages: this game's own, then the original's sets.
@@ -73,11 +82,16 @@ export const stageNumber = (stage) => {
 
 // "Stage 3", "NFM1 Stage 3".
 export const stageLabel = (stage) =>
-  `${setOf(stage)?.prefix ?? ""}Stage ${stageNumber(stage)}`;
+  stage == CUSTOM_STAGE
+    ? "Custom Stage"
+    : `${setOf(stage)?.prefix ?? ""}Stage ${stageNumber(stage)}`;
 
 // How hard the stage's opponents are, as one of this game's stages: the original's
 // stages from easy to hard over the game's.
 export const levelOf = (stage) => {
+  if (stage == CUSTOM_STAGE) {
+    return customStage.level;
+  }
   const set = setOf(stage);
   if (!set) {
     return stage;
@@ -94,6 +108,9 @@ export const levelOf = (stage) => {
 // original's theirs (the classic look's files; NFM1's eleventh has a tune of its own, not
 // NFM2's party).
 export const musicOf = (stage) => {
+  if (stage == CUSTOM_STAGE) {
+    return { file: `stage${customStage.music}`, classic: false };
+  }
   const set = setOf(stage);
   if (!set) {
     return { file: `stage${stage}`, classic: false };

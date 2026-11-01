@@ -34,7 +34,7 @@ const menuMusic = {
   pendingPlay: false,
   firstPlay: true,
 };
-const stageMusic = { track: null, stage: 0, state: 0, pendingPlay: false };
+const stageMusic = { track: null, file: "", state: 0, pendingPlay: false };
 
 // The classic look plays the original's tracks (see tools/classic/music), which loop from
 // a point of their own: on the sound context, not as audio elements.
@@ -168,13 +168,13 @@ export const pauseMenuMusic = () => {
 // the stage's own track, the same in both looks
 export const playStageMusic = (stage) => {
   try {
-    if (stageMusic.stage != stage) {
+    const music = musicOf(stage);
+    if (stageMusic.file != music.file) {
       stageMusic.track?.pause();
-      const music = musicOf(stage);
       stageMusic.track = newTrack(music.file, music.classic);
       stageMusic.track.volume = 1;
       stageMusic.track.loop = true;
-      stageMusic.stage = stage;
+      stageMusic.file = music.file;
     } else {
       stageMusic.track.currentTime = 0;
     }

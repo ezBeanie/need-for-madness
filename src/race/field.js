@@ -1,6 +1,6 @@
 // The field of a race: the opponents for the stage and their places on the start grid.
 
-import { LAST_STAGE, levelOf, originalOf } from "../data/stages.js";
+import { LAST_STAGE, levelOf, ownStage } from "../data/stages.js";
 import { random } from "../core/random.js";
 import { MAX_CARS, RACE_SIZES, game } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
@@ -137,8 +137,8 @@ function chooseOpponents(stage) {
   }
   let randomUpTo = game.carCount;
   const boss = stageBoss(stage);
-  // (the original's stages unlock no car)
-  if (!originalOf(stage) && game.carTypes[0] != boss && stage != LAST_STAGE) {
+  // (the original's stages and the player's own unlock no car)
+  if (ownStage(stage) && game.carTypes[0] != boss && stage != LAST_STAGE) {
     game.carTypes[game.carCount - 1] = boss;
     randomUpTo = game.carCount - 1;
   }

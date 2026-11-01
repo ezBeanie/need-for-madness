@@ -12,6 +12,10 @@ const COMMANDS = {
   name: [["name", text]],
   tip: [["text", text]],
   nlaps: [["laps", int]],
+  // only in stages of the player's own: how hard the opponents are (as on this game's stage
+  // of that number) and which of this game's stages' music plays
+  level: [["level", int]],
+  music: [["stage", int]],
   addon: [["count", int]],
   distfog: [["distance", int]],
   lightswingX: [["angle", int]],
