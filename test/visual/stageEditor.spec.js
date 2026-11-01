@@ -98,3 +98,39 @@ test("stage editor: pieces placed from the palette join the start end to end", a
   await game.advance();
   expect(await page.isVisible("#stageEditorButton")).toBe(true);
 });
+
+test("stage editor: a test drive races the stage from the stage select, and the editor comes back after", async ({
+  page,
+}) => {
+  const stage = await (
+    await fetch(
+      "http://localhost:" +
+        (process.env.PLAYWRIGHT_PORT ?? 5181) +
+        "/data/stages/1.txt",
+    )
+  ).text();
+  const game = await openGame(page, {
+    storage: { carsel: "5", stageEditorDraft: stage },
+  });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance();
+  await page.click("#stageEditorButton");
+  await expect(page.locator("#editorProblems")).toContainText("Ready to race.");
+  await page.click("#editorTestDrive");
+  await game.advanceUntil(PHASE.stageSelect);
+  expect(
+    await page.evaluate(() => [
+      window.gameState.track.stage,
+      window.gameState.track.name,
+      window.gameState.track.n,
+    ]),
+  ).toEqual([51, "Introductory Stage", 22]);
+  // quit: the editor is back, as it was
+  await page.evaluate(() => {
+    window.gameState.game.phase = 1;
+  });
+  await game.advance();
+  expect(await game.phase()).toBe(PHASE.stageEditor);
+  expect(await page.isVisible("#stageEditor")).toBe(true);
+  await expect(page.locator("#editorName")).toHaveValue("Introductory Stage");
+});

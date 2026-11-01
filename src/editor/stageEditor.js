@@ -4,7 +4,14 @@
 // stage being edited is kept in the browser as it changes.
 
 import { PHASE, game } from "../core/state.js";
-import { LAST_STAGE, stageFile } from "../data/stages.js";
+import {
+  CUSTOM_STAGE,
+  LAST_STAGE,
+  customStage,
+  stageFile,
+} from "../data/stages.js";
+import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
+import { track } from "../race/track.js";
 import { fetchText } from "../render/models.js";
 import { loadText, saveSetting } from "../core/storage.js";
 import { menu } from "../screens/menuState.js";
@@ -65,6 +72,8 @@ const editor = {
   placing: null,
   // putting the path in order: each piece clicked follows the one clicked before
   ordering: null,
+  // the stage is being test driven: the editor comes back with the main menu
+  testing: false,
   // the map's middle (the stage file's units) and its pixels per unit
   view: { x: 0, z: 0, scale: 0.02 },
   undo: [],
@@ -635,6 +644,7 @@ const showState = () => {
   );
   element("editorRotate").disabled = !selected() && !editor.placing;
   element("editorDelete").disabled = !selected();
+  element("editorTestDrive").disabled = problemsOf(editor.stage).length > 0;
   element("editorUndo").disabled = editor.undo.length == 0;
   element("editorRedo").disabled = editor.redo.length == 0;
   const pieces = editor.stage.objects.length;
@@ -944,19 +954,25 @@ const copyLookOf = (stage) =>
 
 // --- opening and closing ---
 
+// Opens the editor on the stage kept in the browser, or back from a test drive as it was.
 const open = () => {
-  const draft = loadText(DRAFT);
-  editor.stage = readEditedStage(draft || NEW_STAGE);
-  editor.selected = -1;
+  const back = editor.testing;
+  editor.testing = false;
+  if (!back) {
+    editor.stage = readEditedStage(loadText(DRAFT) || NEW_STAGE);
+    editor.selected = -1;
+    editor.undo = [];
+    editor.redo = [];
+  }
   editor.placing = null;
   editor.ordering = null;
-  editor.undo = [];
-  editor.redo = [];
   game.phase = PHASE.stageEditor;
   draw2D ??= map.getContext("2d");
   buildPalette();
   dialog.showModal?.();
-  fitView();
+  if (!back) {
+    fitView();
+  }
   showName();
   showState();
   showSelected();
@@ -973,6 +989,19 @@ const open = () => {
 const close = () => {
   save();
   dialog.close?.();
+};
+
+// The stage raced as it is: the stage select shows it turning, PLAY races it.
+const testDrive = () => {
+  save();
+  customStage.text = writeEditedStage(editor.stage);
+  track.stage = CUSTOM_STAGE;
+  editor.testing = true;
+  dialog.close?.();
+  stageLoad.after = AFTER_LOAD.stageSelect;
+  stageLoad.progress = STAGE_LOAD.requested;
+  game.phase = PHASE.stageLoading;
+  menu.redraw = true;
 };
 
 const newStage = () => {
@@ -1063,10 +1092,13 @@ export const installStageEditor = () => {
       stopOrdering();
     }
   });
+  element("editorTestDrive").addEventListener("click", testDrive);
   dialog.addEventListener("close", () => {
     save();
-    game.phase = PHASE.mainMenu;
-    menu.redraw = true;
+    if (!editor.testing) {
+      game.phase = PHASE.mainMenu;
+      menu.redraw = true;
+    }
   });
   dialog.addEventListener("keydown", onKey);
   map.addEventListener("pointerdown", onPointerDown);
@@ -1084,8 +1116,13 @@ export const installStageEditor = () => {
   window.addEventListener("resize", drawMap);
 };
 
-// Every tick: the button in the main menu only.
+// Every tick: the button in the main menu only, and the editor back once a test drive
+// has come back to the main menu (a race ended or quit).
 export const placeStageEditorButton = () => {
+  if (editor.testing && game.phase == PHASE.mainMenu) {
+    menu.continuesToCarSelect = false;
+    open();
+  }
   const hidden = game.phase != PHASE.mainMenu;
   if (button.hidden != hidden) {
     button.hidden = hidden;
