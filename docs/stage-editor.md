@@ -101,3 +101,32 @@ Jeder Schritt ist für sich spielbar, getestet und committet.
 2. **Drehung:** nur 90°-Schritte.
 3. **Bedienung:** zuerst am Rechner mit Maus und Tastatur, Touch zum Verschieben und Zoomen.
    Die volle Bedienung am Handy kommt später.
+
+## Stand (2026-11-01)
+
+Die Schritte 1 bis 6 und die Replays aus Schritt 7 sind auf `main`:
+
+| Commit | Inhalt |
+|---|---|
+| `6e21f83` | eigene Strecken aus Text, `level()` und `music()` im Format |
+| `9f9aaf5` | Editor: Draufsicht, Palette, Teile setzen, verschieben, drehen, Einrasten |
+| `1c393c8` | Pfad ordnen, Art der Pfadpunkte, Höhen, Fix-Hoops, Prüfung |
+| `e78809f` | Einstellungen: Runden, Gegner, Musik, Aussehen |
+| `16e2e9b` | Probefahrt über die Streckenauswahl, danach zurück in den Editor |
+| `8f718a9` | mehrere eigene Strecken, Import (auch Originaldateien), Export, Sammlung "Own" |
+| `74aa13a` | Replays tragen den Text einer eigenen Strecke mit |
+
+Nummern: `VISITING_STAGE` (51) ist eine fremde Strecke aus einem Replay oder vom Host,
+ab `FIRST_OWN_STAGE` (52) folgen die eigenen. `raceStage(stage)` und `takeRaceStage(race)`
+in `src/data/stages.js` packen Nummer und Text für ein anderes Spiel ein und wieder aus.
+
+### Offen: Multiplayer
+
+Der Multiplayer-Zweig hat `src/net/host.js` und `src/net/guest.js` seit dem letzten Stand auf
+`main` umgebaut. Damit es dort keine Konflikte gibt, kommt der Rest von Schritt 7 nach dem
+Zusammenführen dazu. Dafür reichen drei kleine Änderungen:
+
+1. `host.js`: in der Startnachricht `...raceStage(track.stage)` statt `stage: track.stage`.
+2. `guest.js` `isStart`: `isIndex(stage, VISITING_STAGE + 1)` und für die 51 einen Text
+   (`typeof stageText == "string"`, mit einer Längengrenze).
+3. `guest.js` `loadHostedRace`: `track.stage = takeRaceStage(start)`.
