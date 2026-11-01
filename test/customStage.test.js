@@ -95,3 +95,41 @@ test("a stage file of the original game races as the player's own as it does as 
   // a file of this game's own stays as it is
   expect(fromOriginal(stageText(3))).toBe(stageText(3));
 });
+
+test("a replay of a stage of the player's own carries the stage, and plays on it in a game without it", async () => {
+  const raced = await customRace(stageText(3));
+  const { ctx } = raced;
+  for (let i = 0; i < 100; i++) {
+    raced.step();
+  }
+  // raced as one of the player's own stages
+  ctx.customStage.texts = ["name(Mine)", stageText(3)];
+  ctx.track.stage = ctx.FIRST_OWN_STAGE + 1;
+  const race = {
+    ...ctx.raceStage(ctx.track.stage),
+    name: ctx.track.name,
+    carTypes: ctx.game.carTypes.slice(0, ctx.game.carCount),
+    player: ctx.game.player,
+  };
+  expect(race.stage).toBe(ctx.VISITING_STAGE);
+  const file = await ctx.encodeReplay(race);
+
+  const { loadGame } = await import("./harness/loadGame.js");
+  const other = await loadGame({ seed: 1 });
+  other.stepUntil(
+    () => other.ctx.game.phase === other.ctx.PHASE.mainMenu,
+    400,
+    "main menu",
+  );
+  await other.ctx.openReplayFile(new Blob([file]));
+  other.stepUntil(
+    () => other.ctx.game.phase === other.ctx.PHASE.replay,
+    100,
+    "replay",
+  );
+  expect(other.ctx.track.stage).toBe(other.ctx.VISITING_STAGE);
+  expect(loaded(other.ctx)).toEqual(loaded(ctx));
+  // this game's stages go as their numbers
+  expect(ctx.raceStage(3)).toEqual({ stage: 3 });
+  expect(ctx.takeRaceStage({ stage: 3 })).toBe(3);
+});

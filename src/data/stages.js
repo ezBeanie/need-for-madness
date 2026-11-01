@@ -50,6 +50,22 @@ export const customText = (stage) =>
     ? customStage.visiting
     : (customStage.texts[stage - FIRST_OWN_STAGE] ?? "");
 
+// What a race takes of its stage to another game (in a replay file, to a guest): its
+// number, and the text of one made in the editor, which the other game may not have.
+export const raceStage = (stage) =>
+  isCustom(stage)
+    ? { stage: VISITING_STAGE, stageText: customText(stage) }
+    : { stage };
+
+// The stage of a race from another game: one made in the editor as the visiting stage.
+export const takeRaceStage = ({ stage, stageText }) => {
+  if (isCustom(stage)) {
+    customStage.visiting = typeof stageText == "string" ? stageText : "";
+    return VISITING_STAGE;
+  }
+  return stage;
+};
+
 const ownStages = () => range(FIRST_OWN_STAGE, customStage.texts.length);
 
 // whether the stage is one of this game's own, not one of the original's or the player's

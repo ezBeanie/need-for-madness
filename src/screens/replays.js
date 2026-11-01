@@ -7,7 +7,7 @@ import {
   stopStageMusic,
 } from "../audio/audio.js";
 import { PHASE, game } from "../core/state.js";
-import { stageLabel } from "../data/stages.js";
+import { raceStage, stageLabel, takeRaceStage } from "../data/stages.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
 import { field } from "../race/field.js";
 import { raceTape } from "../race/raceTape.js";
@@ -35,7 +35,7 @@ const fileName = () => {
 // Saves the race the viewer shows as a file, downloaded by the browser.
 export const saveReplay = async () => {
   const bytes = await encodeReplay({
-    stage: track.stage,
+    ...raceStage(track.stage),
     name: track.name,
     carTypes: game.carTypes.slice(0, game.carCount),
     player: game.player,
@@ -61,7 +61,7 @@ export const openReplayFile = async (file) => {
   }
   const { race, tape } = replay;
   opened = { tape, carType: game.carTypes[0], player: game.player };
-  track.stage = race.stage;
+  track.stage = takeRaceStage(race);
   game.player = race.player;
   field.replayCars = race.carTypes;
   pauseMenuMusic();
