@@ -224,6 +224,17 @@ test("racing together, the menu shows over the race, which goes on for the other
   await drawnTexts(hostPage);
   await advanceBoth(...both, 5);
   expect(await drawnTexts(hostPage)).not.toContain("x Leave Race");
+  // so too with a click on Resume (its button in the middle, the first below the notices),
+  // in the guest's game, whose HUD has a button of its own where the host's has none
+  await guest.tap("Escape");
+  await guestPage.mouse.move(640, 365);
+  await guestPage.mouse.down();
+  await guest.advance();
+  await guestPage.mouse.up();
+  await advanceBoth(...both, 2);
+  expect(
+    await guestPage.evaluate(() => window.gameState.pauseMenu.overRace),
+  ).toBe(false);
   // down to leaving it: the host is in the main menu, the guest races on without it
   await host.tap("Escape");
   await host.tap("ArrowDown");

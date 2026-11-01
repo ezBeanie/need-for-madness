@@ -52,10 +52,11 @@ const ENTRIES = [
   { text: "x Quit Game", width: 250 },
 ];
 
-// (the others need not wait for a replay or the instructions)
+// (the others need not wait for a replay or the instructions; the ids not the HUD's, which
+// is drawn before and would let go of the button pressed)
 const OVER_RACE_ENTRIES = [
-  { entry: RESUME, ...ENTRIES[RESUME] },
-  { entry: QUIT, text: "x Leave Race", width: 270 },
+  { entry: RESUME, id: 31, ...ENTRIES[RESUME] },
+  { entry: QUIT, id: 32, text: "x Leave Race", width: 270 },
 ];
 // below the HUD's notices about the others (see ui/hud.js drawNetNotice)
 const OVER_RACE_TOP = 330;
@@ -208,12 +209,12 @@ const chooseOverRace = (index) => {
 };
 
 // Returns whether the entry was clicked.
-const drawEntry = ({ text, width, withArrow }, index, y) => {
+const drawEntry = ({ id, text, width, withArrow }, index, y) => {
   const selected = pauseMenu.selected == index ? 1 : 0;
   const [faceTop, faceBottom, shadowTop, shadowBottom] =
     BUTTON_COLORS[selected];
   return drawButton({
-    id: index + 1,
+    id: id ?? index + 1,
     x: 640 * view.scaleX,
     y,
     width,
