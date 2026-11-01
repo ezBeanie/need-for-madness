@@ -35,33 +35,58 @@ const SETS = [
 
 export const STAGE_COUNT = LAST_STAGE + 33;
 
-// A stage of the player's own (made in the stage editor), raced from its text: how hard its
-// opponents are and its music (one of this game's stages' tracks) its file says (see
-// loading/stageLoad.js).
-export const CUSTOM_STAGE = STAGE_COUNT + 1;
-export const customStage = { text: "", level: 8, music: 1 };
+// Stages made in the stage editor, raced from their text: one a host or a replay brought
+// (visiting), then the player's own, as many as there are (see editor/stageEditor.js).
+// How hard their opponents are and their music (one of this game's stages' tracks) their
+// texts say (see loading/stageLoad.js).
+export const VISITING_STAGE = STAGE_COUNT + 1;
+export const FIRST_OWN_STAGE = STAGE_COUNT + 2;
+export const customStage = { visiting: "", texts: [], level: 8, music: 1 };
+
+export const isCustom = (stage) => stage >= VISITING_STAGE;
+
+export const customText = (stage) =>
+  stage == VISITING_STAGE
+    ? customStage.visiting
+    : (customStage.texts[stage - FIRST_OWN_STAGE] ?? "");
+
+const ownStages = () => range(FIRST_OWN_STAGE, customStage.texts.length);
 
 // whether the stage is one of this game's own, not one of the original's or the player's
 export const ownStage = (stage) => stage <= LAST_STAGE;
 
 const setOf = (stage) => SETS.find((set) => set.stages.includes(stage));
 
-// The stage select's collections of stages: this game's own, then the original's sets.
-export const COLLECTIONS = ["Modern", "NFM 1", "NFM 2", "NFM MP"];
+const OWN_COLLECTION = SETS.length + 1;
 
-export const collectionOf = (stage) => SETS.indexOf(setOf(stage)) + 1;
+// The stage select's collections of stages: this game's own, the original's sets, and
+// the player's own once there are some.
+export const collections = () => [
+  "Modern",
+  "NFM 1",
+  "NFM 2",
+  "NFM MP",
+  ...(customStage.texts.length ? ["Own"] : []),
+];
 
-// the first stage of one of the original's sets (collection 1 to 3)
-export const firstOfCollection = (collection) => SETS[collection - 1].stages[0];
+export const collectionOf = (stage) =>
+  stage >= FIRST_OWN_STAGE ? OWN_COLLECTION : SETS.indexOf(setOf(stage)) + 1;
+
+// the first stage of one of the original's sets or of the player's (collection 1 to 4)
+export const firstOfCollection = (collection) =>
+  collection == OWN_COLLECTION
+    ? FIRST_OWN_STAGE
+    : SETS[collection - 1].stages[0];
 
 // the stages in the order the stage select goes through them
 const ORDER = [range(1, LAST_STAGE), ...SETS.map((set) => set.stages)].flat();
+const order = () => [...ORDER, ...ownStages()];
 
 // The stage after this one in the stage select, 0 after the last.
-export const stageAfter = (stage) => ORDER[ORDER.indexOf(stage) + 1] ?? 0;
+export const stageAfter = (stage) => order()[order().indexOf(stage) + 1] ?? 0;
 
 // The stage before this one in the stage select, 0 before the first.
-export const stageBefore = (stage) => ORDER[ORDER.indexOf(stage) - 1] ?? 0;
+export const stageBefore = (stage) => order()[order().indexOf(stage) - 1] ?? 0;
 
 // The original's number of the stage, 0 for one of this game's own.
 export const originalOf = (stage) => {
@@ -76,20 +101,23 @@ export const stageFile = (stage) =>
 
 // The stage's number within its set (the original's stages counted within their game).
 export const stageNumber = (stage) => {
+  if (stage >= FIRST_OWN_STAGE) {
+    return stage - FIRST_OWN_STAGE + 1;
+  }
   const set = setOf(stage);
   return set ? set.stages.indexOf(stage) + 1 : stage;
 };
 
 // "Stage 3", "NFM1 Stage 3".
 export const stageLabel = (stage) =>
-  stage == CUSTOM_STAGE
+  stage == VISITING_STAGE
     ? "Custom Stage"
-    : `${setOf(stage)?.prefix ?? ""}Stage ${stageNumber(stage)}`;
+    : `${stage >= FIRST_OWN_STAGE ? "Own " : (setOf(stage)?.prefix ?? "")}Stage ${stageNumber(stage)}`;
 
 // How hard the stage's opponents are, as one of this game's stages: the original's
 // stages from easy to hard over the game's.
 export const levelOf = (stage) => {
-  if (stage == CUSTOM_STAGE) {
+  if (isCustom(stage)) {
     return customStage.level;
   }
   const set = setOf(stage);
@@ -108,7 +136,7 @@ export const levelOf = (stage) => {
 // original's theirs (the classic look's files; NFM1's eleventh has a tune of its own, not
 // NFM2's party).
 export const musicOf = (stage) => {
-  if (stage == CUSTOM_STAGE) {
+  if (isCustom(stage)) {
     return { file: `stage${customStage.music}`, classic: false };
   }
   const set = setOf(stage);

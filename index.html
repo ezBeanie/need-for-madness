@@ -137,6 +137,15 @@ src: url(data/verdana.ttf);
 #editorProblems .ready::before { content: "\2713  "; }
 #editorProblems li:not(.ready)::before { content: "\26A0  "; }
 #editorProblems button { width: 100%; text-align: left; border-radius: 10px; color: #ffd2c8; }
+#editorStages select { box-sizing: border-box; width: 100%; min-height: 44px; padding: 8px 14px; border: 1px solid rgba(1, 234, 255, 0.6); border-radius: 22px; background: rgba(0, 0, 0, 0.4); color: #ffffff; font: inherit; font-size: 15px; }
+#editorStages .row { display: flex; gap: 8px; }
+#editorStages .row button { width: auto; flex: none; justify-content: center; }
+#editorStageList { max-height: 40vh; overflow-y: auto; margin-bottom: 12px; }
+#editorStageList li { padding: 6px 0; border-bottom: 1px solid rgba(1, 234, 255, 0.2); }
+#editorStageList .name { display: block; margin-bottom: 4px; }
+#editorStages input[type="file"] { padding: 10px 14px; }
+#editorStages > button { margin-top: 8px; justify-content: center; }
+#editorStages select:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
 #editorSettings select { box-sizing: border-box; width: 100%; min-height: 44px; padding: 8px 14px; border: 1px solid rgba(1, 234, 255, 0.6); border-radius: 22px; background: rgba(0, 0, 0, 0.4); color: #ffffff; font: inherit; font-size: 15px; }
 #editorSettings .row { display: flex; gap: 8px; }
 #editorSettings .row button { width: auto; flex: none; justify-content: center; }
@@ -188,7 +197,7 @@ src: url(data/verdana.ttf);
 <h2 id="stageEditorTitle">Stage Editor</h2>
 <label class="label" for="editorName">Name</label>
 <input id="editorName" type="text" maxlength="40" autocomplete="off">
-<button type="button" id="editorNew">New</button>
+<button type="button" id="editorStagesButton" aria-haspopup="dialog" aria-controls="editorStages">Stages</button>
 <button type="button" id="editorUndo" aria-keyshortcuts="Control+Z">Undo</button>
 <button type="button" id="editorRedo" aria-keyshortcuts="Control+Y">Redo</button>
 <button type="button" id="editorRotate" aria-keyshortcuts="R">Turn</button>
@@ -206,6 +215,18 @@ src: url(data/verdana.ttf);
 <section aria-labelledby="editorProblemsTitle"><h3 id="editorProblemsTitle">Check</h3><ul id="editorProblems"></ul></section>
 </aside>
 <p id="editorStatus" aria-live="polite"></p>
+<dialog id="editorStages" class="menu-dialog" aria-labelledby="editorStagesTitle">
+<h2 id="editorStagesTitle">Your stages</h2>
+<p>They race in the stage select's Own collection.</p>
+<ul id="editorStageList"></ul>
+<button type="button" id="stagesNew">New stage</button>
+<label for="stagesFrom">Start from</label>
+<div class="row"><select id="stagesFrom"></select><button type="button" id="stagesCopyGame">Copy stage</button></div>
+<label for="stagesImport">Open a stage file (.txt, also the original game's)</label>
+<input id="stagesImport" type="file" accept=".txt,text/plain">
+<button type="button" id="stagesExport">Save this stage as a file</button>
+<form method="dialog"><button type="submit" class="close">Done</button></form>
+</dialog>
 <dialog id="editorSettings" class="menu-dialog" aria-labelledby="editorSettingsTitle">
 <h2 id="editorSettingsTitle">Stage settings</h2>
 <form id="editorSettingsForm" method="dialog">

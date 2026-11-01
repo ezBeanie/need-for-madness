@@ -2,8 +2,9 @@ import { expect, test } from "@playwright/test";
 import { openGame } from "./driver.js";
 import { PHASE } from "../../src/core/state.js";
 
+// the stage being edited, the first of the player's
 const draft = (page) =>
-  page.evaluate(() => localStorage.getItem("stageEditorDraft"));
+  page.evaluate(() => JSON.parse(localStorage.getItem("myStages"))[0]);
 
 // the pieces set, as the stage file has them
 const pieces = async (page) =>
@@ -124,7 +125,7 @@ test("stage editor: a test drive races the stage from the stage select, and the 
       window.gameState.track.name,
       window.gameState.track.n,
     ]),
-  ).toEqual([51, "Introductory Stage", 22]);
+  ).toEqual([52, "Introductory Stage", 22]);
   // quit: the editor is back, as it was
   await page.evaluate(() => {
     window.gameState.game.phase = 1;
@@ -133,4 +134,48 @@ test("stage editor: a test drive races the stage from the stage select, and the 
   expect(await game.phase()).toBe(PHASE.stageEditor);
   expect(await page.isVisible("#stageEditor")).toBe(true);
   await expect(page.locator("#editorName")).toHaveValue("Introductory Stage");
+});
+
+test("stage editor: the player's stages are made, copied from the game's, opened from files and deleted", async ({
+  page,
+}) => {
+  const game = await openGame(page, { storage: { carsel: "5" } });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance();
+  await page.click("#stageEditorButton");
+  const stages = () =>
+    page.evaluate(() => JSON.parse(localStorage.getItem("myStages")));
+  const names = async () =>
+    (await stages()).map((text) => text.match(/name\((.*)\)/)?.[1]);
+  await page.click("#editorStagesButton");
+  await page.click("#stagesNew");
+  await page.selectOption("#stagesFrom", "3");
+  await page.click("#stagesCopyGame");
+  await expect(page.locator("#editorStageList li")).toHaveCount(3);
+  expect(await names()).toEqual([
+    "My Stage",
+    "My Stage",
+    "Wrong Side of the Law",
+  ]);
+  // the original's multiplayer stage with the net, from its file
+  await page.setInputFiles(
+    "#stagesImport",
+    new URL("../../public/data/classic/stages/29.txt", import.meta.url)
+      .pathname,
+  );
+  await expect(page.locator("#editorStageList li")).toHaveCount(4);
+  await expect(page.locator("#editorName")).toHaveValue(/./);
+  expect((await stages())[3]).toContain("set(76,");
+  await expect.soft(page).toHaveScreenshot("stage-editor-stages.png");
+  // deleted after asking
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.click(
+    '#editorStageList button[aria-label="Delete My Stage"] >> nth=0',
+  );
+  await expect(page.locator("#editorStageList li")).toHaveCount(3);
+  expect(await names()).toEqual([
+    "My Stage",
+    "Wrong Side of the Law",
+    (await names())[2],
+  ]);
 });

@@ -3,7 +3,9 @@ import { expect, test } from "vitest";
 import { makePile, pileColor } from "../src/data/pile.js";
 import { parseStage } from "../src/data/stageFormat.js";
 import {
-  COLLECTIONS,
+  FIRST_OWN_STAGE,
+  collections,
+  customStage,
   LAST_STAGE,
   collectionOf,
   firstOfCollection,
@@ -51,11 +53,29 @@ test("NFM1's eleventh stage is the original's 27, after its tenth and before NFM
 });
 
 test("the stage select offers this game's stages, NFM1's, NFM2's and the multiplayer stages as collections", () => {
-  expect(COLLECTIONS).toHaveLength(4);
+  expect(collections()).toHaveLength(4);
   expect([1, 17, 18, 27, 28, 44, 46, 50].map(collectionOf)).toEqual([
     0, 0, 1, 1, 2, 2, 3, 3,
   ]);
   expect([1, 2, 3].map(firstOfCollection)).toEqual([18, 28, 46]);
+});
+
+test("the player's own stages come after all others, in a collection of their own once there are some", () => {
+  customStage.texts = ["name(A)", "name(B)"];
+  expect(collections()).toEqual(["Modern", "NFM 1", "NFM 2", "NFM MP", "Own"]);
+  expect(FIRST_OWN_STAGE).toBe(STAGE_COUNT + 2);
+  expect([FIRST_OWN_STAGE, FIRST_OWN_STAGE + 1].map(collectionOf)).toEqual([
+    4, 4,
+  ]);
+  expect(firstOfCollection(4)).toBe(FIRST_OWN_STAGE);
+  expect(stageAfter(50)).toBe(FIRST_OWN_STAGE);
+  expect(stageAfter(FIRST_OWN_STAGE)).toBe(FIRST_OWN_STAGE + 1);
+  expect(stageAfter(FIRST_OWN_STAGE + 1)).toBe(0);
+  expect(stageBefore(FIRST_OWN_STAGE)).toBe(50);
+  expect(stageLabel(FIRST_OWN_STAGE + 1)).toBe("Own Stage 2");
+  expect(originalOf(FIRST_OWN_STAGE)).toBe(0);
+  customStage.texts = [];
+  expect(stageAfter(50)).toBe(0);
 });
 
 test("the original's multiplayer stages 28 to 32 come last, with their own music", () => {

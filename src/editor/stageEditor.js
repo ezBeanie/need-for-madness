@@ -5,7 +5,7 @@
 
 import { PHASE, game } from "../core/state.js";
 import {
-  CUSTOM_STAGE,
+  FIRST_OWN_STAGE,
   LAST_STAGE,
   customStage,
   stageFile,
@@ -13,7 +13,7 @@ import {
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
 import { track } from "../race/track.js";
 import { fetchText } from "../render/models.js";
-import { loadText, saveSetting } from "../core/storage.js";
+import { loadSetting, loadText, saveSetting } from "../core/storage.js";
 import { menu } from "../screens/menuState.js";
 import { loadShapes, shapes } from "./pieceShapes.js";
 import {
@@ -22,8 +22,10 @@ import {
   PIECE_GROUPS,
   boxOf,
   copyLook,
+  fromOriginal,
   isPathObject,
   moveAfter,
+  nameOf,
   newObject,
   objectAt,
   pieceName,
@@ -46,6 +48,10 @@ const map = element("editorMap");
 // (asked for once the editor first opens)
 let draw2D = null;
 
+// the player's stages (their texts, as a list), and which of them the editor last had
+const STAGES = "myStages";
+const OPEN = "myStageOpen";
+// (before there was a list, the editor kept the one stage it edited)
 const DRAFT = "stageEditorDraft";
 
 const NEW_STAGE = `name(My Stage)
@@ -72,6 +78,8 @@ const editor = {
   placing: null,
   // putting the path in order: each piece clicked follows the one clicked before
   ordering: null,
+  // which of the player's stages (customStage.texts) is being edited
+  current: 0,
   // the stage is being test driven: the editor comes back with the main menu
   testing: false,
   // the map's middle (the stage file's units) and its pixels per unit
@@ -86,7 +94,50 @@ let drag = null;
 
 // --- the stage, its changes and undoing them ---
 
-const save = () => saveSetting(DRAFT, writeEditedStage(editor.stage));
+const saveStages = () => {
+  saveSetting(STAGES, JSON.stringify(customStage.texts));
+  saveSetting(OPEN, editor.current);
+};
+
+const save = () => {
+  customStage.texts[editor.current] = writeEditedStage(editor.stage);
+  saveStages();
+};
+
+// The player's stages from the browser, for the editor and the stage select.
+const loadStages = () => {
+  try {
+    const texts = JSON.parse(loadText(STAGES) || "[]");
+    customStage.texts = Array.isArray(texts)
+      ? texts.filter((text) => typeof text == "string")
+      : [];
+  } catch {
+    customStage.texts = [];
+  }
+  const draft = loadText(DRAFT);
+  if (customStage.texts.length == 0 && draft) {
+    customStage.texts = [draft];
+  }
+};
+
+// Edits another of the player's stages, from scratch.
+const edit = (index) => {
+  editor.current = index;
+  editor.stage = readEditedStage(customStage.texts[index]);
+  editor.selected = -1;
+  editor.undo = [];
+  editor.redo = [];
+  saveStages();
+  fitView();
+  changed();
+};
+
+// A stage added to the player's, and edited.
+const addStage = (text) => {
+  customStage.texts.push(text);
+  edit(customStage.texts.length - 1);
+  showStages();
+};
 
 // Keeps the stage as it is before a change, for undo.
 const remember = () => {
@@ -925,7 +976,12 @@ const showSettings = () => {
 };
 
 const fillStageChoices = () => {
-  for (const id of ["settingLevel", "settingMusic", "settingLookFrom"]) {
+  for (const id of [
+    "settingLevel",
+    "settingMusic",
+    "settingLookFrom",
+    "stagesFrom",
+  ]) {
     const select = element(id);
     if (select.childElementCount > 0) {
       continue;
@@ -954,12 +1010,17 @@ const copyLookOf = (stage) =>
 
 // --- opening and closing ---
 
-// Opens the editor on the stage kept in the browser, or back from a test drive as it was.
+// Opens the editor on the stage it last had, or back from a test drive as it was.
 const open = () => {
   const back = editor.testing;
   editor.testing = false;
   if (!back) {
-    editor.stage = readEditedStage(loadText(DRAFT) || NEW_STAGE);
+    if (customStage.texts.length == 0) {
+      customStage.texts.push(NEW_STAGE);
+    }
+    const last = loadSetting(OPEN);
+    editor.current = last >= 0 && last < customStage.texts.length ? last : 0;
+    editor.stage = readEditedStage(customStage.texts[editor.current]);
     editor.selected = -1;
     editor.undo = [];
     editor.redo = [];
@@ -994,8 +1055,7 @@ const close = () => {
 // The stage raced as it is: the stage select shows it turning, PLAY races it.
 const testDrive = () => {
   save();
-  customStage.text = writeEditedStage(editor.stage);
-  track.stage = CUSTOM_STAGE;
+  track.stage = FIRST_OWN_STAGE + editor.current;
   editor.testing = true;
   dialog.close?.();
   stageLoad.after = AFTER_LOAD.stageSelect;
@@ -1004,12 +1064,74 @@ const testDrive = () => {
   menu.redraw = true;
 };
 
-const newStage = () => {
-  remember();
-  editor.stage = readEditedStage(NEW_STAGE);
-  editor.selected = -1;
-  fitView();
-  changed();
+// --- the player's stages ---
+
+const stagesDialog = element("editorStages");
+
+const showStages = () => {
+  const list = element("editorStageList");
+  list.replaceChildren();
+  customStage.texts.forEach((text, index) => {
+    const item = field("li");
+    const name = field("span", {
+      className: "name",
+      textContent: nameOf(text) + (index == editor.current ? " (editing)" : ""),
+    });
+    const row = field("div", { className: "row" });
+    const actions = [
+      ["Edit", () => edit(index), index == editor.current],
+      ["Copy", () => addStage(text)],
+      ["Delete", () => deleteStage(index)],
+    ];
+    for (const [label, act, disabled] of actions) {
+      const go = field("button", { type: "button", textContent: label });
+      go.setAttribute("aria-label", `${label} ${nameOf(text)}`);
+      go.disabled = !!disabled;
+      go.addEventListener("click", act);
+      row.append(go);
+    }
+    item.append(name, row);
+    list.append(item);
+  });
+};
+
+const deleteStage = (index) => {
+  if (!window.confirm(`Delete "${nameOf(customStage.texts[index])}"?`)) {
+    return;
+  }
+  customStage.texts.splice(index, 1);
+  if (customStage.texts.length == 0) {
+    customStage.texts.push(NEW_STAGE);
+  }
+  edit(Math.min(editor.current, customStage.texts.length - 1));
+  showStages();
+};
+
+const openStages = () => {
+  fillStageChoices();
+  showStages();
+  stagesDialog.showModal?.();
+};
+
+const importStage = (file) => {
+  file
+    .text()
+    .then((text) =>
+      addStage(writeEditedStage(readEditedStage(fromOriginal(text)))),
+    );
+};
+
+const exportStage = () => {
+  save();
+  const name = nameOf(customStage.texts[editor.current]);
+  const link = field("a", {
+    href: URL.createObjectURL(
+      new Blob([customStage.texts[editor.current]], { type: "text/plain" }),
+    ),
+    download: `${name.replace(/[^\w -]+/g, "").trim() || "stage"}.txt`,
+  });
+  link.click();
+  URL.revokeObjectURL(link.href);
 };
 
 const onKey = (event) => {
@@ -1047,7 +1169,20 @@ const onKey = (event) => {
 export const installStageEditor = () => {
   button.addEventListener("click", open);
   element("editorClose").addEventListener("click", close);
-  element("editorNew").addEventListener("click", newStage);
+  loadStages();
+  element("editorStagesButton").addEventListener("click", openStages);
+  element("stagesNew").addEventListener("click", () => addStage(NEW_STAGE));
+  element("stagesCopyGame").addEventListener("click", () =>
+    fetchText(stageFile(Number(element("stagesFrom").value)), addStage),
+  );
+  element("stagesImport").addEventListener("change", (event) => {
+    const [file] = event.target.files;
+    if (file) {
+      importStage(file);
+    }
+    event.target.value = "";
+  });
+  element("stagesExport").addEventListener("click", exportStage);
   element("editorUndo").addEventListener("click", () =>
     undoOrRedo(editor.undo, editor.redo),
   );

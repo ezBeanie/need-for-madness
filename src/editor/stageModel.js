@@ -550,3 +550,46 @@ export const copyLook = (stage, text) => {
     ),
   ];
 };
+
+// --- the original's stages ---
+
+// what only the original's stage files have
+const ORIGINAL_ONLY = [
+  "texture",
+  "polys",
+  "mountains",
+  "density",
+  "fadefrom",
+  "lightson",
+];
+const ORIGINAL_NET = 51;
+const NET = 76;
+
+// A stage file of the original game (Need for Madness 1 or 2, or one made with its stage
+// maker) as this game reads its own stages: the net its own piece, the original's 0 to 10
+// of cloudiness one of this game's three skies (see loading/stageLoad.js). Any other text
+// stays as it is.
+export const fromOriginal = (text) => {
+  const entries = parseStage(text);
+  if (!entries.some((entry) => ORIGINAL_ONLY.includes(entry.command))) {
+    return text;
+  }
+  return writeStage(
+    entries.map((entry) => {
+      if (
+        entry.piece == ORIGINAL_NET &&
+        ["set", "chk"].includes(entry.command)
+      ) {
+        return { ...entry, piece: NET };
+      }
+      if (entry.command == "clouds" && entry.type !== undefined) {
+        return { ...entry, type: Math.min(2, Math.round(entry.type / 4)) };
+      }
+      return entry;
+    }),
+  );
+};
+
+// The stage's name as its text says, for lists.
+export const nameOf = (text) =>
+  parseStage(text).find((entry) => entry.command == "name")?.name || "Unnamed";

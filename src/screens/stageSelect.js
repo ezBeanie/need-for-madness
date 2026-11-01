@@ -2,11 +2,11 @@
 // jagged border with the stage's name and buttons. Also the screen while a stage loads.
 
 import {
-  COLLECTIONS,
+  collections,
   LAST_STAGE,
   collectionOf,
   firstOfCollection,
-  originalOf,
+  ownStage,
   stageAfter,
   stageBefore,
   stageLabel,
@@ -346,7 +346,7 @@ const drawClassic = () => {
     buttons.push(["switch", " Play Switch ", 480, 392]);
   }
   let x = 75;
-  COLLECTIONS.forEach((label, collection) => {
+  collections().forEach((label, collection) => {
     const current = collection == collectionOf(track.stage);
     const text = current ? ` > ${label} < ` : ` ${label} `;
     buttons.push([collection, text, x, 64]);
@@ -526,7 +526,7 @@ const showStage = (stage) => {
 
 // The next stage; after the last of this game's stages won, the original's first.
 const showNextStage = () => {
-  if (originalOf(track.stage)) {
+  if (!ownStage(track.stage)) {
     showStage(stageAfter(track.stage));
   } else if (track.stage < game.unlocked) {
     showStage(track.stage + 1);
@@ -561,7 +561,7 @@ const browseCollections = () => {
   const input = racers[0].u;
   const step = input.down ? 1 : input.up ? -1 : 0;
   if (step) {
-    const count = COLLECTIONS.length;
+    const count = collections().length;
     showCollection((collectionOf(track.stage) + step + count) % count);
   }
   input.up = false;
@@ -678,13 +678,13 @@ const drawControls = (hue) => {
 
 // a tab for each collection under the stage's name, the current one bright
 const drawCollectionTabs = (colors) => {
-  COLLECTIONS.forEach((label, collection) => {
+  collections().forEach((label, collection) => {
     const current = collection == collectionOf(track.stage);
     if (
       drawButton({
         id: 12 + collection,
         x:
-          (640 + (collection - (COLLECTIONS.length - 1) / 2) * 170) *
+          (640 + (collection - (collections().length - 1) / 2) * 170) *
           view.scaleX,
         y: 245 * view.scaleY,
         width: 150,

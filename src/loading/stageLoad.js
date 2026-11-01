@@ -11,9 +11,10 @@ import {
   valueOf,
 } from "../data/stageFormat.js";
 import {
-  CUSTOM_STAGE,
   LAST_STAGE,
   customStage,
+  customText,
+  isCustom,
   originalOf,
   stageFile,
 } from "../data/stages.js";
@@ -67,8 +68,8 @@ const WALL_SPACING = 480;
 
 export function loadStage() {
   stageLoad.progress = STAGE_LOAD.loading;
-  if (track.stage == CUSTOM_STAGE) {
-    readStage(customStage.text);
+  if (isCustom(track.stage)) {
+    readStage(customText(track.stage));
     prepareStage();
     stageLoad.progress = STAGE_LOAD.loaded;
     return;
