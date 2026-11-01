@@ -284,6 +284,13 @@ export const shapeOf = (parsed) => {
   return { extent, heights };
 };
 
+// A rotation turned further, as the stage files have them: -90 to 180 (the game takes
+// only 90 and -90 for sideways, see measure() in loading/stageLoad.js).
+export const turned = (rotation, degrees) => {
+  const turn = ((((rotation ?? 0) + degrees) % 360) + 360) % 360;
+  return turn > 180 ? turn - 360 : turn;
+};
+
 const turnOf = (rotation) => (rotation * Math.PI) / 180;
 
 // A point of the object's model (as its file has it) on the map (the stage file's units):
@@ -370,13 +377,14 @@ export const endsOf = (object) => {
 };
 
 // Where the object goes to join another's end within reach: one of its ends on that
-// end, facing it. Returns the object's new x and z, or null.
+// end, facing it. Returns the object's new x and z, the other object and whether it was
+// the other's front (or a turn's side) it joined, or null.
 export const snapToEnds = (object, others, reach) => {
   let best = null;
   let bestDistance = reach;
   for (const end of endsOf(object)) {
     for (const other of others) {
-      for (const otherEnd of endsOf(other)) {
+      for (const [atFront, otherEnd] of endsOf(other).entries()) {
         // facing each other
         if (end.outX * otherEnd.outX + end.outZ * otherEnd.outZ > -0.99) {
           continue;
@@ -387,10 +395,121 @@ export const snapToEnds = (object, others, reach) => {
           best = {
             x: object.x + otherEnd.x - end.x,
             z: object.z + otherEnd.z - end.z,
+            other,
+            atFront: atFront == 1,
           };
         }
       }
     }
   }
   return best;
+};
+
+// --- the path ---
+
+// The kinds of path point a piece can be (its suffix in the stage file) and what the
+// cars of the AI make of them.
+export const PATH_KINDS = [
+  ["", "Not on the path"],
+  ["p", "Path point"],
+  ["pt", "Corner the AI may cut"],
+  ["pr", "Ramp the AI drives straight at"],
+  ["po", "Path point the AI may leave out"],
+  ["ph", "Halfpipe the AI drives back over"],
+];
+
+const atStart = (object) => [47, 48].includes(object.piece);
+
+// Where a new object goes in the file, and so on the path: a piece joined to another's
+// front right after it, to its back right before it; a checkpoint right after the piece
+// it stands on; anything else after everything.
+export const placeInOrder = (objects, object, joined) => {
+  let index = objects.length;
+  if (joined && isPathObject(object)) {
+    const other = objects.indexOf(joined.other);
+    index = joined.atFront ? other + 1 : other;
+  } else if (object.command == "chk") {
+    const under = objects.findLastIndex(
+      (o) => o.command == "set" && isPathObject(o) && isUnder(o, object),
+    );
+    if (under >= 0) {
+      index = under + 1;
+    }
+  }
+  objects.splice(index, 0, object);
+  return index;
+};
+
+const isUnder = (piece, object) => {
+  const box = boxOf(piece);
+  return (
+    object.x >= box.left &&
+    object.x <= box.right &&
+    object.z >= box.bottom &&
+    object.z <= box.top
+  );
+};
+
+// Moves the object to right after another in the file (to the front for -1); returns
+// where it is now.
+export const moveAfter = (objects, index, after) => {
+  const [object] = objects.splice(index, 1);
+  const target = after < 0 ? 0 : after < index ? after + 1 : after;
+  objects.splice(target, 0, object);
+  return target;
+};
+
+// Moves a path object a step earlier (-1) or later (1) along the path; returns where it
+// is now.
+export const stepAlongPath = (objects, index, step) => {
+  const onPath = objects
+    .map((object, i) => (isPathObject(object) ? i : -1))
+    .filter((i) => i >= 0);
+  const k = onPath.indexOf(index);
+  const other = onPath[k + step];
+  if (k < 0 || other === undefined) {
+    return index;
+  }
+  [objects[index], objects[other]] = [objects[other], objects[index]];
+  return other;
+};
+
+// What keeps the stage from racing well, each with the object it is about (or -1).
+export const problemsOf = ({ objects }) => {
+  const problems = [];
+  const path = objects
+    .map((object, index) => ({ object, index }))
+    .filter(({ object }) => isPathObject(object) && object.command != "fix");
+  // (the cars line up at the middle of the map, driving up)
+  if (
+    objectAt(
+      objects.filter((o) => o.command == "set"),
+      0,
+      0,
+    ) < 0
+  ) {
+    problems.push({
+      text: "No road under the start grid in the middle of the map.",
+      index: -1,
+    });
+  }
+  if (path.length > 0 && !atStart(path[0].object)) {
+    problems.push({
+      text: "The path should begin on a start piece.",
+      index: path[0].index,
+    });
+  }
+  if (!objects.some((object) => object.command == "chk")) {
+    problems.push({
+      text: "A lap needs at least one checkpoint.",
+      index: -1,
+    });
+  }
+  if (path.length < 3) {
+    problems.push({
+      text: "The path needs at least three points to go round.",
+      index: -1,
+    });
+  }
+  return problems;
 };

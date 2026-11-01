@@ -9,14 +9,20 @@ import { menu } from "../screens/menuState.js";
 import { loadShapes, shapes } from "./pieceShapes.js";
 import {
   HEIGHTS,
+  PATH_KINDS,
   PIECE_GROUPS,
   boxOf,
   isPathObject,
+  moveAfter,
   newObject,
   objectAt,
   pieceName,
+  placeInOrder,
+  problemsOf,
   readEditedStage,
   snapToEnds,
+  stepAlongPath,
+  turned,
   wallsAround,
   writeEditedStage,
 } from "./stageModel.js";
@@ -52,6 +58,8 @@ const editor = {
   selected: -1,
   // the piece the palette picked, placed where clicked until Escape
   placing: null,
+  // putting the path in order: each piece clicked follows the one clicked before
+  ordering: null,
   // the map's middle (the stage file's units) and its pixels per unit
   view: { x: 0, z: 0, scale: 0.02 },
   undo: [],
@@ -77,6 +85,7 @@ const changed = () => {
   save();
   showName();
   showState();
+  showSelected();
   drawMap();
 };
 
@@ -104,7 +113,7 @@ const selected = () => editor.stage.objects[editor.selected];
 
 const rotateSelected = (degrees) => {
   if (editor.placing) {
-    editor.placing.rotation = (editor.placing.rotation + degrees) % 360;
+    editor.placing.rotation = turned(editor.placing.rotation, degrees);
     drawMap();
     return;
   }
@@ -112,7 +121,7 @@ const rotateSelected = (degrees) => {
     return;
   }
   remember();
-  selected().rotation = ((selected().rotation ?? 0) + degrees) % 360;
+  selected().rotation = turned(selected().rotation, degrees);
   changed();
 };
 
@@ -296,6 +305,21 @@ const drawCheckpointNumbers = () => {
   }
 };
 
+// The cars line up at the middle of the map, driving up: three rows of their fronts.
+const drawStartGrid = () => {
+  const k = editor.view.scale;
+  draw2D.fillStyle = "rgba(255, 255, 255, 0.85)";
+  for (let i = 0; i < 7; i++) {
+    const at = toScreen([0, -350, 350][i % 3], -Math.ceil(i / 3) * 700 + 400);
+    const size = Math.max(3, 150 * k);
+    draw2D.beginPath();
+    draw2D.moveTo(at.x, at.y - size);
+    draw2D.lineTo(at.x + size * 0.7, at.y + size);
+    draw2D.lineTo(at.x - size * 0.7, at.y + size);
+    draw2D.fill();
+  }
+};
+
 const outline = (object, color) => {
   const box = boxOf(object);
   const corner = toScreen(box.left, box.top);
@@ -327,6 +351,7 @@ export const drawMap = () => {
   drawGrid();
   drawWalls();
   editor.stage.objects.forEach((object) => drawObject(object));
+  drawStartGrid();
   drawPath();
   drawCheckpointNumbers();
   if (selected()) {
@@ -381,7 +406,7 @@ const pan = (dx, dy) => {
 };
 
 // Where the object goes near the point: joined to another's end if one is close,
-// otherwise on the grid.
+// otherwise on the grid. Returns what it joined (see snapToEnds) or null.
 const placeNear = (object, x, z, others) => {
   object.x = x;
   object.z = z;
@@ -393,6 +418,7 @@ const placeNear = (object, x, z, others) => {
     object.x = Math.round(x / GRID) * GRID;
     object.z = Math.round(z / GRID) * GRID;
   }
+  return joined;
 };
 
 // --- what the pointer does ---
@@ -416,14 +442,22 @@ const onPointerDown = (event) => {
     const object = editor.placing.at;
     if (object) {
       remember();
-      editor.stage.objects.push({ ...object });
-      editor.selected = editor.stage.objects.length - 1;
+      editor.selected = placeInOrder(
+        editor.stage.objects,
+        { ...object },
+        editor.placing.joined,
+      );
       changed();
     }
     return;
   }
   const index = objectAt(editor.stage.objects, stageAt.x, stageAt.z);
+  if (editor.ordering && index >= 0) {
+    orderNext(index);
+    return;
+  }
   editor.selected = index;
+  showSelected();
   if (index >= 0 && event.button == 0) {
     const object = editor.stage.objects[index];
     drag = {
@@ -465,7 +499,12 @@ const onPointerMove = (event) => {
       0,
       editor.placing.rotation,
     );
-    placeNear(object, stageAt.x, stageAt.z, editor.stage.objects);
+    editor.placing.joined = placeNear(
+      object,
+      stageAt.x,
+      stageAt.z,
+      editor.stage.objects,
+    );
     editor.placing.at = object;
     drawMap();
     return;
@@ -506,9 +545,11 @@ const onWheel = (event) => {
 // --- the palette ---
 
 const startPlacing = (piece) => {
-  editor.placing = { piece, rotation: 0, at: null };
+  editor.placing = { piece, rotation: 0, at: null, joined: null };
+  editor.ordering = null;
   editor.selected = -1;
   showState();
+  showSelected();
   map.focus();
 };
 
@@ -583,19 +624,225 @@ const showState = () => {
       String(editor.placing?.piece == pick.dataset.piece),
     );
   }
+  element("editorOrder").setAttribute(
+    "aria-pressed",
+    String(!!editor.ordering),
+  );
   element("editorRotate").disabled = !selected() && !editor.placing;
   element("editorDelete").disabled = !selected();
   element("editorUndo").disabled = editor.undo.length == 0;
   element("editorRedo").disabled = editor.redo.length == 0;
   const pieces = editor.stage.objects.length;
-  const text = editor.placing
-    ? `Placing ${pieceName(editor.placing.piece)}: click to place, R to turn, Escape to stop.`
-    : selected()
-      ? `${pieceName(selected().piece ?? 0)} selected: drag to move, R to turn, Delete to take away.`
-      : `${pieces} piece${pieces == 1 ? "" : "s"}. Pick a piece on the left, drag the map to look around, scroll to zoom.`;
+  const text = editor.ordering
+    ? "Ordering the path: click the pieces in the order the cars drive them, the start first. Escape to stop."
+    : editor.placing
+      ? `Placing ${pieceName(editor.placing.piece)}: click to place, R to turn, Escape to stop.`
+      : selected()
+        ? `${pieceName(selected().piece ?? 0)} selected: drag to move, R to turn, Delete to take away.`
+        : `${pieces} piece${pieces == 1 ? "" : "s"}. Pick a piece on the left, drag the map to look around, scroll to zoom.`;
   const status = element("editorStatus");
   if (status.textContent != text) {
     status.textContent = text;
+  }
+  showProblems();
+};
+
+// --- the path's order ---
+
+const startOrdering = () => {
+  editor.placing = null;
+  editor.ordering = editor.ordering ? null : { last: -1 };
+  showState();
+  drawMap();
+};
+
+const stopOrdering = () => {
+  editor.ordering = null;
+  showState();
+};
+
+// The piece clicked follows the one clicked before (the first goes to the front).
+const orderNext = (index) => {
+  if (!isPathObject(editor.stage.objects[index])) {
+    return;
+  }
+  remember();
+  editor.selected = moveAfter(
+    editor.stage.objects,
+    index,
+    editor.ordering.last,
+  );
+  editor.ordering.last = editor.selected;
+  changed();
+};
+
+const step = (steps) => {
+  remember();
+  editor.selected = stepAlongPath(editor.stage.objects, editor.selected, steps);
+  changed();
+};
+
+const makeStart = () => {
+  remember();
+  editor.selected = moveAfter(editor.stage.objects, editor.selected, -1);
+  changed();
+};
+
+// --- the selected piece and the stage's problems ---
+
+const field = (tag, properties) =>
+  Object.assign(document.createElement(tag), properties);
+
+// A labelled field for the selected piece, changing it as it changes.
+const labelled = (text, control) => {
+  const label = field("label", { textContent: text, htmlFor: control.id });
+  return [label, control];
+};
+
+const heightOf = (object) => -(object.y ?? 0);
+
+const showSelected = () => {
+  const panel = element("editorSelected");
+  const focused = document.activeElement?.id;
+  panel.replaceChildren();
+  const object = selected();
+  if (!object) {
+    panel.append(field("p", { textContent: "Nothing selected." }));
+    return;
+  }
+  panel.append(
+    field("p", {
+      className: "piece",
+      textContent: pieceName(object.piece ?? 0),
+    }),
+  );
+  if (object.command == "set") {
+    const kind = field("select", { id: "editorPathKind" });
+    for (const [suffix, text] of PATH_KINDS) {
+      kind.append(field("option", { value: suffix, textContent: text }));
+    }
+    kind.value = PATH_KINDS.some(([suffix]) => suffix == (object.suffix ?? ""))
+      ? (object.suffix ?? "")
+      : "p";
+    kind.addEventListener("change", () => {
+      remember();
+      object.suffix = kind.value || undefined;
+      if (!object.suffix) {
+        delete object.suffix;
+      }
+      changed();
+    });
+    panel.append(...labelled("Path", kind));
+  }
+  if (object.piece == 64 || object.command == "fix") {
+    const height = field("input", {
+      id: "editorHeight",
+      type: "number",
+      step: 100,
+      value: heightOf(object),
+    });
+    height.addEventListener("change", () => {
+      const value = Math.round(Number(height.value));
+      if (Number.isFinite(value)) {
+        remember();
+        object.y = -value;
+        changed();
+      }
+    });
+    panel.append(...labelled("Height", height));
+  }
+  if (object.command == "fix") {
+    const off = field("input", {
+      id: "editorFixOff",
+      type: "checkbox",
+      checked: (object.suffix ?? "").startsWith("s"),
+    });
+    off.addEventListener("change", () => {
+      remember();
+      if (off.checked) {
+        object.suffix = "s";
+      } else {
+        delete object.suffix;
+      }
+      changed();
+    });
+    const label = field("label", {
+      className: "check",
+      htmlFor: "editorFixOff",
+      textContent: "Off the path (the AI leaves the path for it)",
+    });
+    panel.append(field("div", { className: "row" }));
+    panel.lastChild.append(off, label);
+  }
+  if (isPathObject(object)) {
+    const onPath = editor.stage.objects.filter(isPathObject);
+    const place = onPath.indexOf(object);
+    panel.append(
+      field("p", {
+        textContent:
+          place == 0
+            ? `The start of the path, of ${onPath.length} points.`
+            : `Point ${place + 1} of ${onPath.length} on the path.`,
+      }),
+    );
+    const buttons = field("div", { className: "row" });
+    const earlier = field("button", {
+      type: "button",
+      id: "editorEarlier",
+      textContent: "Earlier",
+    });
+    const later = field("button", {
+      type: "button",
+      id: "editorLater",
+      textContent: "Later",
+    });
+    const start = field("button", {
+      type: "button",
+      id: "editorMakeStart",
+      textContent: "Make start",
+    });
+    earlier.disabled = place == 0;
+    later.disabled = place == onPath.length - 1;
+    start.disabled = place == 0;
+    earlier.addEventListener("click", () => step(-1));
+    later.addEventListener("click", () => step(1));
+    start.addEventListener("click", makeStart);
+    buttons.append(earlier, later, start);
+    panel.append(buttons);
+  }
+  if (focused && element(focused)) {
+    element(focused).focus();
+  }
+};
+
+const showProblems = () => {
+  const list = element("editorProblems");
+  list.replaceChildren();
+  const problems = problemsOf(editor.stage);
+  if (problems.length == 0) {
+    list.append(
+      field("li", { className: "ready", textContent: "Ready to race." }),
+    );
+    return;
+  }
+  for (const problem of problems) {
+    const item = field("li");
+    if (problem.index >= 0) {
+      const go = field("button", { type: "button", textContent: problem.text });
+      go.addEventListener("click", () => {
+        editor.selected = problem.index;
+        const object = selected();
+        editor.view.x = object.x;
+        editor.view.z = object.z;
+        showState();
+        showSelected();
+        drawMap();
+      });
+      item.append(go);
+    } else {
+      item.textContent = problem.text;
+    }
+    list.append(item);
   }
 };
 
@@ -606,6 +853,7 @@ const open = () => {
   editor.stage = readEditedStage(draft || NEW_STAGE);
   editor.selected = -1;
   editor.placing = null;
+  editor.ordering = null;
   editor.undo = [];
   editor.redo = [];
   game.phase = PHASE.stageEditor;
@@ -615,6 +863,7 @@ const open = () => {
   fitView();
   showName();
   showState();
+  showSelected();
   drawMap();
   loadShapes((piece) => {
     const icon = icons.get(piece);
@@ -695,11 +944,15 @@ export const installStageEditor = () => {
     }
     save();
   });
-  // Escape stops placing first, and closes the editor only then
+  element("editorOrder").addEventListener("click", startOrdering);
+  // Escape stops placing or ordering first, and closes the editor only then
   dialog.addEventListener("cancel", (event) => {
     if (editor.placing) {
       event.preventDefault();
       stopPlacing();
+    } else if (editor.ordering) {
+      event.preventDefault();
+      stopOrdering();
     }
   });
   dialog.addEventListener("close", () => {

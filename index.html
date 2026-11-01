@@ -82,10 +82,11 @@ src: url(data/verdana.ttf);
   font-family: verd, Verdana, sans-serif;
 }
 .stage-editor[open] {
-  display: grid; grid-template-columns: 230px 1fr; grid-template-rows: auto 1fr auto;
+  display: grid; grid-template-columns: 230px 1fr 260px; grid-template-rows: auto 1fr auto;
+  height: 100vh;
 }
 .stage-editor .editor-bar {
-  grid-column: 1 / 3; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+  grid-column: 1 / 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
   padding: 8px 12px; border-bottom: 1px solid rgba(1, 234, 255, 0.4);
 }
 .stage-editor h2 { margin: 0 8px 0 0; font-size: 18px; }
@@ -117,7 +118,26 @@ src: url(data/verdana.ttf);
 #editorPalette button[aria-pressed="true"] { background: rgba(1, 234, 255, 0.35); border-color: #01eaff; }
 #editorPalette canvas { width: 40px; height: 40px; flex: none; }
 #editorMap { width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; min-height: 0; }
-#editorStatus { grid-column: 1 / 3; margin: 0; padding: 8px 12px; font-size: 14px; border-top: 1px solid rgba(1, 234, 255, 0.4); }
+#editorInspector { overflow-y: auto; padding: 4px 12px 12px; border-left: 1px solid rgba(1, 234, 255, 0.4); font-size: 14px; }
+#editorInspector h3 { margin: 12px 0 6px; font-size: 14px; color: #01eaff; }
+#editorInspector p { margin: 6px 0; line-height: 1.4; }
+#editorInspector .piece { font-weight: bold; }
+#editorInspector label { display: block; margin: 10px 0 4px; }
+#editorInspector .row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
+#editorInspector .row label { display: inline; margin: 0; }
+#editorInspector .row input[type="checkbox"] { width: 22px; height: 22px; margin: 0; flex: none; }
+#editorInspector select, #editorInspector input[type="number"] {
+  box-sizing: border-box; width: 100%; min-height: 44px; padding: 6px 10px; border-radius: 10px;
+  border: 1px solid rgba(1, 234, 255, 0.6); background: rgba(0, 0, 0, 0.4); color: #ffffff; font: inherit;
+}
+#editorInspector select:focus-visible, #editorInspector input:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
+#editorProblems { list-style: none; margin: 0; padding: 0; }
+#editorProblems li { margin-top: 6px; color: #ffd2c8; }
+#editorProblems .ready { color: #9ff5b4; }
+#editorProblems .ready::before { content: "\2713  "; }
+#editorProblems li:not(.ready)::before { content: "\26A0  "; }
+#editorProblems button { width: 100%; text-align: left; border-radius: 10px; color: #ffd2c8; }
+#editorStatus { grid-column: 1 / 4; margin: 0; padding: 8px 12px; font-size: 14px; border-top: 1px solid rgba(1, 234, 255, 0.4); }
 </style>
 <script src="gl-matrix-min.js"></script>
 
@@ -166,11 +186,16 @@ src: url(data/verdana.ttf);
 <button type="button" id="editorRedo" aria-keyshortcuts="Control+Y">Redo</button>
 <button type="button" id="editorRotate" aria-keyshortcuts="R">Turn</button>
 <button type="button" id="editorDelete" aria-keyshortcuts="Delete">Delete</button>
+<button type="button" id="editorOrder" aria-pressed="false">Order path</button>
 <span class="spacer"></span>
 <button type="button" id="editorClose">Close</button>
 </div>
 <nav id="editorPalette" aria-label="Pieces"></nav>
 <canvas id="editorMap" tabindex="0" role="img" aria-label="The stage from above"></canvas>
+<aside id="editorInspector" aria-label="Selected piece and problems">
+<section aria-labelledby="editorSelectedTitle"><h3 id="editorSelectedTitle">Selected</h3><div id="editorSelected"></div></section>
+<section aria-labelledby="editorProblemsTitle"><h3 id="editorProblemsTitle">Check</h3><ul id="editorProblems"></ul></section>
+</aside>
 <p id="editorStatus" aria-live="polite"></p>
 </dialog>
 <button type="button" id="multiplayerButton" class="multiplayer-button" aria-haspopup="dialog" aria-controls="multiplayer" hidden>Multiplayer</button>

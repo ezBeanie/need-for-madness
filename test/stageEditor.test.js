@@ -5,11 +5,16 @@ import {
   boxOf,
   endsOf,
   extents,
+  moveAfter,
   newObject,
   onMap,
+  placeInOrder,
+  problemsOf,
   readEditedStage,
   shapeOf,
   snapToEnds,
+  stepAlongPath,
+  turned,
   writeEditedStage,
 } from "../src/editor/stageModel.js";
 import { startRace } from "./harness/race.js";
@@ -97,7 +102,12 @@ test("a piece dropped near another's end joins it end to end, facing it", () => 
   const start = newObject(47, 0, 0, 0);
   // a road a little off the start's front end
   const road = newObject(10, 230, 5900, 0);
-  expect(snapToEnds(road, [start], 1000)).toEqual({ x: 0, z: 5600 });
+  expect(snapToEnds(road, [start], 1000)).toEqual({
+    x: 0,
+    z: 5600,
+    other: start,
+    atFront: true,
+  });
   // too far
   expect(snapToEnds(road, [start], 100)).toBe(null);
   // a turn joins at its back, and the next road at the turn's side
@@ -123,4 +133,75 @@ test("a new piece gets the command and the path point the original's stages most
   expect(newObject(65, 0, 0, 0).suffix).toBeUndefined();
   expect(newObject(40, 0, 0, 0).command).toBe("chk");
   expect(newObject(41, 0, 0, 0)).toMatchObject({ command: "fix", y: -1200 });
+});
+
+test("a piece joined to another's front follows it on the path, one joined to its back comes before it", () => {
+  const start = newObject(47, 0, 0, 0);
+  const ahead = newObject(10, 0, 11200, 0);
+  const objects = [start, ahead];
+  // a road between the two, joined to the start's front
+  const between = newObject(10, 30, 5650, 0);
+  placeInOrder(objects, between, snapToEnds(between, [start], 100));
+  expect(objects).toEqual([start, between, ahead]);
+  // a road behind the start, joined to its back
+  const behind = newObject(10, 0, -5600, 0);
+  placeInOrder(objects, behind, snapToEnds(behind, [start], 100));
+  expect(objects[0]).toBe(behind);
+  // a checkpoint right after the road it stands on, a tree last
+  const checkpoint = newObject(40, 0, 5600, 0);
+  expect(placeInOrder(objects, checkpoint, null)).toBe(3);
+  const tree = newObject(65, 9000, 0, 0);
+  expect(placeInOrder(objects, tree, null)).toBe(5);
+});
+
+test("the path's order changes a step at a time or by moving a piece after another", () => {
+  const [a, b, tree, c] = [
+    newObject(47, 0, 0, 0),
+    newObject(10, 0, 5600, 0),
+    newObject(65, 900, 0, 0),
+    newObject(10, 0, 11200, 0),
+  ];
+  const objects = [a, b, tree, c];
+  // a step along the path passes over what is not on it
+  expect(stepAlongPath(objects, 1, 1)).toBe(3);
+  expect(objects).toEqual([a, c, tree, b]);
+  expect(stepAlongPath(objects, 0, -1)).toBe(0);
+  expect(moveAfter(objects, 3, -1)).toBe(0);
+  expect(objects).toEqual([b, a, c, tree]);
+  expect(moveAfter(objects, 0, 2)).toBe(2);
+  expect(objects).toEqual([a, c, b, tree]);
+});
+
+test("the editor names what keeps a stage from racing", () => {
+  const texts = (objects) => problemsOf({ objects }).map((p) => p.text);
+  expect(texts([])).toEqual([
+    "No road under the start grid in the middle of the map.",
+    "A lap needs at least one checkpoint.",
+    "The path needs at least three points to go round.",
+  ]);
+  const loop = [
+    newObject(10, 0, 0, 0),
+    newObject(10, 0, 5600, 0),
+    newObject(40, 0, 5600, 0),
+  ];
+  expect(texts(loop)).toEqual(["The path should begin on a start piece."]);
+  // the stages of the game have none
+  for (const stage of [1, 3, 10]) {
+    expect(
+      texts(readEditedStage(read(`data/stages/${stage}.txt`)).objects),
+    ).toEqual([]);
+  }
+});
+
+test("turning a piece keeps its rotation as the stage files have it, sideways only as 90 or -90", () => {
+  expect([0, 90, 180, -90].map((r) => turned(r, 90))).toEqual([
+    90, 180, -90, 0,
+  ]);
+  expect([0, -90, 180, 90].map((r) => turned(r, -90))).toEqual([
+    -90, 180, 90, 0,
+  ]);
+  expect(turned(undefined, 90)).toBe(90);
+  // the original's few other angles turn on from where they are
+  expect(turned(30, 90)).toBe(120);
+  expect(turned(150, 90)).toBe(-120);
 });

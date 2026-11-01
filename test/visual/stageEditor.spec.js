@@ -18,8 +18,11 @@ test("stage editor: pieces placed from the palette join the start end to end", a
   await page.click("#stageEditorButton");
   expect(await game.phase()).toBe(PHASE.stageEditor);
   // the shapes arrive
-  await page.waitForFunction(() =>
-    document.querySelector("#editorStatus").textContent.includes("1 piece"),
+  await page.waitForFunction(
+    () =>
+      document.querySelector("#editorStatus").textContent.includes("1 piece"),
+    null,
+    { polling: 50 },
   );
   await page.waitForTimeout(500);
 
@@ -45,8 +48,39 @@ test("stage editor: pieces placed from the palette join the start end to end", a
   expect((await pieces(page))[2]).toBe("set(14,0,10150,0)pt");
   await expect.soft(page).toHaveScreenshot("stage-editor.png");
 
-  // Escape with nothing to place closes it, back to the main menu
+  // the turn is not the start: made the start, it is the path's first point
+  await expect(page.locator("#editorProblems")).toContainText(
+    "A lap needs at least one checkpoint.",
+  );
+  await page.mouse.click(middle.x, middle.y - 300);
+  await page.click("#editorMakeStart");
+  expect((await pieces(page))[0]).toBe("set(14,0,10150,0)pt");
+  await expect(page.locator("#editorProblems")).toContainText(
+    "The path should begin on a start piece.",
+  );
+  // ordered again by clicking the pieces in the order the cars drive them
+  await page.click("#editorOrder");
+  for (const dy of [0, -175, -300]) {
+    await page.mouse.click(middle.x, middle.y + dy);
+  }
   await page.keyboard.press("Escape");
+  expect(await pieces(page)).toEqual([
+    "set(47,0,0,0)p",
+    "set(10,0,5600,0)p",
+    "set(14,0,10150,0)pt",
+  ]);
+  // the turn a path point the AI drives through, no corner to cut
+  await page.selectOption("#editorPathKind", "p");
+  expect((await pieces(page))[2]).toBe("set(14,0,10150,0)p");
+
+  // Escape with nothing to place closes it, back to the main menu
+  await page.mouse.click(map.x + 20, map.y + 20);
+  await page.keyboard.press("Escape");
+  // (the dialog's close event comes after it closed; polled by time, as the driver holds
+  // the animation frames back)
+  await page.waitForFunction(() => window.gameState.game.phase == 1, null, {
+    polling: 50,
+  });
   await game.advance();
-  expect(await game.phase()).toBe(PHASE.mainMenu);
+  expect(await page.isVisible("#stageEditorButton")).toBe(true);
 });
