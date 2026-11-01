@@ -4,6 +4,8 @@
 // stage being edited is kept in the browser as it changes.
 
 import { PHASE, game } from "../core/state.js";
+import { LAST_STAGE, stageFile } from "../data/stages.js";
+import { fetchText } from "../render/models.js";
 import { loadText, saveSetting } from "../core/storage.js";
 import { menu } from "../screens/menuState.js";
 import { loadShapes, shapes } from "./pieceShapes.js";
@@ -12,6 +14,7 @@ import {
   PATH_KINDS,
   PIECE_GROUPS,
   boxOf,
+  copyLook,
   isPathObject,
   moveAfter,
   newObject,
@@ -20,6 +23,8 @@ import {
   placeInOrder,
   problemsOf,
   readEditedStage,
+  setSetting,
+  settingOf,
   snapToEnds,
   stepAlongPath,
   turned,
@@ -846,6 +851,97 @@ const showProblems = () => {
   }
 };
 
+// --- the stage's settings ---
+
+const settings = element("editorSettings");
+
+const hex = (entry) =>
+  "#" +
+  [entry?.r ?? 0, entry?.g ?? 0, entry?.b ?? 0]
+    .map((c) => Math.min(255, Math.max(0, c)).toString(16).padStart(2, "0"))
+    .join("");
+
+const rgb = (value) => ({
+  r: parseInt(value.slice(1, 3), 16),
+  g: parseInt(value.slice(3, 5), 16),
+  b: parseInt(value.slice(5, 7), 16),
+});
+
+// the settings' fields: which setting, and how the field reads and writes it
+const SETTING_FIELDS = [
+  [
+    "settingLaps",
+    "nlaps",
+    (e) => e?.laps ?? 3,
+    (v) => ({ laps: whole(v, 1, 15) }),
+  ],
+  [
+    "settingLevel",
+    "level",
+    (e) => e?.level ?? 8,
+    (v) => ({ level: Number(v) }),
+  ],
+  [
+    "settingMusic",
+    "music",
+    (e) => e?.stage ?? 1,
+    (v) => ({ stage: Number(v) }),
+  ],
+  ["settingSky", "sky", hex, rgb],
+  ["settingFog", "fog", hex, rgb],
+  ["settingGround", "ground", hex, rgb],
+  ["settingCloudColor", "clouds", hex, rgb],
+  [
+    "settingClouds",
+    "clouds",
+    (e) => e?.type ?? 2,
+    (v) => ({ type: Number(v) }),
+  ],
+  [
+    "settingDistance",
+    "distfog",
+    (e) => e?.distance ?? 10000,
+    (v) => ({ distance: whole(v, 4000, 20000) }),
+  ],
+];
+
+const whole = (value, low, high) =>
+  Math.min(high, Math.max(low, Math.round(Number(value) || low)));
+
+const showSettings = () => {
+  for (const [id, command, read] of SETTING_FIELDS) {
+    element(id).value = String(read(settingOf(editor.stage, command)));
+  }
+};
+
+const fillStageChoices = () => {
+  for (const id of ["settingLevel", "settingMusic", "settingLookFrom"]) {
+    const select = element(id);
+    if (select.childElementCount > 0) {
+      continue;
+    }
+    for (let stage = 1; stage <= LAST_STAGE; stage++) {
+      select.append(
+        field("option", { value: stage, textContent: `Stage ${stage}` }),
+      );
+    }
+  }
+};
+
+const openSettings = () => {
+  fillStageChoices();
+  showSettings();
+  settings.showModal?.();
+};
+
+const copyLookOf = (stage) =>
+  fetchText(stageFile(stage), (text) => {
+    remember();
+    copyLook(editor.stage, text);
+    changed();
+    showSettings();
+  });
+
 // --- opening and closing ---
 
 const open = () => {
@@ -888,7 +984,7 @@ const newStage = () => {
 };
 
 const onKey = (event) => {
-  if (event.target.closest?.("input")) {
+  if (event.target.closest?.("input, select, #editorSettings")) {
     return;
   }
   const key = event.key.toLowerCase();
@@ -945,6 +1041,18 @@ export const installStageEditor = () => {
     save();
   });
   element("editorOrder").addEventListener("click", startOrdering);
+  element("editorSettingsButton").addEventListener("click", openSettings);
+  for (const [id, command, , write] of SETTING_FIELDS) {
+    element(id).addEventListener("change", (event) => {
+      remember();
+      setSetting(editor.stage, command, write(event.target.value));
+      changed();
+      showSettings();
+    });
+  }
+  element("settingCopyLook").addEventListener("click", () =>
+    copyLookOf(Number(element("settingLookFrom").value)),
+  );
   // Escape stops placing or ordering first, and closes the editor only then
   dialog.addEventListener("cancel", (event) => {
     if (editor.placing) {

@@ -137,6 +137,13 @@ src: url(data/verdana.ttf);
 #editorProblems .ready::before { content: "\2713  "; }
 #editorProblems li:not(.ready)::before { content: "\26A0  "; }
 #editorProblems button { width: 100%; text-align: left; border-radius: 10px; color: #ffd2c8; }
+#editorSettings select { box-sizing: border-box; width: 100%; min-height: 44px; padding: 8px 14px; border: 1px solid rgba(1, 234, 255, 0.6); border-radius: 22px; background: rgba(0, 0, 0, 0.4); color: #ffffff; font: inherit; font-size: 15px; }
+#editorSettings .row { display: flex; gap: 8px; }
+#editorSettings .row button { width: auto; flex: none; justify-content: center; }
+#editorSettings .colors { display: grid; grid-template-columns: auto 1fr auto 1fr; align-items: center; gap: 8px 10px; margin-top: 16px; }
+#editorSettings .colors label { margin: 0; }
+#editorSettings input[type="color"] { min-height: 44px; padding: 2px; border-radius: 10px; }
+#editorSettings select:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
 #editorStatus { grid-column: 1 / 4; margin: 0; padding: 8px 12px; font-size: 14px; border-top: 1px solid rgba(1, 234, 255, 0.4); }
 </style>
 <script src="gl-matrix-min.js"></script>
@@ -187,6 +194,7 @@ src: url(data/verdana.ttf);
 <button type="button" id="editorRotate" aria-keyshortcuts="R">Turn</button>
 <button type="button" id="editorDelete" aria-keyshortcuts="Delete">Delete</button>
 <button type="button" id="editorOrder" aria-pressed="false">Order path</button>
+<button type="button" id="editorSettingsButton" aria-haspopup="dialog" aria-controls="editorSettings">Settings</button>
 <span class="spacer"></span>
 <button type="button" id="editorClose">Close</button>
 </div>
@@ -197,6 +205,30 @@ src: url(data/verdana.ttf);
 <section aria-labelledby="editorProblemsTitle"><h3 id="editorProblemsTitle">Check</h3><ul id="editorProblems"></ul></section>
 </aside>
 <p id="editorStatus" aria-live="polite"></p>
+<dialog id="editorSettings" class="menu-dialog" aria-labelledby="editorSettingsTitle">
+<h2 id="editorSettingsTitle">Stage settings</h2>
+<form id="editorSettingsForm" method="dialog">
+<label for="settingLaps">Laps</label>
+<input id="settingLaps" type="number" min="1" max="15" step="1">
+<label for="settingLevel">Opponents as strong as on</label>
+<select id="settingLevel"></select>
+<label for="settingMusic">Music of</label>
+<select id="settingMusic"></select>
+<label for="settingLookFrom">Look like</label>
+<div class="row"><select id="settingLookFrom"></select><button type="button" id="settingCopyLook">Copy look</button></div>
+<div class="colors">
+<label for="settingSky">Sky</label><input id="settingSky" type="color">
+<label for="settingFog">Fog</label><input id="settingFog" type="color">
+<label for="settingGround">Ground</label><input id="settingGround" type="color">
+<label for="settingCloudColor">Clouds</label><input id="settingCloudColor" type="color">
+</div>
+<label for="settingClouds">Cloud cover</label>
+<select id="settingClouds"><option value="0">Overcast</option><option value="1">Cloudy</option><option value="2">A few clouds</option></select>
+<label for="settingDistance">How far one sees</label>
+<input id="settingDistance" type="number" min="4000" max="20000" step="500">
+<button type="submit" class="close">Done</button>
+</form>
+</dialog>
 </dialog>
 <button type="button" id="multiplayerButton" class="multiplayer-button" aria-haspopup="dialog" aria-controls="multiplayer" hidden>Multiplayer</button>
 <dialog id="multiplayer" class="menu-dialog" aria-labelledby="multiplayerTitle">

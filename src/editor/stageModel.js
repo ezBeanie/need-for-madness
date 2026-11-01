@@ -513,3 +513,40 @@ export const problemsOf = ({ objects }) => {
   }
   return problems;
 };
+
+// --- the stage's settings ---
+
+// what makes a stage look as it does: the commands "look like stage" copies
+export const LOOK_SETTINGS = [
+  "snap",
+  "sky",
+  "fog",
+  "clouds",
+  "ground",
+  "distfog",
+  "lightswingX",
+  "lightswingZ",
+];
+
+export const settingOf = (stage, command) =>
+  stage.settings.find((entry) => entry.command == command);
+
+// Sets fields of a setting, adding the setting if the stage has none yet.
+export const setSetting = (stage, command, fields) => {
+  const entry = settingOf(stage, command);
+  if (entry) {
+    Object.assign(entry, fields);
+  } else {
+    stage.settings.push({ command, ...fields });
+  }
+};
+
+// The look of another stage (its file's text) instead of the stage's own.
+export const copyLook = (stage, text) => {
+  stage.settings = [
+    ...stage.settings.filter((entry) => !LOOK_SETTINGS.includes(entry.command)),
+    ...readEditedStage(text).settings.filter((entry) =>
+      LOOK_SETTINGS.includes(entry.command),
+    ),
+  ];
+};

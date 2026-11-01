@@ -73,6 +73,20 @@ test("stage editor: pieces placed from the palette join the start end to end", a
   await page.selectOption("#editorPathKind", "p");
   expect((await pieces(page))[2]).toBe("set(14,0,10150,0)p");
 
+  // the settings: laps, and the look of stage 17
+  await page.click("#editorSettingsButton");
+  await page.fill("#settingLaps", "5");
+  await page.locator("#settingLaps").blur();
+  await page.selectOption("#settingLookFrom", "17");
+  await page.click("#settingCopyLook");
+  await expect(page.locator("#settingSky")).toHaveValue("#99caff");
+  await expect.soft(page).toHaveScreenshot("stage-editor-settings.png");
+  await page.click("#editorSettings .close");
+  const text = await draft(page);
+  expect(text).toContain("nlaps(5)");
+  expect(text).toContain("sky(153,202,255)");
+  expect(await page.isVisible("#stageEditor")).toBe(true);
+
   // Escape with nothing to place closes it, back to the main menu
   await page.mouse.click(map.x + 20, map.y + 20);
   await page.keyboard.press("Escape");

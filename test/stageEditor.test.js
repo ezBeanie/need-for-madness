@@ -3,6 +3,7 @@ import { expect, test } from "vitest";
 import { parseModel } from "../src/data/modelFormat.js";
 import {
   boxOf,
+  copyLook,
   endsOf,
   extents,
   moveAfter,
@@ -11,6 +12,8 @@ import {
   placeInOrder,
   problemsOf,
   readEditedStage,
+  setSetting,
+  settingOf,
   shapeOf,
   snapToEnds,
   stepAlongPath,
@@ -204,4 +207,30 @@ test("turning a piece keeps its rotation as the stage files have it, sideways on
   // the original's few other angles turn on from where they are
   expect(turned(30, 90)).toBe(120);
   expect(turned(150, 90)).toBe(-120);
+});
+
+test("a stage's settings change field by field, and its look comes from another stage", () => {
+  const stage = readEditedStage(read("data/stages/1.txt"));
+  setSetting(stage, "nlaps", { laps: 5 });
+  setSetting(stage, "level", { level: 12 });
+  setSetting(stage, "ground", { r: 10, g: 20, b: 30 });
+  expect(settingOf(stage, "nlaps").laps).toBe(5);
+  expect(settingOf(stage, "level").level).toBe(12);
+  // (the ground's texture stays)
+  expect(settingOf(stage, "ground")).toMatchObject({
+    r: 10,
+    g: 20,
+    b: 30,
+    texture: 2,
+  });
+  copyLook(stage, read("data/stages/17.txt"));
+  const sky17 = settingOf(readEditedStage(read("data/stages/17.txt")), "sky");
+  expect(settingOf(stage, "sky")).toEqual(sky17);
+  expect(settingOf(stage, "ground").r).toBe(201);
+  // the name, laps and level stay the stage's own
+  expect(settingOf(stage, "name").name).toBe("Introductory Stage");
+  expect(settingOf(stage, "nlaps").laps).toBe(5);
+  expect(settingOf(stage, "level").level).toBe(12);
+  // stage 1 swings its light nowhere, stage 17 neither: none left over
+  expect(stage.settings.filter((e) => e.command == "sky")).toHaveLength(1);
 });
