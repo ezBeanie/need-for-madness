@@ -34,14 +34,18 @@ const PLAYERS = ["host0000", "guest001", "guest002"];
 const LEAVING = { car: 1, frame: 900 };
 
 // The fixed race (see net/determinism.js) raced together by three, in the game of the
-// player of car 0, each other's keys coming late[car] frames after they were pressed (and
+// player of car 0 (who got as far as the stage unlocked, if given), each other's keys coming late[car] frames after they were pressed (and
 // the leaving player's left as late after its last keys): the fingerprints it sent, and,
 // every key there and the race run on one frame, the race and its recordings.
-const raceWithKeysLate = async (late, leaving = null) => {
+const raceWithKeysLate = async (late, leaving = null, unlocked = null) => {
   const { ctx, stepUntil } = await loadGame({ seed: 5 });
   stepUntil(() => ctx.game.phase === PHASE.mainMenu, 400, "main menu");
   ctx.startFingerprintRace();
   stepUntil(() => ctx.game.phase === PHASE.stageSelect, 400, "stage select");
+  // (after the field is drawn: racing together, the host's comes to every game)
+  if (unlocked) {
+    ctx.game.unlocked = unlocked;
+  }
   ctx.beginFingerprintRace();
   // (the two white frames it flashes in with, which set it up)
   ctx.runTick();
@@ -131,4 +135,12 @@ test("a player leaving the race leaves its car to the AI from the frame after it
   expect(late.prints).toEqual(onTime.prints);
   expect(late.race).toEqual(onTime.race);
   expect(late.raceTape).toEqual(onTime.raceTape);
+}, 60000);
+
+test("a game whose player races the newest stage it has races it as one whose player got further", async () => {
+  const further = await raceWithKeysLate(ON_TIME);
+  // (the fixed race's stage is the first)
+  const newest = await raceWithKeysLate(ON_TIME, null, 1);
+  expect(newest.prints).toEqual(further.prints);
+  expect(newest.race).toEqual(further.race);
 }, 60000);

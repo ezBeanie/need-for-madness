@@ -64,6 +64,12 @@ export const game = {
 export const isHuman = (c) =>
   game.humans.length == 0 ? c == game.player : game.humans.includes(c);
 
+// Whether the player races stage, its newest one: the first stages go easier on the player
+// there. (Racing together, the games' players have got as far as they each have, so none
+// is helped, alike in every game.)
+export const onNewestStage = (stage) =>
+  game.humans.length == 0 && game.unlocked == stage;
+
 // The car the computer drivers race against, wait for and chase: the player's, and in a
 // race people drive together the first of theirs (the host's), so that every game of it
 // computes the same race.

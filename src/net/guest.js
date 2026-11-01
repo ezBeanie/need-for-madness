@@ -4,7 +4,7 @@
 
 import { pauseMenuMusic, playStageMusic } from "../audio/audio.js";
 import { random, seededRandom } from "../core/random.js";
-import { MAX_CARS, PHASE, game } from "../core/state.js";
+import { MAX_CARS, MODE, PHASE, game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { STAGE_COUNT } from "../data/stages.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
@@ -146,6 +146,8 @@ const loadHostedRace = (start) => {
   guest.ping = null;
   track.stage = start.stage;
   field.replayCars = start.carTypes;
+  // (as the host's: it starts no other)
+  game.mode = MODE.championship;
   pauseMenuMusic();
   stageLoad.after = AFTER_LOAD.guest;
   stageLoad.progress = STAGE_LOAD.requested;

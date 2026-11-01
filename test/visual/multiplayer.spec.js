@@ -247,6 +247,20 @@ test("racing together, the menu shows over the race, which goes on for the other
   ]);
 });
 
+test("a guest that raced in switch mode races the host's race by its rules", async ({
+  context,
+}) => {
+  const games = await openTwoGames(context, "/?host=mode", "/?join=mode");
+  await games.guestPage.evaluate(() => {
+    const { game, MODE } = window.gameState;
+    game.mode = MODE.switchCars;
+  });
+  await hostStartsRace(games);
+  expect(await games.guestPage.evaluate(() => window.gameState.game.mode)).toBe(
+    await games.hostPage.evaluate(() => window.gameState.game.mode),
+  );
+});
+
 test("the games tell a race gone apart by its fingerprints, say so, and tell what differs", async ({
   context,
 }) => {

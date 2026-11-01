@@ -2,7 +2,14 @@
 
 import { cosDeg, distanceSquaredXZ, distanceXZ, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
-import { MAX_CARS, MODE, aiRival, game, isHuman } from "../core/state.js";
+import {
+  MAX_CARS,
+  MODE,
+  aiRival,
+  game,
+  isHuman,
+  onNewestStage,
+} from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { CAR, carStats } from "../data/carStats.js";
 import { MISSED, car, racers } from "./racers.js";
@@ -2361,7 +2368,7 @@ function chooseWhetherToBully(c) {
         track.stage == 8 ||
         track.stage == 10 ||
         track.stage == 14) &&
-      track.stage != game.unlocked
+      !onNewestStage(track.stage)
     ) {
       if (
         type == CAR.masheen &&
