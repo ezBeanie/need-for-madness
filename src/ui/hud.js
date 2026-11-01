@@ -49,6 +49,7 @@ import { newParticleModel } from "../render/models.js";
 import { gl } from "../render/renderer.js";
 import { scene, timeTube } from "../render/scene.js";
 import { pauseMenu } from "../screens/pauseMenu.js";
+import { lockstep } from "../net/lockstep.js";
 import { startRaceEnd } from "../screens/raceEnd.js";
 import { images } from "./images.js";
 import { canvas2D, rd, view } from "./view.js";
@@ -492,6 +493,7 @@ const knownWrecks = [];
 
 export function resetHud() {
   game.player = 0;
+  pauseMenu.overRace = false;
   track.switchtime = 800;
   switchTimer = track.switchtime;
   raceEvents.oncheckpoint = -1;
@@ -839,6 +841,11 @@ const afterRaceOver = () => {
 
 const pause = () => {
   pauseMenu.selected = 0;
+  // (racing together, the race goes on for the others: the menu shows over it)
+  if (lockstep.active) {
+    pauseMenu.overRace = true;
+    return;
+  }
   stopStageMusic();
   stopEngine();
   game.phase = PHASE.paused;
@@ -1618,7 +1625,7 @@ const standAsDrawnLast = (first) => {
 };
 
 // A race waiting for another game's keys (see net/lockstep.js) stands as it was drawn
-// last (first: from this tick on), and can be paused, to be left.
+// last (first: from this tick on), and its menu opened, to leave it.
 export const drawWaitingHud = (first) => {
   standAsDrawnLast(first);
   if (confirm.state == CONFIRM.pressed && raceEvents.countdown <= 65) {

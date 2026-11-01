@@ -183,13 +183,57 @@ test("a game waits for the other's keys, and says so", async ({ context }) => {
   const waiting = await hud();
   await host.advance(20);
   expect(await hud()).toBe(waiting);
-  // the host pauses: the guest waits for it
+});
+
+test("racing together, the menu shows over the race, which goes on for the others, and leaves it", async ({
+  context,
+}) => {
+  await recordDrawnTexts(context);
+  await recordSentMessages(context);
+  const { host, guest, hostPage, guestPage, both } = await raceTogether(
+    context,
+    "menu",
+  );
+  // (past the countdown, which has no menu)
+  await advanceBoth(...both, 200);
   await host.tap("Escape");
-  await host.advanceUntil(PHASE.paused);
+  await drawnTexts(hostPage);
   await drawnTexts(guestPage);
-  // (it guesses the host's keys a while first)
+  const frame = await inStep(...both);
+  await hostPage.evaluate(() => (window.sentMessages = []));
+  // the host holds the throttle in its menu: its car rolls on without it
+  await hostPage.keyboard.down("ArrowUp");
   await advanceBoth(...both, 50);
-  expect(await drawnTexts(guestPage)).toContain("Waiting for the host...");
+  expect(await hostPage.evaluate(() => window.gameState.game.phase)).toBe(
+    PHASE.race,
+  );
+  await hostPage.keyboard.up("ArrowUp");
+  const sent = await hostPage.evaluate(() =>
+    window.sentMessages
+      .filter((message) => message.type == "keys")
+      .map((message) => message.keys),
+  );
+  expect(sent.length).toBeGreaterThan(45);
+  expect(sent).not.toContainEqual(expect.objectContaining({ up: true }));
+  expect(await frameOf(guestPage)).toBeGreaterThan(frame + 45);
+  expect(await drawnTexts(guestPage)).not.toContain("Waiting for the host...");
+  expect(await drawnTexts(hostPage)).toContain("x Leave Race");
+  // Escape again: the race as before, its menu gone
+  await host.tap("Escape");
+  await advanceBoth(...both, 5);
+  await drawnTexts(hostPage);
+  await advanceBoth(...both, 5);
+  expect(await drawnTexts(hostPage)).not.toContain("x Leave Race");
+  // down to leaving it: the host is in the main menu, the guest races on without it
+  await host.tap("Escape");
+  await host.tap("ArrowDown");
+  await host.tap("Enter");
+  await host.advanceUntil(PHASE.mainMenu);
+  await guestPage.waitForTimeout(DELIVERY_MS);
+  await guest.advance(5);
+  expect(await guestPage.evaluate(() => window.gameState.game.humans)).toEqual([
+    1,
+  ]);
 });
 
 test("the games tell a race gone apart by its fingerprints, say so, and tell what differs", async ({

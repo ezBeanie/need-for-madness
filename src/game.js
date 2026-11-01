@@ -60,7 +60,11 @@ import { control } from "./race/ai.js";
 import { chipsfly, dustfly, expburn, sprksfly } from "./race/effects.js";
 import { drive } from "./race/physics.js";
 import { raceEndScreen, unlockedCarTick } from "./screens/raceEnd.js";
-import { pauseMenuTick } from "./screens/pauseMenu.js";
+import {
+  drawPauseMenuOverRace,
+  pauseMenuOverRaceKeys,
+  pauseMenuTick,
+} from "./screens/pauseMenu.js";
 import { mainMenuTick, resetQuestionTick } from "./screens/mainMenu.js";
 import { loadAssets } from "./loading/assets.js";
 import { updateStandings } from "./race/standings.js";
@@ -111,6 +115,9 @@ function raceTick() {
   startProjection();
   raceEvents.onelec = false;
   if (game.phase == PHASE.race) {
+    pauseMenuOverRaceKeys();
+  }
+  if (game.phase == PHASE.race) {
     if (lockstepWaits()) {
       waitedTicks++;
       drawWaitingHud(waitedTicks == 1);
@@ -140,6 +147,7 @@ function raceTick() {
       ],
       link.role == ROLE.guest ? guest.ping : null,
     );
+    drawPauseMenuOverRace();
   }
   if (game.phase == PHASE.replay) {
     const from = viewer.frame;

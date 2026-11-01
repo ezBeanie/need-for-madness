@@ -191,6 +191,9 @@ zu spät, spult ein Spiel zum Tick zurück, an dem sie gedrückt wurden, und rec
   im Rennen alle 30 Ticks), gilt als ausgestiegen ab dem Frame nach seinen letzten Tasten.
   Test: `test/rollback.test.js`.
 - Nach dem Rennen sind alle wieder im Menü und im Raum; der Host startet das nächste.
+- Keine Pause im gemeinsamen Rennen: Escape (oder der Pause-Knopf) öffnet das Menü über dem
+  weiterlaufenden Rennen, nur mit „Resume“ und „Leave Race“. Solange es offen ist, rollt das eigene
+  Auto ohne Tasten weiter; die anderen warten nicht.
 - Verlässt der Host den Raum (`bye`, oder er schweigt 100 Ticks), endet der Raum für die Gäste,
   sobald sie wieder im Menü sind: Der Dialog öffnet sich mit „The host left the room.“
 - Echtzeit-Test gegen den Dev-Server (drei bzw. acht Browser-Kontexte, je eigenes Spiel):

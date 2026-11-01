@@ -1,4 +1,5 @@
-// The menu of a paused race: resume, instant replay, the game instructions, quit.
+// The menu of a paused race: resume, instant replay, the game instructions, quit. Racing
+// together, the race cannot pause: the menu shows over it, to resume or leave it.
 
 import {
   resumeStageMusic,
@@ -35,6 +36,8 @@ import { insano } from "../ui/insano.js";
 export const pauseMenu = {
   // the highlighted entry
   selected: 0,
+  // whether it shows over a race together
+  overRace: false,
 };
 
 const RESUME = 0;
@@ -48,6 +51,14 @@ const ENTRIES = [
   { text: "Game Instructions", width: 380 },
   { text: "x Quit Game", width: 250 },
 ];
+
+// (the others need not wait for a replay or the instructions)
+const OVER_RACE_ENTRIES = [
+  { entry: RESUME, ...ENTRIES[RESUME] },
+  { entry: QUIT, text: "x Leave Race", width: 270 },
+];
+// below the HUD's notices about the others (see ui/hud.js drawNetNotice)
+const OVER_RACE_TOP = 330;
 
 const BUTTON_COLORS = [
   ["#019DFF", "#01EAFF", "#004A78", "#016D77"],
@@ -88,11 +99,13 @@ export function pauseMenuTick() {
     startReplay();
   }
   ENTRIES.forEach((entry, index) => {
-    if (drawEntry(entry, index)) {
+    if (
+      drawEntry(entry, index, 95 * view.scaleY + (35 + 90 * index) * view.scale)
+    ) {
       choose(index);
     }
   });
-  moveSelection();
+  moveSelection(ENTRIES.length);
   if (tooShortTicks) {
     drawTooShortMessage(hue);
     tooShortTicks--;
@@ -153,15 +166,56 @@ const drawBackdrop = (hue) => {
   rd.globalAlpha = 1;
 };
 
+// Before the race's frame: the arrows move the selection, the player's car goes on
+// without keys, as the player is in the menu, and Enter or Escape choose.
+export const pauseMenuOverRaceKeys = () => {
+  if (!pauseMenu.overRace) {
+    return;
+  }
+  moveSelection(OVER_RACE_ENTRIES.length);
+  Object.assign(racers[game.player].u, {
+    up: false,
+    down: false,
+    left: false,
+    right: false,
+    handb: false,
+  });
+  if (confirm.state == CONFIRM.pressed) {
+    confirm.state = CONFIRM.used;
+    chooseOverRace(pauseMenu.selected);
+  }
+};
+
+// After the race's frame is drawn: the menu over it.
+export const drawPauseMenuOverRace = () => {
+  if (!pauseMenu.overRace) {
+    return;
+  }
+  OVER_RACE_ENTRIES.forEach((entry, index) => {
+    const y = OVER_RACE_TOP * view.scaleY + 90 * index * view.scale;
+    if (drawEntry(entry, index, y)) {
+      chooseOverRace(index);
+    }
+  });
+  pulseButtons();
+};
+
+const chooseOverRace = (index) => {
+  pauseMenu.overRace = false;
+  if (OVER_RACE_ENTRIES[index].entry == QUIT) {
+    choose(QUIT);
+  }
+};
+
 // Returns whether the entry was clicked.
-const drawEntry = ({ text, width, withArrow }, index) => {
+const drawEntry = ({ text, width, withArrow }, index, y) => {
   const selected = pauseMenu.selected == index ? 1 : 0;
   const [faceTop, faceBottom, shadowTop, shadowBottom] =
     BUTTON_COLORS[selected];
   return drawButton({
     id: index + 1,
     x: 640 * view.scaleX,
-    y: 95 * view.scaleY + (35 + 90 * index) * view.scale,
+    y,
     width,
     height: 60,
     faceTop,
@@ -227,19 +281,19 @@ const leaveMenu = () => {
   }
 };
 
-// Arrow keys move the selection, wrapping around at both ends.
-const moveSelection = () => {
+// Arrow keys move the selection among the entries, wrapping around at both ends.
+const moveSelection = (entries) => {
   const input = racers[game.player].u;
   if (input.up) {
     pauseMenu.selected--;
     if (pauseMenu.selected == -1) {
-      pauseMenu.selected = ENTRIES.length - 1;
+      pauseMenu.selected = entries - 1;
     }
     input.up = false;
   }
   if (input.down) {
     pauseMenu.selected++;
-    if (pauseMenu.selected == ENTRIES.length) {
+    if (pauseMenu.selected == entries) {
       pauseMenu.selected = 0;
     }
     input.down = false;
