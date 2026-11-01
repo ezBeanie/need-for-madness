@@ -199,3 +199,22 @@ zu spät, spult ein Spiel zum Tick zurück, an dem sie gedrückt wurden, und rec
 - Echtzeit-Test gegen den Dev-Server (drei bzw. acht Browser-Kontexte, je eigenes Spiel):
   zwei Rennen zu dritt, einer steigt aus, der Host geht; acht in einem Rennen, einem reißt die
   Verbindung ab. Alle Fingerabdrücke gleich, das abgerissene Auto ab demselben Frame bei der KI.
+
+Spieltest 2026-11-01 mit vier Geräten (iPhone als Host, S24, iPad, Laptop): Ein Desync kam vom
+Freischaltstand, der pro Gerät verschieden ist und die Hilfe auf der neuesten Strecke steuerte;
+im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spieler ohne Desync.
+
+### Offen
+
+- **Tab oder App im Hintergrund:** Ein verstecktes Spiel rechnet und pingt nicht. Nach 100 Ticks
+  halten die anderen den Spieler für ausgestiegen (KI fährt sein Auto), er selbst weiß es nicht
+  und fährt weiter: Desync. Lösung: Beim Verstecken das Rennen selbst verlassen (`left` senden,
+  wie über das Escape-Menü), oder einem Spiel, das zurückkommt, sagen, ab welchem Frame es als
+  ausgestiegen gilt.
+- **Lobby ohne Bots:** Standardmäßig fahren nur die Spieler; der Host kann in der Lobby Bots
+  hinzufügen und ihr Auto wählen. Keine Schwierigkeitsunterschiede zwischen Spielern.
+- **Querformat auf iOS:** Web-Apps können die Drehung dort nicht sperren; bisher ein Hinweis im
+  Hochformat. Möglich: das Spiel im Hochformat selbst um 90° drehen, oder eine App-Hülle.
+- `?determinism` hängt vom gespeicherten Auto ab (neuer Spieler: Landehilfe `onautocorrect`);
+  die Seite sollte sie abschalten wie der Host.
+- Bandbreite (Tasten als Bits, nur bei Änderung), Namen über den Autos, Ergebnisliste für alle.
