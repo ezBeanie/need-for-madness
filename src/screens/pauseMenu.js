@@ -201,6 +201,19 @@ export const drawPauseMenuOverRace = () => {
   pulseButtons();
 };
 
+// Leaves the race for the main menu, as Quit does (from a stage still loading, with no
+// cars of the race to fix yet).
+export const quitRace = () => {
+  pauseMenu.overRace = false;
+  if (game.phase != PHASE.stageLoading) {
+    choose(QUIT);
+    return;
+  }
+  menu.animation = 0;
+  menu.continuesToCarSelect = false;
+  game.phase = PHASE.mainMenu;
+};
+
 const chooseOverRace = (index) => {
   pauseMenu.overRace = false;
   if (OVER_RACE_ENTRIES[index].entry == QUIT) {

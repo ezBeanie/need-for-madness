@@ -65,6 +65,7 @@ import {
   drawPauseMenuOverRace,
   pauseMenuOverRaceKeys,
   pauseMenuTick,
+  quitRace,
 } from "./screens/pauseMenu.js";
 import { mainMenuTick, resetQuestionTick } from "./screens/mainMenu.js";
 import { loadAssets } from "./loading/assets.js";
@@ -77,6 +78,7 @@ import { guest, guestWaitingTick, startGuesting } from "./net/guest.js";
 import { ROLE, link } from "./net/link.js";
 import {
   OUT_OF_SYNC,
+  leaveLockstep,
   leftNotice,
   lockstep,
   lockstepTick,
@@ -352,6 +354,12 @@ document.addEventListener("visibilitychange", () => {
     audio.muteMusic = true;
     audio.muteSound = true;
     stopEngine();
+    // (a hidden game runs no ticks: racing together, the others would take it for gone
+    // while its player raced on once it shows again, so it leaves the race at once)
+    if (lockstep.active) {
+      leaveLockstep();
+      quitRace();
+    }
   }
 });
 

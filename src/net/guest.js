@@ -181,6 +181,10 @@ export const guestWaitingTick = () => {
   if (guest.joinTicks++ % JOIN_EVERY_TICKS == 0) {
     link.send({ type: MESSAGE.join, carType: game.carTypes[0] });
   }
+  // (a race left while its stage loaded, see game.js, is not loaded again)
+  if (guest.start && !lockstep.active) {
+    guest.start = null;
+  }
   if (guest.start) {
     loadHostedRace(guest.start);
   }

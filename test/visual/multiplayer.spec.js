@@ -312,6 +312,79 @@ test("a guest whose host left races on, the host's car the AI's, and gets its ow
   });
 });
 
+// The page hidden (another tab or app), as the browser tells it.
+const hide = (page) =>
+  page.evaluate(() => {
+    Object.defineProperty(document, "visibilityState", {
+      value: "hidden",
+      configurable: true,
+    });
+    document.dispatchEvent(new Event("visibilitychange"));
+  });
+
+test("a guest whose game is hidden leaves the race at once, its car to the AI in every game", async ({
+  context,
+}) => {
+  const { host, guest, hostPage, guestPage, both } = await raceTogether(
+    context,
+    "hidden",
+  );
+  await advanceBoth(...both, 250);
+  // (a hidden game runs no ticks: it says so as it hides)
+  await hide(guestPage);
+  expect(await guestState(guestPage)).toMatchObject({
+    phase: PHASE.mainMenu,
+    humans: [],
+  });
+  await hostPage.waitForTimeout(DELIVERY_MS);
+  await host.advance(3);
+  expect(await hostPage.evaluate(() => window.gameState.game.humans)).toEqual([
+    0,
+  ]);
+  const frame = await frameOf(hostPage);
+  await host.advance(30);
+  expect(await frameOf(hostPage)).toBe(frame + 30);
+  expect(await apartAt(hostPage)).toBe(-1);
+  // shown again, it stays in its menu, in the room
+  await guest.advance(30);
+  expect(await guestState(guestPage)).toMatchObject({
+    phase: PHASE.mainMenu,
+  });
+});
+
+test("a guest hidden while the stage of the host's race loads goes to its menu, not to the race", async ({
+  context,
+}) => {
+  const games = await openTwoGames(context, "/?host=hidload", "/?join=hidload");
+  const { host, guest, hostPage, guestPage } = games;
+  await host.tap("Enter");
+  await host.advanceUntil(PHASE.carSelect);
+  await host.advance(40);
+  await host.tap("Enter");
+  await host.advanceUntil(PHASE.stageSelect);
+  await host.advance(190);
+  await guest.advance(30);
+  await hostPage.waitForTimeout(DELIVERY_MS);
+  await host.tap("Enter");
+  await host.advanceUntil(PHASE.race);
+  await host.advance();
+  await guestPage.waitForTimeout(DELIVERY_MS);
+  await guest.advanceUntil(PHASE.stageLoading);
+  await hide(guestPage);
+  await guest.advance(100);
+  expect(await guestState(guestPage)).toMatchObject({
+    phase: PHASE.mainMenu,
+    humans: [],
+  });
+  // (told as the host's race runs on)
+  await expect
+    .poll(async () => {
+      await host.advance();
+      return hostPage.evaluate(() => window.gameState.game.humans);
+    })
+    .toEqual([0]);
+});
+
 test("the guest leaving the race leaves its car to the host's AI", async ({
   context,
 }) => {

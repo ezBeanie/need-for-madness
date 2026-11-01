@@ -231,10 +231,16 @@ export const lockstepTick = () => {
     }
   }
   if (!IN_RACE.includes(game.phase)) {
-    send({ type: MESSAGE.left, frame: lockstep.frame + INPUT_DELAY });
-    stopLockstep();
-    game.humans = [];
+    leaveLockstep();
   }
+};
+
+// The player leaves the race: the others' AI drives its car from the frame after the last
+// keys it sent.
+export const leaveLockstep = () => {
+  send({ type: MESSAGE.left, frame: lockstep.frame + INPUT_DELAY });
+  stopLockstep();
+  game.humans = [];
 };
 
 // FNV-1a over the race's every bit (encode keeps -0, NaN and the infinities apart)
