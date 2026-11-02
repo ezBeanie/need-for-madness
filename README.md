@@ -29,3 +29,7 @@ npm test             # unit tests
 npm run test:visual  # browser tests (Playwright)
 npm run lint
 ```
+
+## Contributing
+
+Found a bug or have an idea? Open an [issue](https://github.com/ezBeanie/need-for-madness/issues). Want to change something yourself? Fork the repository and open a pull request; please run `npm test` and `npm run lint` first.
