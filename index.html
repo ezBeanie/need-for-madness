@@ -34,7 +34,8 @@ src: url(data/verdana.ttf);
   font-size: 15px;
 }
 .options-button:focus-visible, .multiplayer-button:focus-visible,
-.menu-dialog button:focus-visible, .menu-dialog input:focus-visible {
+.menu-dialog button:focus-visible, .menu-dialog input:focus-visible,
+.menu-dialog select:focus-visible {
   outline: 3px solid #ffffff; outline-offset: 2px;
 }
 .menu-dialog {
@@ -57,12 +58,20 @@ src: url(data/verdana.ttf);
 .menu-dialog button:disabled { opacity: 0.55; cursor: not-allowed; background: transparent; }
 #options .hint { display: block; color: rgba(160, 230, 255, 0.8); font-size: 12px; }
 .menu-dialog label { display: block; margin: 16px 0 6px; font-size: 14px; }
-.menu-dialog input {
+.menu-dialog input, .menu-dialog select {
   box-sizing: border-box; width: 100%; min-height: 44px; padding: 8px 14px;
   border: 1px solid rgba(1, 234, 255, 0.6); border-radius: 22px;
   background: rgba(0, 0, 0, 0.4); color: #ffffff; font: inherit; font-size: 15px;
 }
 .menu-dialog input + button, .menu-dialog .error + button { margin-top: 8px; }
+.menu-dialog h3 { margin: 16px 0 8px; font-size: 16px; }
+.menu-dialog .bot { display: flex; gap: 8px; }
+#multiplayerBotList label { margin: 0 0 4px; }
+.menu-dialog .bot select { flex: 1; }
+.menu-dialog .bot button { width: auto; }
+#multiplayerAddBot { margin-top: 8px; }
+/* (a room of eight with bots is taller than a phone held sideways) */
+#multiplayer { max-height: 90vh; overflow-y: auto; }
 .menu-dialog .error { margin: 6px 0 0; color: #ffb4a8; }
 .menu-dialog .error::before { content: "\26A0  "; }
 .menu-dialog .room { font-size: 26px; letter-spacing: 3px; color: #01eaff; }
@@ -165,6 +174,15 @@ src: url(data/verdana.ttf);
 #editorHelp dt { white-space: nowrap; }
 #editorHelp dd { margin: 0; }
 #editorStatus { grid-column: 1 / 4; margin: 0; padding: 8px 12px; font-size: 14px; border-top: 1px solid rgba(1, 234, 255, 0.4); }
+/* phones and tablets held upright: iOS lets no page keep itself sideways */
+#turnDevice { display: none; }
+@media (orientation: portrait) and (pointer: coarse) {
+  #turnDevice {
+    display: flex; position: fixed; inset: 0; z-index: 10; align-items: center;
+    justify-content: center; padding: 24px; background: #15190D; color: #ffffff;
+    font-family: Verdana, Arial, sans-serif; font-size: 20px; text-align: center;
+  }
+}
 </style>
 <script src="gl-matrix-min.js"></script>
 
@@ -181,6 +199,7 @@ src: url(data/verdana.ttf);
 </table>
 
 <canvas id="canvas3D" style="position: absolute; left: 0px; top: 0px; padding-left: 0; padding-right: 0; margin-right: auto; margin-left: auto; display: block; width: 1280px; height: 720px;" width=1280 height=720></canvas>
+<p id="turnDevice">Turn your device sideways to play.</p>
 <canvas id="canvas2D" style="position: absolute; left: 0px; top: 0px; padding-left: 0; padding-right: 0; margin-right: auto; margin-left: auto; display: block; width: 1280px; height: 720px;" width=1280 height=720></canvas>
 
 
@@ -299,7 +318,8 @@ src: url(data/verdana.ttf);
 <dialog id="multiplayer" class="menu-dialog" aria-labelledby="multiplayerTitle">
 <h2 id="multiplayerTitle">Multiplayer</h2>
 <div id="multiplayerChoose">
-<p>Race a friend: one of you hosts, the other joins with the host's code.</p>
+<p>Race friends: one of you hosts, up to seven others join with the host's code.</p>
+<p id="multiplayerNotice" role="status" hidden></p>
 <button type="button" id="multiplayerHost">Host a race</button>
 <form id="multiplayerJoinForm" novalidate>
 <label for="multiplayerCode">Code of the host's room</label>
@@ -311,11 +331,18 @@ src: url(data/verdana.ttf);
 <div id="multiplayerRoom" hidden>
 <p>Room <strong id="multiplayerRoomName" class="room"></strong></p>
 <div id="multiplayerShare">
-<label for="multiplayerLink">Link for your guest</label>
+<label for="multiplayerLink">Link for your guests</label>
 <input id="multiplayerLink" readonly>
 <button type="button" id="multiplayerCopy">Copy</button>
 </div>
 <p id="multiplayerStatus" role="status"></p>
+<h3 id="multiplayerPlayersTitle">Players</h3>
+<ul id="multiplayerPlayers" aria-labelledby="multiplayerPlayersTitle"></ul>
+<div id="multiplayerBots" hidden>
+<h3 id="multiplayerBotsTitle">Bots</h3>
+<ul id="multiplayerBotList" aria-labelledby="multiplayerBotsTitle"></ul>
+<button type="button" id="multiplayerAddBot">Add a bot</button>
+</div>
 <button type="button" id="multiplayerLeave">Leave the room</button>
 </div>
 <button type="button" id="multiplayerClose" class="close">Close</button>

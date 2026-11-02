@@ -50,10 +50,11 @@ import { newParticleModel } from "../render/models.js";
 import { gl } from "../render/renderer.js";
 import { scene, timeTube } from "../render/scene.js";
 import { pauseMenu } from "../screens/pauseMenu.js";
+import { lockstep } from "../net/lockstep.js";
 import { startRaceEnd } from "../screens/raceEnd.js";
 import { images } from "./images.js";
 import { drawMinimap } from "./minimap.js";
-import { rd, view } from "./view.js";
+import { canvas2D, rd, view } from "./view.js";
 import {
   AREA,
   BUTTON,
@@ -512,6 +513,7 @@ const knownWrecks = [];
 
 export function resetHud() {
   game.player = 0;
+  pauseMenu.overRace = false;
   track.switchtime = 800;
   switchTimer = track.switchtime;
   raceEvents.oncheckpoint = -1;
@@ -859,6 +861,11 @@ const afterRaceOver = () => {
 
 const pause = () => {
   pauseMenu.selected = 0;
+  // (racing together, the race goes on for the others: the menu shows over it)
+  if (lockstep.active) {
+    pauseMenu.overRace = true;
+    return;
+  }
   stopStageMusic();
   stopEngine();
   game.phase = PHASE.paused;
@@ -1609,9 +1616,33 @@ export function drawHud() {
   }
 }
 
-// A race waiting for the other game's keys (see net/lockstep.js) stands as it was drawn
-// last, and can be paused, to be left.
-export const drawWaitingHud = () => {
+// the HUD as the race was drawn last before it began to wait
+let waitingHud = null;
+
+// The HUD of a race as drawn last, from its first tick of waiting on: what waiting draws
+// goes on it, not on itself again (the soft edges of buttons and texts drawn over
+// themselves would thicken tick by tick).
+const standAsDrawnLast = (first) => {
+  waitingHud ??= document.createElement("canvas");
+  const sized =
+    waitingHud.width == canvas2D.width && waitingHud.height == canvas2D.height;
+  rd.save();
+  rd.setTransform(1, 0, 0, 1, 0, 0);
+  if (first || !sized) {
+    waitingHud.width = canvas2D.width;
+    waitingHud.height = canvas2D.height;
+    waitingHud.getContext("2d").drawImage(canvas2D, 0, 0);
+  } else {
+    rd.clearRect(0, 0, canvas2D.width, canvas2D.height);
+    rd.drawImage(waitingHud, 0, 0);
+  }
+  rd.restore();
+};
+
+// A race waiting for another game's keys (see net/lockstep.js) stands as it was drawn
+// last (first: from this tick on), and its menu opened, to leave it.
+export const drawWaitingHud = (first) => {
+  standAsDrawnLast(first);
   if (confirm.state == CONFIRM.pressed && raceEvents.countdown <= 65) {
     confirm.state = CONFIRM.used;
     pause();
@@ -1621,12 +1652,14 @@ export const drawWaitingHud = () => {
   }
 };
 
-// Racing together: what the HUD tells about the other game, and how long a message takes
-// to the host and back (the first thing to know when the race waits).
-export const drawNetNotice = (notice, ping) => {
-  if (notice) {
-    drawCenteredText(192, notice, 0, 0, 0, TEXT.label);
-  }
+// Racing together: what the HUD tells about the other games, a line each, and how long a
+// message takes to the host and back (the first thing to know when the race waits).
+export const drawNetNotice = (notices, ping) => {
+  notices
+    .filter(Boolean)
+    .forEach((notice, i) =>
+      drawCenteredText(192 + 40 * i, notice, 0, 0, 0, TEXT.label),
+    );
   if (ping != null) {
     drawCenteredText(706, `Ping ${ping} ms`, 0, 0, 0, TEXT.small);
   }

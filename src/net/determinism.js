@@ -11,6 +11,7 @@ import { PHASE, game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
 import { flashIntoRace } from "../race/countdown.js";
+import { raceEvents } from "../race/events.js";
 import { car, racers } from "../race/racers.js";
 import { track } from "../race/track.js";
 import { menu } from "../screens/menuState.js";
@@ -97,6 +98,8 @@ export const beginFingerprintRace = () => {
   tick.fraction = 0;
   game.mode = 0;
   flashIntoRace();
+  // (nor the help of a game that has no car stored yet, off as racing together, see host.js)
+  raceEvents.onautocorrect = 0;
 };
 
 // (the cars people drive steered, see isHuman)

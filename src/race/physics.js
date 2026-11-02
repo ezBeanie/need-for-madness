@@ -12,7 +12,14 @@ import {
   sinDeg,
 } from "../core/math.js";
 import { random } from "../core/random.js";
-import { MAX_CARS, MODE, PHASE, game, isHuman } from "../core/state.js";
+import {
+  MAX_CARS,
+  MODE,
+  PHASE,
+  game,
+  isHuman,
+  onNewestStage,
+} from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
 import { BLEND, gl, keepDamageTexture } from "../render/renderer.js";
@@ -692,23 +699,23 @@ function flipBackWhenCapsized(c, type) {
   let flmat = 7,
     capto = 30;
   if (isHuman(c)) {
-    if (track.stage == 1 && game.unlocked == 1) {
+    if (track.stage == 1 && onNewestStage(1)) {
       flmat = 30;
       capto = 10;
     }
-    if (track.stage == 2 && game.unlocked == 2) {
+    if (track.stage == 2 && onNewestStage(2)) {
       flmat = 30;
       capto = 10;
     }
-    if (track.stage == 3 && game.unlocked == 3) {
+    if (track.stage == 3 && onNewestStage(3)) {
       flmat = 25;
       capto = 15;
     }
-    if (track.stage == 4 && game.unlocked == 4) {
+    if (track.stage == 4 && onNewestStage(4)) {
       flmat = 20;
       capto = 20;
     }
-    if (track.stage == 5 && game.unlocked == 5) {
+    if (track.stage == 5 && onNewestStage(5)) {
       flmat = 14;
       capto = 25;
     }
@@ -744,16 +751,16 @@ function flipBackWhenCapsized(c, type) {
 function drainPower(c, type) {
   let pfact = 1;
   if (isHuman(c)) {
-    if (track.stage == 1 && game.unlocked == 1) {
+    if (track.stage == 1 && onNewestStage(1)) {
       pfact = 0.6;
     }
-    if (track.stage == 2 && game.unlocked == 2) {
+    if (track.stage == 2 && onNewestStage(2)) {
       pfact = 0.7;
     }
-    if (track.stage == 3 && game.unlocked == 3) {
+    if (track.stage == 3 && onNewestStage(3)) {
       pfact = 0.8;
     }
-    if (track.stage == 4 && game.unlocked == 4) {
+    if (track.stage == 4 && onNewestStage(4)) {
       pfact = 0.9;
     }
   }

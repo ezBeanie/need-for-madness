@@ -17,6 +17,7 @@ import { canvas3D, fitCanvas3D } from "./render/renderer.js";
 import { loadLook } from "./render/look.js";
 import { loadMinimap } from "./ui/minimap.js";
 import { canvas2D, view } from "./ui/view.js";
+import { keepScreenOn } from "./ui/screenAwake.js";
 import { loadAiming, startProjection, turnView } from "./render/camera.js";
 import { moveCamera } from "./render/cameraMoves.js";
 import { render } from "./render/drawFrame.js";
@@ -65,7 +66,12 @@ import { control } from "./race/ai.js";
 import { chipsfly, dustfly, expburn, sprksfly } from "./race/effects.js";
 import { drive } from "./race/physics.js";
 import { raceEndScreen, unlockedCarTick } from "./screens/raceEnd.js";
-import { pauseMenuTick } from "./screens/pauseMenu.js";
+import {
+  drawPauseMenuOverRace,
+  pauseMenuOverRaceKeys,
+  pauseMenuTick,
+  quitRace,
+} from "./screens/pauseMenu.js";
 import { mainMenuTick, resetQuestionTick } from "./screens/mainMenu.js";
 import { loadAssets } from "./loading/assets.js";
 import { updateStandings } from "./race/standings.js";
@@ -73,22 +79,19 @@ import { animateTrack, castShadows, placeWheels } from "./render/raceScene.js";
 import { countDown, flashTick } from "./race/countdown.js";
 import { onKey } from "./input/controls.js";
 import { hostTick, startHosting } from "./net/host.js";
-import {
-  guest,
-  guestNotice,
-  guestTick,
-  guestWaitingTick,
-  startGuesting,
-} from "./net/guest.js";
+import { guest, guestWaitingTick, startGuesting } from "./net/guest.js";
 import { ROLE, link } from "./net/link.js";
 import {
   OUT_OF_SYNC,
-  WAITING,
+  leaveLockstep,
+  leftNotice,
   lockstep,
+  lockstepTick,
   lockstepWaits,
   outOfSync,
   pressFrameKeys,
   releaseFrameKeys,
+  waitingNotice,
 } from "./net/lockstep.js";
 
 // The logic runs in fixed ticks, whatever the display's refresh rate (see tick.js).
@@ -111,7 +114,6 @@ const runRaceFrameAgain = () => {
   recordRaceTick();
   updateStandings();
   control();
-  tick.fraction = nextFraction(tick.fraction);
 };
 
 // The race and everything that replays it: the cars drive (or replay), wheels, shadows,
@@ -121,9 +123,12 @@ function raceTick() {
   startProjection();
   raceEvents.onelec = false;
   if (game.phase == PHASE.race) {
+    pauseMenuOverRaceKeys();
+  }
+  if (game.phase == PHASE.race) {
     if (lockstepWaits()) {
       waitedTicks++;
-      drawWaitingHud();
+      drawWaitingHud(waitedTicks == 1);
     } else {
       waitedTicks = 0;
       raceRan = true;
@@ -144,13 +149,13 @@ function raceTick() {
       }
     }
     drawNetNotice(
-      waitedTicks > WAIT_SHOWN_TICKS
-        ? WAITING[link.role]
-        : outOfSync()
-          ? OUT_OF_SYNC
-          : guestNotice(),
+      [
+        outOfSync() ? OUT_OF_SYNC : leftNotice(),
+        waitedTicks > WAIT_SHOWN_TICKS ? waitingNotice() : null,
+      ],
       link.role == ROLE.guest ? guest.ping : null,
     );
+    drawPauseMenuOverRace();
   }
   if (game.phase == PHASE.replay) {
     const from = viewer.frame;
@@ -229,7 +234,7 @@ export function runTick() {
   pollGamepads();
   guestWaitingTick();
   hostTick();
-  guestTick();
+  lockstepTick();
   raceRan = false;
   for (const [phases, run] of TICKS) {
     if (phases.includes(game.phase)) {
@@ -329,10 +334,22 @@ installStageEditor();
 
 installPointer(canvas2D, {
   // a click or touch allows audio (see unlockAudio)
-  onRelease: () => unlockAudio(game.phase == PHASE.race),
+  onRelease: () => {
+    unlockAudio(game.phase == PHASE.race);
+    keepScreenOn();
+  },
   keepPressedWhileTouching: () => game.phase == PHASE.race,
 });
 installKeyboard(onKey);
+document.addEventListener("keydown", keepScreenOn);
+// (so too the buttons and dialogs over the game: a guest may join and wait for the race
+// without touching the game itself)
+document.addEventListener("click", (event) => {
+  if (event.target != canvas2D) {
+    unlockAudio(false);
+    keepScreenOn();
+  }
+});
 
 // A hidden tab is silent and gets its sound settings back when it shows again.
 let mutedBeforeHiding = { music: false, sound: false };
@@ -340,11 +357,18 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState == "visible") {
     audio.muteMusic = mutedBeforeHiding.music;
     audio.muteSound = mutedBeforeHiding.sound;
+    keepScreenOn();
   } else {
     mutedBeforeHiding = { music: audio.muteMusic, sound: audio.muteSound };
     audio.muteMusic = true;
     audio.muteSound = true;
     stopEngine();
+    // (a hidden game runs no ticks: racing together, the others would take it for gone
+    // while its player raced on once it shows again, so it leaves the race at once)
+    if (lockstep.active) {
+      leaveLockstep();
+      quitRace();
+    }
   }
 });
 
