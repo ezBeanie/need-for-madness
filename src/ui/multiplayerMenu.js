@@ -1,10 +1,19 @@
 // The multiplayer dialog: hosting a race (a room with a code and a link for the guests) or
-// joining one with the host's code, and the room's players with their cars. A button beside
-// the options' gear opens it, in the menus a race of the host's can take a guest away from.
+// joining one with the host's code, the room's players with their cars, and its bots, which
+// the host adds and chooses the cars of. A button beside the options' gear opens it, in the
+// menus a race of the host's can take a guest away from.
 
 import { PHASE, game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
-import { hostRoom, roomGuests } from "../net/host.js";
+import {
+  addBot,
+  canAddBot,
+  chooseBotCar,
+  hostRoom,
+  removeBot,
+  roomBots,
+  roomGuests,
+} from "../net/host.js";
 import { guest, hostThere, joinRoom } from "../net/guest.js";
 import { ROLE, ROOM_NAME, leaveRoom, link } from "../net/link.js";
 
@@ -74,6 +83,60 @@ const showPlayers = () => {
   }
 };
 
+const botName = (i) => `Bot ${i + 1}`;
+
+// (each a car to choose, so a list rebuilt only when bots come or go: one chosen in keeps
+// its focus)
+const hostBotItem = (carType, i) => {
+  const item = document.createElement("li");
+  const label = document.createElement("label");
+  label.htmlFor = `multiplayerBot${i}`;
+  label.textContent = botName(i);
+  const row = document.createElement("div");
+  row.className = "bot";
+  const select = document.createElement("select");
+  select.id = `multiplayerBot${i}`;
+  select.append(
+    ...carStats.names.map((name, type) => new Option(name, String(type))),
+  );
+  select.value = String(carType);
+  select.addEventListener("change", () =>
+    chooseBotCar(i, Number(select.value)),
+  );
+  const remove = document.createElement("button");
+  remove.type = "button";
+  remove.textContent = "Remove";
+  remove.setAttribute("aria-label", `Remove ${botName(i)}`);
+  remove.addEventListener("click", () => {
+    removeBot(i);
+    showBots();
+    element("multiplayerAddBot").focus();
+  });
+  row.append(select, remove);
+  item.append(label, row);
+  return item;
+};
+
+const guestBotItem = (carType, i) => {
+  const item = document.createElement("li");
+  item.textContent = `${botName(i)}: ${carStats.names[carType]}`;
+  return item;
+};
+
+const showBots = () => {
+  const isHost = link.role == ROLE.host;
+  const bots = isHost ? roomBots() : guest.bots;
+  element("multiplayerBots").hidden = !isHost && bots.length == 0;
+  element("multiplayerAddBot").hidden = !isHost;
+  element("multiplayerAddBot").disabled = isHost && !canAddBot();
+  const list = element("multiplayerBotList");
+  const shape = isHost ? `host ${bots.length}` : `guest ${bots.join(" ")}`;
+  if (list.dataset.shape != shape) {
+    list.dataset.shape = shape;
+    list.replaceChildren(...bots.map(isHost ? hostBotItem : guestBotItem));
+  }
+};
+
 // What the dialog and its button show: the choice, or the room the game is in.
 const showRoom = () => {
   const inRoom = link.role != ROLE.none;
@@ -95,6 +158,7 @@ const showRoom = () => {
     line.textContent = text;
   }
   showPlayers();
+  showBots();
 };
 
 const showNotice = (text) => {
@@ -149,6 +213,12 @@ export const installMultiplayerMenu = () => {
     leaveRoom();
     copy.textContent = "Copy";
     showRoom();
+  });
+  element("multiplayerAddBot").addEventListener("click", () => {
+    addBot();
+    showBots();
+    const selects = element("multiplayerBotList").querySelectorAll("select");
+    selects[selects.length - 1]?.focus();
   });
   element("multiplayerClose").addEventListener("click", () => dialog.close?.());
 };

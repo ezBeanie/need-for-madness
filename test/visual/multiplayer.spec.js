@@ -109,9 +109,15 @@ const hostStartsRace = async ({ host, guest, hostPage, guestPage }) => {
   await guest.advanceUntil(PHASE.race);
 };
 
-// Host and guest, each in a tab of its own, in a race the host started.
-const raceTogether = async (context, room) => {
+// Host and guest, each in a tab of its own, in a race the host started (with as many bots
+// as given, the room's field otherwise only the two).
+const raceTogether = async (context, room, bots = 0) => {
   const games = await openTwoGames(context, `/?host=${room}`, `/?join=${room}`);
+  await games.hostPage.evaluate((bots) => {
+    for (let i = 0; i < bots; i++) {
+      window.gameState.addBot();
+    }
+  }, bots);
   await hostStartsRace(games);
   const { host, guest, hostPage, guestPage } = games;
   return {
@@ -265,7 +271,7 @@ test("the games tell a race gone apart by its fingerprints, say so, and tell wha
   context,
 }) => {
   await recordDrawnTexts(context);
-  const { guestPage, both } = await raceTogether(context, "sync");
+  const { guestPage, both } = await raceTogether(context, "sync", 5);
   await advanceBoth(...both, 40);
   // a car of the guest's race moves a little, as a race computed apart would
   await guestPage.evaluate(() => (window.gameState.car[3].x += 0.5));
@@ -480,6 +486,53 @@ test("the multiplayer dialog opens a room, and a guest joins it with its code", 
   expect((await guestState(guestPage)).phase).toBe(PHASE.race);
 });
 
+test("a room's race has only its players' cars, and the bots the host adds with the cars it chooses", async ({
+  context,
+}) => {
+  const games = await openTwoGames(context, "/?host=bots", "/?join=bots");
+  const { host, guest, hostPage, guestPage } = games;
+  const fieldOf = (page) =>
+    page.evaluate(() => {
+      const { game } = window.gameState;
+      return game.carTypes.slice(0, game.carCount);
+    });
+  // two bots added, the first's car chosen, then the other taken away again: one left
+  await guest.advance(30);
+  await hostPage.waitForTimeout(DELIVERY_MS);
+  await hostPage.getByRole("button", { name: "Room bots" }).click();
+  await hostPage.getByRole("button", { name: "Add a bot" }).click();
+  await hostPage.getByRole("button", { name: "Add a bot" }).click();
+  await hostPage
+    .getByLabel("Bot 1", { exact: true })
+    .selectOption({ label: "Kool Kat" });
+  await hostPage.getByRole("button", { name: "Remove Bot 2" }).click();
+  await hostPage.getByRole("button", { name: "Close" }).click();
+  // the guest's dialog lists it
+  await guestPage.waitForTimeout(DELIVERY_MS);
+  await guest.advance(2);
+  await guestPage.getByRole("button", { name: "Room bots" }).click();
+  await expect(guestPage.locator("#multiplayerBotList")).toHaveText(
+    "Bot 1: Kool Kat",
+  );
+  await guestPage.getByRole("button", { name: "Close" }).click();
+  await hostStartsRace(games);
+  const koolKat = await hostPage.evaluate(() =>
+    window.gameState.carStats.names.indexOf("Kool Kat"),
+  );
+  // (the host's own car as the tabs' shared storage left it)
+  const field = await fieldOf(hostPage);
+  expect(field.slice(1)).toEqual([Number(GUEST_TYPE), koolKat]);
+  expect(await fieldOf(guestPage)).toEqual(field);
+  // the bot is the AI's, in both games alike
+  const both = [
+    { game: host, page: hostPage },
+    { game: guest, page: guestPage },
+  ];
+  await advanceBoth(...both, 300);
+  expect(await apartAt(hostPage)).toBe(-1);
+  expect(await apartAt(guestPage)).toBe(-1);
+});
+
 test("leaving the room ends the link", async ({ page }) => {
   const game = await openGame(page);
   await game.advanceUntil(PHASE.mainMenu);
@@ -542,7 +595,11 @@ test("each game's HUD tells its player of the stunts it landed and the cars it w
   context,
 }) => {
   await recordDrawnTexts(context);
-  const { hostPage, guestPage, both } = await raceTogether(context, "events");
+  const { hostPage, guestPage, both } = await raceTogether(
+    context,
+    "events",
+    5,
+  );
   // past the countdown
   while (
     await hostPage.evaluate(() => window.gameState.raceEvents.countdown != 0)

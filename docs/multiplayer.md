@@ -206,15 +206,19 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
 
 ### Offen
 
-- **Tab oder App im Hintergrund:** Ein verstecktes Spiel rechnet und pingt nicht. Nach 100 Ticks
-  halten die anderen den Spieler für ausgestiegen (KI fährt sein Auto), er selbst weiß es nicht
-  und fährt weiter: Desync. Lösung: Beim Verstecken das Rennen selbst verlassen (`left` senden,
-  wie über das Escape-Menü), oder einem Spiel, das zurückkommt, sagen, ab welchem Frame es als
-  ausgestiegen gilt.
-- **Lobby ohne Bots:** Standardmäßig fahren nur die Spieler; der Host kann in der Lobby Bots
-  hinzufügen und ihr Auto wählen. Keine Schwierigkeitsunterschiede zwischen Spielern.
 - **Querformat auf iOS:** Web-Apps können die Drehung dort nicht sperren; bisher ein Hinweis im
   Hochformat. Möglich: das Spiel im Hochformat selbst um 90° drehen, oder eine App-Hülle.
-- `?determinism` hängt vom gespeicherten Auto ab (neuer Spieler: Landehilfe `onautocorrect`);
-  die Seite sollte sie abschalten wie der Host.
 - Bandbreite (Tasten als Bits, nur bei Änderung), Namen über den Autos, Ergebnisliste für alle.
+
+### Schritt 7: Hintergrund, Bots in der Lobby
+
+- Ein verstecktes Spiel (anderer Tab, andere App) rechnet und pingt nicht; die anderen hielten
+  es nach 100 Ticks für ausgestiegen, während es danach weiterfuhr. Jetzt verlässt es das
+  Rennen beim Verstecken sofort (`left`, wie „Leave Race“), auch während die Strecke noch lädt
+  (der Start wird dann verworfen). Zurück ist es im Menü und im Raum.
+- `?determinism` schaltet die Landehilfe neuer Spieler ab wie der Host; die Hashes hängen nicht
+  mehr vom gespeicherten Auto ab.
+- Lobby: Mit Gästen fahren im Raum nur die Spieler (`field.roomCarTypes`), keine KI zum
+  Auffüllen. Der Host fügt im Dialog Bots hinzu („Add a bot“), wählt je Bot ein Auto und
+  entfernt sie wieder; `players` trägt die Bots mit, die Gäste listen sie. Bots fahren mit der
+  KI wie bisher (Stärke nach Strecke). Ohne Gäste fährt der Host allein mit dem üblichen Feld.

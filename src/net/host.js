@@ -4,7 +4,7 @@
 
 import { carStats } from "../data/carStats.js";
 import { random, seededRandom } from "../core/random.js";
-import { MODE, game } from "../core/state.js";
+import { MAX_CARS, MODE, game } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
 import { field, setUpField } from "../race/field.js";
 import { raceCarTextures } from "../render/generated.js";
@@ -28,10 +28,12 @@ const GUEST_GONE_TICKS = 100;
 const GUEST_WAITING_TICKS = 60;
 
 // guests: the players in the room but the host, in the order they came, each with its id,
-// the car it chose, and the ticks since it was last heard and since it last joined
-const host = { guests: [] };
+// the car it chose, and the ticks since it was last heard and since it last joined;
+// bots: the cars the computer drives in the room's races, as the host added them
+const host = { guests: [], bots: [] };
 
 export const roomGuests = () => host.guests;
+export const roomBots = () => host.bots;
 
 // the guests a race the host starts takes along
 const waitingGuests = () =>
@@ -44,7 +46,40 @@ const sendPlayers = () =>
     players: [{ id: link.id, carType: game.carTypes[0] }, ...host.guests].map(
       ({ id, carType }) => ({ id, carType }),
     ),
+    bots: host.bots,
   });
+
+// a race's cars at most: the players' and the bots'
+export const canAddBot = () =>
+  1 + host.guests.length + host.bots.length < MAX_CARS;
+
+// A bot joins the room, in the first car no one drives yet.
+export const addBot = () => {
+  if (!canAddBot()) {
+    return;
+  }
+  const taken = [
+    game.carTypes[0],
+    ...host.guests.map(({ carType }) => carType),
+  ];
+  const free = carStats.names.findIndex(
+    (_, type) => !taken.includes(type) && !host.bots.includes(type),
+  );
+  host.bots = [...host.bots, Math.max(free, 0)];
+  sendPlayers();
+};
+
+export const removeBot = (i) => {
+  host.bots = host.bots.filter((_, j) => j != i);
+  sendPlayers();
+};
+
+export const chooseBotCar = (i, carType) => {
+  if (isIndex(carType, carStats.names.length)) {
+    host.bots = host.bots.map((type, j) => (j == i ? carType : type));
+    sendPlayers();
+  }
+};
 
 const receive = (message) => {
   receiveRaceMessage(message);
@@ -86,13 +121,18 @@ export const hostTick = () => {
   host.guests = host.guests.filter(
     ({ quietTicks }) => quietTicks < GUEST_GONE_TICKS,
   );
-  field.guestCarTypes =
-    link.role == ROLE.host ? waitingGuests().map(({ carType }) => carType) : [];
+  // (without guests, the host races as alone, with the opponents of the stage)
+  const guests = link.role == ROLE.host ? waitingGuests() : [];
+  field.roomCarTypes =
+    guests.length > 0
+      ? [...guests.map(({ carType }) => carType), ...host.bots]
+      : null;
 };
 
 // Opens a room for guests to join.
 export const hostRoom = (room) => {
   host.guests = [];
+  host.bots = [];
   openLink(ROLE.host, room, receive);
 };
 
@@ -116,11 +156,12 @@ export const startHostedRace = () => {
     game.humans = [];
     return;
   }
+  const others = [...guests.map(({ carType }) => carType), ...host.bots];
   if (
-    game.carCount <= guests.length ||
-    guests.some(({ carType }, i) => game.carTypes[i + 1] != carType)
+    game.carCount != 1 + others.length ||
+    others.some((carType, i) => game.carTypes[i + 1] != carType)
   ) {
-    // (a guest came, or chose another car, after the field was chosen)
+    // (a guest came, or one or a bot got another car, after the field was chosen)
     setUpField();
     raceCarTextures();
   }

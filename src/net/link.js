@@ -11,7 +11,7 @@ export const ROLE = { none: 0, host: 1, guest: 2 };
 export const MESSAGE = {
   // a guest is in the room (and drives the car it says)
   join: "join",
-  // the host's answer to a join: the room's players
+  // the host's answer to a join: the room's players and its bots
   players: "players",
   // the race the host starts, its whole state as of its first frame (see raceState.js)
   start: "start",

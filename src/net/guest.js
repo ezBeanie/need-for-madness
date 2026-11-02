@@ -43,8 +43,10 @@ export const guest = {
   start: null,
   // the time to the host and back, in ms (null until measured)
   ping: null,
-  // the room's players as the host last told, each with its id and car, the host's first
+  // the room's players as the host last told, each with its id and car, the host's first,
+  // and the cars of its bots
   players: [],
+  bots: [],
   hostId: null,
   // the car the guest drives in the host's race
   car: 0,
@@ -70,6 +72,11 @@ const isPlayers = (players) =>
       isPlayerId(player?.id) && isIndex(player.carType, carStats.names.length),
   );
 
+const isBots = (bots) =>
+  Array.isArray(bots) &&
+  bots.length < MAX_CARS &&
+  bots.every((type) => isIndex(type, carStats.names.length));
+
 const isStart = ({ stage, carTypes, players, raceId, state }) =>
   isIndex(stage, STAGE_COUNT + 1) &&
   Array.isArray(carTypes) &&
@@ -83,9 +90,14 @@ const isStart = ({ stage, carTypes, players, raceId, state }) =>
 
 const receive = (message) => {
   receiveRaceMessage(message);
-  if (message.type == MESSAGE.players && isPlayers(message.players)) {
+  if (
+    message.type == MESSAGE.players &&
+    isPlayers(message.players) &&
+    isBots(message.bots)
+  ) {
     guest.hostId = message.from;
     guest.players = message.players;
+    guest.bots = message.bots;
   }
   if (message.from != guest.hostId) {
     return;
@@ -126,6 +138,7 @@ export const joinRoom = (room) => {
   Object.assign(guest, {
     start: null,
     players: [],
+    bots: [],
     hostId: null,
     joinTicks: 0,
     hostAnsweredTicks: HOST_GONE_TICKS,

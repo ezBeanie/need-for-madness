@@ -26,9 +26,9 @@ const gridZ = Array.from(
 );
 
 // a replay's cars (see screens/replays.js): the field it was raced in, not new opponents;
-// guestCarTypes: the cars the guests of a room chose (see net/host.js), in place of
-// opponents
-export const field = { replayCars: null, guestCarTypes: [] };
+// roomCarTypes: in a room with guests, the cars they chose and those of the bots the host
+// added (see net/host.js), the whole field beside the player's
+export const field = { replayCars: null, roomCarTypes: null };
 
 // Chooses the opponents and puts all cars on the start grid.
 export function setUpField() {
@@ -36,11 +36,13 @@ export function setUpField() {
   if (field.replayCars) {
     game.carCount = field.replayCars.length;
     field.replayCars.forEach((type, c) => (game.carTypes[c] = type));
+  } else if (field.roomCarTypes) {
+    game.carCount = 1 + field.roomCarTypes.length;
+    field.roomCarTypes.forEach((type, i) => (game.carTypes[i + 1] = type));
+    // (the field size of the stage select is not the room's)
+    fieldSize = game.raceCars;
   } else {
     chooseOpponents(track.stage);
-    // (the guests drive the cars after the player's, a field too small for all grown)
-    game.carCount = Math.max(game.carCount, 1 + field.guestCarTypes.length);
-    field.guestCarTypes.forEach((type, i) => (game.carTypes[i + 1] = type));
   }
   resetHud();
   placeOnGrid();
