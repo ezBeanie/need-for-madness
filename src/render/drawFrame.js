@@ -184,11 +184,12 @@ const drawWheeledCar = (type, parent, wheels, body, near) => {
   });
 };
 
-// classicFloor: where the classic menus' floor is, null over the game's own backdrop
-const drawShowcaseCar = (classicFloor = null) => {
+// floor: where the car's shadow lies, null right below its wheels; menuFloor: on the
+// classic menus' floor
+const drawShowcaseCar = (floor = null, menuFloor = floor !== null) => {
   const type = game.carTypes[0];
   if (look.current == LOOK.classic) {
-    drawClassicCar(carModels[type], type, classicFloor);
+    drawClassicCar(carModels[type], type, floor, menuFloor);
     return;
   }
   drawWheeledCar(
@@ -326,11 +327,15 @@ const drawCarSelect = () => {
     dustSprite.texture = spriteTextures[i % 3];
     drawModel(dustSprite);
   });
-  // the classic car brings its own shadow and orders its polygons itself
-  if (look.current != LOOK.classic) {
-    startDepth();
-    drawModel(carShadows[game.carTypes[0]]);
+  const shadow = carShadows[game.carTypes[0]];
+  // the classic car brings its own shadow, on the backdrop's floor while it bobs, and
+  // orders its polygons itself
+  if (look.current == LOOK.classic) {
+    drawShowcaseCar(shadow.y, false);
+    return;
   }
+  startDepth();
+  drawModel(shadow);
   drawShowcaseCar();
 };
 

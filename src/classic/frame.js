@@ -405,10 +405,15 @@ export const drawClassicStage = (count) => {
 // grat, the original's units), 0 while it loads.
 export const classicGroundOf = (type) => models.get(CAR_FILES[type])?.grat ?? 0;
 
-// A car shown on its own (the car select, a car unlocked): over the modern backdrop its
-// shadow right below its wheels, in the classic menus on a floor at groundAt (our y) in
-// the original's menu shadow colour.
-export const drawClassicCar = (instance, type, groundAt = null) => {
+// A car shown on its own (the car select, a car unlocked): its shadow right below its
+// wheels, or on a floor at groundAt (our y), in the classic menus (menuFloor) in the
+// original's menu shadow colour.
+export const drawClassicCar = (
+  instance,
+  type,
+  groundAt = null,
+  menuFloor = groundAt !== null,
+) => {
   // in the menus, as before any stage: no stage's colours on the car
   startFrame(NO_STAGE);
   const object = carObject(game.carCount, instance, type);
@@ -416,7 +421,7 @@ export const drawClassicCar = (instance, type, groundAt = null) => {
     object.shadowBelow = groundAt === null;
     object.groundAt = groundAt;
   }
-  medium.menuShadow = groundAt === null ? null : [87, 85, 57];
+  medium.menuShadow = menuFloor ? [87, 85, 57] : null;
   drawInOrder(object ? [object] : []);
   medium.menuShadow = null;
 };
