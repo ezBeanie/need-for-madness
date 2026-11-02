@@ -92,6 +92,8 @@ const openTwoGames = async (context, hostUrl, guestUrl) => {
 
 // The host goes from the main menu to a race, the guest along into it.
 const hostStartsRace = async ({ host, guest, hostPage, guestPage }) => {
+  // (the focus is on Multiplayer once its dialog closed)
+  await hostPage.locator("#menuCampaign").focus();
   await host.tap("Enter");
   await host.advanceUntil(PHASE.carSelect);
   await host.advance(40);
@@ -534,7 +536,7 @@ test("a room's race has only its players' cars, and the bots the host adds with 
 });
 
 test("leaving the room ends the link", async ({ page }) => {
-  const game = await openGame(page);
+  const game = await openGame(page, { storage: { carsel: "5" } });
   await game.advanceUntil(PHASE.mainMenu);
   await game.advance(2);
   await page.getByRole("button", { name: "Multiplayer" }).click();

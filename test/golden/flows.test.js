@@ -151,8 +151,11 @@ const instructionsTour = () => {
     480: [315, 589], // Back to the controls
     500: [1110, 589], // Next to the coach
     520: [700, 200], // beside the buttons: closes the instructions
-    620: [1050, 554], // Game Instructions in the main menu
+    620: [1050, 554], // where Game Instructions was drawn in the main menu
   };
+  // the main menu's buttons are HTML (see index.html), pressed in the frame a click on
+  // the canvas's, released, chose them, where they were drawn (the pointer stays there)
+  const buttons = { [620 + CLICK_FRAMES]: "menuInstructions" };
   let clickedAt = null;
   return (ctx, frame, game) => {
     keys.releaseAfterFrame(game);
@@ -164,6 +167,9 @@ const instructionsTour = () => {
       clickedAt = frame;
       [ctx.pointer.x[0], ctx.pointer.y[0]] = clicks[frame];
     }
+    if (buttons[frame]) {
+      document.getElementById(buttons[frame]).click();
+    }
     ctx.pointer.down = clickedAt !== null && frame - clickedAt < CLICK_FRAMES;
   };
 };
@@ -174,11 +180,18 @@ const mainMenuTour = () => {
   const keys = keyTapper();
   const taps = { 200: ENTER, 210: UP, 220: ENTER };
   const clicks = {
-    300: [830, 664], // Reset Game
+    300: [830, 664], // where Reset Game was drawn
     340: [340, 589], // Cancel
     380: [830, 664], // Reset Game
     420: [730, 439], // Yes!  Reset my game now
-    470: [1130, 655], // PLAY
+    470: [1130, 655], // where PLAY was drawn
+  };
+  // the main menu's buttons are HTML (see index.html), pressed in the frame a click on
+  // the canvas's, released, chose them, where they were drawn (the pointer stays there)
+  const buttons = {
+    [300 + CLICK_FRAMES]: "menuReset",
+    [380 + CLICK_FRAMES]: "menuReset",
+    [470 + CLICK_FRAMES]: "menuCampaign",
   };
   let clickedAt = null;
   return (ctx, frame, game) => {
@@ -193,6 +206,9 @@ const mainMenuTour = () => {
     if (clicks[frame]) {
       clickedAt = frame;
       [ctx.pointer.x[0], ctx.pointer.y[0]] = clicks[frame];
+    }
+    if (buttons[frame]) {
+      document.getElementById(buttons[frame]).click();
     }
     ctx.pointer.down = clickedAt !== null && frame - clickedAt < CLICK_FRAMES;
   };

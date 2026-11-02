@@ -6,11 +6,13 @@ import { PHASE } from "../../src/core/state.js";
 test("the options switch the look and the classic polygons without a keyboard", async ({
   page,
 }) => {
-  const game = await openGame(page, { storage: { unlocked: "17" } });
+  const game = await openGame(page, {
+    storage: { carsel: "5", unlocked: "17" },
+  });
   await game.advanceUntil(PHASE.mainMenu);
   await game.advance(2);
   const look = () => page.evaluate(() => window.gameState.look);
-  await page.locator("#optionsButton").click();
+  await page.locator("#menuOptions").click();
   await expect(page.locator("#options")).toBeVisible();
   const lookSwitch = page.locator("#option-toggleLook");
   await expect(lookSwitch).toHaveAttribute("aria-pressed", "false");

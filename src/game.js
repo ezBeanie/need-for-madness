@@ -72,7 +72,12 @@ import {
   pauseMenuTick,
   quitRace,
 } from "./screens/pauseMenu.js";
-import { mainMenuTick, resetQuestionTick } from "./screens/mainMenu.js";
+import {
+  installMainMenu,
+  mainMenuTick,
+  placeMainMenu,
+  resetQuestionTick,
+} from "./screens/mainMenu.js";
 import { loadAssets } from "./loading/assets.js";
 import { updateStandings } from "./race/standings.js";
 import { animateTrack, castShadows, placeWheels } from "./render/raceScene.js";
@@ -253,6 +258,7 @@ export function runTick() {
   if (!lockstep.active || raceRan) {
     tick.fraction = nextFraction(tick.fraction);
   }
+  placeMainMenu();
   placeOptionsButton();
   placeMultiplayerButton();
   placeStageEditorButton();
@@ -329,6 +335,7 @@ installReplayDrop(window);
 startHosting();
 startGuesting();
 installOptionsMenu();
+installMainMenu();
 installMultiplayerMenu();
 installStageEditor();
 

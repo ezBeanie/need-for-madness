@@ -16,6 +16,7 @@ import {
 } from "../net/host.js";
 import { guest, hostThere, joinRoom } from "../net/guest.js";
 import { ROLE, ROOM_NAME, leaveRoom, link } from "../net/link.js";
+import { classicMenus } from "../render/look.js";
 
 const button = document.getElementById("multiplayerButton");
 const dialog = document.getElementById("multiplayer");
@@ -141,6 +142,11 @@ const showBots = () => {
 const showRoom = () => {
   const inRoom = link.role != ROLE.none;
   const label = inRoom ? `Room ${link.room}` : "Multiplayer";
+  // (the main menu's button says it too)
+  const menuButton = element("menuMultiplayer");
+  if (menuButton.textContent != label) {
+    menuButton.textContent = label;
+  }
   if (button.textContent != label) {
     button.textContent = label;
   }
@@ -177,11 +183,13 @@ const showCodeError = (text) => {
   );
 };
 
+export const openMultiplayer = () => {
+  showRoom();
+  dialog.showModal?.();
+};
+
 export const installMultiplayerMenu = () => {
-  button.addEventListener("click", () => {
-    showRoom();
-    dialog.showModal?.();
-  });
+  button.addEventListener("click", openMultiplayer);
   element("multiplayerHost").addEventListener("click", () => {
     showNotice("");
     hostRoom(newRoomCode());
@@ -223,17 +231,16 @@ export const installMultiplayerMenu = () => {
   element("multiplayerClose").addEventListener("click", () => dialog.close?.());
 };
 
-// Every tick: the button only where it belongs, and the dialog up to date. A room the
-// host left, or one full, opens it, to say so.
+// Every tick: the button only where it belongs (the main menu has Multiplayer of its own),
+// and the dialog up to date. A room the host left, or one full, opens it, to say so.
 export const placeMultiplayerButton = () => {
-  const hidden = !SHOWN_IN.includes(game.phase);
+  const away = !SHOWN_IN.includes(game.phase);
+  const hidden = away || (game.phase == PHASE.mainMenu && !classicMenus());
   if (button.hidden != hidden) {
     button.hidden = hidden;
-    if (hidden) {
-      dialog.close?.();
-    }
   }
-  if (hidden) {
+  if (away) {
+    dialog.close?.();
     return;
   }
   showRoom();

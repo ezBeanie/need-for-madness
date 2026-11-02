@@ -1,5 +1,6 @@
 // The main menu: Insano and the rider fly aside to make room for the logo, then the
-// buttons wait for PLAY. Also the question whether to reset the game.
+// menu's buttons wait (HTML over the canvas, see placeMainMenu). Also the question whether
+// to reset the game.
 
 import { pauseMenuMusic, playMenuMusic } from "../audio/audio.js";
 import { drawClassicResetQuestion } from "../classic/instructions.js";
@@ -26,7 +27,6 @@ import { rd, view } from "../ui/view.js";
 import {
   BUTTON,
   drawBlueButton,
-  drawButton,
   drawMenuBackground,
   drawMusicToggle,
   pulseButtons,
@@ -34,6 +34,9 @@ import {
 import { PAGE, TALK_TICKS, instructions } from "./instructions.js";
 import { menu } from "./menuState.js";
 import { SHOWCASE, showcase } from "./showcase.js";
+import { openStageEditor } from "../editor/stageEditor.js";
+import { openMultiplayer } from "../ui/multiplayerMenu.js";
+import { openOptions } from "../ui/optionsMenu.js";
 import { chooseReplayFile } from "./replays.js";
 
 // menu.animation of the main menu
@@ -86,7 +89,7 @@ export function mainMenuTick() {
     drawLogo(screen);
   }
   if (!menu.continuesToCarSelect) {
-    drawButtons(screen);
+    waitForChoice();
   }
   animate();
   if (menu.animation >= BLACK_FROM) {
@@ -104,25 +107,22 @@ export function mainMenuTick() {
 
 // Where the intro starts (in the background picture, which is centred and as high as the
 // screen) and where its pictures end up. Narrow screens crop the background, there the
-// pictures end up at the screen's edges and the logo moves left.
+// pictures end up at the screen's edges.
 const layout = () => {
   let left = (view.width - 1280 * view.scaleY) / 2;
   let right = left + 1280 * view.scaleY;
   const insanoStart = [left + 270 * view.scaleY, 39 * view.scaleY];
   const riderStart = [left + 520 * view.scaleY, 43 * view.scaleY];
   let scale = view.scaleY;
-  let logoShift = 1;
   if (left < 0) {
     left = 0;
     right = view.width;
     scale = view.scale;
-    logoShift = 1 - 0.9752 * ((1 - view.scaleX / view.scaleY) / 0.4375);
   }
   return {
     left,
     right,
     scale,
-    logoShift,
     insanoStart,
     insanoEnd: [left + 40 * scale, 186 * scale],
     riderStart,
@@ -154,15 +154,29 @@ const drawFlyingAside = (screen) => {
   rd.globalAlpha = 1;
 };
 
-const drawLogo = ({ left, scale, logoShift }) => {
-  const logoX = left + 282 * scale * logoShift;
-  const logoY = view.height - 464 * scale;
+// Beside the menu's buttons, low on the screen, smaller if they leave less room.
+const logoPlace = ({ left, scale }) => {
+  // (where the buttons start, see .main-menu in index.html: they are sized in vh)
+  const buttonsLeft = view.width - 0.51 * view.height;
+  const logoScale = Math.min(
+    0.8 * scale,
+    (buttonsLeft - left - 30 * scale) / 905,
+  );
+  return [
+    buttonsLeft - 905 * logoScale,
+    view.height - (40 * scale + 258 * logoScale),
+    logoScale,
+  ];
+};
+
+const drawLogo = (screen) => {
+  const [logoX, logoY, scale] = logoPlace(screen);
   rd.drawImage(images.logo, logoX, logoY, 905 * scale, 258 * scale);
   const text = subtitle < 0 ? "RE-LIT" : SUBTITLES[subtitle];
   const x = logoX + 760 * scale;
   const y = logoY + 150 * scale;
   rd.letterSpacing = "1px";
-  rd.font = "" + 24 * (view.scaleY + view.scaleX) + "px junk";
+  rd.font = "" + 48 * scale + "px junk";
   rd.textAlign = "left";
   rd.textBaseline = "middle";
   const gradient = rd.createLinearGradient(
@@ -183,101 +197,16 @@ const drawLogo = ({ left, scale, logoShift }) => {
   }
 };
 
-const drawButtons = ({ right }) => {
-  if (
-    drawButton({
-      id: 1,
-      x: right - 230 * view.scale,
-      y: 720 * view.scaleY - 200 * view.scale,
-      width: 360,
-      height: 60,
-      faceTop: "#FF1301",
-      faceBottom: "#FF8A01",
-      shadowTop: "#780800",
-      shadowBottom: "#784100",
-      layout: BUTTON.textOnly,
-      text: "Game Instructions",
-      fontSize: 19,
-      textOpacity: 0.9,
-      image: null,
-      imageOpacity: 0,
-      pulsing: false,
-    })
-  ) {
-    openInstructions();
-  }
-  if (
-    drawButton({
-      id: 8,
-      x: right - 230 * view.scale,
-      y: 720 * view.scaleY - 290 * view.scale,
-      width: 360,
-      height: 60,
-      faceTop: "#019DFF",
-      faceBottom: "#01EAFF",
-      shadowTop: "#004A78",
-      shadowBottom: "#016D77",
-      layout: BUTTON.textOnly,
-      text: "Open Replay",
-      fontSize: 19,
-      textOpacity: 0.9,
-      image: null,
-      imageOpacity: 0,
-      pulsing: false,
-    })
-  ) {
-    chooseReplayFile();
-  }
-  if (
-    drawButton({
-      id: 3,
-      x: right - 150 * view.scale,
-      y: 720 * view.scaleY - 100 * view.scale,
-      width: 200,
-      height: 70,
-      faceTop: "#FF3D01",
-      faceBottom: "#FFB401",
-      shadowTop: "#771D01",
-      shadowBottom: "#775401",
-      layout: BUTTON.textThenImage,
-      text: "PLAY ",
-      fontSize: 25,
-      textOpacity: 0.9,
-      image: images.buttons[1],
-      imageOpacity: 0.9,
-      pulsing: true,
-    })
-  ) {
-    menu.animation = LEAVING;
-    introFrame = INTRO_FRAMES;
-  }
+const waitForChoice = () => {
   if (menu.animation < LEAVING && confirm.state == CONFIRM.pressed) {
-    menu.animation = LEAVING;
+    // (a gamepad's button chooses the focused button, Enter outside the menu the one
+    // chosen last)
     confirm.state = CONFIRM.used;
-  }
-  if (
-    menu.resetOffered &&
-    drawButton({
-      id: 7,
-      x: right - 450 * view.scale,
-      y: 720 * view.scaleY - 90 * view.scale,
-      width: 280,
-      height: 60,
-      faceTop: "#FF1301",
-      faceBottom: "#FF8A01",
-      shadowTop: "#780800",
-      shadowBottom: "#784100",
-      layout: BUTTON.textOnly,
-      text: "Reset Game",
-      fontSize: 22,
-      textOpacity: 0.9,
-      image: null,
-      imageOpacity: 0,
-      pulsing: 0,
-    })
-  ) {
-    insano.talkTicks = TALK_TICKS;
-    game.phase = PHASE.resetQuestion;
+    (
+      choices.get(document.activeElement) ??
+      choices.get(chosen) ??
+      startCampaign
+    )();
   }
   drawMusicToggle();
 };
@@ -419,4 +348,70 @@ const resetGame = () => {
   saveSetting("carsel", game.carTypes[0]);
   menu.resetOffered = false;
   game.phase = PHASE.mainMenu;
+};
+
+// --- the menu's buttons ---
+
+const nav = document.getElementById("mainMenu");
+const element = (id) => document.getElementById(id);
+// the button chosen last, focused again when the menu comes back
+let chosen = element("menuCampaign");
+// what each button does
+const choices = new Map();
+
+const startCampaign = () => {
+  menu.animation = LEAVING;
+  introFrame = INTRO_FRAMES;
+};
+
+const offerReset = () => {
+  insano.talkTicks = TALK_TICKS;
+  game.phase = PHASE.resetQuestion;
+};
+
+export const installMainMenu = () => {
+  for (const [id, choose] of [
+    ["menuCampaign", startCampaign],
+    ["menuMultiplayer", openMultiplayer],
+    ["menuStageEditor", openStageEditor],
+    ["menuOptions", openOptions],
+    ["menuInstructions", openInstructions],
+    ["menuReplay", chooseReplayFile],
+    ["menuReset", offerReset],
+  ]) {
+    const button = element(id);
+    choices.set(button, choose);
+    button.addEventListener("click", () => {
+      chosen = button;
+      choose();
+    });
+  }
+  // (the up and down keys go along the menu, round at its ends)
+  nav.addEventListener("keydown", (event) => {
+    const step = { ArrowDown: 1, ArrowUp: -1 }[event.key];
+    if (!step) {
+      return;
+    }
+    event.preventDefault();
+    const buttons = [...nav.querySelectorAll("button:not([hidden])")];
+    const at = buttons.indexOf(document.activeElement);
+    buttons[(at + step + buttons.length) % buttons.length].focus();
+  });
+};
+
+// Every tick: the menu's buttons while the modern main menu waits for a choice.
+export const placeMainMenu = () => {
+  const shown =
+    game.phase == PHASE.mainMenu &&
+    !classicMenus() &&
+    !menu.continuesToCarSelect &&
+    menu.animation < LEAVING;
+  if (shown != nav.hidden) {
+    return;
+  }
+  nav.hidden = !shown;
+  if (shown) {
+    element("menuReset").hidden = !menu.resetOffered;
+    (chosen.hidden ? element("menuCampaign") : chosen).focus?.();
+  }
 };

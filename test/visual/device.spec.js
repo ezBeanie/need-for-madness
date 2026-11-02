@@ -49,11 +49,13 @@ test("a touch keeps the screen on, and a click in a dialog allows the music", as
   page,
 }) => {
   await recordRequests(page);
-  const game = await openGame(page, { storage: { unlocked: "17" } });
+  const game = await openGame(page, {
+    storage: { carsel: "5", unlocked: "17" },
+  });
   await game.advanceUntil(PHASE.mainMenu);
   await game.advance(2);
   expect(await page.evaluate(() => window.played)).toBe(0);
-  await page.locator("#optionsButton").click();
+  await page.locator("#menuOptions").click();
   await page.locator("#optionsClose").click();
   expect(await page.evaluate(() => window.played)).toBeGreaterThan(0);
   expect(await page.evaluate(() => window.wakeLocks)).toBe(1);

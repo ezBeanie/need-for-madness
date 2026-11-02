@@ -8,7 +8,7 @@ import { onKey } from "../input/controls.js";
 import { career } from "../race/career.js";
 import { camera } from "../render/camera.js";
 import { minimap } from "./minimap.js";
-import { LOOK, look } from "../render/look.js";
+import { LOOK, classicMenus, look } from "../render/look.js";
 
 const button = document.getElementById("optionsButton");
 const dialog = document.getElementById("options");
@@ -55,6 +55,11 @@ const showStates = () => {
   }
 };
 
+export const openOptions = () => {
+  showStates();
+  dialog.showModal?.();
+};
+
 export const installOptionsMenu = () => {
   for (const [action] of SWITCHES) {
     document
@@ -64,18 +69,17 @@ export const installOptionsMenu = () => {
         showStates();
       });
   }
-  button.addEventListener("click", () => {
-    showStates();
-    dialog.showModal?.();
-  });
+  button.addEventListener("click", openOptions);
   document
     .getElementById("optionsClose")
     .addEventListener("click", () => dialog.close?.());
 };
 
-// Every tick: the gear only where it belongs.
+// Every tick: the gear only where it belongs (the main menu has Options of its own).
 export const placeOptionsButton = () => {
-  const hidden = !SHOWN_IN.includes(game.phase);
+  const hidden =
+    !SHOWN_IN.includes(game.phase) ||
+    (game.phase == PHASE.mainMenu && !classicMenus());
   if (button.hidden != hidden) {
     button.hidden = hidden;
   }

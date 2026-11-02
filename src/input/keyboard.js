@@ -69,8 +69,9 @@ export const handleKey = (event, pressed, onKey) => {
 // Handles every key; the page itself never reacts to keys (scrolling, ...).
 export const installKeyboard = (onKey) => {
   const listen = (pressed) => (event) => {
-    // the dialogs' own buttons and fields take keys as a page does (see ui/optionsMenu.js)
-    if (event.target?.closest?.("dialog")) {
+    // the dialogs' own buttons and fields take keys as a page does (see ui/optionsMenu.js),
+    // so do the main menu's
+    if (event.target?.closest?.("dialog, #mainMenu")) {
       return;
     }
     event.preventDefault();
