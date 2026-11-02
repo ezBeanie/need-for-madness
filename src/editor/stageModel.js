@@ -212,8 +212,14 @@ export const wallsAround = (objects) => {
   ];
 };
 
+// what the stage select counts as on the path (the original's way), fix hoops too
 export const isPathObject = (object) =>
-  ["chk", "fix"].includes(object.command) ||
+  object.command == "fix" || isPathPoint(object);
+
+// The points the cars drive round in order. (A driver heads for a fix hoop by where it
+// is, not by its place in the file.)
+export const isPathPoint = (object) =>
+  object.command == "chk" ||
   (object.command == "set" && pathType(object) !== null);
 
 export const writeEditedStage = (stage) => {
@@ -463,7 +469,7 @@ export const moveAfter = (objects, index, after) => {
 // is now.
 export const stepAlongPath = (objects, index, step) => {
   const onPath = objects
-    .map((object, i) => (isPathObject(object) ? i : -1))
+    .map((object, i) => (isPathPoint(object) ? i : -1))
     .filter((i) => i >= 0);
   const k = onPath.indexOf(index);
   const other = onPath[k + step];
@@ -479,7 +485,7 @@ export const problemsOf = ({ objects }) => {
   const problems = [];
   const path = objects
     .map((object, index) => ({ object, index }))
-    .filter(({ object }) => isPathObject(object) && object.command != "fix");
+    .filter(({ object }) => isPathPoint(object));
   // (the cars line up at the middle of the map, driving up)
   if (
     objectAt(

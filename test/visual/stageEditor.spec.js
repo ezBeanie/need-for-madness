@@ -83,6 +83,8 @@ test("stage editor: pieces placed from the palette join the start end to end", a
   await expect(page.locator("#settingSky")).toHaveValue("#99caff");
   await expect.soft(page).toHaveScreenshot("stage-editor-settings.png");
   await page.click("#editorSettings .close");
+  // (stage 17 sees 11700 far, off the field's steps: it closes all the same)
+  await expect(page.locator("#editorSettings")).toBeHidden();
   const text = await draft(page);
   expect(text).toContain("nlaps(5)");
   expect(text).toContain("sky(153,202,255)");
@@ -178,4 +180,60 @@ test("stage editor: the player's stages are made, copied from the game's, opened
     "Wrong Side of the Law",
     (await names())[2],
   ]);
+});
+
+test("stage editor: the keys select along the path, move, turn, copy and change pieces, and the help explains them", async ({
+  page,
+}) => {
+  const game = await openGame(page);
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance();
+  await page.click("#stageEditorButton");
+  await page.waitForFunction(
+    () =>
+      document.querySelector("#editorStatus").textContent.includes("1 piece"),
+    null,
+    { polling: 50 },
+  );
+  await page.focus("#editorMap");
+  await page.keyboard.press("?");
+  await expect(page.locator("#editorHelp")).toBeVisible();
+  await expect.soft(page).toHaveScreenshot("stage-editor-help.png");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#editorHelp")).toBeHidden();
+  expect(await page.isVisible("#stageEditor")).toBe(true);
+
+  // the start selected as the path's first point, moved a step up and far right
+  await page.keyboard.press(".");
+  await expect(page.locator("#editorStatus")).toContainText("selected");
+  await page.keyboard.press("ArrowUp");
+  await page.keyboard.press("Shift+ArrowRight");
+  expect(await pieces(page)).toEqual(["set(47,1000,100,0)p"]);
+  await page.keyboard.press("Control+z");
+  await page.keyboard.press("Control+z");
+  // (undoing lets go of it) its path point's kind changed, turned left
+  await page.keyboard.press(".");
+  await page.keyboard.press("p");
+  await page.keyboard.press("Shift+R");
+  expect(await pieces(page)).toEqual(["set(47,0,0,-90)pt"]);
+  // another of it to place, turned the same
+  await page.keyboard.press("d");
+  await expect(page.locator("#editorStatus")).toContainText("Placing Start");
+  await page.keyboard.press("Escape");
+  // ordering the path on and off
+  await page.keyboard.press("o");
+  await expect(page.locator("#editorOrder")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await page.keyboard.press("o");
+  await expect(page.locator("#editorOrder")).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  // Escape lets go of the piece first, the editor stays
+  await page.keyboard.press(".");
+  await page.keyboard.press("Escape");
+  await expect(page.locator("#editorStatus")).toContainText("1 piece");
+  expect(await page.isVisible("#stageEditor")).toBe(true);
 });

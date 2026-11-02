@@ -91,12 +91,16 @@ src: url(data/verdana.ttf);
 }
 .stage-editor h2 { margin: 0 8px 0 0; font-size: 18px; }
 .stage-editor .editor-bar .spacer { flex: 1; }
+.stage-editor .editor-bar button { padding: 6px 12px; }
+#editorName { width: 150px; }
+#editorHelpButton { min-width: 44px; font-weight: bold; }
 .stage-editor button {
   min-height: 44px; padding: 6px 14px; border: 1px solid rgba(1, 234, 255, 0.4);
   border-radius: 22px; background: rgba(255, 255, 255, 0.08); color: #ffffff;
   font: inherit; font-size: 14px; cursor: pointer;
 }
 .stage-editor button:hover { background: rgba(1, 234, 255, 0.25); }
+.stage-editor kbd { padding: 1px 6px; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 5px; font: inherit; font-size: 12px; }
 .stage-editor button:disabled { opacity: 0.45; cursor: not-allowed; background: transparent; }
 .stage-editor button:focus-visible, .stage-editor input:focus-visible,
 .stage-editor canvas:focus-visible, .editor-button:focus-visible {
@@ -153,6 +157,13 @@ src: url(data/verdana.ttf);
 #editorSettings .colors label { margin: 0; }
 #editorSettings input[type="color"] { min-height: 44px; padding: 2px; border-radius: 10px; }
 #editorSettings select:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
+#editorHelp { max-width: 640px; }
+#editorHelp h3 { margin: 16px 0 6px; font-size: 16px; color: #01eaff; }
+#editorHelp li { font-size: 14px; line-height: 1.4; }
+#editorHelp ul.points li::before { content: "\2022  "; color: #01eaff; }
+#editorHelp dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; font-size: 14px; }
+#editorHelp dt { white-space: nowrap; }
+#editorHelp dd { margin: 0; }
 #editorStatus { grid-column: 1 / 4; margin: 0; padding: 8px 12px; font-size: 14px; border-top: 1px solid rgba(1, 234, 255, 0.4); }
 </style>
 <script src="gl-matrix-min.js"></script>
@@ -200,12 +211,13 @@ src: url(data/verdana.ttf);
 <button type="button" id="editorStagesButton" aria-haspopup="dialog" aria-controls="editorStages">Stages</button>
 <button type="button" id="editorUndo" aria-keyshortcuts="Control+Z">Undo</button>
 <button type="button" id="editorRedo" aria-keyshortcuts="Control+Y">Redo</button>
-<button type="button" id="editorRotate" aria-keyshortcuts="R">Turn</button>
-<button type="button" id="editorDelete" aria-keyshortcuts="Delete">Delete</button>
-<button type="button" id="editorOrder" aria-pressed="false">Order path</button>
+<button type="button" id="editorRotate" aria-keyshortcuts="R">Turn <kbd>R</kbd></button>
+<button type="button" id="editorDelete" aria-keyshortcuts="Delete">Delete <kbd>Del</kbd></button>
+<button type="button" id="editorOrder" aria-pressed="false" aria-keyshortcuts="O">Order path <kbd>O</kbd></button>
 <button type="button" id="editorSettingsButton" aria-haspopup="dialog" aria-controls="editorSettings">Settings</button>
-<button type="button" id="editorTestDrive" aria-describedby="editorProblemsTitle">Test drive</button>
+<button type="button" id="editorTestDrive" aria-describedby="editorProblemsTitle" aria-keyshortcuts="T">Test drive <kbd>T</kbd></button>
 <span class="spacer"></span>
+<button type="button" id="editorHelpButton" aria-haspopup="dialog" aria-controls="editorHelp" aria-keyshortcuts="Shift+?" aria-label="Help" title="Help (?)">?</button>
 <button type="button" id="editorClose">Close</button>
 </div>
 <nav id="editorPalette" aria-label="Pieces"></nav>
@@ -227,9 +239,40 @@ src: url(data/verdana.ttf);
 <button type="button" id="stagesExport">Save this stage as a file</button>
 <form method="dialog"><button type="submit" class="close">Done</button></form>
 </dialog>
+<dialog id="editorHelp" class="menu-dialog" aria-labelledby="editorHelpTitle">
+<h2 id="editorHelpTitle">How the editor works</h2>
+<h3>The path</h3>
+<p>The path is the way the cars go round: the computer cars drive from one point of it to the next, and the checkpoints count in its order. On the map it is the light blue line, its arrows point the way, the white square is the start, and every point has its number.</p>
+<ul class="points">
+<li>A road dropped onto the end of another joins it and follows it on the path by itself. Build the lap end to end from the start, and the path builds itself.</li>
+<li>A piece dropped anywhere else goes to the end of the path. Put it in its place with <b>Order path</b>: click the pieces one after another the way the cars drive, the start first.</li>
+<li>Or select a point and move it earlier or later on the path, or make it the start.</li>
+<li>A point's kind tells the computer cars how to drive it: a corner they may cut, a ramp they drive straight at, a point they may leave out. Trees and other scenery are not on the path.</li>
+<li>A lap needs a start piece at the middle of the map, a checkpoint and three points.</li>
+</ul>
+<h3>Keys</h3>
+<dl>
+<dt><kbd>R</kbd> / <kbd>Shift</kbd>+<kbd>R</kbd></dt><dd>Turn the piece (or the one being placed) right / left</dd>
+<dt><kbd>Del</kbd></dt><dd>Take the piece away</dd>
+<dt><kbd>D</kbd></dt><dd>Place another of the selected piece, turned the same</dd>
+<dt>Arrow keys</dt><dd>Move the piece (with <kbd>Shift</kbd> further), or the map when nothing is selected</dd>
+<dt><kbd>,</kbd> / <kbd>.</kbd></dt><dd>Select the path's point before / after</dd>
+<dt><kbd>Shift</kbd>+<kbd>,</kbd> / <kbd>Shift</kbd>+<kbd>.</kbd></dt><dd>Move the point earlier / later on the path</dd>
+<dt><kbd>S</kbd></dt><dd>Make the point the path's start</dd>
+<dt><kbd>P</kbd></dt><dd>Change the point's kind</dd>
+<dt><kbd>O</kbd></dt><dd>Order the path by clicking</dd>
+<dt><kbd>F</kbd></dt><dd>Show the whole stage</dd>
+<dt><kbd>+</kbd> / <kbd>-</kbd></dt><dd>Zoom in / out (or the mouse wheel)</dd>
+<dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></dt><dd>Undo / redo</dd>
+<dt><kbd>T</kbd></dt><dd>Test drive</dd>
+<dt><kbd>Esc</kbd></dt><dd>Stop placing or ordering, deselect, then close</dd>
+<dt><kbd>?</kbd></dt><dd>This help</dd>
+</dl>
+<form method="dialog"><button type="submit" class="close">Done</button></form>
+</dialog>
 <dialog id="editorSettings" class="menu-dialog" aria-labelledby="editorSettingsTitle">
 <h2 id="editorSettingsTitle">Stage settings</h2>
-<form id="editorSettingsForm" method="dialog">
+<form id="editorSettingsForm" method="dialog" novalidate>
 <label for="settingLaps">Laps</label>
 <input id="settingLaps" type="number" min="1" max="15" step="1">
 <label for="settingLevel">Opponents as strong as on</label>
@@ -247,7 +290,7 @@ src: url(data/verdana.ttf);
 <label for="settingClouds">Cloud cover</label>
 <select id="settingClouds"><option value="0">Overcast</option><option value="1">Cloudy</option><option value="2">A few clouds</option></select>
 <label for="settingDistance">How far one sees</label>
-<input id="settingDistance" type="number" min="4000" max="20000" step="500">
+<input id="settingDistance" type="number" min="4000" max="20000" step="100">
 <button type="submit" class="close">Done</button>
 </form>
 </dialog>

@@ -23,7 +23,7 @@ import {
   boxOf,
   copyLook,
   fromOriginal,
-  isPathObject,
+  isPathPoint,
   moveAfter,
   nameOf,
   newObject,
@@ -200,6 +200,42 @@ const deleteSelected = () => {
   changed();
 };
 
+// Selects the object (-1 none), the map moved to it if it is out of sight.
+const select = (index) => {
+  editor.selected = index;
+  const object = selected();
+  if (object) {
+    const at = toScreen(object.x, object.z);
+    if (at.x < 0 || at.y < 0 || at.x > map.width || at.y > map.height) {
+      editor.view.x = object.x;
+      editor.view.z = object.z;
+    }
+  }
+  showState();
+  showSelected();
+  drawMap();
+};
+
+const moveSelected = (dx, dz) => {
+  if (!selected()) {
+    return;
+  }
+  remember();
+  selected().x += dx;
+  selected().z += dz;
+  changed();
+};
+
+// Another of the selected piece to place, turned as it is.
+const placeAnother = () => {
+  const object = selected();
+  if (object?.piece === undefined) {
+    return;
+  }
+  startPlacing(object.piece);
+  editor.placing.rotation = object.rotation ?? 0;
+};
+
 // --- the map ---
 
 const toScreen = (x, z) => ({
@@ -313,7 +349,7 @@ const drawWalls = () => {
 // The path through its points in file order, the way the cars go round.
 const drawPath = () => {
   const points = editor.stage.objects
-    .filter((object) => isPathObject(object) && object.command != "fix")
+    .filter(isPathPoint)
     .map((object) => toScreen(object.x, object.z));
   if (points.length < 2) {
     return;
@@ -348,6 +384,21 @@ const drawPath = () => {
   // the start
   draw2D.fillStyle = "#ffffff";
   draw2D.fillRect(points[0].x - 5, points[0].y - 5, 10, 10);
+};
+
+// Every point's place on the path, beside it.
+const drawPathNumbers = () => {
+  draw2D.font = "bold 11px verd, Verdana, sans-serif";
+  draw2D.textAlign = "left";
+  draw2D.textBaseline = "bottom";
+  draw2D.lineWidth = 3;
+  draw2D.strokeStyle = "#0b1a10";
+  draw2D.fillStyle = "rgb(1, 234, 255)";
+  editor.stage.objects.filter(isPathPoint).forEach((object, i) => {
+    const at = toScreen(object.x, object.z);
+    draw2D.strokeText(String(i + 1), at.x + 8, at.y - 6);
+    draw2D.fillText(String(i + 1), at.x + 8, at.y - 6);
+  });
 };
 
 const drawCheckpointNumbers = () => {
@@ -418,6 +469,7 @@ export const drawMap = () => {
   editor.stage.objects.forEach((object) => drawObject(object));
   drawStartGrid();
   drawPath();
+  drawPathNumbers();
   drawCheckpointNumbers();
   if (selected()) {
     outline(selected(), "#ffe14a");
@@ -704,8 +756,8 @@ const showState = () => {
     : editor.placing
       ? `Placing ${pieceName(editor.placing.piece)}: click to place, R to turn, Escape to stop.`
       : selected()
-        ? `${pieceName(selected().piece ?? 0)} selected: drag to move, R to turn, Delete to take away.`
-        : `${pieces} piece${pieces == 1 ? "" : "s"}. Pick a piece on the left, drag the map to look around, scroll to zoom.`;
+        ? `${pieceName(selected().piece ?? 0)} selected: drag or arrow keys to move, R to turn, D for another, Del to take away, , and . along the path.`
+        : `${pieces} piece${pieces == 1 ? "" : "s"}. Pick a piece on the left, drag the map to look around, scroll to zoom. ? for the keys and how the path works.`;
   const status = element("editorStatus");
   if (status.textContent != text) {
     status.textContent = text;
@@ -729,7 +781,7 @@ const stopOrdering = () => {
 
 // The piece clicked follows the one clicked before (the first goes to the front).
 const orderNext = (index) => {
-  if (!isPathObject(editor.stage.objects[index])) {
+  if (!isPathPoint(editor.stage.objects[index])) {
     return;
   }
   remember();
@@ -745,6 +797,37 @@ const orderNext = (index) => {
 const step = (steps) => {
   remember();
   editor.selected = stepAlongPath(editor.stage.objects, editor.selected, steps);
+  changed();
+};
+
+const onPathSelected = () => selected() && isPathPoint(selected());
+
+// The point before or after the selected one on the path, round the lap.
+const selectAlongPath = (steps) => {
+  const onPath = editor.stage.objects
+    .map((object, i) => (isPathPoint(object) ? i : -1))
+    .filter((i) => i >= 0);
+  if (onPath.length == 0) {
+    return;
+  }
+  const k = onPath.indexOf(editor.selected);
+  select(onPath[k < 0 ? 0 : (k + steps + onPath.length) % onPath.length]);
+};
+
+// The selected piece's next kind of path point.
+const nextPathKind = () => {
+  const object = selected();
+  if (object?.command != "set") {
+    return;
+  }
+  const kinds = PATH_KINDS.map(([suffix]) => suffix);
+  const kind = kinds[(kinds.indexOf(object.suffix ?? "") + 1) % kinds.length];
+  remember();
+  if (kind) {
+    object.suffix = kind;
+  } else {
+    delete object.suffix;
+  }
   changed();
 };
 
@@ -840,8 +923,8 @@ const showSelected = () => {
     panel.append(field("div", { className: "row" }));
     panel.lastChild.append(off, label);
   }
-  if (isPathObject(object)) {
-    const onPath = editor.stage.objects.filter(isPathObject);
+  if (isPathPoint(object)) {
+    const onPath = editor.stage.objects.filter(isPathPoint);
     const place = onPath.indexOf(object);
     panel.append(
       field("p", {
@@ -895,15 +978,7 @@ const showProblems = () => {
     const item = field("li");
     if (problem.index >= 0) {
       const go = field("button", { type: "button", textContent: problem.text });
-      go.addEventListener("click", () => {
-        editor.selected = problem.index;
-        const object = selected();
-        editor.view.x = object.x;
-        editor.view.z = object.z;
-        showState();
-        showSelected();
-        drawMap();
-      });
+      go.addEventListener("click", () => select(problem.index));
       item.append(go);
     } else {
       item.textContent = problem.text;
@@ -1067,6 +1142,7 @@ const testDrive = () => {
 // --- the player's stages ---
 
 const stagesDialog = element("editorStages");
+const helpDialog = element("editorHelp");
 
 const showStages = () => {
   const list = element("editorStageList");
@@ -1134,19 +1210,36 @@ const exportStage = () => {
   URL.revokeObjectURL(link.href);
 };
 
+const ARROWS = {
+  arrowleft: [-1, 0],
+  arrowright: [1, 0],
+  arrowup: [0, 1],
+  arrowdown: [0, -1],
+};
+
+// (the comma and the full stop by where they are, Shift turning them into other
+// characters on other keyboards)
+const PATH_STEPS = { Comma: -1, Period: 1 };
+
 const onKey = (event) => {
-  if (event.target.closest?.("input, select, #editorSettings")) {
+  if (event.target.closest?.("input, select, .menu-dialog")) {
     return;
   }
   const key = event.key.toLowerCase();
   const control = event.ctrlKey || event.metaKey;
-  if (control && key == "z") {
-    event.shiftKey
-      ? undoOrRedo(editor.redo, editor.undo)
-      : undoOrRedo(editor.undo, editor.redo);
-  } else if (control && key == "y") {
-    undoOrRedo(editor.redo, editor.undo);
-  } else if (key == "r" && !control) {
+  const arrow = ARROWS[key];
+  const pathStep = PATH_STEPS[event.code];
+  if (control) {
+    if (key == "z") {
+      event.shiftKey
+        ? undoOrRedo(editor.redo, editor.undo)
+        : undoOrRedo(editor.undo, editor.redo);
+    } else if (key == "y") {
+      undoOrRedo(editor.redo, editor.undo);
+    } else {
+      return;
+    }
+  } else if (key == "r") {
     rotateSelected(event.shiftKey ? -90 : 90);
   } else if (key == "delete" || key == "backspace") {
     deleteSelected();
@@ -1154,12 +1247,36 @@ const onKey = (event) => {
     zoom(1.25, map.width / 2, map.height / 2);
   } else if (key == "-") {
     zoom(0.8, map.width / 2, map.height / 2);
-  } else if (key.startsWith("arrow") && event.target === map) {
-    const step = 60;
-    pan(
-      { arrowleft: step, arrowright: -step }[key] ?? 0,
-      { arrowup: step, arrowdown: -step }[key] ?? 0,
-    );
+  } else if (arrow && selected() && !editor.placing) {
+    const distance = event.shiftKey ? 10 * GRID : GRID;
+    moveSelected(arrow[0] * distance, arrow[1] * distance);
+  } else if (arrow) {
+    pan(-arrow[0] * 60, arrow[1] * 60);
+  } else if (pathStep && event.shiftKey) {
+    if (onPathSelected()) {
+      step(pathStep);
+    }
+  } else if (pathStep) {
+    selectAlongPath(pathStep);
+  } else if (key == "s") {
+    if (onPathSelected()) {
+      makeStart();
+    }
+  } else if (key == "p") {
+    nextPathKind();
+  } else if (key == "d") {
+    placeAnother();
+  } else if (key == "o") {
+    startOrdering();
+  } else if (key == "f") {
+    fitView();
+    drawMap();
+  } else if (key == "t") {
+    if (!element("editorTestDrive").disabled) {
+      testDrive();
+    }
+  } else if (key == "?") {
+    helpDialog.showModal?.();
   } else {
     return;
   }
@@ -1217,7 +1334,11 @@ export const installStageEditor = () => {
   element("settingCopyLook").addEventListener("click", () =>
     copyLookOf(Number(element("settingLookFrom").value)),
   );
-  // Escape stops placing or ordering first, and closes the editor only then
+  element("editorHelpButton").addEventListener("click", () =>
+    helpDialog.showModal?.(),
+  );
+  // Escape stops placing or ordering first, then lets go of the selected piece, and
+  // closes the editor only then
   dialog.addEventListener("cancel", (event) => {
     if (editor.placing) {
       event.preventDefault();
@@ -1225,6 +1346,9 @@ export const installStageEditor = () => {
     } else if (editor.ordering) {
       event.preventDefault();
       stopOrdering();
+    } else if (selected()) {
+      event.preventDefault();
+      select(-1);
     }
   });
   element("editorTestDrive").addEventListener("click", testDrive);

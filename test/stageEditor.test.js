@@ -6,6 +6,7 @@ import {
   copyLook,
   endsOf,
   extents,
+  isPathPoint,
   moveAfter,
   newObject,
   onMap,
@@ -173,6 +174,17 @@ test("the path's order changes a step at a time or by moving a piece after anoth
   expect(objects).toEqual([b, a, c, tree]);
   expect(moveAfter(objects, 0, 2)).toBe(2);
   expect(objects).toEqual([a, c, b, tree]);
+});
+
+test("a fix hoop is no point of the path, the drivers head for it by where it is", () => {
+  const [start, hoop, road] = [
+    newObject(47, 0, 0, 0),
+    newObject(41, 0, 2800, 0),
+    newObject(10, 0, 5600, 0),
+  ];
+  expect([start, hoop, road].map(isPathPoint)).toEqual([true, false, true]);
+  const objects = [start, hoop, road];
+  expect(stepAlongPath(objects, 0, 1)).toBe(2);
 });
 
 test("the editor names what keeps a stage from racing", () => {
