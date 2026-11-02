@@ -66,11 +66,22 @@ export const game = {
 export const isHuman = (c) =>
   game.humans.length == 0 ? c == game.player : game.humans.includes(c);
 
+// How the race is set up beyond its stage and its cars, by the menu it was started from
+// (see race/career.js): the race reads this, never the career's progress itself.
+export const raceSetup = {
+  // the stage raced to open the next one in the career, 0 for none: there Insano gives
+  // tips, the first stages go easier on the player and the opponents are the original's
+  // for a new stage
+  newestStage: 0,
+  // the opponents drive only the cars these stages opened
+  openedStages: 17,
+};
+
 // Whether the player races stage, its newest one: the first stages go easier on the player
 // there. (Racing together, the games' players have got as far as they each have, so none
 // is helped, alike in every game.)
 export const onNewestStage = (stage) =>
-  game.humans.length == 0 && game.unlocked == stage;
+  game.humans.length == 0 && raceSetup.newestStage == stage;
 
 // The car the computer drivers race against, wait for and chase: the player's, and in a
 // race people drive together the first of theirs (the host's), so that every game of it

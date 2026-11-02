@@ -25,7 +25,7 @@ import {
 } from "../classic/hud.js";
 import { isPhone } from "../core/platform.js";
 import { random } from "../core/random.js";
-import { MAX_CARS, MODE, PHASE, game } from "../core/state.js";
+import { MAX_CARS, MODE, PHASE, game, raceSetup } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
@@ -582,13 +582,13 @@ const touchControlsShown = () =>
   isPhone &&
   !(
     raceEvents.countdown > 65 &&
-    ((track.stage == 2 && game.unlocked == 2) ||
-      (track.stage == 4 && game.unlocked == 4))
+    (raceSetup.newestStage == 2 || raceSetup.newestStage == 4) &&
+    track.stage == raceSetup.newestStage
   );
 
 // The arrow button is there in races with opponents, after the first stage.
 const arrowButtonShown = () =>
-  game.carCount != 1 && (track.stage != 1 || game.unlocked != 1);
+  game.carCount != 1 && (track.stage != 1 || raceSetup.newestStage != 1);
 
 const drawTouchControls = () => {
   for (const { image, x, y, key } of TOUCH) {
@@ -772,7 +772,7 @@ const afterRaceOver = () => {
   if (raceEvents.raceOverTicks == 0) {
     if (
       raceEvents.winner &&
-      game.unlocked == track.stage &&
+      raceSetup.newestStage == track.stage &&
       game.carCount != 1 &&
       track.stage != 17
     ) {
