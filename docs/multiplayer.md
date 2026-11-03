@@ -14,16 +14,16 @@ mischt zwei Bedeutungen, die im Multiplayer auseinanderfallen:
 
 ### Fundstellen nach Bereich
 
-| Bereich | Stellen | Art | Aufwand |
-|---|---|---|---|
-| Eingabe `input/controls.js`, `input/gamepad.js` | 2 | schreibt Tasten in `racers[game.player].u` | klein |
-| KI überspringt den Spieler `race/ai.js:247` | 1 | `if (c != game.player)` | klein |
-| Physik `race/physics.js` | 17 | gemischt, siehe unten | mittel |
-| KI-Verhalten `race/ai.js` | ~69 | KI richtet sich nach *dem* Spieler | groß, aber mechanisch |
-| HUD `ui/hud.js` | 42 | Anzeige fürs eigene Auto | keiner (bleibt lokal) |
-| Kamera, Motorgeräusch, `drawFrame`, Countdown | ~10 | Anzeige fürs eigene Auto | keiner bzw. klein |
-| Standings, Recording, Highlights | ~10 | Kameraeffekte ums eigene Auto | keiner (lokal) |
-| Meta: Meisterschaft, Freischalten, `raceEnd`, Autowahl `carTypes[0]` | ~10 | Einzelspieler-Fortschritt | im MP abschalten |
+| Bereich                                                              | Stellen | Art                                        | Aufwand               |
+| -------------------------------------------------------------------- | ------- | ------------------------------------------ | --------------------- |
+| Eingabe `input/controls.js`, `input/gamepad.js`                      | 2       | schreibt Tasten in `racers[game.player].u` | klein                 |
+| KI überspringt den Spieler `race/ai.js:247`                          | 1       | `if (c != game.player)`                    | klein                 |
+| Physik `race/physics.js`                                             | 17      | gemischt, siehe unten                      | mittel                |
+| KI-Verhalten `race/ai.js`                                            | ~69     | KI richtet sich nach _dem_ Spieler         | groß, aber mechanisch |
+| HUD `ui/hud.js`                                                      | 42      | Anzeige fürs eigene Auto                   | keiner (bleibt lokal) |
+| Kamera, Motorgeräusch, `drawFrame`, Countdown                        | ~10     | Anzeige fürs eigene Auto                   | keiner bzw. klein     |
+| Standings, Recording, Highlights                                     | ~10     | Kameraeffekte ums eigene Auto              | keiner (lokal)        |
+| Meta: Meisterschaft, Freischalten, `raceEnd`, Autowahl `carTypes[0]` | ~10     | Einzelspieler-Fortschritt                  | im MP abschalten      |
 
 ### Physik: was ist Regel, was ist Anzeige?
 
@@ -42,7 +42,7 @@ Reine Anzeige (bleibt "Auto dieses Bildschirms"): Sounds (486, 503, 1226, 3361),
 
 ### KI: der eigentliche Brocken
 
-Die KI ist um *einen* Menschen gebaut: Gummiband nach `rank(game.player)` (ai.js:1860, 1895),
+Die KI ist um _einen_ Menschen gebaut: Gummiband nach `rank(game.player)` (ai.js:1860, 1895),
 Angriffe und "bully" nur gegen den Spieler (ai.js:2672 bis 2835), stage-spezifische Skripte nach
 dem Fortschritt des Spielers (`clearedPathPoint == 152` usw., ai.js:1484 bis 1764), Boss-Logik
 auf Stage 7. Lösung ohne Umbau: eine Funktion `rivalOf(c)`, die für ein KI-Auto den Menschen
@@ -222,3 +222,17 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
   Auffüllen. Der Host fügt im Dialog Bots hinzu („Add a bot“), wählt je Bot ein Auto und
   entfernt sie wieder; `players` trägt die Bots mit, die Gäste listen sie. Bots fahren mit der
   KI wie bisher (Stärke nach Strecke). Ohne Gäste fährt der Host allein mit dem üblichen Feld.
+
+### Schritt 8: Lobby
+
+- Der Multiplayer-Dialog ist im Raum eine Lobby: Spieler mit Auto und „Ready“, Bots, die
+  Strecke, das eigene Auto und ein Chat. Der Host wählt die Strecke aus den Strecken des Spiels
+  und des Originals (die eigenen Strecken hat nur das eigene Gerät) und startet, sobald alle
+  Gäste bereit sind; das Rennen startet direkt aus dem Laden (`AFTER_LOAD.room`).
+- `join` trägt `ready`, `players` trägt `ready` je Spieler und die gewählte `stage`. Nach jedem
+  Rennen ist niemand mehr bereit, und die Lobby geht wieder auf.
+- Chat: `chat`-Nachrichten gehen an alle im Raum, ohne Steuerzeichen, höchstens 200 Zeichen,
+  die letzten 50 Zeilen bleiben (`net/chat.js`). Angezeigt nur als Text.
+- Mit Bots und ohne Gäste fährt der Host jetzt mit den Bots statt mit dem Feld der Strecke.
+- Das gemeinsame Rennen hat eigene Einstellungen (`RACE_KIND.together`): keine Hilfe der
+  neuesten Strecke, KI nach der Strecke, in jedem Spiel gleich.

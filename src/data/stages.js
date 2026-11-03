@@ -85,6 +85,14 @@ export const collections = () => [
   ...(customStage.texts.length ? ["Own"] : []),
 ];
 
+// The game's and the original's stages by collection: what a room races, every game having
+// them (the player's own stages are only on its device).
+export const sharedStageGroups = () =>
+  [range(1, LAST_STAGE), ...SETS.map((set) => set.stages)].map((stages, i) => ({
+    label: collections()[i],
+    stages,
+  }));
+
 export const collectionOf = (stage) =>
   stage >= FIRST_OWN_STAGE ? OWN_COLLECTION : SETS.indexOf(setOf(stage)) + 1;
 

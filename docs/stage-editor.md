@@ -106,15 +106,15 @@ Jeder Schritt ist für sich spielbar, getestet und committet.
 
 Die Schritte 1 bis 6 und die Replays aus Schritt 7 sind auf `main`:
 
-| Commit | Inhalt |
-|---|---|
-| `6e21f83` | eigene Strecken aus Text, `level()` und `music()` im Format |
-| `9f9aaf5` | Editor: Draufsicht, Palette, Teile setzen, verschieben, drehen, Einrasten |
-| `1c393c8` | Pfad ordnen, Art der Pfadpunkte, Höhen, Fix-Hoops, Prüfung |
-| `e78809f` | Einstellungen: Runden, Gegner, Musik, Aussehen |
-| `16e2e9b` | Probefahrt über die Streckenauswahl, danach zurück in den Editor |
+| Commit    | Inhalt                                                                         |
+| --------- | ------------------------------------------------------------------------------ |
+| `6e21f83` | eigene Strecken aus Text, `level()` und `music()` im Format                    |
+| `9f9aaf5` | Editor: Draufsicht, Palette, Teile setzen, verschieben, drehen, Einrasten      |
+| `1c393c8` | Pfad ordnen, Art der Pfadpunkte, Höhen, Fix-Hoops, Prüfung                     |
+| `e78809f` | Einstellungen: Runden, Gegner, Musik, Aussehen                                 |
+| `16e2e9b` | Probefahrt über die Streckenauswahl, danach zurück in den Editor               |
 | `8f718a9` | mehrere eigene Strecken, Import (auch Originaldateien), Export, Sammlung "Own" |
-| `74aa13a` | Replays tragen den Text einer eigenen Strecke mit |
+| `74aa13a` | Replays tragen den Text einer eigenen Strecke mit                              |
 
 Nummern: `VISITING_STAGE` (51) ist eine fremde Strecke aus einem Replay oder vom Host,
 ab `FIRST_OWN_STAGE` (52) folgen die eigenen. `raceStage(stage)` und `takeRaceStage(race)`

@@ -4,9 +4,12 @@
 
 import { carStats } from "../data/carStats.js";
 import { random, seededRandom } from "../core/random.js";
-import { MAX_CARS, MODE, game } from "../core/state.js";
+import { MAX_CARS, MODE, PHASE, RACE_KIND, game } from "../core/state.js";
+import { STAGE_COUNT } from "../data/stages.js";
+import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
+import { receiveChat, clearChat } from "./chat.js";
 import { raceEvents } from "../race/events.js";
-import { setUpRaceTogether } from "../race/career.js";
+import { chooseRaceKind, setUpRaceTogether } from "../race/career.js";
 import { field, setUpField } from "../race/field.js";
 import { raceCarTextures } from "../render/generated.js";
 import { track } from "../race/track.js";
@@ -29,26 +32,44 @@ const GUEST_GONE_TICKS = 100;
 const GUEST_WAITING_TICKS = 60;
 
 // guests: the players in the room but the host, in the order they came, each with its id,
-// the car it chose, and the ticks since it was last heard and since it last joined;
-// bots: the cars the computer drives in the room's races, as the host added them
-const host = { guests: [], bots: [] };
+// the car it chose, whether it is ready to race, and the ticks since it was last heard and
+// since it last joined; bots: the cars the computer drives in the room's races, as the host
+// added them; stage: the stage the host chose in the lobby
+const host = { guests: [], bots: [], stage: 1 };
 
 export const roomGuests = () => host.guests;
 export const roomBots = () => host.bots;
+export const roomStage = () => host.stage;
 
 // the guests a race the host starts takes along
 const waitingGuests = () =>
   host.guests.filter(({ joinedTicks }) => joinedTicks < GUEST_WAITING_TICKS);
 
 // (the host's own car first: the room's players as every game lists them)
-const sendPlayers = () =>
+export const sendPlayers = () =>
   link.send({
     type: MESSAGE.players,
-    players: [{ id: link.id, carType: game.carTypes[0] }, ...host.guests].map(
-      ({ id, carType }) => ({ id, carType }),
-    ),
+    players: [
+      { id: link.id, carType: game.carTypes[0], ready: true },
+      ...host.guests,
+    ].map(({ id, carType, ready }) => ({ id, carType, ready })),
     bots: host.bots,
+    stage: host.stage,
   });
+
+// the stages a room races: the game's and the original's, which every game has
+export const isRoomStage = (stage) =>
+  isIndex(stage, STAGE_COUNT + 1) && stage >= 1;
+
+export const chooseRoomStage = (stage) => {
+  if (isRoomStage(stage)) {
+    host.stage = stage;
+    sendPlayers();
+  }
+};
+
+// The host starts once the guests in the lobby are all ready.
+export const everyoneReady = () => waitingGuests().every(({ ready }) => ready);
 
 // a race's cars at most: the players' and the bots'
 export const canAddBot = () =>
@@ -84,6 +105,7 @@ export const chooseBotCar = (i, carType) => {
 
 const receive = (message) => {
   receiveRaceMessage(message);
+  receiveChat(message);
   let guest = host.guests.find(({ id }) => id == message.from);
   if (
     message.type == MESSAGE.join &&
@@ -95,6 +117,7 @@ const receive = (message) => {
     }
     if (guest) {
       guest.carType = message.carType;
+      guest.ready = message.ready === true;
       guest.joinedTicks = 0;
       // (the answer that tells the guest the host is there)
       sendPlayers();
@@ -122,11 +145,12 @@ export const hostTick = () => {
   host.guests = host.guests.filter(
     ({ quietTicks }) => quietTicks < GUEST_GONE_TICKS,
   );
-  // (without guests, the host races as alone, with the opponents of the stage)
+  // (without guests and bots, the host races as alone, with the opponents of the stage)
   const guests = link.role == ROLE.host ? waitingGuests() : [];
+  const bots = link.role == ROLE.host ? host.bots : [];
   field.roomCarTypes =
-    guests.length > 0
-      ? [...guests.map(({ carType }) => carType), ...host.bots]
+    guests.length + bots.length > 0
+      ? [...guests.map(({ carType }) => carType), ...bots]
       : null;
 };
 
@@ -134,7 +158,20 @@ export const hostTick = () => {
 export const hostRoom = (room) => {
   host.guests = [];
   host.bots = [];
+  host.stage = isRoomStage(track.stage) ? track.stage : 1;
+  clearChat();
   openLink(ROLE.host, room, receive);
+};
+
+// The lobby's Start: the room's race on the stage chosen, the guests along (see
+// startHostedRace), straight from its loading.
+export const startRoomRace = () => {
+  chooseRaceKind(RACE_KIND.together);
+  track.stage = host.stage;
+  game.mode = MODE.championship;
+  stageLoad.after = AFTER_LOAD.room;
+  stageLoad.progress = STAGE_LOAD.requested;
+  game.phase = PHASE.stageLoading;
 };
 
 export const startHosting = () => {
@@ -167,6 +204,10 @@ export const startHostedRace = () => {
     raceCarTextures();
   }
   setUpRaceTogether();
+  // (ready again for the next race)
+  for (const guest of guests) {
+    guest.ready = false;
+  }
   // (the players by car: the host's is the player's car, 0)
   const players = [link.id, ...guests.map(({ id }) => id)];
   game.humans = players.map((_, car) => car);

@@ -473,7 +473,9 @@ test("the multiplayer dialog opens a room, and a guest joins it with its code", 
   // each one sees the other is there
   await guestPage.waitForTimeout(DELIVERY_MS);
   await advanceBoth(...both, 35);
-  await expect(hostPage.getByRole("status")).toContainText("start a race");
+  await expect(hostPage.getByRole("status")).toContainText(
+    "everyone to be ready",
+  );
   await expect(guestPage.getByRole("status")).toContainText("Choose your car");
   // and who drives which car
   await expect(
@@ -712,6 +714,11 @@ test("three race together, one leaves the race to the AI while the others race o
     { game: third, page: thirdPage },
   ];
   const raceAll = async () => {
+    // (after a race the lobby is back: this race starts from the main menu)
+    for (const { page } of all) {
+      await page.evaluate(() => document.getElementById("multiplayer").close());
+    }
+    await hostPage.locator("#menuCampaign").focus();
     await host.tap("Enter");
     await host.advanceUntil(PHASE.carSelect);
     await host.advance(40);
@@ -796,4 +803,81 @@ test("the host leaving the room ends it for its guests, who are told so", async 
   await expect(
     guestPage.getByRole("button", { name: "Join the race" }),
   ).toBeVisible();
+});
+
+test("in the lobby the host chooses the stage, the guest its car, both chat, and the race starts once the guest is ready", async ({
+  context,
+}) => {
+  const games = await openTwoGames(context, "/?host=lobby", "/?join=lobby");
+  const { host, guest, hostPage, guestPage } = games;
+  const both = [
+    { game: host, page: hostPage },
+    { game: guest, page: guestPage },
+  ];
+  const deliver = async () => {
+    await guestPage.waitForTimeout(DELIVERY_MS);
+    await advanceBoth(...both, 35);
+  };
+  await deliver();
+  await hostPage.locator("#menuMultiplayer").click();
+  await guestPage.locator("#menuMultiplayer").click();
+
+  await hostPage.getByLabel("Stage", { exact: true }).selectOption("3");
+  await guestPage.getByLabel("Your car").selectOption("12");
+  // (a chat line is text, whatever it says)
+  await hostPage.getByLabel("Message").fill("on <b>three</b>?");
+  await hostPage.getByRole("button", { name: "Send" }).click();
+  await deliver();
+  await expect(guestPage.locator("#lobbyStageName")).toHaveText(
+    "Stage: Stage 3",
+  );
+  await expect(guestPage.locator("#lobbyChat li")).toHaveText([
+    "Player 1 (host): on <b>three</b>?",
+  ]);
+  await expect(hostPage.locator("#lobbyChat li")).toHaveText([
+    "Player 1 (host) (you): on <b>three</b>?",
+  ]);
+  const start = hostPage.getByRole("button", { name: "Start the race" });
+  await expect(start).toBeDisabled();
+  // (the host starts, the guest gets ready)
+  await expect(hostPage.locator("#lobbyReady")).toBeHidden();
+  await expect(guestPage.locator("#lobbyStart")).toBeHidden();
+  await expect(
+    hostPage.getByRole("list", { name: "Players" }).getByRole("listitem"),
+  ).toHaveText([/Ready$/, /Not ready$/]);
+
+  await guestPage.getByRole("button", { name: "Ready" }).click();
+  await expect(guestPage.locator("#lobbyReady")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await deliver();
+  await expect(hostPage.getByRole("status")).toContainText("start a race");
+  await start.click();
+  await host.advanceUntil(PHASE.race);
+  await host.advance();
+  await guestPage.waitForTimeout(DELIVERY_MS);
+  await guest.advanceUntil(PHASE.race);
+  const raced = (page) =>
+    page.evaluate(() => ({
+      stage: window.gameState.track.stage,
+      field: window.gameState.game.carTypes.slice(0, 2),
+    }));
+  // (the tabs share their storage, and with it the host's car: the games are compared)
+  expect(await raced(guestPage)).toMatchObject({ stage: 3 });
+  expect((await raced(guestPage)).field[1]).toBe(12);
+  expect(await raced(hostPage)).toEqual(await raced(guestPage));
+
+  // the guest leaves the race: the lobby is back, to get ready again
+  await advanceBoth(...both, 150);
+  await guest.tap("Escape");
+  await guest.tap("ArrowDown");
+  await guest.tap("Enter");
+  await guest.advanceUntil(PHASE.mainMenu);
+  await guest.advance(2);
+  await expect(guestPage.locator("#multiplayer")).toBeVisible();
+  await expect(guestPage.locator("#lobbyReady")).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
 });

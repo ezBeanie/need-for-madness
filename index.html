@@ -72,6 +72,33 @@ src: url(data/verdana.ttf);
 #multiplayerAddBot { margin-top: 8px; }
 /* (a room of eight with bots is taller than a phone held sideways) */
 #multiplayer { max-height: 90vh; overflow-y: auto; }
+/* the lobby: players, the race and the chat side by side, one under the other on phones */
+#multiplayer.in-room { width: min(94vw, 1100px); }
+.lobby:not([hidden]) {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
+  gap: 12px 20px; align-items: start;
+}
+.lobby section { min-width: 0; }
+/* (the dialog's buttons are flex boxes, which would show them hidden) */
+#multiplayer [hidden] { display: none; }
+.lobby .row { display: flex; gap: 8px; }
+.lobby .row input { flex: 1; min-width: 0; }
+.lobby .row button { width: auto; flex: none; }
+.lobby .room-line { margin: 0; }
+.lobby .players li { display: flex; justify-content: space-between; gap: 8px; padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); font-size: 14px; }
+.lobby .players .ready { color: #9ff5b4; white-space: nowrap; }
+.lobby .players .waiting { color: rgba(255, 255, 255, 0.7); white-space: nowrap; }
+.lobby .players .ready::before { content: "\2713  "; }
+.lobby .stage-name { margin: 16px 0 0; font-size: 15px; }
+.lobby .status { margin: 16px 0 8px; color: #01eaff; }
+.lobby .go { justify-content: center; margin-bottom: 8px; background: linear-gradient(90deg, #FF3D01, #FFB401); color: #1B0F05; font-weight: bold; }
+.lobby .go:hover { background: linear-gradient(90deg, #FF5B21, #FFC421); }
+.lobby .go[aria-pressed="true"] { background: linear-gradient(90deg, #0FA84A, #5FE38A); }
+.lobby .go:disabled { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
+#lobbyChat { list-style: none; margin: 0; padding: 8px 12px; height: 220px; overflow-y: auto; border-radius: 12px; background: rgba(0, 0, 0, 0.35); font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
+#lobbyChat li + li { margin-top: 4px; }
+#lobbyChat .from { color: #01eaff; font-weight: bold; }
+#lobbyChatForm label { margin-top: 10px; }
 .menu-dialog .error { margin: 6px 0 0; color: #ffb4a8; }
 .menu-dialog .error::before { content: "\26A0  "; }
 .menu-dialog .room { font-size: 26px; letter-spacing: 3px; color: #01eaff; }
@@ -379,22 +406,43 @@ src: url(data/verdana.ttf);
 <button type="submit">Join the race</button>
 </form>
 </div>
-<div id="multiplayerRoom" hidden>
-<p>Room <strong id="multiplayerRoomName" class="room"></strong></p>
+<div id="multiplayerRoom" class="lobby" hidden>
+<section aria-labelledby="multiplayerPlayersTitle">
+<p class="room-line">Room <strong id="multiplayerRoomName" class="room"></strong></p>
 <div id="multiplayerShare">
 <label for="multiplayerLink">Link for your guests</label>
-<input id="multiplayerLink" readonly>
-<button type="button" id="multiplayerCopy">Copy</button>
+<div class="row"><input id="multiplayerLink" readonly><button type="button" id="multiplayerCopy">Copy</button></div>
 </div>
-<p id="multiplayerStatus" role="status"></p>
 <h3 id="multiplayerPlayersTitle">Players</h3>
-<ul id="multiplayerPlayers" aria-labelledby="multiplayerPlayersTitle"></ul>
+<ul id="multiplayerPlayers" class="players" aria-labelledby="multiplayerPlayersTitle"></ul>
 <div id="multiplayerBots" hidden>
 <h3 id="multiplayerBotsTitle">Bots</h3>
 <ul id="multiplayerBotList" aria-labelledby="multiplayerBotsTitle"></ul>
 <button type="button" id="multiplayerAddBot">Add a bot</button>
 </div>
+</section>
+<section aria-labelledby="lobbyRaceTitle">
+<h3 id="lobbyRaceTitle">The race</h3>
+<div id="lobbyStageChoice">
+<label for="lobbyStage">Stage</label>
+<select id="lobbyStage"></select>
+</div>
+<p id="lobbyStageName" class="stage-name" hidden></p>
+<label for="lobbyCar">Your car</label>
+<select id="lobbyCar"></select>
+<p id="multiplayerStatus" class="status" role="status"></p>
+<button type="button" id="lobbyReady" class="go" aria-pressed="false">Ready</button>
+<button type="button" id="lobbyStart" class="go">Start the race</button>
 <button type="button" id="multiplayerLeave">Leave the room</button>
+</section>
+<section aria-labelledby="lobbyChatTitle" class="chat">
+<h3 id="lobbyChatTitle">Chat</h3>
+<ol id="lobbyChat" tabindex="0" aria-labelledby="lobbyChatTitle" aria-live="polite" aria-relevant="additions"></ol>
+<form id="lobbyChatForm" novalidate>
+<label for="lobbyChatText">Message</label>
+<div class="row"><input id="lobbyChatText" maxlength="200" autocomplete="off"><button type="submit">Send</button></div>
+</form>
+</section>
 </div>
 <button type="button" id="multiplayerClose" class="close">Close</button>
 </dialog>

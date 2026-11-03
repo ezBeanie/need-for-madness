@@ -50,6 +50,8 @@ export const AFTER_LOAD = {
   replay: 3,
   // the race of a host (see net/guest.js)
   guest: 4,
+  // the race the host starts from the lobby (see net/host.js)
+  room: 5,
 };
 
 export const stageLoad = {

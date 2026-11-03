@@ -1,6 +1,6 @@
 # Hauptmenü: Analyse und Plan
 
-Stand: 2026-11-02, Basis b7d5223.
+Stand: 2026-11-03, Basis b7d5223. Umgesetzt: Schritte 1 bis 7 (siehe „Stand“ am Ende).
 
 ## Ziel
 
@@ -108,3 +108,22 @@ bitgleich: Die Kampagne behält genau die heutigen Werte.
 ### 9. Autoeditor
 
 - Eigener Plan, wenn die Schritte davor stehen.
+
+## Stand
+
+- **1** Hauptmenü als HTML (`#mainMenu`, ein `<nav>`): Kampagne, Schnelles Rennen, Übung, Time
+  Attack, Multiplayer, darunter zwei mal zwei kleinere Knöpfe. Pfeiltasten gehen durch das Menü,
+  ein Gamepad-Knopf wählt den fokussierten Eintrag. Mit den Menüs des Originals bleibt dessen
+  Hauptmenü.
+- **2** `raceSetup` (`core/state.js`) statt `game.unlocked` im Rennen: neueste Strecke, offene
+  Autos, KI-Stufe. `setUpRace()` (`race/career.js`) beim Laden jeder Strecke.
+- **3** Die Kampagne hat immer Fortschritt und 7 Autos, nur die Strecken des Spiels, nicht weiter
+  als freigeschaltet. Der Schalter „Career“ ist weg.
+- **4** Schnelles Rennen: alle Sammlungen, Feldgröße (C) und KI-Stärke (B: Easy, Normal, Hard;
+  Leicht fährt wie Strecke 1, Normal wie die Strecke, Hard wie Strecke 17).
+- **5** Übung: allein, jede Strecke.
+- **6** Time Attack (`race/timeAttack.js`): allein, Uhr in Ticks, Runden- und Gesamtzeit im HUD,
+  Bestzeiten je Strecke in `bestTimes`, in der Streckenwahl angezeigt; kein Zurückspulen.
+- **7** Lobby, siehe `docs/multiplayer.md`, Schritt 8.
+- **8** Optionen: noch der bisherige Dialog.
+- **9** Autoeditor: noch offen.

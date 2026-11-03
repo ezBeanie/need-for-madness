@@ -28,6 +28,8 @@ export const MESSAGE = {
   // a game's ping in a race, which the host answers at once: the time to the host and back
   ping: "ping",
   pong: "pong",
+  // a line of the lobby's chat (see chat.js)
+  chat: "chat",
 };
 
 // the most games in a room, as the relay takes them

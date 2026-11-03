@@ -241,7 +241,8 @@ export function stageLoadingTick() {
     (menu.redraw ||
       stageLoad.after == AFTER_LOAD.race ||
       stageLoad.after == AFTER_LOAD.replay ||
-      stageLoad.after == AFTER_LOAD.guest)
+      stageLoad.after == AFTER_LOAD.guest ||
+      stageLoad.after == AFTER_LOAD.room)
   ) {
     loadStage();
     if (!isEngineLoaded(game.carTypes[0])) {
@@ -265,6 +266,9 @@ export function stageLoadingTick() {
       showOpenedReplay();
     } else if (stageLoad.after == AFTER_LOAD.guest) {
       showHostedRace();
+    } else if (stageLoad.after == AFTER_LOAD.room) {
+      pauseMenuMusic();
+      flashIntoRace();
     } else if (stageLoad.after != AFTER_LOAD.race) {
       openStageSelect();
     } else {
@@ -293,7 +297,8 @@ const drawLoadingScreen = () => {
   rd.lineWidth = 10 * view.scale;
   // the very first race does not tell which stage it is
   const text =
-    stageLoad.after == AFTER_LOAD.stageSelect
+    stageLoad.after == AFTER_LOAD.stageSelect ||
+    stageLoad.after == AFTER_LOAD.room
       ? "Loading " + stageLabel(track.stage)
       : "Loading Stage...";
   rd.strokeText(text, 640 * view.scaleX, 330 * view.scaleY);
