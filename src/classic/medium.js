@@ -45,8 +45,10 @@ export const medium = {
   tick: 0,
   // the replay holds still (its highlight's peak): a wreck flashes on without burning
   frozen: false,
-  // an object's nearer polygons cover its farther ones, whatever their order (look.depth)
-  depth: false,
+  // an object's nearer polygons cover its farther ones, whatever their order, where the
+  // original's order of polygons by their middles at times got it wrong (tyres, wheel
+  // arches); false draws by the original's order alone, kept for comparing
+  depth: true,
 };
 
 const clamp255 = (v) => Math.min(255, Math.max(0, v));

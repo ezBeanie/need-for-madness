@@ -1,4 +1,4 @@
-// The options: a screen of the switches that otherwise have only keys (L, K, J, U, T, G, N,
+// The options: a screen of the switches that otherwise have only keys (L, K, U, T, G, N,
 // M, O), for phones and tablets without a keyboard. The main menu opens it, and an Options
 // button the other menus (outside races: in a race, the pause menu leads there); each switch
 // does what its key does.
@@ -17,7 +17,6 @@ const dialog = document.getElementById("options");
 const SWITCHES = [
   ["toggleLook", () => look.current == LOOK.classic, "Classic", "Modern"],
   ["toggleSharp", () => look.sharp, "Sharp", "Original pixels"],
-  ["toggleDepth", () => look.depth, "By depth", "As the original"],
   ["toggleClassicMenus", () => look.menus, "Classic", "Modern"],
   ["toggleAiming", () => camera.aims, "On", "Off"],
   ["toggleMinimap", () => minimap.shown, "On", "Off"],

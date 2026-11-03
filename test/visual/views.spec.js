@@ -156,3 +156,36 @@ test("the views' buttons show the keyboard's focus also hovered", async ({
   });
   expect(face).toEqual(["none", "rgb(255, 255, 255)"]);
 });
+
+// The classic look's cars are flat polygons of few colours, the modern look's textured.
+test("the lobby shows the cars in the look chosen", async ({ page }) => {
+  const game = await toMainMenu(page);
+  await page.locator("#menuMultiplayer").click();
+  await page.getByRole("button", { name: "Host a race" }).click();
+  await game.advance(4);
+  const colours = () =>
+    page.evaluate(() => {
+      const canvas = document.querySelector("#multiplayer canvas.car-preview");
+      const { data } = canvas
+        .getContext("2d")
+        .getImageData(0, 0, canvas.width, canvas.height);
+      const seen = new Set();
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] > 0) {
+          seen.add((data[i] << 16) | (data[i + 1] << 8) | data[i + 2]);
+        }
+      }
+      return seen.size;
+    });
+  const modern = await colours();
+  await page.evaluate(() => window.gameState.toggleLook());
+  // (the classic models load first)
+  await expect
+    .poll(async () => {
+      await game.advance();
+      return colours();
+    })
+    .toBeGreaterThan(5);
+  const classic = await colours();
+  expect(classic * 4).toBeLessThan(modern);
+});

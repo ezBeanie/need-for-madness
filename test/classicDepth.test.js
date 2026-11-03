@@ -164,9 +164,9 @@ test("in the classic look pieces sharing a model each draw its polygons in their
   expect(own.order).not.toEqual(shared.order);
 });
 
-test("J switches the classic look's depth test", async () => {
+// (the original's order alone, medium.depth false, stays in the code but has no switch)
+test("the classic look always tests depth, J switching nothing", async () => {
   const { ctx, key } = await classicRace();
-  expect(ctx.look.depth).toBe(true);
   let tested = null;
   const depthTested = () => {
     tested = false;
@@ -182,8 +182,7 @@ test("J switches the classic look's depth test", async () => {
   expect(depthTested()).toBe(true);
   key(74, true);
   key(74, false);
-  expect(ctx.look.depth).toBe(false);
-  expect(depthTested()).toBe(false);
+  expect(depthTested()).toBe(true);
 });
 
 test("in the classic look by depth the edges behind a wall the camera is close to stay hidden", async () => {

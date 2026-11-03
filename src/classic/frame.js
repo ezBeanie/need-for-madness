@@ -13,7 +13,6 @@ import {
   placeModel,
 } from "../render/interpolation.js";
 import { fetchText } from "../render/models.js";
-import { look } from "../render/look.js";
 import { canvas3D } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 import { PIECE_FILES } from "../loading/assets.js";
@@ -141,10 +140,11 @@ const tintForStage = (colors) => {
   tintedFor = colors;
 };
 
-// The classic look draws on the 3D canvas, made 450 pixels high (see fitCanvas3D).
-const fitScreen = () => {
-  medium.w = canvas3D.width;
-  medium.h = canvas3D.height;
+// The classic look draws on the 3D canvas, made 450 pixels high (see fitCanvas3D), or
+// what else is bound w x h.
+const fitScreen = (w = canvas3D.width, h = canvas3D.height) => {
+  medium.w = w;
+  medium.h = h;
   medium.cx = medium.w / 2;
   medium.cy = medium.h / 2;
   setPixelSize(medium.h / 450);
@@ -171,11 +171,11 @@ const NO_STAGE = {
 };
 
 // Starts a frame: the models (loaded on the first), the colours, the camera.
-const startFrame = (colors = scene.colors ?? NO_STAGE) => {
+const startFrame = (colors = scene.colors ?? NO_STAGE, w, h) => {
   if (!loading) {
     loadModels();
   }
-  fitScreen();
+  fitScreen(w, h);
   startBatch();
   if (tintedFor !== colors) {
     tintForStage(colors);
@@ -187,7 +187,6 @@ const startFrame = (colors = scene.colors ?? NO_STAGE) => {
     (Math.asin(Math.max(-1, Math.min(1, -drawCamera.projection[7]))) * 180) /
     Math.PI;
   medium.flicker = !medium.flicker;
-  medium.depth = look.depth;
   medium.frame++;
   medium.tick = interpolation.tick;
   medium.frozen = recording.frozen;
@@ -424,4 +423,15 @@ export const drawClassicCar = (
   medium.menuShadow = menuFloor ? [87, 85, 57] : null;
   drawInOrder(object ? [object] : []);
   medium.menuShadow = null;
+};
+
+// A car on a card of the lobby (see render/carPreviews.js), w x h into what is bound: each
+// type its own copy of the model, after the cars of a race and the car select's.
+export const drawClassicPreview = (instance, type, w, h) => {
+  startFrame(NO_STAGE, w, h);
+  const object = carObject(game.carCount + 1 + type, instance, type);
+  if (object) {
+    object.shadowBelow = true;
+  }
+  drawInOrder(object ? [object] : []);
 };

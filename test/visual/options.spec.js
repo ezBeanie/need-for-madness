@@ -20,9 +20,6 @@ test("the options switch the look and the classic polygons without a keyboard", 
   expect((await look()).current).toBe(1);
   await expect(lookSwitch).toHaveAttribute("aria-pressed", "true");
   await expect(lookSwitch.locator(".state")).toHaveText("Classic");
-  const depth = (await look()).depth;
-  await page.locator("#option-toggleDepth").click();
-  expect((await look()).depth).toBe(!depth);
   const menus = page.locator("#option-toggleClassicMenus");
   await expect(menus.locator(".state")).toHaveText("Modern");
   await menus.click();

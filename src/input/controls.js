@@ -17,7 +17,6 @@ import { CAMERA, camera, toggleAiming } from "../render/camera.js";
 import {
   look,
   toggleClassicMenus,
-  toggleDepth,
   toggleLook,
   toggleSharp,
 } from "../render/look.js";
@@ -129,12 +128,6 @@ export function onKey(action, pressed) {
     toggleLook();
     fitCanvas3D();
     switchMusicLook();
-  }
-  if (!pressed && action == "toggleDepth") {
-    toggleDepth();
-    announce(
-      look.depth ? "Classic look by depth: on" : "Classic look by depth: off",
-    );
   }
   if (!pressed && action == "toggleSharp") {
     toggleSharp();

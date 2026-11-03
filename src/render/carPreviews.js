@@ -2,11 +2,13 @@
 // each car type shown is drawn once a frame into a framebuffer and copied into every card's
 // canvas of that type.
 
+import { drawClassicPreview } from "../classic/frame.js";
 import { carStats } from "../data/carStats.js";
 import { poseShowcaseCar } from "../screens/showcase.js";
 import { drawWheeledCar } from "./drawFrame.js";
 import { CAR_TEXTURE } from "./generated.js";
 import { drawCamera } from "./interpolation.js";
+import { LOOK, look } from "./look.js";
 import { gl, setWorld } from "./renderer.js";
 import { carModels, scene, showcaseWheels } from "./scene.js";
 
@@ -166,18 +168,24 @@ export const drawCarPreviews = () => {
     (PITCH * Math.PI) / 180,
     [1, 0, 0],
   );
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.LEQUAL);
   for (const type of shownTypes(canvases).filter((t) => posed.has(t))) {
+    // (the classic look's batch turns the depth test off when done)
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.depthMask(true);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    drawWheeledCar(
-      type,
-      carModels[type],
-      showcaseWheels[type],
-      carModels[type],
-      () => true,
-    );
+    if (look.current == LOOK.classic) {
+      drawClassicPreview(carModels[type], type, PREVIEW_WIDTH, PREVIEW_HEIGHT);
+    } else {
+      drawWheeledCar(
+        type,
+        carModels[type],
+        showcaseWheels[type],
+        carModels[type],
+        () => true,
+      );
+    }
     keepPixels();
     for (const canvas of canvases) {
       if (Number(canvas.dataset.car) == type) {
