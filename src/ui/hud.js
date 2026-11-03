@@ -43,6 +43,12 @@ import {
 } from "../race/racers.js";
 import { HIGHLIGHT, startHighlight, recording } from "../race/recording.js";
 import { VIEWER_FROM, openReplay } from "../race/replayViewer.js";
+import {
+  currentLapTicks,
+  formatTime,
+  isTimeAttack,
+  timeAttack,
+} from "../race/timeAttack.js";
 import { track } from "../race/track.js";
 import { CAMERA, camera, faceCamera } from "../render/camera.js";
 import { LOOK, classicMenus, look } from "../render/look.js";
@@ -738,7 +744,14 @@ const raceOutcome = () => {
   if (!over) {
     for (let i = 0; i < game.carCount; i++) {
       if (track.clear[i] == track.nlaps * track.nsp && track.pos[i] == 0) {
-        if (i == game.player) {
+        if (i == game.player && isTimeAttack()) {
+          drawOutcome("Finished!", "youwon");
+          drawBlinking(192, finishedIn(), 0, 128, 255);
+          raceEvents.winner = true;
+          if (!track.haltall) {
+            playSound(32, 1);
+          }
+        } else if (i == game.player) {
           drawOutcome("You Won!", "youwon");
           drawBlinking(192, "You finished first, nice job!", 0, 128, 255);
           raceEvents.winner = true;
@@ -872,6 +885,35 @@ const pause = () => {
 };
 
 // Switch mode: the time until the player switches to another car.
+// Time attack's clock under the race: the race's time, the lap and the best lap.
+const drawClock = () => {
+  const { best, laps } = timeAttack;
+  const lap = Math.min(laps.length + 1, track.nlaps);
+  const bestLap = Math.min(best?.lap ?? Infinity, ...laps);
+  drawCenteredText(
+    636,
+    `Lap ${lap}/${track.nlaps}   ${formatTime(currentLapTicks())}` +
+      (Number.isFinite(bestLap) ? `   Best lap ${formatTime(bestLap)}` : ""),
+    0,
+    0,
+    0,
+    TEXT.label,
+  );
+  drawCenteredText(670, formatTime(timeAttack.ticks), 0, 0, 0, TEXT.heading);
+};
+
+const finishedIn = () => {
+  const { best, newBest, ticks } = timeAttack;
+  const time = `Your time: ${formatTime(ticks)}`;
+  if (newBest.race) {
+    return `${time}, a new best!`;
+  }
+  return (
+    `${time}, best ${formatTime(best.race)}` +
+    (newBest.lap ? ", but a new best lap!" : "")
+  );
+};
+
 const drawSwitchTimer = () => {
   switchTimer--;
   const minutes = Math.floor(switchTimer / 800);
@@ -1561,6 +1603,9 @@ export function drawHud() {
       !raceOver
     ) {
       drawSwitchTimer();
+    }
+    if (isTimeAttack() && raceEvents.countdown == 0) {
+      drawClock();
     }
     if (
       game.carCount != 1 &&

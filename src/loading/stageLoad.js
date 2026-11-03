@@ -4,7 +4,7 @@ import { makePile } from "../data/pile.js";
 import { freeModel, newModel } from "../render/models.js";
 import { buildPileModel } from "../render/piles.js";
 import { raceSetup } from "../core/state.js";
-import { setUpCareerRace } from "../race/career.js";
+import { setUpRace } from "../race/career.js";
 import {
   isSpecialFix,
   parseStage,
@@ -70,7 +70,7 @@ const WALL_SPACING = 480;
 export function loadStage() {
   stageLoad.progress = STAGE_LOAD.loading;
   // (the stage's tips are read with it)
-  setUpCareerRace();
+  setUpRace();
   if (isCustom(track.stage)) {
     readStage(customText(track.stage));
     prepareStage();

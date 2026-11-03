@@ -59,7 +59,7 @@ test("screens: the car select and the stage select in the classic look", async (
   page,
 }) => {
   const game = await openGame(page, {
-    storage: { carsel: "5", look: "1" },
+    storage: { carsel: "5", look: "1", unlocked: "2" },
   });
   await game.advanceUntil(PHASE.mainMenu);
   await game.settle();

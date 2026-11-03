@@ -243,9 +243,11 @@ const carSelectTour = () => {
     Object.assign(ctx.racers[0].u, NO_INPUT);
     if (frame === 225) {
       ctx.game.unlocked = 3;
+      ctx.career.progress = 3;
     }
     if (frame === 780) {
       ctx.game.unlocked = 1;
+      ctx.career.progress = 1;
     }
     if (taps[frame]) {
       keys.tap(game, taps[frame]);
@@ -291,6 +293,7 @@ const stageSelectTour = () => {
     Object.assign(ctx.racers[0].u, NO_INPUT);
     if (frame === 225) {
       ctx.game.unlocked = 4;
+      ctx.career.progress = 4;
       // car 15 is locked until stage 10
       ctx.game.carTypes[0] = 5;
     }

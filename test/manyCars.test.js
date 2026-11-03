@@ -56,7 +56,7 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test("C in the stage select cycles the field size and remembers it", async () => {
+test("C in a quick race's stage select cycles the field size and remembers it", async () => {
   const stored = new Map();
   vi.stubGlobal("Storage", class {});
   vi.stubGlobal("localStorage", {
@@ -64,6 +64,7 @@ test("C in the stage select cycles the field size and remembers it", async () =>
     setItem: (name, value) => stored.set(name, String(value)),
   });
   const { ctx, key, step } = await openStageSelect({ stage: 3, car: 5 });
+  ctx.chooseRaceKind(ctx.RACE_KIND.quickRace);
   const sizes = [];
   for (let i = 0; i < 4; i++) {
     key(67, true);
@@ -80,6 +81,7 @@ test("a field size chosen in the stage select applies to the race started from i
     stage: 3,
     car: 5,
   });
+  ctx.chooseRaceKind(ctx.RACE_KIND.quickRace);
   key(67, true);
   key(67, false);
   step();

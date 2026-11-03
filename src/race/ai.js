@@ -9,6 +9,7 @@ import {
   game,
   isHuman,
   onNewestStage,
+  raceSetup,
 } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { CAR, carStats } from "../data/carStats.js";
@@ -1858,7 +1859,7 @@ function rethink(c) {
 }
 
 function chooseAimLag(c) {
-  let tstage = track.stage;
+  let tstage = raceSetup.aiStage;
   ai[c].aimLag = Math.floor((7 - rank(c)) * rank(aiRival()) * (6 - tstage * 2));
   if (ai[c].aimLag < 0) {
     ai[c].aimLag = 0;
@@ -1879,17 +1880,18 @@ function chooseAimLag(c) {
 
 function chooseHoldBack(c) {
   const type = car[c].typ;
+  const aiStage = raceSetup.aiStage;
   let holdBackScale = 0;
-  if (track.stage == 1) {
+  if (aiStage == 1) {
     holdBackScale = 2;
   }
-  if (track.stage == 2) {
+  if (aiStage == 2) {
     holdBackScale = 1.5;
   }
-  if (track.stage == 3 && type != CAR.swordOfJustice) {
+  if (aiStage == 3 && type != CAR.swordOfJustice) {
     holdBackScale = 0.5;
   }
-  if (track.stage == 4) {
+  if (aiStage == 4) {
     holdBackScale = 0.5;
   }
   ai[c].holdBack = Math.floor(
@@ -1901,7 +1903,7 @@ function chooseHoldBack(c) {
   if (ai[c].holdBack > 80) {
     ai[c].holdBack = 80;
   }
-  if (track.stage == 1) {
+  if (aiStage == 1) {
     if (ai[c].holdBack < 20) {
       ai[c].holdBack = 20;
     }
@@ -1910,17 +1912,18 @@ function chooseHoldBack(c) {
 
 function chooseCornerCutting(c) {
   const type = car[c].typ;
+  const aiStage = raceSetup.aiStage;
   let maxCutting = 0;
-  if (track.stage == 1 || track.stage == 2) {
+  if (aiStage == 1 || aiStage == 2) {
     maxCutting = 1;
   }
-  if (track.stage == 3) {
+  if (aiStage == 3) {
     maxCutting = 0.5;
   }
-  if (track.stage == 4) {
+  if (aiStage == 4) {
     maxCutting = 0.5;
   }
-  if (track.stage == 5) {
+  if (aiStage == 5) {
     maxCutting = 0.2;
   }
   if (track.pos[c] - track.pos[aiRival()] >= -1) {

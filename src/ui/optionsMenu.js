@@ -5,7 +5,6 @@
 import { audio } from "../audio/audio.js";
 import { PHASE, game } from "../core/state.js";
 import { onKey } from "../input/controls.js";
-import { career } from "../race/career.js";
 import { camera } from "../render/camera.js";
 import { minimap } from "./minimap.js";
 import { LOOK, classicMenus, look } from "../render/look.js";
@@ -13,11 +12,7 @@ import { LOOK, classicMenus, look } from "../render/look.js";
 const button = document.getElementById("optionsButton");
 const dialog = document.getElementById("options");
 
-// the career only between races, as the AI races by it (see race/career.js)
-const inMainMenu = () => game.phase == PHASE.mainMenu;
-
-// each switch: its key's action, whether it is on, what that is called and, if not
-// always, when it can be switched
+// each switch: its key's action, whether it is on and what that is called
 const SWITCHES = [
   ["toggleLook", () => look.current == LOOK.classic, "Classic", "Modern"],
   ["toggleSharp", () => look.sharp, "Sharp", "Original pixels"],
@@ -28,7 +23,6 @@ const SWITCHES = [
   ["muteSound", () => !audio.muteSound, "On", "Off"],
   ["muteMusic", () => !audio.muteMusic, "On", "Off"],
   ["otherCarSounds", () => audio.otherCars, "On", "Off"],
-  ["toggleCareer", () => career.on, "On", "Off", inMainMenu],
 ];
 
 // where the gear shows: everywhere but in the race itself and its flashes
@@ -44,10 +38,9 @@ const SHOWN_IN = [
 ];
 
 const showStates = () => {
-  for (const [action, on, yes, no, available] of SWITCHES) {
+  for (const [action, on, yes, no] of SWITCHES) {
     const item = document.getElementById(`option-${action}`);
     item.setAttribute?.("aria-pressed", on() ? "true" : "false");
-    item.disabled = available ? !available() : false;
     const state = item.querySelector?.(".state");
     if (state) {
       state.textContent = on() ? yes : no;

@@ -6,6 +6,7 @@ import { carStats } from "../data/carStats.js";
 import { random, seededRandom } from "../core/random.js";
 import { MAX_CARS, MODE, game } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
+import { setUpRaceTogether } from "../race/career.js";
 import { field, setUpField } from "../race/field.js";
 import { raceCarTextures } from "../render/generated.js";
 import { track } from "../race/track.js";
@@ -165,6 +166,7 @@ export const startHostedRace = () => {
     setUpField();
     raceCarTextures();
   }
+  setUpRaceTogether();
   // (the players by car: the host's is the player's car, 0)
   const players = [link.id, ...guests.map(({ id }) => id)];
   game.humans = players.map((_, car) => car);

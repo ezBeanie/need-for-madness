@@ -5,7 +5,8 @@
 import { pauseMenuMusic, playMenuMusic } from "../audio/audio.js";
 import { drawClassicResetQuestion } from "../classic/instructions.js";
 import { OPTION, classicMainMenu } from "../classic/mainMenu.js";
-import { PHASE, game } from "../core/state.js";
+import { PHASE, RACE_KIND, game } from "../core/state.js";
+import { career, chooseRaceKind } from "../race/career.js";
 import { saveSetting } from "../core/storage.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { lookForGamepads } from "../input/gamepad.js";
@@ -341,6 +342,7 @@ export function resetQuestionTick() {
 }
 
 const resetGame = () => {
+  career.progress = 1;
   game.unlocked = 1;
   track.stage = game.unlocked;
   saveSetting("unlocked", game.unlocked);
@@ -359,10 +361,13 @@ let chosen = element("menuCampaign");
 // what each button does
 const choices = new Map();
 
-const startCampaign = () => {
+// The kind of race chosen: the car select opens, after the menu's own way out.
+const startRaces = (kind) => {
+  chooseRaceKind(kind);
   menu.animation = LEAVING;
   introFrame = INTRO_FRAMES;
 };
+const startCampaign = () => startRaces(RACE_KIND.campaign);
 
 const offerReset = () => {
   insano.talkTicks = TALK_TICKS;
@@ -372,6 +377,9 @@ const offerReset = () => {
 export const installMainMenu = () => {
   for (const [id, choose] of [
     ["menuCampaign", startCampaign],
+    ["menuQuickRace", () => startRaces(RACE_KIND.quickRace)],
+    ["menuPractice", () => startRaces(RACE_KIND.practice)],
+    ["menuTimeAttack", () => startRaces(RACE_KIND.timeAttack)],
     ["menuMultiplayer", openMultiplayer],
     ["menuStageEditor", openStageEditor],
     ["menuOptions", openOptions],
@@ -413,5 +421,9 @@ export const placeMainMenu = () => {
   if (shown) {
     element("menuReset").hidden = !menu.resetOffered;
     (chosen.hidden ? element("menuCampaign") : chosen).focus?.();
+  } else if (nav.contains?.(document.activeElement)) {
+    // (keys on a button of the menu are the page's, see input/keyboard.js: the screens
+    // after it take them again, also in browsers that leave the focus on hidden buttons)
+    document.activeElement.blur();
   }
 };

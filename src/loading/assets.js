@@ -5,7 +5,7 @@ import { LAST_STAGE } from "../data/stages.js";
 import { loadSound } from "../audio/audio.js";
 import { interfaceResolution, isPhone } from "../core/platform.js";
 import { random } from "../core/random.js";
-import { PHASE, RACE_SIZES, game } from "../core/state.js";
+import { PHASE, game } from "../core/state.js";
 import { loadSetting } from "../core/storage.js";
 import { career, loadCareer } from "../race/career.js";
 import { raceEvents } from "../race/events.js";
@@ -145,12 +145,7 @@ const readSettings = () => {
     raceEvents.onautocorrect = 2;
   }
   loadCareer();
-  game.raceCars = loadSetting("racecars");
-  if (!RACE_SIZES.includes(game.raceCars)) {
-    game.raceCars = 7;
-  }
-  // without the career the first stage, everything being open
-  track.stage = career.on ? game.unlocked : 1;
+  track.stage = game.unlocked;
   // (the keys' hint is for players new to the game)
   if (career.progress >= 5) {
     hud.keyHintTicks = 200;

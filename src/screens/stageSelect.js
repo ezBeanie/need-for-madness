@@ -24,7 +24,9 @@ import {
 } from "../classic/stageSelect.js";
 import { cosDeg, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
-import { MODE, PHASE, game } from "../core/state.js";
+import { MODE, PHASE, RACE_KIND, game, raceSetup } from "../core/state.js";
+import { nextStrength } from "../race/career.js";
+import { bestTimes, formatTime } from "../race/timeAttack.js";
 import { applyFieldSize, nextRaceSize } from "../race/field.js";
 import {
   AFTER_LOAD,
@@ -60,8 +62,10 @@ import {
 import { canvas2D, rd, view } from "../ui/view.js";
 import {
   BUTTON,
+  TEXT,
   blink,
   drawButton,
+  drawCenteredText,
   drawMusicToggle,
   fillRoundedRect,
   fillScaledShape,
@@ -83,6 +87,21 @@ const FIRST_STAGE = 1;
 const NO_ARROW_STAGE = 16;
 // from here on, won stages can also be played in switch mode
 const FIRST_SWITCH_STAGE = 3;
+
+const inCampaign = () => raceSetup.kind == RACE_KIND.campaign;
+const quickRace = () => raceSetup.kind == RACE_KIND.quickRace;
+// practice and time attack race alone
+const alone = () =>
+  raceSetup.kind == RACE_KIND.practice ||
+  raceSetup.kind == RACE_KIND.timeAttack;
+// the campaign races this game's own stages only, the others every collection
+const shownCollections = () =>
+  inCampaign() ? collections().slice(0, 1) : collections();
+// the campaign goes no further than the stages it opened
+const hasNext = () =>
+  stageAfter(track.stage) && (!inCampaign() || track.stage < game.unlocked);
+
+const STRENGTH_NAMES = ["Easy", "Normal", "Hard"];
 
 // The camera falls from FALL_FROM to FALL_TO above the stage while it turns and moves its
 // view to the stage's first path point. Then it follows the path, one point every
@@ -336,17 +355,27 @@ const drawClassic = () => {
     game.phase = PHASE.stageLoading;
     return;
   }
-  const buttons = [["cars", ` ${game.raceCars} Cars  [C] `, 75, 30]];
+  const buttons = quickRace()
+    ? [
+        ["cars", ` ${game.raceCars} Cars  [C] `, 75, 30],
+        [
+          "strength",
+          ` ${STRENGTH_NAMES[raceSetup.strength]} AI  [B] `,
+          220,
+          30,
+        ],
+      ]
+    : [];
   if (track.tips.length) {
     buttons.push(["tip", showingTip ? " Okay " : " Tip ", 75, 392]);
-  } else if (track.stage == 1 || track.stage == 2) {
+  } else if (inCampaign() && (track.stage == 1 || track.stage == 2)) {
     buttons.push(["practice", " Practice ", 220, 392]);
   }
   if (switchOffered()) {
     buttons.push(["switch", " Play Switch ", 480, 392]);
   }
   let x = 75;
-  collections().forEach((label, collection) => {
+  shownCollections().forEach((label, collection) => {
     const current = collection == collectionOf(track.stage);
     const text = current ? ` > ${label} < ` : ` ${label} `;
     buttons.push([collection, text, x, 64]);
@@ -360,12 +389,12 @@ const drawClassic = () => {
         : `Stage ${stageNumber(track.stage)}  >`,
     name: track.name,
     first: track.stage == FIRST_STAGE,
-    last: !stageAfter(track.stage),
+    last: !hasNext(),
     buttons,
     tip: showingTip ? track.tips : null,
   });
   if (input.right || chosen == "next") {
-    if (stageAfter(track.stage)) {
+    if (hasNext()) {
       showNextStage();
     }
     input.right = false;
@@ -385,6 +414,9 @@ const drawClassic = () => {
   }
   if (chosen == "cars") {
     nextRaceSize();
+  }
+  if (chosen == "strength") {
+    nextStrength();
   }
   if (chosen == "tip") {
     showingTip = !showingTip;
@@ -561,7 +593,7 @@ const browseCollections = () => {
   const input = racers[0].u;
   const step = input.down ? 1 : input.up ? -1 : 0;
   if (step) {
-    const count = collections().length;
+    const count = shownCollections().length;
     showCollection((collectionOf(track.stage) + step + count) % count);
   }
   input.up = false;
@@ -573,6 +605,7 @@ const stageTitle = () =>
 
 // Won stages of this game's own can also be played in switch mode.
 const switchOffered = () =>
+  !alone() &&
   track.stage != game.unlocked &&
   track.stage >= FIRST_SWITCH_STAGE &&
   track.stage <= LAST_STAGE;
@@ -581,7 +614,7 @@ const drawControls = (hue) => {
   const colors = buttonColors(hue);
   const input = racers[0].u;
   if (input.right) {
-    if (stageAfter(track.stage)) {
+    if (hasNext()) {
       showNextStage();
     }
     input.right = false;
@@ -593,7 +626,9 @@ const drawControls = (hue) => {
     input.left = false;
   }
   browseCollections();
-  drawCollectionTabs(colors);
+  if (!inCampaign()) {
+    drawCollectionTabs(colors);
+  }
   if (
     drawButton({
       id: 9,
@@ -613,24 +648,11 @@ const drawControls = (hue) => {
   ) {
     backToCarSelect();
   }
-  if (
-    drawButton({
-      id: 11,
-      x: view.width - 210 * view.scale,
-      y: 130 * view.scaleY,
-      width: 190,
-      height: 56,
-      ...colors,
-      layout: BUTTON.textOnly,
-      text: `${game.raceCars} Cars  [C]`,
-      fontSize: 20,
-      textOpacity: 0.7,
-      image: null,
-      imageOpacity: 0,
-      pulsing: false,
-    })
-  ) {
-    nextRaceSize();
+  if (quickRace()) {
+    drawQuickRaceButtons(colors);
+  }
+  if (raceSetup.kind == RACE_KIND.timeAttack) {
+    drawBestTimes(hue);
   }
   if (
     track.stage > FIRST_STAGE &&
@@ -646,7 +668,7 @@ const drawControls = (hue) => {
     showPreviousStage();
   }
   if (
-    stageAfter(track.stage) &&
+    hasNext() &&
     browseButton({
       id: 2,
       x: view.width - 190 * view.scale,
@@ -661,7 +683,7 @@ const drawControls = (hue) => {
   if (!stageSelect.hiddenTicks) {
     if (track.tips.length) {
       drawTipButton(colors);
-    } else if (track.stage == 1 || track.stage == 2) {
+    } else if (inCampaign() && (track.stage == 1 || track.stage == 2)) {
       drawPracticeButton(colors);
     }
   }
@@ -674,6 +696,45 @@ const drawControls = (hue) => {
     confirm.state = CONFIRM.used;
   }
   pulseButtons();
+};
+
+// A quick race's field size and how strong its opponents are.
+const drawQuickRaceButtons = (colors) => {
+  const button = (id, y, text) =>
+    drawButton({
+      id,
+      x: view.width - 225 * view.scale,
+      y: y * view.scaleY,
+      width: 230,
+      height: 50,
+      ...colors,
+      layout: BUTTON.textOnly,
+      text,
+      fontSize: 18,
+      textOpacity: 0.7,
+      image: null,
+      imageOpacity: 0,
+      pulsing: false,
+    });
+  if (button(11, 105, `${game.raceCars} Cars  [C]`)) {
+    nextRaceSize();
+  }
+  if (button(16, 165, `AI: ${STRENGTH_NAMES[raceSetup.strength]}  [B]`)) {
+    nextStrength();
+  }
+};
+
+// The stage's best times in time attack, under its collections, dark in the stage's hue.
+const drawBestTimes = (hue) => {
+  const best = bestTimes(track.stage);
+  drawCenteredText(
+    310,
+    best
+      ? `Best lap ${formatTime(best.lap)}   Best race ${formatTime(best.race)}`
+      : "No best time yet",
+    ...hslToRgb(hue, 1, 0.25),
+    TEXT.heading,
+  );
 };
 
 // a tab for each collection under the stage's name, the current one bright
@@ -849,6 +910,10 @@ const drawPlayButton = (hue) => {
 };
 
 const play = () => {
+  if (alone()) {
+    practise();
+    return;
+  }
   applyFieldSize();
   game.mode = MODE.championship;
   pauseMenuMusic();

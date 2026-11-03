@@ -13,7 +13,8 @@ import {
 } from "../classic/raceEnd.js";
 import { interfaceResolution } from "../core/platform.js";
 import { random } from "../core/random.js";
-import { PHASE, game } from "../core/state.js";
+import { PHASE, game, raceSetup } from "../core/state.js";
+import { career } from "../race/career.js";
 import { carStats } from "../data/carStats.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { raceEvents } from "../race/events.js";
@@ -58,7 +59,7 @@ let confettiLoaded = false;
 // (not the host's stage for a guest)
 const unlocksStage = () =>
   raceEvents.winner &&
-  game.unlocked == track.stage &&
+  raceSetup.newestStage == track.stage &&
   game.carCount != 1 &&
   link.role != ROLE.guest;
 
@@ -359,6 +360,7 @@ const leaveRaceEnd = () => {
   if (unlocksStage()) {
     if (track.stage != 17) {
       game.unlocked++;
+      career.progress = game.unlocked;
       track.stage = game.unlocked;
     } else {
       track.stage = Math.floor(3 + random.sim() * 13);

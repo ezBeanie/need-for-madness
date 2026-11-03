@@ -20,10 +20,9 @@ test("the main menu's buttons are gone through with the keys and open what they 
   // round at the ends, past the hidden Reset Game
   await page.keyboard.press("ArrowUp");
   expect(await focused(page)).toBe("menuReplay");
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("ArrowDown");
-  await page.keyboard.press("ArrowDown");
+  for (let i = 0; i < 7; i++) {
+    await page.keyboard.press("ArrowDown");
+  }
   expect(await focused(page)).toBe("menuOptions");
   await page.keyboard.press("Enter");
   await expect(page.locator("#options")).toBeVisible();
@@ -69,4 +68,77 @@ test("the original's menus keep their own main menu, with the buttons beside it"
   await expect(page.locator("#optionsButton")).toBeVisible();
   await expect(page.locator("#multiplayerButton")).toBeVisible();
   await expect(page.locator("#stageEditorButton")).toBeVisible();
+});
+
+// From the main menu's button to the car select, then on with the keys (the clicked
+// button, hidden with the menu, keeps none of them).
+const toStageSelect = async (page, game, button) => {
+  await page.locator(button).click();
+  await game.advanceUntil(PHASE.carSelect);
+  await game.advance(60);
+  await game.tap("Enter");
+  await game.advanceUntil(PHASE.stageSelect);
+  await game.advance(60);
+};
+
+test("a quick race opens every stage, with the field size and the opponents' strength", async ({
+  page,
+}) => {
+  const game = await openGame(page, {
+    storage: { carsel: "5", unlocked: "2" },
+  });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance(2);
+  await toStageSelect(page, game, "#menuQuickRace");
+  const state = () =>
+    page.evaluate(() => ({
+      stage: window.gameState.track.stage,
+      raceCars: window.gameState.game.raceCars,
+      strength: localStorage.getItem("strength"),
+    }));
+  expect((await state()).stage).toBe(2);
+  // past the stages the campaign opened
+  await game.tap("ArrowRight");
+  await game.advanceUntil(PHASE.stageSelect);
+  await game.advance(60);
+  expect((await state()).stage).toBe(3);
+  await game.tap("c");
+  await game.tap("b");
+  expect(await state()).toMatchObject({ raceCars: 10, strength: "2" });
+  await game.tap("Enter");
+  await game.advanceUntil(PHASE.race);
+  expect(await page.evaluate(() => window.gameState.game.carCount)).toBe(10);
+});
+
+test("the campaign races the stages it opened with the original's field, practice alone", async ({
+  page,
+}) => {
+  const game = await openGame(page, {
+    storage: { carsel: "5", unlocked: "2", racecars: "15" },
+  });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance(2);
+  await toStageSelect(page, game, "#menuCampaign");
+  const stage = () => page.evaluate(() => window.gameState.track.stage);
+  expect(await stage()).toBe(2);
+  await game.tap("ArrowRight");
+  await game.tap("c");
+  await game.advance(5);
+  expect(await stage()).toBe(2);
+  expect(await page.evaluate(() => window.gameState.game.raceCars)).toBe(7);
+  await game.tap("Enter");
+  await game.advanceUntil(PHASE.race);
+  expect(await page.evaluate(() => window.gameState.game.carCount)).toBe(7);
+
+  // back in the main menu, practice: alone on any stage
+  await page.evaluate(() => {
+    window.gameState.menu.continuesToCarSelect = false;
+    window.gameState.menu.animation = 0;
+    window.gameState.game.phase = 1;
+  });
+  await game.advance(2);
+  await toStageSelect(page, game, "#menuPractice");
+  await game.tap("Enter");
+  await game.advanceUntil(PHASE.race);
+  expect(await page.evaluate(() => window.gameState.game.carCount)).toBe(1);
 });
