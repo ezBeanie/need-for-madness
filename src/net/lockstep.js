@@ -409,10 +409,31 @@ const driveWithKeys = (frame) => {
 // (the guessed frames come in order)
 const firstGuessed = () => lockstep.guessed.keys().next().value ?? Infinity;
 
+// The race with its fields in one order: a game puts a car's fields in the order it first
+// set them, which a game that raced before may have done otherwise.
+const inOrder = (value) => {
+  if (Array.isArray(value)) {
+    return value.map(inOrder);
+  }
+  if (value == null || typeof value != "object" || ArrayBuffer.isView(value)) {
+    return value;
+  }
+  const ordered = {};
+  for (const key of Object.keys(value).sort()) {
+    ordered[key] = inOrder(value[key]);
+  }
+  return ordered;
+};
+
+// The race as written for its fingerprint, and the fingerprint.
+export const printOf = (race) => {
+  const text = encode(inOrder(race));
+  return { print: fingerprint(text), race: text };
+};
+
 const takePrint = (frame) => {
   if (frame % SYNC_EVERY == 0) {
-    const race = encode(sharedRace());
-    lockstep.unsentPrints.set(frame, { print: fingerprint(race), race });
+    lockstep.unsentPrints.set(frame, printOf(sharedRace()));
   }
 };
 
