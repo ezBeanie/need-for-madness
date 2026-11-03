@@ -244,7 +244,27 @@ export const createBrowserGlobals = ({
   const canvas3D = createCanvasStub(gl);
   const canvas2D = createCanvasStub(ctx2d);
   const canvases = { "#canvas3D": canvas3D, "#canvas2D": canvas2D };
-  const element = () => ({ style: {}, addEventListener: noop });
+  // one per id, whose click() calls its click listeners (the main menu's buttons)
+  const elements = new Map();
+  const element = (id) => {
+    if (!elements.has(id)) {
+      const clicks = [];
+      elements.set(id, {
+        style: {},
+        addEventListener: (type, listener) => {
+          if (type == "click") {
+            clicks.push(listener);
+          }
+        },
+        click() {
+          for (const listener of clicks) {
+            listener({ currentTarget: this, target: this });
+          }
+        },
+      });
+    }
+    return elements.get(id);
+  };
 
   return {
     navigator: { userAgent, getGamepads: () => [] },
@@ -255,7 +275,7 @@ export const createBrowserGlobals = ({
       documentElement: {},
       body: {},
       visibilityState: "visible",
-      querySelector: (selector) => canvases[selector] ?? element(),
+      querySelector: (selector) => canvases[selector] ?? element(selector),
       getElementById: element,
       createElement: () => createCanvasStub(create2dContextStub()),
       addEventListener: noop,

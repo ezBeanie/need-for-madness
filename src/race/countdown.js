@@ -5,7 +5,8 @@
 import { isEngineLoaded, loadEngine, playStageMusic } from "../audio/audio.js";
 import { updateEngineSound, resetEngineSound } from "../audio/engineSound.js";
 import { isPhone } from "../core/platform.js";
-import { MODE, PHASE, game } from "../core/state.js";
+import { MODE, PHASE, game, raceSetup } from "../core/state.js";
+import { startTimeAttack } from "./timeAttack.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { pointer } from "../input/pointer.js";
 import { CAMERA, camera } from "../render/camera.js";
@@ -65,6 +66,7 @@ const beginRace = () => {
   }
   menu.redraw = false;
   game.phase = PHASE.race;
+  startTimeAttack();
   startHostedRace();
 };
 
@@ -122,8 +124,8 @@ export function countDown() {
   if (raceEvents.countdown < COUNTDOWN.behindTheCar) {
     updateEngineSound();
   } else if (
-    (track.stage == 2 && game.unlocked == 2) ||
-    (track.stage == 4 && game.unlocked == 4)
+    (raceSetup.newestStage == 2 || raceSetup.newestStage == 4) &&
+    track.stage == raceSetup.newestStage
   ) {
     drawStartHint();
   }

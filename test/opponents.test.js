@@ -15,6 +15,7 @@ test("the opponents and the start grid of every stage", async () => {
           ctx.random.sim = seededRandom(seed);
           ctx.track.stage = stage;
           ctx.game.unlocked = unlocked;
+          ctx.setUpRace();
           ctx.game.raceCars = raceCars;
           ctx.game.carTypes[0] = (stage + seed) % 11;
           setUpField();

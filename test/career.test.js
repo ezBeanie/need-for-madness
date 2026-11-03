@@ -28,38 +28,62 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-test("without the career every stage and car is open, starting at the first stage", async () => {
+test("the campaign opens the stages won, and starts at the newest", async () => {
   storeSettings({ unlocked: "4" });
   const { ctx } = await openMainMenu();
-  expect(ctx.career.on).toBe(false);
-  expect(ctx.game.unlocked).toBe(LAST_STAGE);
-  expect(ctx.track.stage).toBe(1);
-});
-
-test("the career opens the stages won", async () => {
-  storeSettings({ unlocked: "4", career: "1" });
-  const { ctx } = await openMainMenu();
-  expect(ctx.career.on).toBe(true);
+  expect(ctx.raceSetup.kind).toBe(ctx.RACE_KIND.campaign);
   expect(ctx.game.unlocked).toBe(4);
   expect(ctx.track.stage).toBe(4);
+  expect(ctx.game.raceCars).toBe(7);
 });
 
-test("switching the career in the main menu keeps its progress", async () => {
+test("the other kinds open every stage and car, and the campaign keeps its progress", async () => {
+  storeSettings({ unlocked: "4", racecars: "15" });
+  const { ctx } = await openMainMenu();
+  for (const kind of ["quickRace", "practice", "timeAttack"]) {
+    ctx.chooseRaceKind(ctx.RACE_KIND[kind]);
+    expect(ctx.game.unlocked).toBe(LAST_STAGE);
+  }
+  expect(ctx.game.raceCars).toBe(15);
+  ctx.chooseRaceKind(ctx.RACE_KIND.campaign);
+  expect(ctx.game.unlocked).toBe(4);
+  // (the original's field)
+  expect(ctx.game.raceCars).toBe(7);
+});
+
+test("the campaign races its newest stage with its help, a quick race none and the opponents as strong as chosen", async () => {
   const stored = storeSettings({ unlocked: "4" });
   const { ctx } = await openMainMenu();
-  ctx.onKey("toggleCareer", false);
-  expect(ctx.game.unlocked).toBe(4);
-  expect(stored.get("career")).toBe("1");
-  ctx.onKey("toggleCareer", false);
-  expect(ctx.game.unlocked).toBe(LAST_STAGE);
-  expect(stored.get("career")).toBe("0");
-  expect(stored.get("unlocked")).toBe("4");
+  ctx.track.stage = 4;
+  ctx.setUpRace();
+  expect(ctx.raceSetup).toMatchObject({
+    newestStage: 4,
+    openedStages: 4,
+    aiStage: 4,
+  });
+  ctx.chooseRaceKind(ctx.RACE_KIND.quickRace);
+  const aiStages = [];
+  for (let i = 0; i < 3; i++) {
+    ctx.nextStrength();
+    ctx.setUpRace();
+    aiStages.push(ctx.raceSetup.aiStage);
+  }
+  // (from normal: hard, easy and normal again)
+  expect(aiStages).toEqual([LAST_STAGE, 1, 4]);
+  expect(stored.get("strength")).toBe("1");
+  expect(ctx.raceSetup).toMatchObject({
+    newestStage: 0,
+    openedStages: LAST_STAGE,
+  });
 });
 
-test("the career is not switched in a race, as the AI races by it", async () => {
-  storeSettings({ unlocked: "4" });
-  const { ctx } = await startRace({ stage: 3, car: 5 });
-  ctx.onKey("toggleCareer", false);
-  expect(ctx.career.on).toBe(false);
-  expect(ctx.game.unlocked).toBe(LAST_STAGE);
+test("B sets the opponents' strength in a quick race's stage select only", async () => {
+  storeSettings({});
+  const { ctx } = await openMainMenu();
+  ctx.game.phase = PHASE.stageSelect;
+  ctx.onKey("aiStrength", false);
+  expect(ctx.raceSetup.strength).toBe(1);
+  ctx.chooseRaceKind(ctx.RACE_KIND.quickRace);
+  ctx.onKey("aiStrength", false);
+  expect(ctx.raceSetup.strength).toBe(2);
 });

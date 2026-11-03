@@ -59,7 +59,7 @@ test("screens: the car select and the stage select in the classic look", async (
   page,
 }) => {
   const game = await openGame(page, {
-    storage: { carsel: "5", look: "1" },
+    storage: { carsel: "5", look: "1", unlocked: "2" },
   });
   await game.advanceUntil(PHASE.mainMenu);
   await game.settle();
@@ -72,7 +72,7 @@ test("screens: the car select and the stage select in the classic look", async (
   await expect.soft(page).toHaveScreenshot("car-select-classic.png");
   // the next car dropping in, its shadow on the floor below it
   await game.tap("ArrowRight");
-  await game.advance(35);
+  await game.advance(25);
   await page.waitForTimeout(100);
   await expect.soft(page).toHaveScreenshot("car-select-classic-dropping.png");
   await game.tap("ArrowLeft");

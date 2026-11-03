@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#15190D" />
+    <title>Multiplayer Lobbies</title>
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="icons/icon-192.png"
+    />
+    <style>
+      @font-face {
+        font-family: junk;
+        src: url(data/JunkDog.ttf);
+      }
+      body {
+        margin: 0;
+        padding: 24px 16px;
+        min-height: 100vh;
+        box-sizing: border-box;
+        background: #15190d;
+        color: #ffffff;
+        font-family: Verdana, sans-serif;
+      }
+      main {
+        max-width: 640px;
+        margin: 0 auto;
+      }
+      h1 {
+        font-family: junk, sans-serif;
+        font-weight: normal;
+        color: #01eaff;
+        margin: 0 0 16px;
+      }
+      p {
+        margin: 0 0 12px;
+      }
+      ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      li {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 12px;
+        margin-bottom: 8px;
+        border: 1px solid rgba(1, 234, 255, 0.6);
+        border-radius: 8px;
+        background: rgba(0, 16, 32, 0.7);
+      }
+      .racing {
+        color: #ffd84d;
+      }
+      .lobby {
+        color: #8dff8d;
+      }
+      .muted {
+        color: #b8c2c8;
+        font-size: 14px;
+      }
+      a {
+        color: #01eaff;
+      }
+      h2 {
+        font-size: 18px;
+        color: #01eaff;
+        margin: 32px 0 12px;
+      }
+      .table-box {
+        overflow-x: auto;
+        margin-bottom: 12px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 6px 8px;
+        border-bottom: 1px solid rgba(1, 234, 255, 0.3);
+        white-space: nowrap;
+      }
+      th {
+        color: #b8c2c8;
+        font-weight: normal;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Multiplayer Lobbies</h1>
+      <div id="rooms" aria-live="polite"><p>Looking…</p></div>
+      <p class="muted" id="updated"></p>
+      <h2>Past sessions (last 7 days)</h2>
+      <div id="past" class="table-box"></div>
+      <p class="muted">
+        Hosts are shown by their network only, never by their whole address.
+      </p>
+      <p><a href="./">Play Need for Madness</a></p>
+    </main>
+    <script>
+      // What the relay's rooms are like (see server/relay.js), asked anew every few seconds.
+      const ASK_EVERY_MS = 5000;
+      // (the newest; a week of rooms can be many)
+      const MOST_PAST_SHOWN = 100;
+      const roomsBox = document.getElementById("rooms");
+      const pastBox = document.getElementById("past");
+      const updated = document.getElementById("updated");
+
+      const minutesAgo = (since, now) => {
+        const minutes = Math.floor((now - since) / 60000);
+        return minutes < 1 ? "just opened" : `open for ${minutes} min`;
+      };
+
+      const when = (time) =>
+        new Date(time).toLocaleString([], {
+          weekday: "short",
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit",
+        });
+
+      const lasted = (from, to) => {
+        const minutes = Math.round((to - from) / 60000);
+        return minutes < 1 ? "< 1 min" : `${minutes} min`;
+      };
+
+      const row = (cells, tag = "td") => {
+        const tr = document.createElement("tr");
+        for (const text of cells) {
+          const cell = document.createElement(tag);
+          cell.textContent = text;
+          tr.append(cell);
+        }
+        return tr;
+      };
+
+      const showPast = (past) => {
+        if (past.length == 0) {
+          pastBox.innerHTML = "<p>None yet.</p>";
+          return;
+        }
+        const table = document.createElement("table");
+        const head = document.createElement("thead");
+        head.append(
+          row(["Started", "Lasted", "Players", "Host network", "Raced"], "th"),
+        );
+        const body = document.createElement("tbody");
+        for (const session of past.slice(-MOST_PAST_SHOWN).reverse()) {
+          body.append(
+            row([
+              when(session.since),
+              lasted(session.since, session.until),
+              String(session.mostGames),
+              session.host,
+              session.raced ? "yes" : "no",
+            ]),
+          );
+        }
+        table.append(head, body);
+        pastBox.replaceChildren(table);
+      };
+
+      const show = ({ now, rooms, past }) => {
+        showPast(past);
+        if (rooms.length == 0) {
+          roomsBox.innerHTML = "<p>No lobby open right now.</p>";
+          return;
+        }
+        const list = document.createElement("ul");
+        for (const room of rooms.sort((a, b) => a.since - b.since)) {
+          const item = document.createElement("li");
+          const players = document.createElement("span");
+          players.textContent = `${room.games} player${room.games == 1 ? "" : "s"} · ${minutesAgo(room.since, now)} · host ${room.host}`;
+          const state = document.createElement("span");
+          state.className = room.racing ? "racing" : "lobby";
+          state.textContent = room.racing ? "● racing" : "○ in the lobby";
+          item.append(players, state);
+          list.append(item);
+        }
+        const heading = document.createElement("p");
+        heading.textContent = `${rooms.length} lobb${rooms.length == 1 ? "y" : "ies"} open:`;
+        roomsBox.replaceChildren(heading, list);
+      };
+
+      const ask = async () => {
+        try {
+          const response = await fetch("net/rooms", { cache: "no-store" });
+          if (!response.ok) {
+            throw new Error(response.status);
+          }
+          show(await response.json());
+          updated.textContent = `As of ${new Date().toLocaleTimeString()}`;
+        } catch {
+          roomsBox.innerHTML = "<p>The multiplayer server does not answer.</p>";
+        }
+      };
+
+      ask();
+      setInterval(ask, ASK_EVERY_MS);
+    </script>
+  </body>
+</html>

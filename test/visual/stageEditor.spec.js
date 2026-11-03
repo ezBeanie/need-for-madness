@@ -13,10 +13,10 @@ const pieces = async (page) =>
 test("stage editor: pieces placed from the palette join the start end to end", async ({
   page,
 }) => {
-  const game = await openGame(page);
+  const game = await openGame(page, { storage: { carsel: "5" } });
   await game.advanceUntil(PHASE.mainMenu);
   await game.advance();
-  await page.click("#stageEditorButton");
+  await page.click("#menuStageEditor");
   expect(await game.phase()).toBe(PHASE.stageEditor);
   // the shapes arrive
   await page.waitForFunction(
@@ -99,7 +99,7 @@ test("stage editor: pieces placed from the palette join the start end to end", a
     polling: 50,
   });
   await game.advance();
-  expect(await page.isVisible("#stageEditorButton")).toBe(true);
+  expect(await page.isVisible("#menuStageEditor")).toBe(true);
 });
 
 test("stage editor: a test drive races the stage from the stage select, and the editor comes back after", async ({
@@ -117,7 +117,7 @@ test("stage editor: a test drive races the stage from the stage select, and the 
   });
   await game.advanceUntil(PHASE.mainMenu);
   await game.advance();
-  await page.click("#stageEditorButton");
+  await page.click("#menuStageEditor");
   await expect(page.locator("#editorProblems")).toContainText("Ready to race.");
   await page.click("#editorTestDrive");
   await game.advanceUntil(PHASE.stageSelect);
@@ -144,7 +144,7 @@ test("stage editor: the player's stages are made, copied from the game's, opened
   const game = await openGame(page, { storage: { carsel: "5" } });
   await game.advanceUntil(PHASE.mainMenu);
   await game.advance();
-  await page.click("#stageEditorButton");
+  await page.click("#menuStageEditor");
   const stages = () =>
     page.evaluate(() => JSON.parse(localStorage.getItem("myStages")));
   const names = async () =>
@@ -185,10 +185,10 @@ test("stage editor: the player's stages are made, copied from the game's, opened
 test("stage editor: the keys select along the path, move, turn, copy and change pieces, and the help explains them", async ({
   page,
 }) => {
-  const game = await openGame(page);
+  const game = await openGame(page, { storage: { carsel: "5" } });
   await game.advanceUntil(PHASE.mainMenu);
   await game.advance();
-  await page.click("#stageEditorButton");
+  await page.click("#menuStageEditor");
   await page.waitForFunction(
     () =>
       document.querySelector("#editorStatus").textContent.includes("1 piece"),

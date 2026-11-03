@@ -66,11 +66,40 @@ export const game = {
 export const isHuman = (c) =>
   game.humans.length == 0 ? c == game.player : game.humans.includes(c);
 
+// What the main menu starts (see race/career.js): the campaign with its progress, a race
+// against opponents as strong as chosen, practice and time attack alone, or a race of a
+// room's players (see net/host.js).
+export const RACE_KIND = {
+  campaign: 0,
+  quickRace: 1,
+  practice: 2,
+  timeAttack: 3,
+  together: 4,
+};
+
+// how strong the opponents of a quick race are
+export const STRENGTH = { easy: 0, normal: 1, hard: 2 };
+
+// How the race is set up beyond its stage and its cars, by the menu it was started from
+// (see race/career.js): the race reads this, never the career's progress itself.
+export const raceSetup = {
+  kind: RACE_KIND.campaign,
+  strength: STRENGTH.normal,
+  // the stage whose general driving the opponents have (the stage's own in the campaign)
+  aiStage: 1,
+  // the stage raced to open the next one in the career, 0 for none: there Insano gives
+  // tips, the first stages go easier on the player and the opponents are the original's
+  // for a new stage
+  newestStage: 0,
+  // the opponents drive only the cars these stages opened
+  openedStages: 17,
+};
+
 // Whether the player races stage, its newest one: the first stages go easier on the player
 // there. (Racing together, the games' players have got as far as they each have, so none
 // is helped, alike in every game.)
 export const onNewestStage = (stage) =>
-  game.humans.length == 0 && game.unlocked == stage;
+  game.humans.length == 0 && raceSetup.newestStage == stage;
 
 // The car the computer drivers race against, wait for and chase: the player's, and in a
 // race people drive together the first of theirs (the host's), so that every game of it

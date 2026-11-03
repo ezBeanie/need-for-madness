@@ -12,6 +12,7 @@ import {
 } from "../data/stages.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
 import { track } from "../race/track.js";
+import { classicMenus } from "../render/look.js";
 import { fetchText } from "../render/models.js";
 import { loadSetting, loadText, saveSetting } from "../core/storage.js";
 import { menu } from "../screens/menuState.js";
@@ -1086,7 +1087,7 @@ const copyLookOf = (stage) =>
 // --- opening and closing ---
 
 // Opens the editor on the stage it last had, or back from a test drive as it was.
-const open = () => {
+export const openStageEditor = () => {
   const back = editor.testing;
   editor.testing = false;
   if (!back) {
@@ -1284,7 +1285,7 @@ const onKey = (event) => {
 };
 
 export const installStageEditor = () => {
-  button.addEventListener("click", open);
+  button.addEventListener("click", openStageEditor);
   element("editorClose").addEventListener("click", close);
   loadStages();
   element("editorStagesButton").addEventListener("click", openStages);
@@ -1375,14 +1376,15 @@ export const installStageEditor = () => {
   window.addEventListener("resize", drawMap);
 };
 
-// Every tick: the button in the main menu only, and the editor back once a test drive
+// Every tick: the button in the original's main menu only, and the editor back once a test drive
 // has come back to the main menu (a race ended or quit).
 export const placeStageEditorButton = () => {
   if (editor.testing && game.phase == PHASE.mainMenu) {
     menu.continuesToCarSelect = false;
-    open();
+    openStageEditor();
   }
-  const hidden = game.phase != PHASE.mainMenu;
+  // (the main menu has a Stage Editor of its own, the original's has not)
+  const hidden = game.phase != PHASE.mainMenu || !classicMenus();
   if (button.hidden != hidden) {
     button.hidden = hidden;
   }

@@ -5,7 +5,7 @@ import { LAST_STAGE } from "../data/stages.js";
 import { loadSound } from "../audio/audio.js";
 import { interfaceResolution, isPhone } from "../core/platform.js";
 import { random } from "../core/random.js";
-import { PHASE, RACE_SIZES, game } from "../core/state.js";
+import { PHASE, game } from "../core/state.js";
 import { loadSetting } from "../core/storage.js";
 import { career, loadCareer } from "../race/career.js";
 import { raceEvents } from "../race/events.js";
@@ -45,7 +45,8 @@ const SOUNDS = 43;
 // the texture groups with files (renderer.js keeps one more)
 const TEXTURE_GROUPS = 19;
 
-// the stage pieces, by type; piece 40 (launchpad) is not loaded, as in the original
+// the stage pieces, by type (piece 40, the launchpad, none of this game's own stages has, as
+// in the original, but the original's multiplayer stages do)
 export const PIECE_FILES = [
   "road",
   "froad",
@@ -116,7 +117,6 @@ export const PIECE_FILES = [
   // the original's net (its piece 51, see stageLoad.js), made from its model
   "thenet",
 ];
-const UNLOADED_PIECE = 40;
 
 // the picture above the loading bar, the first thing to load
 const loadingPicture = new Image();
@@ -145,12 +145,7 @@ const readSettings = () => {
     raceEvents.onautocorrect = 2;
   }
   loadCareer();
-  game.raceCars = loadSetting("racecars");
-  if (!RACE_SIZES.includes(game.raceCars)) {
-    game.raceCars = 7;
-  }
-  // without the career the first stage, everything being open
-  track.stage = career.on ? game.unlocked : 1;
+  track.stage = game.unlocked;
   // (the keys' hint is for players new to the game)
   if (career.progress >= 5) {
     hud.keyHintTicks = 200;
@@ -198,9 +193,7 @@ const requestCars = () => {
 
 const requestPieces = () => {
   PIECE_FILES.forEach((file, i) => {
-    if (i != UNLOADED_PIECE) {
-      loadModel("data/3D/" + file + ".r3d", pieceModels[i]);
-    }
+    loadModel("data/3D/" + file + ".r3d", pieceModels[i]);
   });
 };
 
@@ -298,11 +291,7 @@ const countLoaded = () => {
   countModel(ground, 1);
   countModel(sky, 1);
   carModels.forEach((model) => countModel(model, 31));
-  pieceModels.forEach((model, i) => {
-    if (i != UNLOADED_PIECE) {
-      countModel(model, 7);
-    }
-  });
+  pieceModels.forEach((model) => countModel(model, 7));
   textureGroups
     .slice(0, TEXTURE_GROUPS)
     .forEach((group) => countParticleModel(group, 44));

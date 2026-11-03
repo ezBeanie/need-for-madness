@@ -25,7 +25,7 @@ import {
 } from "../classic/hud.js";
 import { isPhone } from "../core/platform.js";
 import { random } from "../core/random.js";
-import { MAX_CARS, MODE, PHASE, game } from "../core/state.js";
+import { MAX_CARS, MODE, PHASE, game, raceSetup } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
@@ -43,6 +43,12 @@ import {
 } from "../race/racers.js";
 import { HIGHLIGHT, startHighlight, recording } from "../race/recording.js";
 import { VIEWER_FROM, openReplay } from "../race/replayViewer.js";
+import {
+  currentLapTicks,
+  formatTime,
+  isTimeAttack,
+  timeAttack,
+} from "../race/timeAttack.js";
 import { track } from "../race/track.js";
 import { CAMERA, camera, faceCamera } from "../render/camera.js";
 import { LOOK, classicMenus, look } from "../render/look.js";
@@ -582,13 +588,13 @@ const touchControlsShown = () =>
   isPhone &&
   !(
     raceEvents.countdown > 65 &&
-    ((track.stage == 2 && game.unlocked == 2) ||
-      (track.stage == 4 && game.unlocked == 4))
+    (raceSetup.newestStage == 2 || raceSetup.newestStage == 4) &&
+    track.stage == raceSetup.newestStage
   );
 
 // The arrow button is there in races with opponents, after the first stage.
 const arrowButtonShown = () =>
-  game.carCount != 1 && (track.stage != 1 || game.unlocked != 1);
+  game.carCount != 1 && (track.stage != 1 || raceSetup.newestStage != 1);
 
 const drawTouchControls = () => {
   for (const { image, x, y, key } of TOUCH) {
@@ -738,7 +744,14 @@ const raceOutcome = () => {
   if (!over) {
     for (let i = 0; i < game.carCount; i++) {
       if (track.clear[i] == track.nlaps * track.nsp && track.pos[i] == 0) {
-        if (i == game.player) {
+        if (i == game.player && isTimeAttack()) {
+          drawOutcome("Finished!", "youwon");
+          drawBlinking(192, finishedIn(), 0, 128, 255);
+          raceEvents.winner = true;
+          if (!track.haltall) {
+            playSound(32, 1);
+          }
+        } else if (i == game.player) {
           drawOutcome("You Won!", "youwon");
           drawBlinking(192, "You finished first, nice job!", 0, 128, 255);
           raceEvents.winner = true;
@@ -772,7 +785,7 @@ const afterRaceOver = () => {
   if (raceEvents.raceOverTicks == 0) {
     if (
       raceEvents.winner &&
-      game.unlocked == track.stage &&
+      raceSetup.newestStage == track.stage &&
       game.carCount != 1 &&
       track.stage != 17
     ) {
@@ -872,6 +885,39 @@ const pause = () => {
 };
 
 // Switch mode: the time until the player switches to another car.
+// Time attack's clock under the race: the race's time, the lap and the best lap.
+const drawClock = () => {
+  const { best, laps } = timeAttack;
+  const lap = Math.min(laps.length + 1, track.nlaps);
+  const bestLap = Math.min(best?.lap ?? Infinity, ...laps);
+  drawCenteredText(
+    636,
+    `Lap ${lap}/${track.nlaps}   ${formatTime(currentLapTicks())}` +
+      (Number.isFinite(bestLap) ? `   Best lap ${formatTime(bestLap)}` : ""),
+    0,
+    0,
+    0,
+    TEXT.label,
+  );
+  drawCenteredText(670, formatTime(timeAttack.ticks), 0, 0, 0, TEXT.heading);
+};
+
+const finishedIn = () => {
+  const { best, newBest, ticks } = timeAttack;
+  const time = `Your time: ${formatTime(ticks)}`;
+  if (newBest.race) {
+    return `${time}, a new best!`;
+  }
+  // (stages made in the editor keep no best times)
+  if (!best) {
+    return time;
+  }
+  return (
+    `${time}, best ${formatTime(best.race)}` +
+    (newBest.lap ? ", but a new best lap!" : "")
+  );
+};
+
 const drawSwitchTimer = () => {
   switchTimer--;
   const minutes = Math.floor(switchTimer / 800);
@@ -1561,6 +1607,9 @@ export function drawHud() {
       !raceOver
     ) {
       drawSwitchTimer();
+    }
+    if (isTimeAttack() && raceEvents.countdown == 0) {
+      drawClock();
     }
     if (
       game.carCount != 1 &&

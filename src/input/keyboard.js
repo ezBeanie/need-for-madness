@@ -22,7 +22,8 @@ const ACTIONS = {
   78: "muteSound", // N
   77: "muteMusic", // M
   79: "otherCarSounds", // O: the other cars' crashes, scrapes and skids heard or not
-  67: "raceCars", // C: how many cars race, in the stage select
+  67: "raceCars", // C: how many cars race, in a quick race's stage select
+  66: "aiStrength", // B: how strong its opponents are
   76: "toggleLook", // L: the modern or the classic look (see render/look.js)
   75: "toggleSharp", // K: the classic look sharp or in the original's pixels
   74: "toggleDepth", // J: the classic look's polygons covering each other by depth or not
@@ -69,8 +70,9 @@ export const handleKey = (event, pressed, onKey) => {
 // Handles every key; the page itself never reacts to keys (scrolling, ...).
 export const installKeyboard = (onKey) => {
   const listen = (pressed) => (event) => {
-    // the dialogs' own buttons and fields take keys as a page does (see ui/optionsMenu.js)
-    if (event.target?.closest?.("dialog")) {
+    // the dialogs' own buttons and fields take keys as a page does (see ui/optionsMenu.js),
+    // so do the main menu's
+    if (event.target?.closest?.("dialog, #mainMenu")) {
       return;
     }
     event.preventDefault();

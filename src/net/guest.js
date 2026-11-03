@@ -9,7 +9,14 @@ import {
   playStageMusic,
 } from "../audio/audio.js";
 import { random, seededRandom } from "../core/random.js";
-import { MAX_CARS, MODE, PHASE, game } from "../core/state.js";
+import {
+  MAX_CARS,
+  MODE,
+  PHASE,
+  RACE_KIND,
+  game,
+  raceSetup,
+} from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { STAGE_COUNT } from "../data/stages.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
@@ -30,6 +37,7 @@ import {
 } from "./link.js";
 import { lockstep, receiveRaceMessage, startLockstep } from "./lockstep.js";
 import { isRaceState, restoreRace } from "./raceState.js";
+import { clearChat, receiveChat } from "./chat.js";
 
 // how often a guest not in a race tells the host it is there (and which car it chose)
 const JOIN_EVERY_TICKS = 30;
@@ -43,10 +51,13 @@ export const guest = {
   start: null,
   // the time to the host and back, in ms (null until measured)
   ping: null,
-  // the room's players as the host last told, each with its id and car, the host's first,
-  // and the cars of its bots
+  // the room's players as the host last told, each with its id, car and whether it is
+  // ready, the host's first, the cars of its bots and the stage it chose
   players: [],
   bots: [],
+  stage: null,
+  // whether this guest's player is ready to race
+  ready: false,
   hostId: null,
   // the car the guest drives in the host's race
   car: 0,
@@ -69,7 +80,9 @@ const isPlayers = (players) =>
   players.length <= MOST_PLAYERS &&
   players.every(
     (player) =>
-      isPlayerId(player?.id) && isIndex(player.carType, carStats.names.length),
+      isPlayerId(player?.id) &&
+      isIndex(player.carType, carStats.names.length) &&
+      typeof player.ready == "boolean",
   );
 
 const isBots = (bots) =>
@@ -90,14 +103,17 @@ const isStart = ({ stage, carTypes, players, raceId, state }) =>
 
 const receive = (message) => {
   receiveRaceMessage(message);
+  receiveChat(message);
   if (
     message.type == MESSAGE.players &&
     isPlayers(message.players) &&
-    isBots(message.bots)
+    isBots(message.bots) &&
+    isIndex(message.stage, STAGE_COUNT + 1)
   ) {
     guest.hostId = message.from;
     guest.players = message.players;
     guest.bots = message.bots;
+    guest.stage = message.stage;
   }
   if (message.from != guest.hostId) {
     return;
@@ -133,12 +149,34 @@ const receive = (message) => {
 
 export const hostThere = () => guest.hostAnsweredTicks < HOST_GONE_TICKS;
 
+const sendJoin = () =>
+  link.send({
+    type: MESSAGE.join,
+    carType: game.carTypes[0],
+    ready: guest.ready,
+  });
+
+// The lobby's car or readiness changed: the host hears of it at once.
+export const tellHost = () => {
+  if (link.role == ROLE.guest) {
+    sendJoin();
+  }
+};
+
+export const setReady = (ready) => {
+  guest.ready = ready;
+  tellHost();
+};
+
 // Joins the room of a host.
 export const joinRoom = (room) => {
+  clearChat();
   Object.assign(guest, {
     start: null,
     players: [],
     bots: [],
+    stage: null,
+    ready: false,
     hostId: null,
     joinTicks: 0,
     hostAnsweredTicks: HOST_GONE_TICKS,
@@ -162,10 +200,13 @@ const loadHostedRace = (start) => {
     guest.ownBack = false;
   }
   guest.ping = null;
+  // (ready again for the next race)
+  guest.ready = false;
   track.stage = start.stage;
   field.replayCars = start.carTypes;
   // (as the host's: it starts no other)
   game.mode = MODE.championship;
+  raceSetup.kind = RACE_KIND.together;
   pauseMenuMusic();
   stageLoad.after = AFTER_LOAD.guest;
   stageLoad.progress = STAGE_LOAD.requested;
@@ -192,7 +233,7 @@ export const guestWaitingTick = () => {
     return;
   }
   if (guest.joinTicks++ % JOIN_EVERY_TICKS == 0) {
-    link.send({ type: MESSAGE.join, carType: game.carTypes[0] });
+    sendJoin();
   }
   // (a race left while its stage loaded, see game.js, is not loaded again)
   if (guest.start && !lockstep.active) {

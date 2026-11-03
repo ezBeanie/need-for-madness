@@ -8,7 +8,7 @@ import {
   toggleOtherCarSounds,
 } from "../audio/audio.js";
 import { announce } from "../ui/hud.js";
-import { PHASE, game } from "../core/state.js";
+import { PHASE, RACE_KIND, game, raceSetup } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
 import { nextRaceSize } from "../race/field.js";
 import { racers } from "../race/racers.js";
@@ -21,7 +21,7 @@ import {
   toggleLook,
   toggleSharp,
 } from "../render/look.js";
-import { toggleCareer } from "../race/career.js";
+import { nextStrength } from "../race/career.js";
 import { fitCanvas3D } from "../render/renderer.js";
 import { minimap, toggleMinimap } from "../ui/minimap.js";
 import { buttons } from "../ui/widgets.js";
@@ -71,7 +71,8 @@ export function onKey(action, pressed) {
     if (
       game.phase == PHASE.race &&
       raceEvents.countdown == 0 &&
-      game.humans.length == 0
+      game.humans.length == 0 &&
+      raceSetup.kind != RACE_KIND.timeAttack
     ) {
       if (pressed) {
         buttons.pressedByKey = REWIND_BUTTON;
@@ -112,8 +113,17 @@ export function onKey(action, pressed) {
   if (!pressed && action == "muteMusic") {
     audio.muteMusic = !audio.muteMusic;
   }
-  if (!pressed && action == "raceCars" && game.phase == PHASE.stageSelect) {
-    nextRaceSize();
+  if (
+    !pressed &&
+    game.phase == PHASE.stageSelect &&
+    raceSetup.kind == RACE_KIND.quickRace
+  ) {
+    if (action == "raceCars") {
+      nextRaceSize();
+    }
+    if (action == "aiStrength") {
+      nextStrength();
+    }
   }
   if (!pressed && action == "toggleLook") {
     toggleLook();
@@ -129,9 +139,6 @@ export function onKey(action, pressed) {
   if (!pressed && action == "toggleSharp") {
     toggleSharp();
     fitCanvas3D();
-  }
-  if (!pressed && action == "toggleCareer" && game.phase == PHASE.mainMenu) {
-    toggleCareer();
   }
   if (!pressed && action == "toggleMinimap") {
     toggleMinimap();

@@ -10,7 +10,7 @@ import {
   startClassicCarSelect,
 } from "../classic/carSelect.js";
 import { random } from "../core/random.js";
-import { MODE, PHASE, game } from "../core/state.js";
+import { MODE, PHASE, RACE_KIND, game, raceSetup } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
 import { CAR, carStats } from "../data/carStats.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
@@ -185,6 +185,18 @@ const driftSmoke = (puff) => {
 
 // The car hovers up and down; another one drops in after the last one flew out.
 const moveShowcase = () => {
+  if (switchesAsked.length) {
+    // (the car flying out first makes way for its neighbour, as it would have)
+    if (showcase.motion == SHOWCASE.flyingOut) {
+      switchCar();
+    }
+    for (const to of switchesAsked) {
+      switchingTo = to;
+      switchCar();
+    }
+    switchesAsked = [];
+    dropIn(60);
+  }
   if (showcase.motion == SHOWCASE.hovering) {
     hover();
     return;
@@ -200,20 +212,24 @@ const moveShowcase = () => {
     }
   }
   if (showcase.motion == SHOWCASE.flyingOut) {
-    showcase.height += 7;
+    showcase.height += 14;
     if (switchingTo == SWITCH.next) {
-      showcase.pitch += 20;
+      showcase.pitch += 40;
     }
     if (switchingTo == SWITCH.previous) {
-      showcase.pitch -= 20;
+      showcase.pitch -= 40;
     }
     if (showcase.height > 100) {
       switchCar();
-      showcase.motion = SHOWCASE.droppingIn;
-      showcase.dropSpeed = 0;
-      showcase.height = 100;
+      dropIn(100);
     }
   }
+};
+
+const dropIn = (from) => {
+  showcase.motion = SHOWCASE.droppingIn;
+  showcase.dropSpeed = 0;
+  showcase.height = from;
 };
 
 const hover = () => {
@@ -266,9 +282,32 @@ const switchCar = () => {
   }
 };
 
+// Browsing on while a car still flies out or drops in: the next one drops in at once
+// (with the next tick, which poses it first), from lower down, so the cars go by as fast
+// as they are asked for.
+let switchesAsked = [];
+// the car browsed to so far: the one shown, after the switches still to come
+const carAsked = () => {
+  const coming =
+    showcase.motion == SHOWCASE.flyingOut
+      ? [switchingTo, ...switchesAsked]
+      : switchesAsked;
+  return coming.reduce((type, to) => type + to, game.carTypes[0]);
+};
 const flyOut = (to) => {
-  switchingTo = to;
-  showcase.motion = SHOWCASE.flyingOut;
+  if (showcase.motion == SHOWCASE.hovering) {
+    switchingTo = to;
+    showcase.motion = SHOWCASE.flyingOut;
+    return;
+  }
+  // (no further than the first and the last car)
+  const asked = carAsked();
+  if (
+    (to == SWITCH.next && asked < LAST_CAR) ||
+    (to == SWITCH.previous && asked > FIRST_CAR)
+  ) {
+    switchesAsked.push(to);
+  }
 };
 
 // The stage that unlocks the car, or 0 when it can be driven.
@@ -294,25 +333,24 @@ function drawCarSelect() {
   rd.strokeText("Select your Car", left + 20 * view.scale, 25 * view.scaleY);
   rd.fillStyle = "#8665FF";
   rd.fillText("Select your Car", left + 20 * view.scale, 25 * view.scaleY);
-  if (showcase.motion == SHOWCASE.hovering) {
-    const type = game.carTypes[0];
-    drawName(type);
-    browse(type, left, right);
-    const locked = unlockingStage(type);
-    if (!locked && lastSelected != type) {
-      lastSelected = type;
-    }
-    if (!locked) {
-      drawStrengths(type, left, right);
-    } else {
-      drawUnlockHint(locked);
-    }
-    if (locked) {
-      drawLockedStand();
-    }
-    if (!locked) {
-      drawStart(right);
-    }
+  // (the buttons stay while the cars change, PLAY only once the car chosen has landed)
+  const type = game.carTypes[0];
+  drawName(type);
+  browse(type, left, right);
+  const locked = unlockingStage(type);
+  if (!locked && lastSelected != type) {
+    lastSelected = type;
+  }
+  if (!locked) {
+    drawStrengths(type, left, right);
+  } else {
+    drawUnlockHint(locked);
+  }
+  if (locked && showcase.motion == SHOWCASE.hovering) {
+    drawLockedStand();
+  }
+  if (!locked && showcase.motion == SHOWCASE.hovering) {
+    drawStart(right);
   }
   pulseButtons();
   drawMusicToggle();
@@ -693,9 +731,13 @@ const classicTick = () => {
 
 const openStageSelect = () => {
   saveSetting("carsel", game.carTypes[0]);
-  // the original's stages and the player's own are all open; of this game's own only those won
-  if (ownStage(track.stage) && track.stage > game.unlocked) {
-    track.stage = game.unlocked;
+  // the original's stages and the player's own are all open; of this game's own only those
+  // won, and the campaign races no others
+  if (
+    (ownStage(track.stage) && track.stage > game.unlocked) ||
+    (!ownStage(track.stage) && raceSetup.kind == RACE_KIND.campaign)
+  ) {
+    track.stage = Math.min(game.unlocked, LAST_STAGE);
   }
   // switch mode needs all stages won
   if (game.unlocked != LAST_STAGE && game.mode == MODE.switchCars) {

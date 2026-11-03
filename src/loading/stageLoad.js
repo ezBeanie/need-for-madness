@@ -3,7 +3,8 @@
 import { makePile } from "../data/pile.js";
 import { freeModel, newModel } from "../render/models.js";
 import { buildPileModel } from "../render/piles.js";
-import { game } from "../core/state.js";
+import { raceSetup } from "../core/state.js";
+import { setUpRace } from "../race/career.js";
 import {
   isSpecialFix,
   parseStage,
@@ -49,6 +50,8 @@ export const AFTER_LOAD = {
   replay: 3,
   // the race of a host (see net/guest.js)
   guest: 4,
+  // the race the host starts from the lobby (see net/host.js)
+  room: 5,
 };
 
 export const stageLoad = {
@@ -68,6 +71,8 @@ const WALL_SPACING = 480;
 
 export function loadStage() {
   stageLoad.progress = STAGE_LOAD.loading;
+  // (the stage's tips are read with it)
+  setUpRace();
   if (isCustom(track.stage)) {
     readStage(customText(track.stage));
     prepareStage();
@@ -237,7 +242,7 @@ const COMMANDS = {
   },
   // Insano's tips, for the stage the player has to win next
   tip: (e) => {
-    if (track.stage >= 3 && game.unlocked == track.stage) {
+    if (track.stage >= 3 && raceSetup.newestStage == track.stage) {
       track.tips.push(
         (e.text ?? "").replace("[", "(").replace("]", ")").replace(";", ","),
       );

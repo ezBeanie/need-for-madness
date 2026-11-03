@@ -2,7 +2,7 @@
 
 import { LAST_STAGE, levelOf, ownStage } from "../data/stages.js";
 import { random } from "../core/random.js";
-import { MAX_CARS, RACE_SIZES, game } from "../core/state.js";
+import { MAX_CARS, RACE_SIZES, game, raceSetup } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
 import { CAR, carStats } from "../data/carStats.js";
 import { raceCarTextures } from "../render/generated.js";
@@ -147,7 +147,7 @@ function chooseOpponents(stage) {
   for (let i = 1; i < randomUpTo; i++) {
     pickOpponent(i, stage);
   }
-  if (game.unlocked == stage) {
+  if (raceSetup.newestStage == stage) {
     if (stage == 6) {
       makeSureOfOnStage6(randomUpTo);
     }
@@ -164,7 +164,7 @@ function chooseOpponents(stage) {
 // Random types, weaker cars dropping out more often on later stages, no cars the player
 // has not unlocked yet, and no twins (in the original's field, or until 50 tries failed).
 const pickOpponent = (i, stage) => {
-  const newStage = game.unlocked == stage;
+  const newStage = raceSetup.newestStage == stage;
   const level = levelOf(stage);
   let tries = 0;
   let ok = false;
@@ -190,7 +190,7 @@ const pickOpponent = (i, stage) => {
         ok = false;
       }
     }
-    if ((type - 10) * 2 > game.unlocked) {
+    if ((type - 10) * 2 > raceSetup.openedStages) {
       ok = false;
     }
     const rule = newStage ? NEW_STAGE_RULES[stage] : undefined;

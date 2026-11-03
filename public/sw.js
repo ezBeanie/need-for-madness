@@ -19,10 +19,12 @@ self.addEventListener("fetch", (event) => {
   const request = event.request;
   // (music streams in ranges, which the cache cannot answer; other servers' files and the
   // relay are none of its business)
+  const url = new URL(request.url);
   if (
     request.method != "GET" ||
     request.headers.has("range") ||
-    new URL(request.url).origin != self.location.origin
+    url.origin != self.location.origin ||
+    url.pathname.startsWith("/net/")
   ) {
     return;
   }

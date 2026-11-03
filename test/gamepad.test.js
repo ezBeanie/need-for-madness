@@ -64,6 +64,8 @@ test("a gamepad steers, toggles, looks back and confirms", async () => {
   tap(UP);
   tap(ENTER);
   stepUntil(() => ctx.game.phase === PHASE.mainMenu, 10, "main menu");
+  // (a player whose campaign opened every car)
+  ctx.career.progress = 17;
   tap(ENTER);
   stepUntil(() => ctx.game.phase === PHASE.carSelect, 100, "car select");
 
