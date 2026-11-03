@@ -40,8 +40,18 @@ const recordRequests = (page) =>
         },
       },
     });
-    HTMLMediaElement.prototype.play = async function () {
-      window.played++;
+    // (Web Audio kept, which the driver takes away, see driver.js: the music plays on it)
+    Object.defineProperty(window, "AudioContext", {
+      value: window.AudioContext,
+      writable: true,
+      configurable: false,
+    });
+    const { start } = AudioBufferSourceNode.prototype;
+    AudioBufferSourceNode.prototype.start = function (...args) {
+      if (this.buffer?.duration > 20) {
+        window.played++;
+      }
+      return start.apply(this, args);
     };
   });
 
@@ -57,7 +67,12 @@ test("a touch keeps the screen on, and a click in a dialog allows the music", as
   expect(await page.evaluate(() => window.played)).toBe(0);
   await page.locator("#menuOptions").click();
   await page.locator("#optionsClose").click();
-  expect(await page.evaluate(() => window.played)).toBeGreaterThan(0);
+  await expect
+    .poll(async () => {
+      await game.advance();
+      return page.evaluate(() => window.played);
+    })
+    .toBeGreaterThan(0);
   expect(await page.evaluate(() => window.wakeLocks)).toBe(1);
   // (held already: not asked again)
   await page.mouse.click(640, 700);

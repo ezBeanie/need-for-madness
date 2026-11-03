@@ -433,17 +433,10 @@ const drawPoly = (poly, n, noline, size) => {
   if (off0 == n || off1 == n || off2 == n || off3 == n) {
     return;
   }
-  // the stage select's preview (trk 1) leaves out what reaches out of its frame, the
-  // original's 670 x 400 in the middle (of its 450 rows)
-  const pixel = medium.h / 450;
-  if (
-    medium.trk == 1 &&
-    (behind ||
-      minX < medium.w / 2 - 335 * pixel ||
-      maxX > medium.w / 2 + 335 * pixel ||
-      minY < 25 * pixel ||
-      maxY > 425 * pixel)
-  ) {
+  // the stage select's preview (trk 1) leaves out what reaches behind the camera. (The
+  // original also left out what reached out of its 670 x 400 frame: pieces went missing
+  // well inside a wider window, and the classic menus cut the 3D at that frame anyway.)
+  if (medium.trk == 1 && behind) {
     return;
   }
   // far (b in the original): no black outline, and the far light; models of stone

@@ -387,7 +387,8 @@ const colorOfCar = (c) => {
   return poly?.c ?? [128, 128, 128];
 };
 
-export const drawClassicRace = () => {
+// The stage as a race sees it: its sky, ground and scenery, and its pieces.
+const stageObjects = (nextCheckpoint) => {
   startFrame();
   drawSkyAndGround();
   drawScenery({
@@ -395,8 +396,11 @@ export const drawClassicRace = () => {
     y: 250 - 10 * drawCamera.y,
     z: 10 * drawCamera.z,
   });
-  const objects = pieceObjects(
-    pieces.count,
+  return pieceObjects(pieces.count, nextCheckpoint);
+};
+
+export const drawClassicRace = () => {
+  const objects = stageObjects(
     (piece) => raceEvents.oncheckpoint + 1 == piece.iscp,
   );
   for (let c = 0; c < game.carCount; c++) {
@@ -417,6 +421,12 @@ export const drawClassicStage = (count) => {
   medium.trk = 1;
   drawInOrder(pieceObjects(count, () => true));
   medium.trk = 0;
+};
+
+// The stage editor's view of the stage it has, in the stage's colours, as a race would
+// show it.
+export const drawClassicEditedStage = () => {
+  drawInOrder(stageObjects(() => false));
 };
 
 // How far below its middle the original's model of the car type touches the ground (its

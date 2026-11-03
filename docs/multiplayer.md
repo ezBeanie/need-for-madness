@@ -212,6 +212,12 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
 
 - **Querformat auf iOS:** Web-Apps können die Drehung dort nicht sperren; bisher ein Hinweis im
   Hochformat. Möglich: das Spiel im Hochformat selbst um 90° drehen, oder eine App-Hülle.
+- **Als App bauen (für später):** `dist/` in eine native Hülle packen statt der PWA: Capacitor
+  für Android und iOS, Tauri (oder Electron) für Windows, macOS und Linux. Dafür: feste Adresse
+  für Relay und `/net/ice` statt relativer Pfade, kein Service Worker in der App,
+  Mikrofon-Berechtigungstexte, Signieren (Apple-Developer-Account für iOS/macOS, Play-Konto).
+  Vor einer Store-Veröffentlichung die Rechte am Original klären. Löst auch die Drehsperre
+  auf iOS (oben).
 - Bandbreite (Tasten als Bits, nur bei Änderung), Ergebnisliste für alle.
 - **Discord-Integration (Idee für später):** Mitspieler im laufenden Discord-Call nach der
   Position im Spiel leiser/lauter und links/rechts. Discords lokale RPC-Schnittstelle kann das

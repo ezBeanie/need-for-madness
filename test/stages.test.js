@@ -185,20 +185,21 @@ test("this game's stages play their own music in the classic look too", async ()
   key(76, false);
   step();
   expect(ctx.look.current).toBe(ctx.LOOK.classic);
-  const played = [];
-  const Audio = globalThis.Audio;
-  globalThis.Audio = class extends Audio {
-    constructor(src) {
-      super();
-      played.push(src);
+  // (the tracks load as the sounds do, to play on Web Audio)
+  const loaded = [];
+  const Request = globalThis.XMLHttpRequest;
+  globalThis.XMLHttpRequest = class extends Request {
+    open(method, url) {
+      super.open(method, url);
+      loaded.push(url);
     }
   };
   try {
     ctx.playStageMusic(2);
   } finally {
-    globalThis.Audio = Audio;
+    globalThis.XMLHttpRequest = Request;
   }
-  expect(played).toEqual(["data/music/stage2.mp3"]);
+  expect(loaded).toEqual(["data/music/stage2.mp3"]);
 });
 
 test("the multiplayer stages load and race, the original's net as a piece of its own", async () => {

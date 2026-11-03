@@ -251,8 +251,8 @@ const openedPieces = async (page) =>
   (await opened(page)).split("\n").filter((line) => line.startsWith("set("));
 
 // the editor opened on a stage of the game's, copied
-const editStage = async (page, stage) => {
-  const game = await openGame(page, { storage: { carsel: "5" } });
+const editStage = async (page, stage, storage = {}) => {
+  const game = await openGame(page, { storage: { carsel: "5", ...storage } });
   await game.advanceUntil(PHASE.mainMenu);
   await game.advance();
   await page.click("#menuStageEditor");
@@ -329,6 +329,31 @@ test("stage editor: the 3D view shows the stage built as it is, flown over with 
   const [newest] = placed((await openedPieces(page)).slice(-1));
   expect(built).not.toContain(newest);
   expect(await builtAt()).toContain(newest);
+});
+
+test("stage editor: the 3D view in the classic look shows the stage in its colours, under its sky", async ({
+  page,
+}) => {
+  const game = await editStage(page, 3, { look: "1" });
+  await page.locator("#editorMap").focus();
+  await page.keyboard.press("v");
+  await settle(game, page, 12);
+  // the 3D canvas's top middle, drawn and read in one go (WebGL keeps no picture after)
+  const top = await page.evaluate(() => {
+    const { render, canvas3D } = window.gameState;
+    window.gameState.menu.redraw = true;
+    render();
+    const copy = document.createElement("canvas");
+    copy.width = canvas3D.width;
+    copy.height = canvas3D.height;
+    const rd = copy.getContext("2d");
+    rd.drawImage(canvas3D, 0, 0);
+    return [...rd.getImageData(copy.width / 2, 2, 1, 1).data.slice(0, 3)];
+  });
+  const sky = await page.evaluate(() => window.gameState.scene.colors.sky);
+  // (the sky's colour, not the black the preview of the stage select had)
+  expect(Math.max(...top)).toBeGreaterThan(40);
+  top.forEach((value, i) => expect(Math.abs(value - sky[i])).toBeLessThan(60));
 });
 
 // (seen: how many of the picture's pixels are drawn)

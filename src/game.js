@@ -4,6 +4,7 @@
 import { random } from "./core/random.js";
 import {
   audio,
+  holdAudio,
   pauseMusic,
   resumeMusic,
   stopEngine,
@@ -392,12 +393,19 @@ document.addEventListener("visibilitychange", () => {
   if (document.visibilityState == "visible") {
     audio.muteMusic = mutedBeforeHiding.music;
     audio.muteSound = mutedBeforeHiding.sound;
+    holdAudio(false);
     keepScreenOn();
   } else {
     mutedBeforeHiding = { music: audio.muteMusic, sound: audio.muteSound };
     audio.muteMusic = true;
     audio.muteSound = true;
     stopEngine();
+    // (a hidden game runs no ticks, which would pause the music: paused now)
+    if (!musicPaused) {
+      pauseMusic();
+      musicPaused = true;
+    }
+    holdAudio(true);
     // (a hidden game runs no ticks: racing together, the others would take it for gone
     // while its player raced on once it shows again, so it leaves the race at once)
     if (lockstep.active) {

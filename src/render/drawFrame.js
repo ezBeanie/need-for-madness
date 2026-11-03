@@ -7,6 +7,7 @@ import { editorView } from "../editor/editorView.js";
 import { placeNameTags } from "../ui/nameTags.js";
 import {
   drawClassicCar,
+  drawClassicEditedStage,
   drawClassicRace,
   drawClassicStage,
 } from "../classic/frame.js";
@@ -227,7 +228,7 @@ const drawGroundAndSky = () => {
 // The stage the editor has, from its free camera: the piece selected flashes.
 const drawEditedStage = () => {
   if (look.current == LOOK.classic) {
-    drawClassicStage(pieces.count);
+    drawClassicEditedStage();
     return;
   }
   drawGroundAndSky();
