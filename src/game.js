@@ -252,6 +252,8 @@ export function runTick() {
   // (a guest learns of the next race of the room here, a host as it starts)
   if (MENU_PHASES.includes(game.phase)) {
     forgetRoomCars();
+    // (a race left together goes to the menus without the pause, which stops it otherwise)
+    stopEngine();
   }
   guestWaitingTick();
   hostTick();

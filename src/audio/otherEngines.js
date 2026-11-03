@@ -13,7 +13,7 @@ import { audio, placeSound, startPlacedEngine } from "./audio.js";
 const NEAR = 100;
 const FAR = 2000;
 // as loud as the player's engine, near, at full speed
-const LOUDEST = 0.6;
+const LOUDEST = 1;
 
 // by car: the engine playing, if any
 const engines = [];
@@ -54,7 +54,7 @@ export const otherEnginesTick = () => {
       Math.abs(racers[c].speed) / carStats.swits[type][2],
     );
     const near = Math.min(1, (FAR - place.distance) / (FAR - NEAR));
-    engine.volume.gain.value = LOUDEST * near * near * (0.5 + 0.5 * speed);
+    engine.volume.gain.value = LOUDEST * near * (0.5 + 0.5 * speed);
     engine.source.playbackRate.value = 1 + 1.2 * speed * carStats.engrev[type];
     placeSound(engine.panner, place.side, place.front);
   }
