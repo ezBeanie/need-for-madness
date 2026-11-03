@@ -22,18 +22,17 @@ src: url(data/JunkDog.ttf);
 font-family: verd;
 src: url(data/verdana.ttf);
 }
-/* the options and multiplayer: switches without keys and races together (see src/ui/) */
+/* the options and multiplayer beside the classic menus and the screens after the main
+   menu, slanted as the main menu's buttons (see src/ui/) */
 .options-button, .multiplayer-button {
-  position: fixed; top: 8px; right: 76px; width: 44px; height: 44px;
-  border-radius: 22px; border: 1px solid rgba(1, 234, 255, 0.6);
-  background: rgba(0, 16, 32, 0.7); color: #ffffff; font-size: 24px; line-height: 1;
-  cursor: pointer;
+  position: fixed; top: 8px; right: 76px; min-height: 44px; padding: 0 22px; border: 0;
+  clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+  background: linear-gradient(90deg, #019DFF, #01EAFF); color: #1B0F05;
+  font-family: junk, Verdana, sans-serif; font-size: 17px; cursor: pointer;
 }
-.multiplayer-button {
-  right: 128px; width: auto; padding: 0 16px; font-family: verd, Verdana, sans-serif;
-  font-size: 15px;
-}
-.options-button:focus-visible, .multiplayer-button:focus-visible,
+.multiplayer-button { right: 196px; }
+.options-button:hover, .multiplayer-button:hover { filter: brightness(1.15); }
+.options-button:focus-visible, .multiplayer-button:focus-visible { outline: none; background: #ffffff; }
 .menu-dialog button:focus-visible, .menu-dialog input:focus-visible,
 .menu-dialog select:focus-visible {
   outline: 3px solid #ffffff; outline-offset: 2px;
@@ -56,7 +55,6 @@ src: url(data/verdana.ttf);
 }
 .menu-dialog button:hover { background: rgba(1, 234, 255, 0.25); }
 .menu-dialog button:disabled { opacity: 0.55; cursor: not-allowed; background: transparent; }
-#options .hint { display: block; color: rgba(160, 230, 255, 0.8); font-size: 12px; }
 .menu-dialog label { display: block; margin: 16px 0 6px; font-size: 14px; }
 .menu-dialog input, .menu-dialog select {
   box-sizing: border-box; width: 100%; min-height: 44px; padding: 8px 14px;
@@ -65,48 +63,90 @@ src: url(data/verdana.ttf);
 }
 .menu-dialog input + button, .menu-dialog .error + button { margin-top: 8px; }
 .menu-dialog h3 { margin: 16px 0 8px; font-size: 16px; }
-.menu-dialog .bot { display: flex; gap: 8px; }
-#multiplayerBotList label { margin: 0 0 4px; }
-.menu-dialog .bot select { flex: 1; }
-.menu-dialog .bot button { width: auto; }
-#multiplayerAddBot { margin-top: 8px; }
-/* (a room of eight with bots is taller than a phone held sideways) */
-#multiplayer { max-height: 90vh; overflow-y: auto; }
-/* the lobby: players, the race and the chat side by side, one under the other on phones */
-#multiplayer.in-room { width: min(94vw, 1100px); }
-.lobby:not([hidden]) {
-  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(280px, 100%), 1fr));
-  gap: 12px 20px; align-items: start;
-}
-.lobby section { min-width: 0; }
-/* (the dialog's buttons are flex boxes, which would show them hidden) */
-#multiplayer [hidden] { display: none; }
-.lobby .row { display: flex; gap: 8px; }
-.lobby .row input { flex: 1; min-width: 0; }
-.lobby .row button { width: auto; flex: none; }
-.lobby .room-line { margin: 0; }
-.lobby .players li { display: flex; justify-content: space-between; gap: 8px; padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.06); font-size: 14px; }
-.lobby .players .ready { color: #9ff5b4; white-space: nowrap; }
-.lobby .players .waiting { color: rgba(255, 255, 255, 0.7); white-space: nowrap; }
-.lobby .players .ready::before { content: "\2713  "; }
-.lobby .stage-name { margin: 16px 0 0; font-size: 15px; }
-.lobby .status { margin: 16px 0 8px; color: #01eaff; }
-.lobby .go { justify-content: center; margin-bottom: 8px; background: linear-gradient(90deg, #FF3D01, #FFB401); color: #1B0F05; font-weight: bold; }
-.lobby .go:hover { background: linear-gradient(90deg, #FF5B21, #FFC421); }
-.lobby .go[aria-pressed="true"] { background: linear-gradient(90deg, #0FA84A, #5FE38A); }
-.lobby .go:disabled { background: rgba(255, 255, 255, 0.1); color: #ffffff; }
-#lobbyChat { list-style: none; margin: 0; padding: 8px 12px; height: 220px; overflow-y: auto; border-radius: 12px; background: rgba(0, 0, 0, 0.35); font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
-#lobbyChat li + li { margin-top: 4px; }
-#lobbyChat .from { color: #01eaff; font-weight: bold; }
-#lobbyChatForm label { margin-top: 10px; }
 .menu-dialog .error { margin: 6px 0 0; color: #ffb4a8; }
 .menu-dialog .error::before { content: "\26A0  "; }
 .menu-dialog .room { font-size: 26px; letter-spacing: 3px; color: #01eaff; }
-#options .state { color: #01eaff; font-weight: bold; white-space: nowrap; }
-#options .key { color: rgba(160, 230, 255, 0.8); font-size: 12px; }
-#options h3 { color: #01eaff; }
-#options { max-height: 90vh; overflow-y: auto; }
 .menu-dialog .close { justify-content: center; margin-top: 14px; }
+/* read out, not shown */
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+/* the options and the multiplayer lobby: screens of their own over the game, in the main
+   menu's style */
+.menu-dialog.view {
+  box-sizing: border-box; width: 100vw; height: 100vh; max-width: none; max-height: none;
+  margin: 0; padding: max(16px, 3vh) max(16px, 4vh); border: 0; border-radius: 0;
+  overflow-y: auto; background: linear-gradient(160deg, rgba(0, 24, 48, 0.94), rgba(21, 25, 13, 0.97));
+}
+.menu-dialog.view::backdrop { background: transparent; }
+/* (its buttons are flex boxes, which would show them hidden) */
+.view [hidden] { display: none; }
+.view-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; margin-bottom: max(12px, 2.5vh); }
+.view h2 {
+  margin: 0; font-family: junk, Verdana, sans-serif; font-weight: normal; font-size: max(30px, 6vh);
+  color: #FFB401; text-shadow: 0.5vh 0.5vh 0 #780800;
+}
+.view h3 { margin: 0 0 12px; font-family: junk, Verdana, sans-serif; font-weight: normal; font-size: max(18px, 3vh); color: #01eaff; }
+.view .panel { min-width: 0; padding: 14px 18px 18px; border: 1px solid rgba(1, 234, 255, 0.45); border-radius: 14px; background: rgba(0, 10, 20, 0.6); }
+.view button {
+  min-height: 44px; padding: 8px 24px; border-radius: 0;
+  clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
+  background: linear-gradient(90deg, #019DFF, #01EAFF); color: #1B0F05;
+  font-family: junk, Verdana, sans-serif; font-size: 17px;
+}
+.view button:hover { filter: brightness(1.15); background: linear-gradient(90deg, #019DFF, #01EAFF); }
+.view .go, .view .back, .view .go:hover, .view .back:hover { justify-content: center; background: linear-gradient(90deg, #FF3D01, #FFB401); }
+.view .go[aria-pressed="true"] { background: linear-gradient(90deg, #0FA84A, #5FE38A); }
+.view button:disabled, .view button:disabled:hover { filter: none; opacity: 1; background: rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.75); }
+/* (an outline would be cut off with the corners: the focused button turns white) */
+.view button:focus-visible { outline: none; background: #ffffff; }
+.view .back { width: auto; margin-left: auto; padding: 8px 36px; }
+.view .row { display: flex; gap: 8px; }
+.view .row input { flex: 1; min-width: 0; }
+.view .row button { width: auto; flex: none; }
+@media (forced-colors: active) {
+  .view button, .options-button, .multiplayer-button { clip-path: none; border: 1px solid ButtonText; }
+  .view button:focus-visible { outline: 3px solid Highlight; }
+}
+/* the options: their switches in groups side by side */
+.option-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 16px; align-items: start; }
+#options li + li { margin-top: 10px; }
+#options .state { font-weight: bold; white-space: nowrap; }
+#options .volume { display: grid; grid-template-columns: 1fr 3.5em; align-items: center; gap: 4px 12px; margin-top: 14px; }
+#options .volume label { grid-column: 1 / 3; margin: 0; font-family: junk, Verdana, sans-serif; font-size: 17px; color: #ffffff; }
+#options .volume input { width: 100%; min-height: 44px; margin: 0; padding: 0; border: 0; background: none; accent-color: #01EAFF; }
+#options .volume output { color: #01eaff; font-weight: bold; text-align: right; }
+#options .volume input:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
+#options .key { margin-left: 6px; padding: 0 6px; border: 1px solid rgba(27, 15, 5, 0.5); border-radius: 4px; font-family: verd, Verdana, sans-serif; font-size: 12px; }
+/* the multiplayer: hosting or joining, then the lobby's cars, race and chat side by side */
+.view .choose { max-width: 480px; }
+.view .choose form { margin-top: 20px; }
+.view .room-line { margin: 0; font-size: 16px; }
+.view .room { font-size: 26px; letter-spacing: 3px; color: #01eaff; }
+.lobby:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 1000px) { .lobby:not([hidden]) { grid-template-columns: 1fr; } }
+.lobby .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
+.view .cards li + li { margin-top: 0; }
+.lobby .cards li { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px 10px; border: 2px solid transparent; border-radius: 12px; background: rgba(255, 255, 255, 0.07); font-size: 14px; }
+.lobby .cards li.you { border-color: #FFB401; }
+.lobby .car-preview { display: block; width: 100%; aspect-ratio: 5 / 3; }
+.lobby .cards .who { font-weight: bold; }
+.lobby .cards .car { color: #01eaff; }
+.lobby .cards .ready { color: #9ff5b4; }
+.lobby .cards .ready::before { content: "\2713  "; }
+.lobby .cards .waiting { color: rgba(255, 255, 255, 0.7); }
+.lobby .cards label { margin: 0; font-weight: bold; }
+.lobby .cards select { min-height: 36px; padding: 4px 10px; font-size: 14px; }
+.lobby .cards button { min-height: 36px; padding: 4px 18px; font-size: 14px; }
+#multiplayerAddBot { width: auto; margin-top: 10px; }
+.lobby .stage-name { margin: 16px 0 0; font-size: 15px; }
+.lobby .status { margin: 16px 0 10px; color: #01eaff; }
+.lobby .panel > button { width: 100%; justify-content: center; margin-top: 8px; }
+#lobbyChat { list-style: none; margin: 0; padding: 8px 12px; height: max(160px, 40vh); overflow-y: auto; border-radius: 12px; background: rgba(0, 0, 0, 0.4); font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
+#lobbyChat li + li { margin-top: 4px; }
+#lobbyChat .from { color: #01eaff; font-weight: bold; }
+#lobbyChatForm label { margin-top: 10px; }
 /* the stage editor: a bar of tools, the palette of pieces and the map (see src/editor/) */
 .editor-button {
   position: fixed; top: 60px; right: 8px; min-height: 44px; padding: 0 16px;
@@ -284,9 +324,14 @@ src: url(data/verdana.ttf);
 </ul></li>
 </ul>
 </nav>
-<button type="button" id="optionsButton" class="options-button" aria-label="Options" aria-haspopup="dialog" aria-controls="options" hidden>&#9881;</button>
-<dialog id="options" class="menu-dialog" aria-labelledby="optionsTitle">
+<button type="button" id="optionsButton" class="options-button" aria-haspopup="dialog" aria-controls="options" hidden>Options</button>
+<dialog id="options" class="menu-dialog view" aria-labelledby="optionsTitle">
+<header class="view-head">
 <h2 id="optionsTitle">Options</h2>
+<button type="button" id="optionsClose" class="back">Back</button>
+</header>
+<div class="option-groups">
+<section class="panel">
 <h3 id="optionsLookTitle">Look</h3>
 <ul aria-labelledby="optionsLookTitle">
 <li><button type="button" id="option-toggleLook" aria-pressed="false"><span>Look <span class="key">L</span></span><span class="state"></span></button></li>
@@ -294,18 +339,25 @@ src: url(data/verdana.ttf);
 <li><button type="button" id="option-toggleSharp" aria-pressed="false"><span>Classic pixels <span class="key">K</span></span><span class="state"></span></button></li>
 <li><button type="button" id="option-toggleDepth" aria-pressed="false"><span>Polygon sorting <span class="key">J</span></span><span class="state"></span></button></li>
 </ul>
+</section>
+<section class="panel">
 <h3 id="optionsRaceTitle">Racing</h3>
 <ul aria-labelledby="optionsRaceTitle">
 <li><button type="button" id="option-toggleAiming" aria-pressed="false"><span>Camera turns to the arrow's car <span class="key">T</span></span><span class="state"></span></button></li>
 <li><button type="button" id="option-toggleMinimap" aria-pressed="false"><span>Minimap <span class="key">G</span></span><span class="state"></span></button></li>
 </ul>
+</section>
+<section class="panel">
 <h3 id="optionsSoundTitle">Sound</h3>
 <ul aria-labelledby="optionsSoundTitle">
 <li><button type="button" id="option-muteSound" aria-pressed="false"><span>Sound <span class="key">N</span></span><span class="state"></span></button></li>
 <li><button type="button" id="option-muteMusic" aria-pressed="false"><span>Music <span class="key">M</span></span><span class="state"></span></button></li>
 <li><button type="button" id="option-otherCarSounds" aria-pressed="false"><span>Other cars' sounds <span class="key">O</span></span><span class="state"></span></button></li>
+<li class="volume"><label for="musicVolume">Music volume</label><input type="range" id="musicVolume" min="0" max="100" step="5"><output id="musicVolumeShown" for="musicVolume"></output></li>
+<li class="volume"><label for="soundVolume">Effects volume</label><input type="range" id="soundVolume" min="0" max="100" step="5"><output id="soundVolumeShown" for="soundVolume"></output></li>
 </ul>
-<button type="button" id="optionsClose" class="close">Close</button>
+</section>
+</div>
 </dialog>
 
 <button type="button" id="stageEditorButton" class="editor-button" aria-haspopup="dialog" aria-controls="stageEditor" hidden>Stage Editor</button>
@@ -402,36 +454,39 @@ src: url(data/verdana.ttf);
 </dialog>
 </dialog>
 <button type="button" id="multiplayerButton" class="multiplayer-button" aria-haspopup="dialog" aria-controls="multiplayer" hidden>Multiplayer</button>
-<dialog id="multiplayer" class="menu-dialog" aria-labelledby="multiplayerTitle">
+<dialog id="multiplayer" class="menu-dialog view" aria-labelledby="multiplayerTitle">
+<header class="view-head">
 <h2 id="multiplayerTitle">Multiplayer</h2>
-<div id="multiplayerChoose">
+<p id="multiplayerRoomLine" class="room-line" hidden>Room <strong id="multiplayerRoomName" class="room"></strong></p>
+<button type="button" id="multiplayerClose" class="back">Back</button>
+</header>
+<div id="multiplayerChoose" class="choose">
 <p>Race friends: one of you hosts, up to seven others join with the host's code.</p>
 <p id="multiplayerNotice" role="status" hidden></p>
-<button type="button" id="multiplayerHost">Host a race</button>
+<button type="button" id="multiplayerHost" class="go">Host a race</button>
 <form id="multiplayerJoinForm" novalidate>
 <label for="multiplayerCode">Code of the host's room</label>
 <input id="multiplayerCode" name="room" maxlength="32" required aria-required="true" aria-describedby="multiplayerCodeError" autocomplete="off" autocapitalize="none" spellcheck="false">
 <p id="multiplayerCodeError" class="error" role="alert" hidden></p>
-<button type="submit">Join the race</button>
+<button type="submit" class="join">Join the race</button>
 </form>
 </div>
 <div id="multiplayerRoom" class="lobby" hidden>
-<section aria-labelledby="multiplayerPlayersTitle">
-<p class="room-line">Room <strong id="multiplayerRoomName" class="room"></strong></p>
+<section class="panel field" aria-labelledby="multiplayerPlayersTitle">
+<h3 id="multiplayerPlayersTitle">Players</h3>
+<ul id="multiplayerPlayers" class="cards" aria-labelledby="multiplayerPlayersTitle"></ul>
+<div id="multiplayerBots" hidden>
+<h3 id="multiplayerBotsTitle">Bots</h3>
+<ul id="multiplayerBotList" class="cards" aria-labelledby="multiplayerBotsTitle"></ul>
+<button type="button" id="multiplayerAddBot">Add a bot</button>
+</div>
+</section>
+<section class="panel" aria-labelledby="lobbyRaceTitle">
+<h3 id="lobbyRaceTitle">The race</h3>
 <div id="multiplayerShare">
 <label for="multiplayerLink">Link for your guests</label>
 <div class="row"><input id="multiplayerLink" readonly><button type="button" id="multiplayerCopy">Copy</button></div>
 </div>
-<h3 id="multiplayerPlayersTitle">Players</h3>
-<ul id="multiplayerPlayers" class="players" aria-labelledby="multiplayerPlayersTitle"></ul>
-<div id="multiplayerBots" hidden>
-<h3 id="multiplayerBotsTitle">Bots</h3>
-<ul id="multiplayerBotList" aria-labelledby="multiplayerBotsTitle"></ul>
-<button type="button" id="multiplayerAddBot">Add a bot</button>
-</div>
-</section>
-<section aria-labelledby="lobbyRaceTitle">
-<h3 id="lobbyRaceTitle">The race</h3>
 <div id="lobbyStageChoice">
 <label for="lobbyStage">Stage</label>
 <select id="lobbyStage"></select>
@@ -444,7 +499,7 @@ src: url(data/verdana.ttf);
 <button type="button" id="lobbyStart" class="go">Start the race</button>
 <button type="button" id="multiplayerLeave">Leave the room</button>
 </section>
-<section aria-labelledby="lobbyChatTitle" class="chat">
+<section class="panel chat" aria-labelledby="lobbyChatTitle">
 <h3 id="lobbyChatTitle">Chat</h3>
 <ol id="lobbyChat" tabindex="0" aria-labelledby="lobbyChatTitle" aria-live="polite" aria-relevant="additions"></ol>
 <form id="lobbyChatForm" novalidate>
@@ -453,7 +508,6 @@ src: url(data/verdana.ttf);
 </form>
 </section>
 </div>
-<button type="button" id="multiplayerClose" class="close">Close</button>
 </dialog>
 
 <script type="module" src="/src/game.js"></script>

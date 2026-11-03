@@ -120,12 +120,15 @@ const font = (classic, size, bold = false) => {
     : `${bold ? "bold " : ""}${size * 0.5 * (view.scaleY + view.scaleX)}px verd`;
 };
 
-// a font so many pixels high: the classic look's the original's bold Arial
-const pixelFont = (size, bold = false) => {
+// a font so many pixels high: the classic look's the original's bold Arial; the modern
+// one's labels in the main menu's junk
+const pixelFont = (size, bold = false, label = false) => {
   rd.letterSpacing = "0px";
   rd.font = classicMenus()
     ? `bold ${Math.round(size)}px Arial`
-    : `${bold ? "bold " : ""}${Math.round(size)}px verd`;
+    : label
+      ? `${Math.round(size * 1.15)}px junk`
+      : `${bold ? "bold " : ""}${Math.round(size)}px verd`;
 };
 
 // the looks' colours: the classic one the original's menu blue and black
@@ -142,18 +145,52 @@ const COLORS = {
     key: "rgb(150,150,150)",
     text: "rgb(0,128,255)",
   },
+  // the main menu's: slanted buttons in its blue (see index.html), dark labels on them
   modern: {
-    panel: "rgba(0,16,32,0.6)",
-    edge: "rgba(1,234,255,0.35)",
-    played: "#01EAFF",
+    panel: "rgba(0,16,32,0.75)",
+    edge: "rgba(1,234,255,0.6)",
+    played: "#FFB401",
     unplayed: "rgba(255,255,255,0.18)",
-    button: "rgba(255,255,255,0.08)",
+    face: ["#019DFF", "#01EAFF"],
+    // the way out, as the screens' Back
+    away: ["#FF3D01", "#FFB401"],
+    shadow: "#004A78",
     over: "rgba(1,234,255,0.25)",
-    label: "#FFFFFF",
-    pressed: "#01EAFF",
-    key: "rgba(160,230,255,0.8)",
+    label: "#1B0F05",
+    pressed: "#FFFFFF",
+    key: "rgba(27,15,5,0.65)",
     text: "#FFFFFF",
+    chosen: "#01EAFF",
   },
+};
+
+// A parallelogram leaning as the main menu's buttons do.
+const slanted = (x, y, width, height) => {
+  const lean = height * 0.3;
+  rd.beginPath();
+  rd.moveTo(x + lean, y);
+  rd.lineTo(x + width, y);
+  rd.lineTo(x + width - lean, y + height);
+  rd.lineTo(x, y + height);
+  rd.closePath();
+};
+
+// A modern button's face: its shadow below right, the blue across it, white while
+// pressed.
+const drawFace = (colors, x, y, width, height, hovered, down, away) => {
+  const drop = Math.max(2, height * 0.1);
+  rd.fillStyle = colors.shadow;
+  slanted(x + drop, y + drop, width, height);
+  rd.fill();
+  const face = rd.createLinearGradient(x, 0, x + width, 0);
+  const [from, to] = away ? colors.away : colors.face;
+  face.addColorStop(0, from);
+  face.addColorStop(1, to);
+  rd.fillStyle = down ? colors.pressed : face;
+  rd.filter = hovered && !down ? "brightness(1.15)" : "none";
+  slanted(x, y, width, height);
+  rd.fill();
+  rd.filter = "none";
 };
 
 const rounded = (x, y, width, height, radius) => {
@@ -178,7 +215,11 @@ let draggingBar = false;
 const drawSeekBar = (colors, { seek }) => {
   const box = seek;
   rd.fillStyle = colors.panel;
-  rounded(box.x, box.y, box.width, box.height, box.height / 2);
+  if (colors.face) {
+    slanted(box.x, box.y, box.width, box.height);
+  } else {
+    rounded(box.x, box.y, box.width, box.height, box.height / 2);
+  }
   rd.fill();
   pixelFont(box.height * 0.36, true);
   rd.fillStyle = colors.text;
@@ -225,24 +266,29 @@ const drawSeekBar = (colors, { seek }) => {
 // the button pressed, by its index
 let pressed = -1;
 
-const button = (index, box, label, key, colors) => {
+const button = (index, box, label, key, colors, away = false) => {
   const { x, y, width, height: h } = box;
   const hovered = over(x, y, width, h);
   if (pointer.down && hovered && !draggingBar && pressed == -1) {
     pressed = index;
   }
-  rd.fillStyle = hovered ? colors.over : colors.panel;
-  rounded(x, y, width, h, h / 2);
-  rd.fill();
+  const down = pressed == index && hovered;
+  if (colors.face) {
+    drawFace(colors, x, y, width, h, hovered, down, away);
+  } else {
+    rd.fillStyle = hovered ? colors.over : colors.panel;
+    rounded(x, y, width, h, h / 2);
+    rd.fill();
+  }
   rd.textBaseline = "middle";
   rd.textAlign = "left";
   pixelFont(h * 0.3);
   const keyWidth = key ? rd.measureText(key).width : 0;
-  pixelFont(h * 0.36, true);
+  pixelFont(h * 0.36, true, true);
   const labelWidth = rd.measureText(label).width;
   const space = key ? h * 0.18 : 0;
   const textLeft = x + (width - labelWidth - space - keyWidth) / 2;
-  rd.fillStyle = pressed == index && hovered ? colors.pressed : colors.label;
+  rd.fillStyle = down && !colors.face ? colors.pressed : colors.label;
   rd.fillText(label, textLeft, y + h / 2);
   if (key) {
     pixelFont(h * 0.3);
@@ -270,8 +316,8 @@ const save = () => {
   }
 };
 
-// The controls: [label, key shown, what it does, the keys (code, with Shift)]. A replay
-// file needs no saving again.
+// The controls: [label, key shown, what it does, whether it leaves]. A replay file needs
+// no saving again.
 const controls = () => [
   ["<< 5 s", "\u21e7\u2190", () => jump(-JUMP_FRAMES)],
   [viewer.playing ? "Pause" : "Play", "Space", togglePlaying],
@@ -281,7 +327,7 @@ const controls = () => [
   [CAMERA_NAMES[camera.mode] ?? "Camera", "V", nextCamera],
   ["Cars", "Tab", togglePicker],
   ...(canSave() ? [["Save", "Ctrl+S", save]] : []),
-  ["Exit", "Esc", exit],
+  ["Exit", "Esc", exit, true],
 ];
 
 // what the keys do that have no button of their own, or more than one key
@@ -483,19 +529,20 @@ const drawPicker = (classic, colors) => {
     rd.fillStyle = "rgba(0,0,0,0.6)";
     rd.fillRect(x, y + h - strip, w, strip);
     rd.restore();
-    rd.strokeStyle = chosen ? colors.pressed : colors.edge;
+    rd.strokeStyle = chosen ? (colors.chosen ?? colors.pressed) : colors.edge;
     rd.lineWidth = (chosen ? 3 : 1) * view.scale;
     rounded(x, y, w, h, 10 * view.scale);
     rd.stroke();
     // (a long name smaller, to fit)
-    pixelFont(strip * 0.6, true);
+    pixelFont(strip * 0.6, true, true);
     const nameWidth = rd.measureText(carName(c)).width;
     if (nameWidth > w * 0.92) {
-      pixelFont((strip * 0.6 * w * 0.92) / nameWidth, true);
+      pixelFont((strip * 0.6 * w * 0.92) / nameWidth, true, true);
     }
     rd.textAlign = "center";
     rd.textBaseline = "middle";
-    rd.fillStyle = c == camera.target ? colors.pressed : "#FFFFFF";
+    rd.fillStyle =
+      c == camera.target ? (colors.chosen ?? colors.pressed) : "#FFFFFF";
     rd.fillText(carName(c), x + w / 2, y + h - strip / 2);
     // (a card's press told from a button's: both may show at once)
     if (hovered && pointer.down) {
@@ -546,15 +593,23 @@ const drawTitle = (classic, colors) => {
     rd.fillText(carName(camera.target), dx(20), dy(62));
     return;
   }
+  // (as the screens' titles: outlined, readable over any stage)
+  const outlined = (text, x, y, fill, outline) => {
+    rd.strokeStyle = outline;
+    rd.lineWidth = 6 * view.scale;
+    rd.lineJoin = "round";
+    rd.strokeText(text, x, y);
+    rd.fillStyle = fill;
+    rd.fillText(text, x, y);
+  };
   rd.letterSpacing = "1px";
   rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
-  rd.fillStyle = "rgb(0,32,64)";
-  rd.fillText("REPLAY", dx(20), dy(35));
+  outlined("REPLAY", dx(20), dy(35), "#FFB401", "#780800");
   font(classic, 20);
-  rd.fillStyle = "rgb(0,32,64)";
-  rd.fillText(line, dx(20), dy(80));
-  font(classic, 22, true);
-  rd.fillText(carName(camera.target), dx(20), dy(118));
+  outlined(line, dx(20), dy(80), "#FFFFFF", "rgb(0,32,64)");
+  rd.letterSpacing = "1px";
+  rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
+  outlined(carName(camera.target), dx(20), dy(118), "#01EAFF", "rgb(0,32,64)");
 };
 
 // A line of text in a pill, its middle at (x, y) and so high, in pixels; returns
@@ -571,8 +626,16 @@ const drawPill = (colors, text, x, y, height, id) => {
   const top = y - height / 2;
   const hovered = over(left, top, width, height);
   rd.fillStyle = hovered ? colors.over : colors.panel;
-  rounded(left, top, width, height, height / 2);
-  rd.fill();
+  if (colors.face) {
+    slanted(left, top, width, height);
+    rd.fill();
+    rd.strokeStyle = colors.edge;
+    rd.lineWidth = Math.max(1, view.scale);
+    rd.stroke();
+  } else {
+    rounded(left, top, width, height, height / 2);
+    rd.fill();
+  }
   rd.fillStyle = colors.text;
   rd.fillText(text, x, y);
   if (hovered && pointer.down) {
@@ -618,8 +681,8 @@ const drawControls = (colors) => {
   drawSeekBar(colors, place);
   const all = controls();
   const chosen = all
-    .map(([label, key], i) =>
-      button(i, place.buttonAt(i), label, place.touch ? "" : key, colors),
+    .map(([label, key, , away], i) =>
+      button(i, place.buttonAt(i), label, place.touch ? "" : key, colors, away),
     )
     .indexOf(true);
   all[chosen]?.[2]();

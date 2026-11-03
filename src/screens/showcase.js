@@ -21,15 +21,19 @@ export const showcase = {
   pitch: 0,
 };
 
-// Turns the presented car of the given type after showcase.spin and pitch, and puts its
-// wheels on.
-export const poseShowcaseCar = (type) => {
+// Turns the presented car of the given type after showcase.spin and pitch (or the given
+// ones), and puts its wheels on.
+export const poseShowcaseCar = (
+  type,
+  spin = showcase.spin,
+  pitch = showcase.pitch,
+) => {
   const body = carModels[type];
   const across = [1, 0, 0];
   const up = [0, 1, 0];
   const along = [0, 0, 1];
-  rotateAxes(up, along, showcase.pitch);
-  rotateAxes(across, along, showcase.spin);
+  rotateAxes(up, along, pitch);
+  rotateAxes(across, along, spin);
   body.mat[0] = across[0];
   body.mat[1] = up[0];
   body.mat[2] = along[0];

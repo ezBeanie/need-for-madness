@@ -1,8 +1,9 @@
-// The options: the switches that otherwise have only keys (L, K, J, U, T, G, N, M, O), for
-// phones and tablets without a keyboard. A button with a gear opens them (outside races:
-// in a race, the pause menu leads there), each one does what its key does.
+// The options: a screen of the switches that otherwise have only keys (L, K, J, U, T, G, N,
+// M, O), for phones and tablets without a keyboard. The main menu opens it, and an Options
+// button the other menus (outside races: in a race, the pause menu leads there); each switch
+// does what its key does.
 
-import { audio } from "../audio/audio.js";
+import { audio, setMusicVolume, setSoundVolume } from "../audio/audio.js";
 import { PHASE, game } from "../core/state.js";
 import { onKey } from "../input/controls.js";
 import { camera } from "../render/camera.js";
@@ -37,6 +38,20 @@ const SHOWN_IN = [
   PHASE.raceEnd,
 ];
 
+// each volume slider: its input, what it sets and reads
+const VOLUMES = [
+  ["musicVolume", setMusicVolume, () => audio.musicVolume],
+  ["soundVolume", setSoundVolume, () => audio.soundVolume],
+];
+
+const showVolumes = () => {
+  for (const [id, , volume] of VOLUMES) {
+    const percent = Math.round(volume() * 100);
+    document.getElementById(id).value = String(percent);
+    document.getElementById(`${id}Shown`).textContent = `${percent}%`;
+  }
+};
+
 const showStates = () => {
   for (const [action, on, yes, no] of SWITCHES) {
     const item = document.getElementById(`option-${action}`);
@@ -50,6 +65,7 @@ const showStates = () => {
 
 export const openOptions = () => {
   showStates();
+  showVolumes();
   dialog.showModal?.();
 };
 
@@ -62,13 +78,19 @@ export const installOptionsMenu = () => {
         showStates();
       });
   }
+  for (const [id, set] of VOLUMES) {
+    document.getElementById(id).addEventListener("input", (event) => {
+      set(Number(event.target.value) / 100);
+      showVolumes();
+    });
+  }
   button.addEventListener("click", openOptions);
   document
     .getElementById("optionsClose")
     .addEventListener("click", () => dialog.close?.());
 };
 
-// Every tick: the gear only where it belongs (the main menu has Options of its own).
+// Every tick: the button only where it belongs (the main menu has Options of its own).
 export const placeOptionsButton = () => {
   const hidden =
     !SHOWN_IN.includes(game.phase) ||
