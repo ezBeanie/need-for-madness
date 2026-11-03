@@ -16,6 +16,8 @@ import { fetchText } from "../render/models.js";
 import { canvas3D } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 import { PIECE_FILES } from "../loading/assets.js";
+import { skinOf } from "../net/roomCars.js";
+import { SKINS, paint } from "../render/skins.js";
 import { bodyDamage } from "../race/physics.js";
 import { recording } from "../race/recording.js";
 import { flushBatch, setPixelSize, startBatch } from "./batch.js";
@@ -284,15 +286,32 @@ export const unstretched = (c, matrix) => {
   return matrix;
 };
 
-// Car c's own copy of its model (the order its polygons are drawn in is its own).
-const carObject = (c, instance, type) => {
+// A model's paint, but its windows, in the skin's colours (see render/skins.js).
+const paintRad = (rad, skin) => {
+  for (const poly of rad.polys) {
+    if (poly.glass == 0) {
+      poly.color = paint(...poly.color, skin);
+    }
+  }
+  tintModel(rad, () => 0);
+};
+
+// Car c's own copy of its model (the order its polygons are drawn in is its own), in its
+// skin.
+const carObject = (c, instance, type, skin = 0) => {
   const file = CAR_FILES[type];
-  if (carModels[c]?.file != file && models.has(file)) {
+  if (
+    (carModels[c]?.file != file || carModels[c].skin != skin) &&
+    models.has(file)
+  ) {
     const rad = structuredClone(models.get(file));
+    if (skin) {
+      paintRad(rad, skin);
+    }
     for (const hit of c < game.carCount ? (hits[c] ?? []) : []) {
       dentClassic(rad, hit);
     }
-    carModels[c] = { file, rad };
+    carModels[c] = { file, skin, rad };
   }
   const rad = carModels[c]?.rad;
   return (
@@ -381,7 +400,7 @@ export const drawClassicRace = () => {
     (piece) => raceEvents.oncheckpoint + 1 == piece.iscp,
   );
   for (let c = 0; c < game.carCount; c++) {
-    const object = carObject(c, car[c], car[c].typ);
+    const object = carObject(c, car[c], car[c].typ, skinOf(c));
     if (object) {
       object.onStage = true;
       objects.push(object);
@@ -426,10 +445,11 @@ export const drawClassicCar = (
 };
 
 // A car on a card of the lobby (see render/carPreviews.js), w x h into what is bound: each
-// type its own copy of the model, after the cars of a race and the car select's.
-export const drawClassicPreview = (instance, type, w, h) => {
+// type and skin its own copy of the model, after the cars of a race and the car select's.
+export const drawClassicPreview = (instance, type, skin, w, h) => {
   startFrame(NO_STAGE, w, h);
-  const object = carObject(game.carCount + 1 + type, instance, type);
+  const slot = game.carCount + 1 + type * SKINS.length + skin;
+  const object = carObject(slot, instance, type, skin);
   if (object) {
     object.shadowBelow = true;
   }

@@ -30,6 +30,8 @@ export const MESSAGE = {
   pong: "pong",
   // a line of the lobby's chat (see chat.js)
   chat: "chat",
+  // the voice chat's setting up between two games (see voice.js)
+  voice: "voice",
 };
 
 // the most games in a room, as the relay takes them

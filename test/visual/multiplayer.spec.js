@@ -72,17 +72,26 @@ const drawnTexts = async (page) => {
   return texts;
 };
 
+// (the tabs share their storage: each says its own)
+const UNNAMED = { playerName: "", carSkin: "0" };
+
 // Two tabs, linked by the relay of the dev server: the host's game starts the race, and
 // both compute it.
-const openTwoGames = async (context, hostUrl, guestUrl) => {
+const openTwoGames = async (
+  context,
+  hostUrl,
+  guestUrl,
+  hostStorage = {},
+  guestStorage = {},
+) => {
   const hostPage = await context.newPage();
   const guestPage = await context.newPage();
   const host = await openGame(hostPage, {
-    storage: { carsel: HOST_TYPE, unlocked: "3" },
+    storage: { ...UNNAMED, carsel: HOST_TYPE, unlocked: "3", ...hostStorage },
     url: hostUrl,
   });
   const guest = await openGame(guestPage, {
-    storage: { carsel: GUEST_TYPE, unlocked: "3" },
+    storage: { ...UNNAMED, carsel: GUEST_TYPE, unlocked: "3", ...guestStorage },
     url: guestUrl,
   });
   await host.advanceUntil(PHASE.mainMenu);
@@ -113,8 +122,20 @@ const hostStartsRace = async ({ host, guest, hostPage, guestPage }) => {
 
 // Host and guest, each in a tab of its own, in a race the host started (with as many bots
 // as given, the room's field otherwise only the two).
-const raceTogether = async (context, room, bots = 0) => {
-  const games = await openTwoGames(context, `/?host=${room}`, `/?join=${room}`);
+const raceTogether = async (
+  context,
+  room,
+  bots = 0,
+  hostStorage = {},
+  guestStorage = {},
+) => {
+  const games = await openTwoGames(
+    context,
+    `/?host=${room}`,
+    `/?join=${room}`,
+    hostStorage,
+    guestStorage,
+  );
   await games.hostPage.evaluate((bots) => {
     for (let i = 0; i < bots; i++) {
       window.gameState.addBot();
@@ -911,4 +932,76 @@ test("a race of the host's own while it waits for guests goes on to the car sele
   expect(
     await page.evaluate(() => window.gameState.menu.continuesToCarSelect),
   ).toBe(true);
+});
+
+// (skins: 1 red, 5 blue; see src/render/skins.js)
+test("each game names the cars after their players and paints them as chosen, a name over each car the camera does not follow", async ({
+  context,
+}) => {
+  const { hostPage, guestPage, both } = await raceTogether(
+    context,
+    "names",
+    1,
+    { playerName: "Hosti", carSkin: "1" },
+    { playerName: "Gasti", carSkin: "5" },
+  );
+  await advanceBoth(both[0], both[1], 5);
+  const cars = (page) =>
+    page.evaluate(() => {
+      const s = window.gameState;
+      return [0, 1, 2].map((c) => ({
+        name: s.nameOfCar(c),
+        skin: s.skinOf(c),
+        ownBody: s.racers[c].body !== s.carModels[s.car[c].typ],
+      }));
+    });
+  const expected = [
+    { name: "Hosti", skin: 1, ownBody: true },
+    { name: "Gasti", skin: 5, ownBody: true },
+    { name: "Bot 1", skin: 0, ownBody: false },
+  ];
+  expect(await cars(hostPage)).toEqual(expected);
+  expect(await cars(guestPage)).toEqual(expected);
+  // the guest's own car has no name over it, the others theirs
+  const tags = (page) =>
+    page.locator("#nameTags .name-tag:not([hidden])").allTextContents();
+  await expect.poll(() => tags(guestPage)).toContain("Hosti");
+  expect(await tags(guestPage)).not.toContain("Gasti");
+  await expect.poll(() => tags(hostPage)).toContain("Gasti");
+  expect(await tags(hostPage)).not.toContain("Hosti");
+});
+
+test("the lobby shows each player's name and paint, and a name set in the options at once", async ({
+  context,
+}) => {
+  const { host, guest, hostPage, guestPage } = await openTwoGames(
+    context,
+    "/?host=lobby-names",
+    "/?join=lobby-names",
+    { playerName: "Hosti" },
+  );
+  await guest.advance(30);
+  await hostPage.waitForTimeout(DELIVERY_MS);
+  await host.advance(2);
+  await guestPage.waitForTimeout(DELIVERY_MS);
+  await guest.advance(2);
+  await guestPage.locator("#menuMultiplayer").click();
+  const players = guestPage.locator("#multiplayerPlayers");
+  await expect(players).toContainText("Hosti (host)");
+  await expect(players).toContainText("Player 2 (you)");
+  await guestPage.getByLabel("Your paint").selectOption("Green");
+  await host.advance(2);
+  await hostPage.locator("#menuMultiplayer").click();
+  await expect(hostPage.locator("#multiplayerPlayers")).toContainText(
+    "in green",
+  );
+  // (a name from the options goes to the room)
+  await guestPage.getByRole("button", { name: "Back" }).click();
+  await guestPage.locator("#menuOptions").click();
+  await guestPage.getByLabel("Your name").fill("Gasti");
+  await guestPage.getByLabel("Your name").press("Enter");
+  await guestPage.getByLabel("Your name").blur();
+  await hostPage.waitForTimeout(DELIVERY_MS);
+  await host.advance(2);
+  await expect(hostPage.locator("#multiplayerPlayers")).toContainText("Gasti");
 });

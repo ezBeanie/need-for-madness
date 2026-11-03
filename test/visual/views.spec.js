@@ -189,3 +189,37 @@ test("the lobby shows the cars in the look chosen", async ({ page }) => {
   const classic = await colours();
   expect(classic * 4).toBeLessThan(modern);
 });
+
+test("a bot's paint chosen shows on its card", async ({ page }) => {
+  const game = await toMainMenu(page);
+  await page.locator("#menuMultiplayer").click();
+  await page.getByRole("button", { name: "Host a race" }).click();
+  await page.getByRole("button", { name: "Add a bot" }).click();
+  await page.getByLabel("Bot 1", { exact: true }).selectOption("5");
+  await game.advance(4);
+  // the reddest share of the card's car
+  const red = () =>
+    page.evaluate(() => {
+      const canvas = document.querySelectorAll(
+        "#multiplayer canvas.car-preview",
+      )[1];
+      const { data } = canvas
+        .getContext("2d")
+        .getImageData(0, 0, canvas.width, canvas.height);
+      let seen = 0;
+      let reddish = 0;
+      for (let i = 0; i < data.length; i += 4) {
+        if (data[i + 3] > 0) {
+          seen++;
+          if (data[i] > data[i + 1] + 40 && data[i] > data[i + 2] + 40) {
+            reddish++;
+          }
+        }
+      }
+      return reddish / seen;
+    });
+  const before = await red();
+  await page.getByLabel("Paint of Bot 1").selectOption("Red");
+  await game.advance(2);
+  expect(await red()).toBeGreaterThan(before + 0.1);
+});

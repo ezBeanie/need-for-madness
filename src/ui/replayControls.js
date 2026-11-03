@@ -5,8 +5,8 @@
 // reads the keys by their place on the keyboard: W A S D are the free camera's, not the
 // arrows' as in races.
 
+import { nameOfCar } from "../net/roomCars.js";
 import { game } from "../core/state.js";
-import { carStats } from "../data/carStats.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { keys, takePressedKeys } from "../input/keyboard.js";
 import { pointer } from "../input/pointer.js";
@@ -406,8 +406,7 @@ const moveFree = () => {
 // --- the list of cars to follow: a picture of each, its name ---
 
 // the player's own car is marked
-const carName = (c) =>
-  carStats.names[game.carTypes[c]] + (c == game.player ? " (You)" : "");
+const carName = (c) => nameOfCar(c) + (c == game.player ? " (You)" : "");
 
 const picker = { open: false, choice: 0 };
 // the pictures, by look and car type (see tools/replay/carPictures.mjs)

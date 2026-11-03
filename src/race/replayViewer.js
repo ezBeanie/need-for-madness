@@ -325,14 +325,19 @@ export const nextCamera = () => {
 const FLIGHT_TICKS = 15;
 const flight = { ticks: FLIGHT_TICKS, from: null };
 
-// step 1: the next car, -1: the one before
-export const nextCar = (step = 1) => {
-  const count = raceTape.cars.length;
-  camera.target = (camera.target + step + count) % count;
+// (also a race watched after the player's car was wasted, see spectate.js)
+export const followCar = (c) => {
+  camera.target = c;
   camera.relocate = true;
   const { x, y, z, yaw, pitch } = camera;
   flight.from = { x, y, z, yaw, pitch };
   flight.ticks = 0;
+};
+
+// step 1: the next car, -1: the one before
+export const nextCar = (step = 1) => {
+  const count = raceTape.cars.length;
+  followCar((camera.target + step + count) % count);
 };
 
 // After the camera moved on (moveCamera): on its way from the car before, it is only

@@ -25,6 +25,7 @@ import { fitCanvas3D } from "../render/renderer.js";
 import { minimap, toggleMinimap } from "../ui/minimap.js";
 import { buttons } from "../ui/widgets.js";
 import { pressConfirm } from "./confirm.js";
+import { talk } from "../net/voice.js";
 
 // the button a key shows pressed: the arrow button of the race
 const ARROW_BUTTON = 1;
@@ -33,6 +34,9 @@ const REWIND_BUTTON = 11;
 
 export function onKey(action, pressed) {
   const input = racers[game.player].u;
+  if (action == "talk") {
+    talk(pressed);
+  }
   if (action == "accelerate") {
     input.up = pressed;
   }

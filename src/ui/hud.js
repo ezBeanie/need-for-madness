@@ -1,6 +1,8 @@
 // What is drawn over the race: positions, laps, damage and power, the arrow, messages, the
 // buttons, and the overlays of replays, winding back time and switch mode.
 
+import { spectating, watchNext, watchingOthers } from "../race/spectate.js";
+import { nameOfCar } from "../net/roomCars.js";
 import {
   audio,
   playSound,
@@ -727,7 +729,10 @@ const raceOutcome = () => {
   }
   if (!over) {
     if (racers[game.player].wasted && raceEvents.playerWreckTicks == 16) {
-      drawOutcome("You're Wasted!", "yourwasted");
+      // (watching the others race on, the wreck's title is gone)
+      if (!watchingOthers()) {
+        drawOutcome("You're Wasted!", "yourwasted");
+      }
       over = true;
       raceEvents.winner = false;
     }
@@ -762,9 +767,7 @@ const raceOutcome = () => {
           drawOutcome("You Lost!", "youlost");
           drawBlinking(
             192,
-            "" +
-              carStats.names[game.carTypes[i]] +
-              " finished first, race over!",
+            `${nameOfCar(i)} finished first, race over!`,
             0,
             128,
             255,
@@ -777,6 +780,46 @@ const raceOutcome = () => {
     }
   }
   return over;
+};
+
+// The car watched after the player's was wasted, racing together (see race/spectate.js),
+// and buttons to watch the one before or the next.
+const drawWatchedCar = () => {
+  drawCenteredText(
+    86,
+    `Watching ${nameOfCar(camera.target)}`,
+    255,
+    255,
+    255,
+    TEXT.heading,
+  );
+  drawCenteredText(118, "Steer to watch another car", 1, 234, 255, TEXT.small);
+  const watchButton = (id, x, text, step) => {
+    if (
+      drawButton({
+        id,
+        x,
+        y: 140 * view.scaleY,
+        width: 200,
+        height: 50,
+        faceTop: "#019DFF",
+        faceBottom: "#01BAFF",
+        shadowTop: "#004A78",
+        shadowBottom: "#015777",
+        layout: BUTTON.textOnly,
+        text,
+        fontSize: 18,
+        textOpacity: 0.8,
+        image: null,
+        imageOpacity: 0,
+        pulsing: false,
+      })
+    ) {
+      watchNext(step);
+    }
+  };
+  watchButton(40, 640 * view.scaleX - 120 * view.scale, "< Before", -1);
+  watchButton(41, 640 * view.scaleX + 120 * view.scale, "Next >", 1);
 };
 
 // After the race: remembers the unlocked stage, waits for "Continue" (or the handbrake)
@@ -824,7 +867,11 @@ const afterRaceOver = () => {
   ) {
     leave = true;
   }
-  if (
+  if (spectating()) {
+    if (watchingOthers()) {
+      drawWatchedCar();
+    }
+  } else if (
     drawButton({
       id: 8,
       x: 640 * view.scaleX - 290 * view.scale,

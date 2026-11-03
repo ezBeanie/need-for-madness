@@ -79,7 +79,9 @@ test("a host's bots race only the room's races, and its guests no race of one al
   expect(ctx.field.roomCarTypes).toBe(null);
   ctx.chooseRaceKind(ctx.RACE_KIND.together);
   ctx.hostTick();
-  expect(ctx.field.roomCarTypes).toEqual(ctx.roomBots());
+  expect(ctx.field.roomCarTypes).toEqual(
+    ctx.roomBots().map(({ carType }) => carType),
+  );
 
   ctx.roomGuests().push({
     id: "abcdefgh",

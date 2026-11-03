@@ -38,6 +38,9 @@ import {
 import { lockstep, receiveRaceMessage, startLockstep } from "./lockstep.js";
 import { isRaceState, restoreRace } from "./raceState.js";
 import { clearChat, receiveChat } from "./chat.js";
+import { receiveVoice } from "./voice.js";
+import { MOST_NAME_CHARACTERS, own, setRoomCars } from "./roomCars.js";
+import { isSkin } from "../render/skins.js";
 
 // how often a guest not in a race tells the host it is there (and which car it chose)
 const JOIN_EVERY_TICKS = 30;
@@ -51,8 +54,8 @@ export const guest = {
   start: null,
   // the time to the host and back, in ms (null until measured)
   ping: null,
-  // the room's players as the host last told, each with its id, car and whether it is
-  // ready, the host's first, the cars of its bots and the stage it chose
+  // the room's players as the host last told, each with its id, name, car, skin and
+  // whether it is ready, the host's first, its bots' cars and skins and the stage it chose
   players: [],
   bots: [],
   stage: null,
@@ -81,16 +84,24 @@ const isPlayers = (players) =>
   players.every(
     (player) =>
       isPlayerId(player?.id) &&
+      isName(player.name) &&
       isIndex(player.carType, carStats.names.length) &&
+      isSkin(player.skin) &&
       typeof player.ready == "boolean",
   );
+
+// (shown only as text, see ui/multiplayerMenu.js)
+const isName = (name) =>
+  typeof name == "string" && name.length <= MOST_NAME_CHARACTERS;
 
 const isBots = (bots) =>
   Array.isArray(bots) &&
   bots.length < MAX_CARS &&
-  bots.every((type) => isIndex(type, carStats.names.length));
+  bots.every(
+    (bot) => isIndex(bot?.carType, carStats.names.length) && isSkin(bot.skin),
+  );
 
-const isStart = ({ stage, carTypes, players, raceId, state }) =>
+const isStart = ({ stage, carTypes, players, names, skins, raceId, state }) =>
   isIndex(stage, STAGE_COUNT + 1) &&
   Array.isArray(carTypes) &&
   carTypes.length <= MAX_CARS &&
@@ -99,11 +110,18 @@ const isStart = ({ stage, carTypes, players, raceId, state }) =>
   players.length <= carTypes.length &&
   Number.isInteger(raceId) &&
   players.every(isPlayerId) &&
+  Array.isArray(names) &&
+  names.length == carTypes.length &&
+  names.every((name) => name === null || isName(name)) &&
+  Array.isArray(skins) &&
+  skins.length == carTypes.length &&
+  skins.every(isSkin) &&
   isRaceState(state, carTypes.length);
 
 const receive = (message) => {
   receiveRaceMessage(message);
   receiveChat(message);
+  receiveVoice(message);
   if (
     message.type == MESSAGE.players &&
     isPlayers(message.players) &&
@@ -152,7 +170,9 @@ export const hostThere = () => guest.hostAnsweredTicks < HOST_GONE_TICKS;
 const sendJoin = () =>
   link.send({
     type: MESSAGE.join,
+    name: own.name,
     carType: game.carTypes[0],
+    skin: own.skin,
     ready: guest.ready,
   });
 
@@ -204,6 +224,7 @@ const loadHostedRace = (start) => {
   guest.ready = false;
   track.stage = start.stage;
   field.replayCars = start.carTypes;
+  setRoomCars(start.names, start.skins);
   // (as the host's: it starts no other)
   game.mode = MODE.championship;
   raceSetup.kind = RACE_KIND.together;

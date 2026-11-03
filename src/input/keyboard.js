@@ -27,6 +27,7 @@ const ACTIONS = {
   76: "toggleLook", // L: the modern or the classic look (see render/look.js)
   75: "toggleSharp", // K: the classic look sharp or in the original's pixels
   85: "toggleClassicMenus", // U: the classic look with the original's menus and race HUD or not
+  80: "talk", // P, held: the others in the room hear the player (see net/voice.js)
 };
 
 export const actionFor = (keyCode) => ACTIONS[keyCode];

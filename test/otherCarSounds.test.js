@@ -47,3 +47,21 @@ test("another car is heard on the side of the screen it is seen on", async () =>
   }
   expect(checked).toBeGreaterThan(0);
 });
+
+test("another car is heard before or behind as it is before or behind the camera", async () => {
+  const { ctx } = await race(true, 400);
+  const ways = new Set();
+  for (let c = 0; c < ctx.game.carCount; c++) {
+    const { x, y, z } = ctx.car[c];
+    const { front } = ctx.heardFrom(x, z);
+    const m = ctx.camera.matrix;
+    const [dx, dy, dz] = [x - ctx.camera.x, y - ctx.camera.y, z - ctx.camera.z];
+    const clipW = m[3] * dx + m[7] * dy + m[11] * dz + m[15];
+    if (Math.abs(front) > 0.3) {
+      expect(Math.sign(front), `car ${c}`).toBe(Math.sign(clipW));
+      ways.add(Math.sign(front));
+    }
+  }
+  // (the followed car at least is before the camera)
+  expect(ways.has(1)).toBe(true);
+});

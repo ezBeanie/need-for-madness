@@ -2,6 +2,7 @@
 // switch screen), the car select, the stage select and the car a stage unlocked. A scene
 // is drawn once a logic tick has moved it (menu.redraw), then every frame of its phase.
 
+import { placeNameTags } from "../ui/nameTags.js";
 import {
   drawClassicCar,
   drawClassicRace,
@@ -99,6 +100,7 @@ export function render() {
   // a classic menu's screen, with the 3D just drawn in its middle
   presentScreen();
   drawCarPreviews();
+  placeNameTags();
 }
 
 const drawWhenDue = (drawScene) => {

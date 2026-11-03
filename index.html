@@ -119,6 +119,14 @@ src: url(data/verdana.ttf);
 #options .volume input { width: 100%; min-height: 44px; margin: 0; padding: 0; border: 0; background: none; accent-color: #01EAFF; }
 #options .volume output { color: #01eaff; font-weight: bold; text-align: right; }
 #options .volume input:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
+#options .name label { display: block; margin: 0 0 6px; font-family: junk, Verdana, sans-serif; font-size: 17px; color: #ffffff; }
+#options .name input { width: 100%; }
+.name-tags { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
+.name-tag { position: fixed; left: 0; top: 0; padding: 2px 10px; white-space: nowrap; background: rgba(0, 10, 20, 0.6); border-bottom: 2px solid #01EAFF; color: #ffffff; font-family: junk, Verdana, sans-serif; font-size: 15px; text-shadow: 1px 1px 0 #000000; }
+.name-tag[hidden] { display: none; }
+.view .hint { margin: 6px 0 0; font-size: 13px; color: rgba(255, 255, 255, 0.75); }
+.lobby .cards .talking::after { content: " \1F50A"; }
+#lobbyTalk[aria-pressed="true"] { background: #FFB401; color: #000000; }
 #options .key { margin-left: 6px; padding: 0 6px; border: 1px solid rgba(27, 15, 5, 0.5); border-radius: 4px; font-family: verd, Verdana, sans-serif; font-size: 12px; }
 /* the multiplayer: hosting or joining, then the lobby's cars, race and chat side by side */
 .view .choose { max-width: 480px; }
@@ -306,6 +314,7 @@ src: url(data/verdana.ttf);
 
 <canvas id="canvas3D" style="position: absolute; left: 0px; top: 0px; padding-left: 0; padding-right: 0; margin-right: auto; margin-left: auto; display: block; width: 1280px; height: 720px;" width=1280 height=720></canvas>
 <p id="turnDevice">Turn your device sideways to play.</p>
+<div id="nameTags" class="name-tags" aria-hidden="true"></div>
 <canvas id="canvas2D" style="position: absolute; left: 0px; top: 0px; padding-left: 0; padding-right: 0; margin-right: auto; margin-left: auto; display: block; width: 1280px; height: 720px;" width=1280 height=720></canvas>
 
 
@@ -355,6 +364,13 @@ src: url(data/verdana.ttf);
 <li><button type="button" id="option-otherCarSounds" aria-pressed="false"><span>Other cars' sounds <span class="key">O</span></span><span class="state"></span></button></li>
 <li class="volume"><label for="musicVolume">Music volume</label><input type="range" id="musicVolume" min="0" max="100" step="5"><output id="musicVolumeShown" for="musicVolume"></output></li>
 <li class="volume"><label for="soundVolume">Effects volume</label><input type="range" id="soundVolume" min="0" max="100" step="5"><output id="soundVolumeShown" for="soundVolume"></output></li>
+</ul>
+</section>
+<section class="panel">
+<h3 id="optionsMultiplayerTitle">Multiplayer</h3>
+<ul aria-labelledby="optionsMultiplayerTitle">
+<li class="name"><label for="playerName">Your name</label><input id="playerName" maxlength="16" autocomplete="nickname" spellcheck="false" aria-describedby="playerNameHint"><p id="playerNameHint" class="hint">The others in a room see it on your car.</p></li>
+<li><button type="button" id="voiceChat" aria-pressed="false" aria-describedby="voiceChatHint"><span>Voice chat</span><span class="state"></span></button><p id="voiceChatHint" class="hint">In a race hold P to talk, in the lobby its talk button. Voices go straight between the players' games, which so learn each other's internet address.</p></li>
 </ul>
 </section>
 </div>
@@ -494,9 +510,13 @@ src: url(data/verdana.ttf);
 <p id="lobbyStageName" class="stage-name" hidden></p>
 <label for="lobbyCar">Your car</label>
 <select id="lobbyCar"></select>
+<label for="lobbySkin">Your paint</label>
+<select id="lobbySkin"></select>
 <p id="multiplayerStatus" class="status" role="status"></p>
 <button type="button" id="lobbyReady" class="go" aria-pressed="false">Ready</button>
 <button type="button" id="lobbyStart" class="go">Start the race</button>
+<button type="button" id="lobbyTalk" aria-describedby="lobbyTalkHint">Hold to talk</button>
+<p id="lobbyTalkHint" class="hint">In a race hold P. Voice chat can be switched off in the options.</p>
 <button type="button" id="multiplayerLeave">Leave the room</button>
 </section>
 <section class="panel chat" aria-labelledby="lobbyChatTitle">

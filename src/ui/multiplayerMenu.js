@@ -14,6 +14,7 @@ import {
   addBot,
   canAddBot,
   chooseBotCar,
+  chooseBotSkin,
   chooseRoomStage,
   everyoneReady,
   hostRoom,
@@ -34,6 +35,9 @@ import {
 import { menu } from "../screens/menuState.js";
 import { ROLE, ROOM_NAME, leaveRoom, link } from "../net/link.js";
 import { classicMenus } from "../render/look.js";
+import { SKINS } from "../render/skins.js";
+import { own, setOwnSkin } from "../net/roomCars.js";
+import { isTalking, talk, voice } from "../net/voice.js";
 import {
   PREVIEW_HEIGHT,
   PREVIEW_WIDTH,
@@ -87,7 +91,14 @@ const status = () => {
 const players = () =>
   link.role == ROLE.host
     ? [
-        { id: link.id, carType: game.carTypes[0], ready: true, you: true },
+        {
+          id: link.id,
+          name: own.name,
+          carType: game.carTypes[0],
+          skin: own.skin,
+          ready: true,
+          you: true,
+        },
         ...roomGuests(),
       ]
     : guest.players.map((player) => ({
@@ -95,16 +106,18 @@ const players = () =>
         you: player.id == link.id,
       }));
 
-const playerName = (i, you) =>
-  `Player ${i + 1}${[i == 0 && " (host)", you && " (you)"].filter(Boolean).join("")}`;
+// (the own one as chosen now, the others' as the host last told)
+const playerName = (i, you, name) =>
+  `${(you ? own.name : name) || `Player ${i + 1}`}${[i == 0 && " (host)", you && " (you)"].filter(Boolean).join("")}`;
 
-// (a picture only: the card says the car's name)
-const carPreview = (carType) => {
+// (a picture only: the card says the car's name and paint)
+const carPreview = (carType, skin) => {
   const canvas = document.createElement("canvas");
   canvas.className = "car-preview";
   canvas.width = PREVIEW_WIDTH;
   canvas.height = PREVIEW_HEIGHT;
   canvas.dataset.car = String(carType);
+  canvas.dataset.skin = String(skin);
   canvas.setAttribute("aria-hidden", "true");
   return canvas;
 };
@@ -119,14 +132,21 @@ const textOf = (className, text) => {
 // (the card's lines read as one: "Player 1 (host): Radical One, Ready")
 const unseen = (text) => textOf("visually-hidden", text);
 
-const playerItem = ({ carType, ready, you }, i) => {
+// (a car in a paint of its own says so: "Radical One in red")
+const carText = (carType, skin) =>
+  skin
+    ? `${carStats.names[carType]} in ${SKINS[skin].toLowerCase()}`
+    : carStats.names[carType];
+
+const playerItem = ({ id, name, carType, skin, ready, you }, i) => {
   const item = document.createElement("li");
   item.classList?.toggle("you", Boolean(you));
+  item.dataset.id = id;
   item.append(
-    carPreview(carType),
-    textOf("who", playerName(i, you)),
+    carPreview(carType, skin),
+    textOf("who", playerName(i, you, name)),
     unseen(": "),
-    textOf("car", carStats.names[carType]),
+    textOf("car", carText(carType, skin)),
     unseen(", "),
     textOf(ready ? "ready" : "waiting", ready ? "Ready" : "Not ready"),
   );
@@ -136,13 +156,26 @@ const playerItem = ({ carType, ready, you }, i) => {
 const showPlayers = () => {
   const all = players();
   const shape = JSON.stringify(
-    all.map(({ carType, ready, you }) => [carType, ready, you]),
+    all.map(({ name, carType, skin, ready, you }) => [
+      you ? own.name : name,
+      carType,
+      skin,
+      ready,
+      you,
+    ]),
   );
   const list = element("multiplayerPlayers");
   // (changed only when it changes, so screen readers announce each change once)
   if (list.dataset.shape != shape) {
     list.dataset.shape = shape;
     list.replaceChildren(...all.map(playerItem));
+  }
+  // (who talks shows only to the eye: a voice is heard anyway)
+  for (const item of list.children) {
+    const who = item.querySelector(".who");
+    const talking =
+      item.dataset.id == link.id ? voice.talking : isTalking(item.dataset.id);
+    who?.classList.toggle("talking", talking);
   }
 };
 
@@ -169,6 +202,13 @@ const showChoices = () => {
   if (document.activeElement != car && car.value != String(game.carTypes[0])) {
     car.value = String(game.carTypes[0]);
   }
+  const skin = element("lobbySkin");
+  if (document.activeElement != skin && skin.value != String(own.skin)) {
+    skin.value = String(own.skin);
+  }
+  const talkButton = element("lobbyTalk");
+  talkButton.hidden = !voice.on;
+  talkButton.setAttribute("aria-pressed", voice.talking ? "true" : "false");
   const ready = element("lobbyReady");
   ready.hidden = isHost;
   ready.setAttribute("aria-pressed", guest.ready ? "true" : "false");
@@ -202,7 +242,10 @@ const showChat = () => {
     const item = document.createElement("li");
     const who = document.createElement("span");
     who.className = "from";
-    who.textContent = index < 0 ? "Someone" : playerName(index, all[index].you);
+    who.textContent =
+      index < 0
+        ? "Someone"
+        : playerName(index, all[index].you, all[index].name);
     item.append(who, `: ${text}`);
     log.append(item);
   }
@@ -217,9 +260,22 @@ const botName = (i) => `Bot ${i + 1}`;
 
 // (each a car to choose, so a list rebuilt only when bots come or go: one chosen in keeps
 // its focus)
-const hostBotItem = (carType, i) => {
+const skinChoice = (id, label, skin, choose) => {
+  const choice = document.createElement("label");
+  choice.htmlFor = id;
+  choice.className = "visually-hidden";
+  choice.textContent = label;
+  const select = document.createElement("select");
+  select.id = id;
+  select.append(...SKINS.map((name, k) => new Option(name, String(k))));
+  select.value = String(skin);
+  select.addEventListener("change", () => choose(Number(select.value)));
+  return [choice, select];
+};
+
+const hostBotItem = ({ carType, skin }, i) => {
   const item = document.createElement("li");
-  const preview = carPreview(carType);
+  const preview = carPreview(carType, skin);
   const label = document.createElement("label");
   label.htmlFor = `multiplayerBot${i}`;
   label.textContent = botName(i);
@@ -242,17 +298,26 @@ const hostBotItem = (carType, i) => {
     showBots();
     element("multiplayerAddBot").focus();
   });
-  item.append(preview, label, select, remove);
+  const paint = skinChoice(
+    `multiplayerBotSkin${i}`,
+    `Paint of ${botName(i)}`,
+    skin,
+    (chosen) => {
+      chooseBotSkin(i, chosen);
+      preview.dataset.skin = String(chosen);
+    },
+  );
+  item.append(preview, label, select, ...paint, remove);
   return item;
 };
 
-const guestBotItem = (carType, i) => {
+const guestBotItem = ({ carType, skin }, i) => {
   const item = document.createElement("li");
   item.append(
-    carPreview(carType),
+    carPreview(carType, skin),
     textOf("who", botName(i)),
     unseen(": "),
-    textOf("car", carStats.names[carType]),
+    textOf("car", carText(carType, skin)),
   );
   return item;
 };
@@ -264,7 +329,9 @@ const showBots = () => {
   element("multiplayerAddBot").hidden = !isHost;
   element("multiplayerAddBot").disabled = isHost && !canAddBot();
   const list = element("multiplayerBotList");
-  const shape = isHost ? `host ${bots.length}` : `guest ${bots.join(" ")}`;
+  const shape = isHost
+    ? `host ${bots.length}`
+    : `guest ${JSON.stringify(bots)}`;
   if (list.dataset.shape != shape) {
     list.dataset.shape = shape;
     list.replaceChildren(...bots.map(isHost ? hostBotItem : guestBotItem));
@@ -336,6 +403,9 @@ const fillChoices = () => {
   element("lobbyCar").append(
     ...carStats.names.map((name, type) => new Option(name, String(type))),
   );
+  element("lobbySkin").append(
+    ...SKINS.map((name, skin) => new Option(name, String(skin))),
+  );
   element("lobbyStage").append(
     ...sharedStageGroups().map(({ label, stages }) => {
       const group = document.createElement("optgroup");
@@ -358,6 +428,30 @@ export const installMultiplayerMenu = () => {
     }
     tellHost();
   });
+  element("lobbySkin").addEventListener("change", (event) => {
+    setOwnSkin(Number(event.target.value));
+    if (link.role == ROLE.host) {
+      sendPlayers();
+    }
+    tellHost();
+  });
+  // (held: pressed with the mouse, a finger or the space bar)
+  const talkButton = element("lobbyTalk");
+  talkButton.addEventListener("pointerdown", () => talk(true));
+  for (const up of ["pointerup", "pointercancel", "pointerleave"]) {
+    talkButton.addEventListener(up, () => talk(false));
+  }
+  talkButton.addEventListener("keydown", (event) => {
+    if (event.key == " " && !event.repeat) {
+      event.preventDefault();
+      talk(true);
+    }
+  });
+  talkButton.addEventListener(
+    "keyup",
+    (event) => event.key == " " && talk(false),
+  );
+  talkButton.addEventListener("blur", () => talk(false));
   element("lobbyStage").addEventListener("change", (event) =>
     chooseRoomStage(Number(event.target.value)),
   );

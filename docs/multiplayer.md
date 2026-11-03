@@ -240,3 +240,36 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
 - Mit Bots und ohne Gäste fährt der Host jetzt mit den Bots statt mit dem Feld der Strecke.
 - Das gemeinsame Rennen hat eigene Einstellungen (`RACE_KIND.together`): keine Hilfe der
   neuesten Strecke, KI nach der Strecke, in jedem Spiel gleich.
+
+### Schritt 9: Namen, Lacke, Zuschauen, Voice Chat
+
+- Namen: In den Optionen (Abschnitt „Multiplayer“) legt jeder Spieler einen Namen fest
+  (höchstens 16 Zeichen, ohne Steuerzeichen, `net/roomCars.js`). `join` und `players` tragen
+  `name` und `skin`, Bots sind `{ carType, skin }`. `start` trägt `names` (je Auto, `null` für
+  Bots) und `skins`. Ohne Namen heißt ein Spieler „Player n“, Bots „Bot n“. Die Namen stehen
+  im Rennen über den Autos (`ui/nameTags.js`, außer über dem eigenen und dem verfolgten), im
+  Replay und in „… finished first“.
+- Lacke: In der Lobby wählt jeder Spieler und der Host je Bot einen Lack (`render/skins.js`):
+  farbige Teile bekommen den Farbton, Schwarz oder Weiß; graue Teile, Reifen und Scheiben
+  bleiben. Im modernen Look färbt `raceCarTextures` die Textur des Autos (eigene Kopie wie bei
+  zweimal demselben Auto), im klassischen Look `paintRad` die Polygone. Rein optisch: die
+  Golden Masters bleiben gleich.
+- Zuschauen: Ist das eigene Auto im gemeinsamen Rennen zerstört, folgt die Kamera nach dem
+  Wrack den Autos, die noch fahren (`race/spectate.js`), mit „< Before“, „Next >“ oder durch
+  Lenken; der Kameraflug ist der des Replay-Players (`followCar`).
+- Raumklang: Die Geräusche der anderen Autos (Crashs, Kratzen, Rutschen) kommen über einen
+  HRTF-Panner aus ihrer Richtung, auch von vorn oder hinten (`heardFrom` mit `front`). Im
+  modernen Look haben die anderen Autos eigene Motoren (`audio/otherEngines.js`), leiser mit
+  der Entfernung, höher mit der Geschwindigkeit; ihre Sounds laden getrennt vom eigenen Motor,
+  weil dessen Start entscheidet, welche Zufallszahlen die Effekte bekommen.
+- Voice Chat (`net/voice.js`): je zwei Spiele eines Raums direkt per WebRTC, ausgehandelt über
+  `voice`-Nachrichten des Relays (das Spiel mit der kleineren Id bietet an). Push-to-talk: im
+  Rennen Taste P, in der Lobby „Hold to talk“; das Mikrofon wird beim ersten Drücken erfragt.
+  Im Rennen kommt jede Stimme von ihrem Auto, leiser mit der Entfernung; in der Lobby alle
+  gleich laut. In den Optionen abschaltbar. Die Mitspieler sehen dabei gegenseitig ihre
+  IP-Adressen (so steht es auch in den Optionen).
+- STUN/TURN: Das Relay gibt unter `/net/ice` die Server und einen Tag lang gültige
+  TURN-Zugangsdaten heraus (`server/ice.js`, coturn mit `use-auth-secret`). Dazu braucht das
+  Relay `TURN_HOST` und `TURN_SECRET` in seiner Env-Datei auf beanie; ohne sie finden sich die
+  Spiele nur im selben Netz. coturn läuft als eigener Container auf beanie, Port 3478 (UDP und
+  TCP) und ein Bereich für die Weiterleitung müssen im Router freigegeben sein.
