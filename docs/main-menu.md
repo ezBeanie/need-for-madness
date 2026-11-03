@@ -1,6 +1,6 @@
 # Hauptmenü: Analyse und Plan
 
-Stand: 2026-11-03, Basis b7d5223. Umgesetzt: Schritte 1 bis 7 (siehe „Stand“ am Ende).
+Stand: 2026-11-03, Basis b7d5223. Umgesetzt: Schritte 1 bis 8 (siehe „Stand“ am Ende).
 
 ## Ziel
 
@@ -125,5 +125,6 @@ bitgleich: Die Kampagne behält genau die heutigen Werte.
 - **6** Time Attack (`race/timeAttack.js`): allein, Uhr in Ticks, Runden- und Gesamtzeit im HUD,
   Bestzeiten je Strecke in `bestTimes`, in der Streckenwahl angezeigt; kein Zurückspulen.
 - **7** Lobby, siehe `docs/multiplayer.md`, Schritt 8.
-- **8** Optionen: noch der bisherige Dialog.
+- **8** Optionen in Gruppen: Look (Look, Menüs, Pixel, Polygonsortierung), Rennen (Kamera,
+  Minimap), Ton.
 - **9** Autoeditor: noch offen.

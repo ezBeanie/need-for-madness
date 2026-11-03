@@ -104,6 +104,8 @@ src: url(data/verdana.ttf);
 .menu-dialog .room { font-size: 26px; letter-spacing: 3px; color: #01eaff; }
 #options .state { color: #01eaff; font-weight: bold; white-space: nowrap; }
 #options .key { color: rgba(160, 230, 255, 0.8); font-size: 12px; }
+#options h3 { color: #01eaff; }
+#options { max-height: 90vh; overflow-y: auto; }
 .menu-dialog .close { justify-content: center; margin-top: 14px; }
 /* the stage editor: a bar of tools, the palette of pieces and the map (see src/editor/) */
 .editor-button {
@@ -285,13 +287,20 @@ src: url(data/verdana.ttf);
 <button type="button" id="optionsButton" class="options-button" aria-label="Options" aria-haspopup="dialog" aria-controls="options" hidden>&#9881;</button>
 <dialog id="options" class="menu-dialog" aria-labelledby="optionsTitle">
 <h2 id="optionsTitle">Options</h2>
-<ul>
+<h3 id="optionsLookTitle">Look</h3>
+<ul aria-labelledby="optionsLookTitle">
 <li><button type="button" id="option-toggleLook" aria-pressed="false"><span>Look <span class="key">L</span></span><span class="state"></span></button></li>
-<li><button type="button" id="option-toggleSharp" aria-pressed="false"><span>Classic pixels <span class="key">K</span></span><span class="state"></span></button></li>
-<li><button type="button" id="option-toggleDepth" aria-pressed="false"><span>Classic polygons <span class="key">J</span></span><span class="state"></span></button></li>
 <li><button type="button" id="option-toggleClassicMenus" aria-pressed="false"><span>Classic menus and HUD <span class="key">U</span></span><span class="state"></span></button></li>
+<li><button type="button" id="option-toggleSharp" aria-pressed="false"><span>Classic pixels <span class="key">K</span></span><span class="state"></span></button></li>
+<li><button type="button" id="option-toggleDepth" aria-pressed="false"><span>Polygon sorting <span class="key">J</span></span><span class="state"></span></button></li>
+</ul>
+<h3 id="optionsRaceTitle">Racing</h3>
+<ul aria-labelledby="optionsRaceTitle">
 <li><button type="button" id="option-toggleAiming" aria-pressed="false"><span>Camera turns to the arrow's car <span class="key">T</span></span><span class="state"></span></button></li>
 <li><button type="button" id="option-toggleMinimap" aria-pressed="false"><span>Minimap <span class="key">G</span></span><span class="state"></span></button></li>
+</ul>
+<h3 id="optionsSoundTitle">Sound</h3>
+<ul aria-labelledby="optionsSoundTitle">
 <li><button type="button" id="option-muteSound" aria-pressed="false"><span>Sound <span class="key">N</span></span><span class="state"></span></button></li>
 <li><button type="button" id="option-muteMusic" aria-pressed="false"><span>Music <span class="key">M</span></span><span class="state"></span></button></li>
 <li><button type="button" id="option-otherCarSounds" aria-pressed="false"><span>Other cars' sounds <span class="key">O</span></span><span class="state"></span></button></li>
