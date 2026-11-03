@@ -137,11 +137,65 @@ test("hud: watching the race on after a wreck, racing together", async ({
     fixcar(0);
     s.racers[0].damage = 1e9;
   });
-  await game.advance(80);
+  await game.advance(60);
+  // Watch Race, beside Continue
+  await expect.soft(page).toHaveScreenshot("hud-wasted-together.png");
+  await page.evaluate(() => window.gameState.startWatching());
+  await game.advance(20);
   await expect.soft(page).toHaveScreenshot("hud-watching.png");
 });
 
 test("hud: the minimap", async ({ page }) => {
   await racing(page, 300, { minimap: "1" });
   await expect.soft(page).toHaveScreenshot("hud-minimap.png");
+});
+
+test.describe("on a phone", () => {
+  test.use({ hasTouch: true, viewport: { width: 844, height: 390 } });
+
+  test("hud: watching with the free camera, a finger on the pad flies it", async ({
+    page,
+  }) => {
+    const game = await racing(page);
+    await set(page, async () => {
+      const s = window.gameState;
+      const { fixcar } = await import("/src/race/physics.js");
+      s.game.humans = [0];
+      fixcar(0);
+      s.racers[0].damage = 1e9;
+    });
+    await game.advance(60);
+    await page.evaluate(() => {
+      const s = window.gameState;
+      s.startWatching();
+      s.camera.mode = s.CAMERA.free;
+    });
+    await game.advance(20);
+    await expect.soft(page).toHaveScreenshot("hud-watching-free-phone.png");
+    const where = () =>
+      page.evaluate(() => {
+        const { x, z, yaw } = window.gameState.camera;
+        return { x, z, yaw };
+      });
+    const before = await where();
+    // a finger at the pad's top: forward, as the camera looks
+    await page.evaluate(() => {
+      const { pointer, view } = window.gameState;
+      const pad = 70 * view.scale;
+      const margin = 30 * view.scale;
+      pointer.x[0] = margin + pad;
+      pointer.y[0] = view.height - margin - pad * 2;
+      pointer.count = 1;
+      pointer.down = true;
+    });
+    await game.advance(10);
+    await page.evaluate(() => {
+      window.gameState.pointer.down = false;
+    });
+    const after = await where();
+    expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeGreaterThan(
+      100,
+    );
+    expect(after.yaw).toBe(before.yaw);
+  });
 });

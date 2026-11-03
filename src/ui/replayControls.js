@@ -17,7 +17,6 @@ import {
   changeSpeed,
   closeReplay,
   lastFrame,
-  moveFreeCamera,
   nextCamera,
   nextCar,
   seekReplay,
@@ -29,6 +28,11 @@ import { classicMenus } from "../render/look.js";
 import { leaveOpenedReplay, saveReplay } from "../screens/replays.js";
 import { CAMERA, camera } from "../render/camera.js";
 import { isPhone } from "../core/platform.js";
+import {
+  drawFreeCameraPad,
+  steerFreeCamera,
+  stopSteeringFreeCamera,
+} from "./freeCamera.js";
 import { rd, view } from "./view.js";
 
 const TICK_SECONDS = 0.035;
@@ -40,12 +44,6 @@ const CAMERA_NAMES = {
   [CAMERA.trackside]: "Track",
   [CAMERA.free]: "Free",
 };
-// the free camera: how far it moves and turns a tick (Shift: faster), and per pixel
-// the mouse is dragged
-const FREE_MOVE = 6;
-const FREE_FAST = 4;
-const FREE_TURN = 2.5;
-const DRAG_TURN = 0.25;
 
 // -1 or 1 while the left or right arrow is held (without Shift: that jumps)
 export const heldArrow = () => {
@@ -368,39 +366,16 @@ const readKeys = () => {
   }
 };
 
-// --- the free camera: W A S D, Q and E down and up, Shift faster, the mouse to look ---
-
-let dragFrom = null;
+// --- the free camera (see freeCamera.js), dragged on the race, not on the controls ---
 
 const moveFree = () => {
   if (camera.mode != CAMERA.free) {
-    dragFrom = null;
+    stopSteeringFreeCamera();
     return;
   }
-  const held = (code) => (keys.held.has(code) ? 1 : 0);
-  const fast =
-    keys.held.has("ShiftLeft") || keys.held.has("ShiftRight") ? FREE_FAST : 1;
-  const step = FREE_MOVE * fast;
-  let yaw = 0;
-  let pitch = 0;
-  // dragged on the race (not on the controls below it)
-  const onRace = !panelShown() || pointer.y[0] < layout().top;
-  if (pointer.down && (dragFrom || onRace)) {
-    if (dragFrom) {
-      yaw = (pointer.x[0] - dragFrom.x) * DRAG_TURN;
-      pitch = (pointer.y[0] - dragFrom.y) * DRAG_TURN;
-    }
-    dragFrom = { x: pointer.x[0], y: pointer.y[0] };
-  } else {
-    dragFrom = null;
-  }
-  moveFreeCamera(
-    (held("KeyW") - held("KeyS")) * step,
-    (held("KeyD") - held("KeyA")) * step,
-    (held("KeyE") - held("KeyQ")) * step,
-    yaw + (held("KeyX") - held("KeyZ")) * FREE_TURN,
-    pitch,
-  );
+  const bottom = panelShown() ? layout().top : view.height;
+  drawFreeCameraPad(bottom);
+  steerFreeCamera(bottom, (x, y) => !panelShown() || y < layout().top);
 };
 
 // --- the list of cars to follow: a picture of each, its name ---

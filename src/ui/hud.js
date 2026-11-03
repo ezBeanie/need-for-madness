@@ -1,7 +1,12 @@
 // What is drawn over the race: positions, laps, damage and power, the arrow, messages, the
 // buttons, and the overlays of replays, winding back time and switch mode.
 
-import { spectating, watchNext, watchingOthers } from "../race/spectate.js";
+import {
+  spectating,
+  startWatching,
+  watchNext,
+  watchingOthers,
+} from "../race/spectate.js";
 import { nameOfCar } from "../net/roomCars.js";
 import {
   audio,
@@ -44,7 +49,7 @@ import {
   useUpStuntTurns,
 } from "../race/racers.js";
 import { HIGHLIGHT, startHighlight, recording } from "../race/recording.js";
-import { VIEWER_FROM, openReplay } from "../race/replayViewer.js";
+import { VIEWER_FROM, nextCamera, openReplay } from "../race/replayViewer.js";
 import {
   currentLapTicks,
   formatTime,
@@ -60,6 +65,11 @@ import { scene, timeTube } from "../render/scene.js";
 import { pauseMenu } from "../screens/pauseMenu.js";
 import { lockstep } from "../net/lockstep.js";
 import { startRaceEnd } from "../screens/raceEnd.js";
+import {
+  drawFreeCameraPad,
+  steerFreeCamera,
+  stopSteeringFreeCamera,
+} from "./freeCamera.js";
 import { images } from "./images.js";
 import { drawMinimap } from "./minimap.js";
 import { canvas2D, rd, view } from "./view.js";
@@ -73,6 +83,7 @@ import {
   drawCenteredText,
   drawMeter,
   fillPolygon,
+  pressOn,
   strokePolygon,
   touchArea,
 } from "./widgets.js";
@@ -588,6 +599,7 @@ const CONTROL_FOR = {
 
 const touchControlsShown = () =>
   isPhone &&
+  !watchingOthers() &&
   !(
     raceEvents.countdown > 65 &&
     (raceSetup.newestStage == 2 || raceSetup.newestStage == 4) &&
@@ -782,44 +794,88 @@ const raceOutcome = () => {
   return over;
 };
 
-// The car watched after the player's was wasted, racing together (see race/spectate.js),
-// and buttons to watch the one before or the next.
-const drawWatchedCar = () => {
-  drawCenteredText(
-    86,
-    `Watching ${nameOfCar(camera.target)}`,
-    255,
-    255,
-    255,
-    TEXT.heading,
+// The car watched after the player's was wasted, racing together (see race/spectate.js):
+// its name in a small bar at the top, arrows beside it to watch the one before or the
+// next, and the camera to switch. The free camera flies (see freeCamera.js).
+const WATCH_CAMERAS = {
+  [CAMERA.orbit]: "Orbit",
+  [CAMERA.behind]: "Behind",
+  [CAMERA.trackside]: "Track",
+  [CAMERA.free]: "Free",
+};
+
+const drawWatchBar = () => {
+  const scale = view.scale;
+  const height = Math.max(isPhone ? 30 : 26, 30 * scale);
+  const top = 82 * view.scaleY;
+  const font = Math.round(height * 0.45);
+  rd.save();
+  rd.font = `${font}px sans-serif`;
+  rd.textBaseline = "middle";
+  rd.textAlign = "center";
+  const name =
+    camera.mode == CAMERA.free
+      ? "Free camera"
+      : `Watching ${nameOfCar(camera.target)}`;
+  const parts = [
+    { id: 40, text: "‹", act: () => watchNext(-1) },
+    { id: 0, text: name },
+    { id: 41, text: "›", act: () => watchNext(1) },
+    {
+      id: 42,
+      text: `📷 ${WATCH_CAMERAS[camera.mode] ?? "Camera"}`,
+      act: nextCamera,
+    },
+  ];
+  const pad = height * 0.45;
+  const widths = parts.map(({ text, id }) =>
+    id == 40 || id == 41 ? height : rd.measureText(text).width + pad * 2,
   );
-  drawCenteredText(118, "Steer to watch another car", 1, 234, 255, TEXT.small);
-  const watchButton = (id, x, text, step) => {
-    if (
-      drawButton({
-        id,
-        x,
-        y: 140 * view.scaleY,
-        width: 110,
-        height: 36,
-        faceTop: "#019DFF",
-        faceBottom: "#01BAFF",
-        shadowTop: "#004A78",
-        shadowBottom: "#015777",
-        layout: BUTTON.textOnly,
-        text,
-        fontSize: 14,
-        textOpacity: 0.8,
-        image: null,
-        imageOpacity: 0,
-        pulsing: false,
-      })
-    ) {
-      watchNext(step);
+  const gap = 4 * scale;
+  const total =
+    widths.reduce((sum, w) => sum + w, 0) + gap * (parts.length - 1);
+  let left = view.width / 2 - total / 2;
+  let chosen = null;
+  parts.forEach((part, i) => {
+    const width = widths[i];
+    const { clicked, pressed } = part.act
+      ? pressOn(part.id, left, top, width, height)
+      : { clicked: false, pressed: false };
+    rd.globalAlpha = part.act ? (pressed ? 0.75 : 0.45) : 0.35;
+    rd.fillStyle = "#000000";
+    rd.beginPath();
+    rd.roundRect(left, top, width, height, height / 2);
+    rd.fill();
+    rd.globalAlpha = 0.9;
+    rd.fillStyle = "#FFFFFF";
+    rd.fillText(part.text, left + width / 2, top + height / 2);
+    if (clicked) {
+      chosen = part.act;
     }
-  };
-  watchButton(40, 640 * view.scaleX - 76 * view.scale, "< Before", -1);
-  watchButton(41, 640 * view.scaleX + 76 * view.scale, "Next >", 1);
+    left += width + gap;
+  });
+  if (!isPhone) {
+    rd.globalAlpha = 0.6;
+    rd.font = `${Math.round(font * 0.8)}px sans-serif`;
+    rd.fillText(
+      camera.mode == CAMERA.free
+        ? "W A S D Q E to fly, drag to look · V camera · Esc menu"
+        : "Steer for another car · V camera · Esc menu",
+      view.width / 2,
+      top + height * 1.6,
+    );
+  }
+  rd.restore();
+  chosen?.();
+  if (camera.mode == CAMERA.free) {
+    drawFreeCameraPad(view.height);
+    steerFreeCamera(
+      view.height,
+      (x, y) => y > top + height * 2 || Math.abs(x - view.width / 2) > total,
+    );
+  } else {
+    stopSteeringFreeCamera();
+  }
 };
 
 // After the race: remembers the unlocked stage, waits for "Continue" (or the handbrake)
@@ -836,6 +892,15 @@ const afterRaceOver = () => {
     }
   }
   raceEvents.raceOverTicks++;
+  // watching the race go on, it is left by the menu
+  if (watchingOthers()) {
+    if (confirm.state == CONFIRM.pressed) {
+      confirm.state = CONFIRM.used;
+      pause();
+    }
+    drawWatchBar();
+    return;
+  }
   let leave = false;
   if (racers[game.player].u.handb && raceEvents.raceOverTicks > 50) {
     leave = true;
@@ -845,10 +910,10 @@ const afterRaceOver = () => {
     leave = true;
     confirm.state = CONFIRM.used;
   }
-  if (
+  const buttonAt = (id, x, text) =>
     drawButton({
-      id: 7,
-      x: 640 * view.scaleX,
+      id,
+      x,
       y: view.height - 60 * view.scale - 40 * view.scaleY,
       width: 250,
       height: 60,
@@ -856,44 +921,33 @@ const afterRaceOver = () => {
       faceBottom: "#01BAFF",
       shadowTop: "#004A78",
       shadowBottom: "#015777",
-      layout: BUTTON.textThenImage,
-      text: "Continue ",
+      layout: id == 7 ? BUTTON.textThenImage : BUTTON.textOnly,
+      text,
       fontSize: 20,
       textOpacity: 0.8,
-      image: images.buttons[1],
-      imageOpacity: 0.8,
+      image: id == 7 ? images.buttons[1] : null,
+      imageOpacity: id == 7 ? 0.8 : 0,
       pulsing: false,
-    })
-  ) {
+    });
+  if (buttonAt(7, 640 * view.scaleX + 145 * view.scale, "Continue ")) {
     leave = true;
   }
-  if (spectating()) {
-    if (watchingOthers()) {
-      drawWatchedCar();
-    }
-  } else if (
-    drawButton({
-      id: 8,
-      x: 640 * view.scaleX - 290 * view.scale,
-      y: view.height - 60 * view.scale - 40 * view.scaleY,
-      width: 250,
-      height: 60,
-      faceTop: "#019DFF",
-      faceBottom: "#01BAFF",
-      shadowTop: "#004A78",
-      shadowBottom: "#015777",
-      layout: BUTTON.textOnly,
-      text: "Watch Race",
-      fontSize: 20,
-      textOpacity: 0.8,
-      image: null,
-      imageOpacity: 0,
-      pulsing: false,
-    })
+  // racing together the race goes on to be watched; else its replay
+  const watchRace = spectating();
+  if (
+    buttonAt(
+      8,
+      640 * view.scaleX - 145 * view.scale,
+      watchRace ? "Watch Race" : "Watch Replay",
+    )
   ) {
-    stopEngine();
-    openReplay(VIEWER_FROM.raceOver, 0);
-    return;
+    if (watchRace) {
+      startWatching();
+    } else {
+      stopEngine();
+      openReplay(VIEWER_FROM.raceOver, 0);
+      return;
+    }
   }
   if (leave) {
     if (recording.highlight) {

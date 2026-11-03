@@ -26,6 +26,8 @@ import { minimap, toggleMinimap } from "../ui/minimap.js";
 import { buttons } from "../ui/widgets.js";
 import { pressConfirm } from "./confirm.js";
 import { talk } from "../net/voice.js";
+import { nextCamera } from "../race/replayViewer.js";
+import { watchingOthers } from "../race/spectate.js";
 
 // the button a key shows pressed: the arrow button of the race
 const ARROW_BUTTON = 1;
@@ -95,7 +97,10 @@ export function onKey(action, pressed) {
   if (action == "lookBackRight") {
     camera.lookBack = pressed ? 1 : 0;
   }
-  if (!pressed && action == "nextCamera" && game.phase == PHASE.race) {
+  // (watching the race go on: the replay viewer's cameras, the free one too)
+  if (!pressed && action == "nextCamera" && watchingOthers()) {
+    nextCamera();
+  } else if (!pressed && action == "nextCamera" && game.phase == PHASE.race) {
     camera.mode++;
     if (camera.mode == CAMERA.flyTo) {
       camera.mode = CAMERA.behind;
