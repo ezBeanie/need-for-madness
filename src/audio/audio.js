@@ -8,11 +8,20 @@ import { isIos } from "../core/platform.js";
 import { LOOK, look } from "../render/look.js";
 import { fetchText } from "../render/models.js";
 
-// otherCars: the other cars' crashes, scrapes and skids are heard too (see carSounds.js)
+// A volume kept in percent, 100 if none is.
+const storedVolume = (name) => {
+  const percent = loadSetting(name);
+  return percent < 0 ? 1 : Math.min(percent, 100) / 100;
+};
+
+// otherCars: the other cars' crashes, scrapes and skids are heard too (see carSounds.js);
+// musicVolume and soundVolume: 0..1, as the options' sliders set them
 export const audio = {
   muteMusic: false,
   muteSound: false,
   otherCars: loadSetting("otherCarSounds") != 0,
+  musicVolume: storedVolume("musicVolume"),
+  soundVolume: storedVolume("soundVolume"),
 };
 
 export const toggleOtherCarSounds = () => {
@@ -27,14 +36,29 @@ let unlocked = false;
 
 // Music tracks: state 0 = never played, 1 = playing, 2 = paused.
 // (file: the track's, which the look decides)
+// (level: how loud the track plays at full music volume)
 const menuMusic = {
   track: null,
+  level: 0.6,
   file: null,
   state: 0,
   pendingPlay: false,
   firstPlay: true,
 };
-const stageMusic = { track: null, file: "", state: 0, pendingPlay: false };
+const stageMusic = {
+  track: null,
+  level: 0.7,
+  file: "",
+  state: 0,
+  pendingPlay: false,
+};
+
+// (iOS leaves the modern look's tracks, audio elements, as loud as they are)
+const turnUp = (music) => {
+  if (music.track) {
+    music.track.volume = music.level * audio.musicVolume;
+  }
+};
 
 // The classic look plays the original's tracks (see tools/classic/music), which loop from
 // a point of their own: on the sound context, not as audio elements.
@@ -144,7 +168,7 @@ export const playMenuMusic = () => {
       menuMusic.track.volume = 1;
       menuMusic.track.loop = true;
     }
-    menuMusic.track.volume = 0.6;
+    turnUp(menuMusic);
     // iOS only starts the first play from within a touch (see unlockAudio)
     if (unlocked && !audio.muteMusic && (!isIos || !menuMusic.firstPlay)) {
       menuMusic.track.play();
@@ -178,7 +202,7 @@ export const playStageMusic = (stage) => {
     } else {
       stageMusic.track.currentTime = 0;
     }
-    stageMusic.track.volume = 0.7;
+    turnUp(stageMusic);
     if (unlocked && !audio.muteMusic && !isIos) {
       stageMusic.track.play();
     }
@@ -224,6 +248,22 @@ export const pauseMusic = () => {
   }
 };
 
+export const setMusicVolume = (volume) => {
+  audio.musicVolume = volume;
+  saveSetting("musicVolume", Math.round(volume * 100));
+  turnUp(menuMusic);
+  turnUp(stageMusic);
+};
+
+export const setSoundVolume = (volume) => {
+  audio.soundVolume = volume;
+  saveSetting("soundVolume", Math.round(volume * 100));
+  if (contexts) {
+    contexts.soundsOut.gain.value = volume;
+    contexts.enginesOut.gain.value = volume;
+  }
+};
+
 export const resumeMusic = () => {
   for (const music of [stageMusic, menuMusic]) {
     if (music.state == 1 && unlocked) {
@@ -238,7 +278,14 @@ const createContexts = () => {
     const sounds = new AudioContext();
     const engines = new AudioContext();
     engine.volume = engines.createGain();
-    return { sounds, engines };
+    // what all sound effects and engines go through, for their volume
+    const soundsOut = sounds.createGain();
+    soundsOut.connect(sounds.destination);
+    const enginesOut = engines.createGain();
+    enginesOut.connect(engines.destination);
+    soundsOut.gain.value = audio.soundVolume;
+    enginesOut.gain.value = audio.soundVolume;
+    return { sounds, engines, soundsOut, enginesOut };
   } catch {
     return null;
   }
@@ -311,12 +358,12 @@ const playBuffer = (buffer, rate, place = null) => {
     if (contexts.sounds.createStereoPanner) {
       const panner = contexts.sounds.createStereoPanner();
       panner.pan.value = place.pan;
-      volume.connect(panner).connect(contexts.sounds.destination);
+      volume.connect(panner).connect(contexts.soundsOut);
     } else {
-      volume.connect(contexts.sounds.destination);
+      volume.connect(contexts.soundsOut);
     }
   } else {
-    source.connect(contexts.sounds.destination);
+    source.connect(contexts.soundsOut);
   }
   source.playbackRate.value = rate;
   source.start();
@@ -362,7 +409,7 @@ export const startEngine = (carType, loop) => {
     engine.source = contexts.engines.createBufferSource();
     engine.source.buffer = engineBuffers[carType];
     engine.source.connect(engine.volume);
-    engine.volume.connect(contexts.engines.destination);
+    engine.volume.connect(contexts.enginesOut);
     engine.source.loop = loop;
     engine.source.start();
     engine.started = true;

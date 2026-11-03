@@ -18,6 +18,7 @@ import { menu } from "../screens/menuState.js";
 import { UNLOCKED_CAR_SHOWN } from "../screens/raceEnd.js";
 import { stageSelect } from "../screens/stageSelect.js";
 import { camera } from "./camera.js";
+import { drawCarPreviews } from "./carPreviews.js";
 import { attachTo, interpolation, placeCamera } from "./interpolation.js";
 import { LOOK, classicMenus, look } from "./look.js";
 import { CLASSIC_FLOOR } from "../classic/carSelect.js";
@@ -97,6 +98,7 @@ export function render() {
   }
   // a classic menu's screen, with the 3D just drawn in its middle
   presentScreen();
+  drawCarPreviews();
 }
 
 const drawWhenDue = (drawScene) => {
@@ -163,7 +165,7 @@ const drawFixHoops = () => {
 
 // A car with its wheels: the wheels follow the parent's movement between ticks, the treads
 // come before the body and the disks after it.
-const drawWheeledCar = (type, parent, wheels, body, near) => {
+export const drawWheeledCar = (type, parent, wheels, body, near) => {
   for (const wheel of wheels) {
     attachTo(wheel.mat, parent);
   }

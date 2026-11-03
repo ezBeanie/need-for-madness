@@ -481,8 +481,8 @@ test("the multiplayer dialog opens a room, and a guest joins it with its code", 
   await expect(
     guestPage.getByRole("list", { name: "Players" }).getByRole("listitem"),
   ).toHaveText([/^Player 1 \(host\): /, /^Player 2 \(you\): /]);
-  await hostPage.getByRole("button", { name: "Close" }).click();
-  await guestPage.getByRole("button", { name: "Close" }).click();
+  await hostPage.getByRole("button", { name: "Back" }).click();
+  await guestPage.getByRole("button", { name: "Back" }).click();
   await expect(
     hostPage.getByRole("button", { name: `Room ${room}` }),
   ).toBeVisible();
@@ -510,7 +510,7 @@ test("a room's race has only its players' cars, and the bots the host adds with 
     .getByLabel("Bot 1", { exact: true })
     .selectOption({ label: "Kool Kat" });
   await hostPage.getByRole("button", { name: "Remove Bot 2" }).click();
-  await hostPage.getByRole("button", { name: "Close" }).click();
+  await hostPage.getByRole("button", { name: "Back" }).click();
   // the guest's dialog lists it
   await guestPage.waitForTimeout(DELIVERY_MS);
   await guest.advance(2);
@@ -518,7 +518,7 @@ test("a room's race has only its players' cars, and the bots the host adds with 
   await expect(guestPage.locator("#multiplayerBotList")).toHaveText(
     "Bot 1: Kool Kat",
   );
-  await guestPage.getByRole("button", { name: "Close" }).click();
+  await guestPage.getByRole("button", { name: "Back" }).click();
   await hostStartsRace(games);
   const koolKat = await hostPage.evaluate(() =>
     window.gameState.carStats.names.indexOf("Kool Kat"),
@@ -546,7 +546,7 @@ test("leaving the room ends the link", async ({ page }) => {
   await expect(page.locator("#multiplayerRoom")).toBeVisible();
   await page.getByRole("button", { name: "Leave the room" }).click();
   await expect(page.getByRole("button", { name: "Host a race" })).toBeVisible();
-  await page.getByRole("button", { name: "Close" }).click();
+  await page.getByRole("button", { name: "Back" }).click();
   await game.advance();
   await expect(page.getByRole("button", { name: "Multiplayer" })).toBeVisible();
 });

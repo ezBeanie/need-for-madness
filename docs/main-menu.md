@@ -128,3 +128,19 @@ bitgleich: Die Kampagne behält genau die heutigen Werte.
 - **8** Optionen in Gruppen: Look (Look, Menüs, Pixel, Polygonsortierung), Rennen (Kamera,
   Minimap), Ton.
 - **9** Autoeditor: noch offen.
+
+Zweite Runde (3.11.2026, nach dem ersten Spieltest):
+
+- Lobby und Optionen sind eigene Vollbild-Ansichten im Stil des Hauptmenüs (schräge Knöpfe,
+  Junk-Schrift), keine Dialoge mehr. Beide sind weiter `<dialog>`-Elemente (Fokus bleibt drin,
+  Escape geht zurück), oben rechts „Back“.
+- In der Lobby hat jeder Spieler und Bot eine Karte mit seinem Auto, klein und drehend
+  (`render/carPreviews.js`: jeder gezeigte Autotyp einmal pro Frame in einen Framebuffer, von
+  dort in die Karten kopiert; beim Öffnen das Licht der Autowahl).
+- Das Zahnrad ist ein Knopf „Options“ im Stil des Menüs. Multiplayer gibt es nur im Hauptmenü
+  (im Original-Menü als Knopf daneben).
+- Die Autowahl hat „Back“ zum Hauptmenü (die Streckenwahl hatte ihres schon).
+- Lautstärke für Musik und Effekte in den Optionen (`musicVolume`, `soundVolume` in Prozent).
+  Auf iOS bleiben die Musikstücke des modernen Looks (Audio-Elemente) so laut, wie sie sind.
+- Der Replay-Player zeichnet im modernen Look schräge Knöpfe und Leisten wie das Menü; Exit ist
+  orange wie Back.

@@ -1,9 +1,9 @@
-// The multiplayer dialog: hosting a race (a room with a code and a link for the guests) or
-// joining one with the host's code, then the room's lobby: its players with their cars and
-// whether they are ready, its bots, which the host adds and chooses the cars of, the stage
-// the host chooses, each player's car, and a chat. The host starts the race once everyone
-// is ready, and the lobby comes back after it. The main menu opens it, and a button beside
-// the options' gear in the menus a race of the host's can take a guest away from.
+// The multiplayer screen: hosting a race (a room with a code and a link for the guests) or
+// joining one with the host's code, then the room's lobby: its players, each on a card with
+// its car turning (see render/carPreviews.js) and whether it is ready, its bots, which the
+// host adds and chooses the cars of, the stage the host chooses, each player's car, and a
+// chat. The host starts the race once everyone is ready, and the lobby comes back after
+// it. The main menu opens it (the classic one with a button beside its Options).
 
 import { PHASE, RACE_KIND, game, raceSetup } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
@@ -34,6 +34,12 @@ import {
 import { menu } from "../screens/menuState.js";
 import { ROLE, ROOM_NAME, leaveRoom, link } from "../net/link.js";
 import { classicMenus } from "../render/look.js";
+import {
+  PREVIEW_HEIGHT,
+  PREVIEW_WIDTH,
+  previews,
+  turnCarPreviews,
+} from "../render/carPreviews.js";
 
 const button = document.getElementById("multiplayerButton");
 const dialog = document.getElementById("multiplayer");
@@ -92,14 +98,38 @@ const players = () =>
 const playerName = (i, you) =>
   `Player ${i + 1}${[i == 0 && " (host)", you && " (you)"].filter(Boolean).join("")}`;
 
+// (a picture only: the card says the car's name)
+const carPreview = (carType) => {
+  const canvas = document.createElement("canvas");
+  canvas.className = "car-preview";
+  canvas.width = PREVIEW_WIDTH;
+  canvas.height = PREVIEW_HEIGHT;
+  canvas.dataset.car = String(carType);
+  canvas.setAttribute("aria-hidden", "true");
+  return canvas;
+};
+
+const textOf = (className, text) => {
+  const span = document.createElement("span");
+  span.className = className;
+  span.textContent = text;
+  return span;
+};
+
+// (the card's lines read as one: "Player 1 (host): Radical One, Ready")
+const unseen = (text) => textOf("visually-hidden", text);
+
 const playerItem = ({ carType, ready, you }, i) => {
   const item = document.createElement("li");
-  const who = document.createElement("span");
-  who.textContent = `${playerName(i, you)}: ${carStats.names[carType]}`;
-  const state = document.createElement("span");
-  state.className = ready ? "ready" : "waiting";
-  state.textContent = ready ? "Ready" : "Not ready";
-  item.append(who, state);
+  item.classList?.toggle("you", Boolean(you));
+  item.append(
+    carPreview(carType),
+    textOf("who", playerName(i, you)),
+    unseen(": "),
+    textOf("car", carStats.names[carType]),
+    unseen(", "),
+    textOf(ready ? "ready" : "waiting", ready ? "Ready" : "Not ready"),
+  );
   return item;
 };
 
@@ -189,20 +219,20 @@ const botName = (i) => `Bot ${i + 1}`;
 // its focus)
 const hostBotItem = (carType, i) => {
   const item = document.createElement("li");
+  const preview = carPreview(carType);
   const label = document.createElement("label");
   label.htmlFor = `multiplayerBot${i}`;
   label.textContent = botName(i);
-  const row = document.createElement("div");
-  row.className = "bot";
   const select = document.createElement("select");
   select.id = `multiplayerBot${i}`;
   select.append(
     ...carStats.names.map((name, type) => new Option(name, String(type))),
   );
   select.value = String(carType);
-  select.addEventListener("change", () =>
-    chooseBotCar(i, Number(select.value)),
-  );
+  select.addEventListener("change", () => {
+    chooseBotCar(i, Number(select.value));
+    preview.dataset.car = select.value;
+  });
   const remove = document.createElement("button");
   remove.type = "button";
   remove.textContent = "Remove";
@@ -212,14 +242,18 @@ const hostBotItem = (carType, i) => {
     showBots();
     element("multiplayerAddBot").focus();
   });
-  row.append(select, remove);
-  item.append(label, row);
+  item.append(preview, label, select, remove);
   return item;
 };
 
 const guestBotItem = (carType, i) => {
   const item = document.createElement("li");
-  item.textContent = `${botName(i)}: ${carStats.names[carType]}`;
+  item.append(
+    carPreview(carType),
+    textOf("who", botName(i)),
+    unseen(": "),
+    textOf("car", carStats.names[carType]),
+  );
   return item;
 };
 
@@ -237,7 +271,7 @@ const showBots = () => {
   }
 };
 
-// What the dialog and its button show: the choice, or the room the game is in.
+// What the screen and its button show: the choice, or the room the game is in.
 const showRoom = () => {
   const inRoom = link.role != ROLE.none;
   const label = inRoom ? `Room ${link.room}` : "Multiplayer";
@@ -251,7 +285,7 @@ const showRoom = () => {
   }
   element("multiplayerChoose").hidden = inRoom;
   element("multiplayerRoom").hidden = !inRoom;
-  dialog.classList?.toggle("in-room", inRoom);
+  element("multiplayerRoomLine").hidden = !inRoom;
   if (!inRoom) {
     return;
   }
@@ -388,12 +422,13 @@ export const installMultiplayerMenu = () => {
 // whether the game left the menus while in a room: the lobby comes back after the race
 let raced = false;
 
-// Every tick: the button only where it belongs (the main menu has Multiplayer of its own),
-// and the dialog up to date. A room the host left, or one full, opens it, to say so, and
-// so does the main menu after a race of the room.
+// Every tick: the button only where it belongs, and the screen up to date. A room the host
+// left, or one full, opens it, to say so, and so does the main menu after a race of the
+// room.
 export const placeMultiplayerButton = () => {
   const away = !SHOWN_IN.includes(game.phase);
-  const hidden = away || (game.phase == PHASE.mainMenu && !classicMenus());
+  // (only the classic main menu needs it: the modern one has Multiplayer of its own)
+  const hidden = game.phase != PHASE.mainMenu || !classicMenus();
   if (button.hidden != hidden) {
     button.hidden = hidden;
   }
@@ -402,6 +437,9 @@ export const placeMultiplayerButton = () => {
       game.phase == PHASE.race &&
       (game.humans.length > 0 || raceSetup.kind == RACE_KIND.together);
     dialog.close?.();
+    // (a race lights its stage: the cards need the car select's light again after it)
+    previews.root = null;
+    previews.lit = false;
     return;
   }
   if (raced && game.phase == PHASE.mainMenu) {
@@ -412,6 +450,8 @@ export const placeMultiplayerButton = () => {
     }
   }
   showRoom();
+  previews.root = dialog.open && link.role != ROLE.none ? dialog : null;
+  turnCarPreviews();
   if (guest.roomEnded || link.full) {
     showNotice(guest.roomEnded ? ROOM_ENDED : ROOM_FULL);
     guest.roomEnded = false;

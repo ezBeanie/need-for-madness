@@ -352,9 +352,28 @@ function drawCarSelect() {
   if (!locked && showcase.motion == SHOWCASE.hovering) {
     drawStart(right);
   }
+  drawBack(left);
   pulseButtons();
   drawMusicToggle();
 }
+
+// Back to the main menu, from where the stage select has its own Back.
+const drawBack = (left) => {
+  if (
+    browseButton({
+      id: 9,
+      x: left + 110 * view.scale,
+      y: 720 * view.scaleY - 90 * view.scale,
+      layout: BUTTON.imageThenText,
+      text: " Back",
+      image: images.buttons[5],
+    })
+  ) {
+    menu.animation = 0;
+    menu.continuesToCarSelect = false;
+    game.phase = PHASE.mainMenu;
+  }
+};
 
 const drawName = (type) => {
   rd.letterSpacing = "1px";
