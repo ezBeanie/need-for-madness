@@ -41,6 +41,14 @@ test("time attack times each lap and the race, and keeps the best of each stage"
   expect(ctx.bestTimes(2)).toEqual({ lap: 90, race: 220 });
   expect(ctx.bestTimes(3)).toBe(null);
 
+  // (none for stages made in the editor, whose numbers change)
+  const own = ctx.FIRST_OWN_STAGE;
+  ctx.track.stage = own;
+  timeRace(ctx, [50, 100, 160, 220]);
+  expect(ctx.bestTimes(own)).toBe(null);
+  expect(JSON.parse(stored.get("bestTimes"))[own]).toBeUndefined();
+  ctx.track.stage = 2;
+
   // 35 ms a tick
   expect(ctx.formatTime(220)).toBe("0:07.70");
   expect(ctx.formatTime(2000)).toBe("1:10.00");

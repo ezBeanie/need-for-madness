@@ -4,6 +4,7 @@
 import { RACE_KIND, game, raceSetup } from "../core/state.js";
 import { loadText, saveSetting } from "../core/storage.js";
 import { TICK_MS } from "../core/tick.js";
+import { isCustom } from "../data/stages.js";
 import { track } from "./track.js";
 
 // ticks: since the start; laps: the ticks of each lap done; best: the stage's best times
@@ -27,8 +28,13 @@ const allBestTimes = () => {
   }
 };
 
-// The best lap and race of a stage, in ticks, or null when it was never finished.
+// The best lap and race of a stage, in ticks, or null when it was never finished. (Stages
+// made in the editor keep none: their numbers change as stages are deleted, a host's
+// visiting one is another each time.)
 export const bestTimes = (stage) => {
+  if (isCustom(stage)) {
+    return null;
+  }
   const best = allBestTimes()[stage];
   return Number.isInteger(best?.lap) && Number.isInteger(best?.race)
     ? best
@@ -61,6 +67,9 @@ const lapStart = () => timeAttack.laps.reduce((sum, lap) => sum + lap, 0);
 export const currentLapTicks = () => timeAttack.ticks - lapStart();
 
 const keepBest = () => {
+  if (isCustom(track.stage)) {
+    return;
+  }
   const fastestLap = Math.min(...timeAttack.laps);
   const best = timeAttack.best;
   timeAttack.newBest = {

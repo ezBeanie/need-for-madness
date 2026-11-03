@@ -198,16 +198,35 @@ const drawLogo = (screen) => {
   }
 };
 
+// the dialogs the menu opens over itself: they take the keys while open
+const MENU_DIALOGS = ["options", "multiplayer", "stageEditor"];
+// up and down as held last tick, so a gamepad's stick goes one button at a time
+let heldUp = false;
+let heldDown = false;
+
 const waitForChoice = () => {
+  const dialogOpen = MENU_DIALOGS.some((id) => element(id).open);
+  // (a gamepad's stick, or the arrow keys with the focus outside the menu)
+  const { up, down } = racers[game.player].u;
+  if (!dialogOpen && up && !heldUp) {
+    moveFocus(-1);
+  }
+  if (!dialogOpen && down && !heldDown) {
+    moveFocus(1);
+  }
+  heldUp = up;
+  heldDown = down;
   if (menu.animation < LEAVING && confirm.state == CONFIRM.pressed) {
     // (a gamepad's button chooses the focused button, Enter outside the menu the one
-    // chosen last)
+    // chosen last; none behind a dialog)
     confirm.state = CONFIRM.used;
-    (
-      choices.get(document.activeElement) ??
-      choices.get(chosen) ??
-      startCampaign
-    )();
+    if (!dialogOpen) {
+      (
+        choices.get(document.activeElement) ??
+        choices.get(chosen) ??
+        startCampaign
+      )();
+    }
   }
   drawMusicToggle();
 };
@@ -239,7 +258,9 @@ const classicTick = () => {
   menu.continuesToCarSelect = false;
   introFrame = INTRO_FRAMES;
   const chosen = classicMainMenu(menu.resetOffered);
+  // (the original's menu knows the campaign only)
   if (chosen == OPTION.play) {
+    chooseRaceKind(RACE_KIND.campaign);
     openCarSelect();
   }
   if (chosen == OPTION.instructions) {
@@ -374,6 +395,18 @@ const offerReset = () => {
   game.phase = PHASE.resetQuestion;
 };
 
+// The focus one button up or down the menu, round at its ends (from the button chosen last
+// when it is elsewhere).
+const moveFocus = (step) => {
+  const buttons = [...(nav.querySelectorAll?.("button:not([hidden])") ?? [])];
+  if (buttons.length == 0) {
+    return;
+  }
+  const focused = buttons.indexOf(document.activeElement);
+  const at = focused >= 0 ? focused : Math.max(buttons.indexOf(chosen), 0);
+  buttons[(at + step + buttons.length) % buttons.length].focus();
+};
+
 export const installMainMenu = () => {
   for (const [id, choose] of [
     ["menuCampaign", startCampaign],
@@ -397,13 +430,10 @@ export const installMainMenu = () => {
   // (the up and down keys go along the menu, round at its ends)
   nav.addEventListener("keydown", (event) => {
     const step = { ArrowDown: 1, ArrowUp: -1 }[event.key];
-    if (!step) {
-      return;
+    if (step) {
+      event.preventDefault();
+      moveFocus(step);
     }
-    event.preventDefault();
-    const buttons = [...nav.querySelectorAll("button:not([hidden])")];
-    const at = buttons.indexOf(document.activeElement);
-    buttons[(at + step + buttons.length) % buttons.length].focus();
   });
 };
 

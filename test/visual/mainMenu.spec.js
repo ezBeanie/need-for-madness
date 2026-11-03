@@ -144,3 +144,17 @@ test("the campaign races the stages it opened with the original's field, practic
   await game.advanceUntil(PHASE.race);
   expect(await page.evaluate(() => window.gameState.game.carCount)).toBe(1);
 });
+
+test("the arrow keys go through the menu with the focus outside it, as a gamepad's stick", async ({
+  page,
+}) => {
+  const game = await openGame(page, { storage: { carsel: "5" } });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance(2);
+  await page.evaluate(() => document.activeElement.blur());
+  await game.tap("ArrowDown");
+  expect(await focused(page)).toBe("menuQuickRace");
+  await game.tap("ArrowUp");
+  await game.tap("ArrowUp");
+  expect(await focused(page)).toBe("menuReplay");
+});

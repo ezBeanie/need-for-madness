@@ -881,3 +881,34 @@ test("in the lobby the host chooses the stage, the guest its car, both chat, and
     "false",
   );
 });
+
+test("a race of the host's own while it waits for guests goes on to the car select, not to the lobby", async ({
+  page,
+}) => {
+  const game = await openGame(page, {
+    storage: { carsel: HOST_TYPE, unlocked: "3" },
+    url: "/?host=alone",
+  });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance(2);
+  await page.locator("#menuPractice").click();
+  await game.advanceUntil(PHASE.carSelect);
+  await game.advance(60);
+  await game.tap("Enter");
+  await game.advanceUntil(PHASE.stageSelect);
+  await game.advance(60);
+  await game.tap("Enter");
+  await game.advanceUntil(PHASE.race);
+  await game.advance();
+  await page.evaluate(() => {
+    const { game, menu, PHASE } = window.gameState;
+    menu.animation = 0;
+    menu.continuesToCarSelect = true;
+    game.phase = PHASE.mainMenu;
+  });
+  await game.advance(2);
+  await expect(page.locator("#multiplayer")).toBeHidden();
+  expect(
+    await page.evaluate(() => window.gameState.menu.continuesToCarSelect),
+  ).toBe(true);
+});

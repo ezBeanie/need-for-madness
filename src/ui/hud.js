@@ -908,6 +908,10 @@ const finishedIn = () => {
   if (newBest.race) {
     return `${time}, a new best!`;
   }
+  // (stages made in the editor keep no best times)
+  if (!best) {
+    return time;
+  }
   return (
     `${time}, best ${formatTime(best.race)}` +
     (newBest.lap ? ", but a new best lap!" : "")

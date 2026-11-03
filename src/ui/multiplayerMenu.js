@@ -5,7 +5,7 @@
 // is ready, and the lobby comes back after it. The main menu opens it, and a button beside
 // the options' gear in the menus a race of the host's can take a guest away from.
 
-import { PHASE, game } from "../core/state.js";
+import { PHASE, RACE_KIND, game, raceSetup } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { saveSetting } from "../core/storage.js";
 import { sharedStageGroups, stageLabel } from "../data/stages.js";
@@ -159,7 +159,10 @@ const showChat = () => {
     log.replaceChildren();
     chatShown = 0;
   }
-  const fresh = chat.lines.slice(chat.lines.length - (chat.count - chatShown));
+  // (more new ones than kept, during a race: the kept ones)
+  const fresh = chat.lines.slice(
+    Math.max(0, chat.lines.length - (chat.count - chatShown)),
+  );
   if (fresh.length == 0) {
     return;
   }
@@ -395,7 +398,9 @@ export const placeMultiplayerButton = () => {
     button.hidden = hidden;
   }
   if (away) {
-    raced ||= link.role != ROLE.none && game.phase == PHASE.race;
+    raced ||=
+      game.phase == PHASE.race &&
+      (game.humans.length > 0 || raceSetup.kind == RACE_KIND.together);
     dialog.close?.();
     return;
   }

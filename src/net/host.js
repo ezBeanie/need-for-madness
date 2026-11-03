@@ -4,7 +4,14 @@
 
 import { carStats } from "../data/carStats.js";
 import { random, seededRandom } from "../core/random.js";
-import { MAX_CARS, MODE, PHASE, RACE_KIND, game } from "../core/state.js";
+import {
+  MAX_CARS,
+  MODE,
+  PHASE,
+  RACE_KIND,
+  game,
+  raceSetup,
+} from "../core/state.js";
 import { STAGE_COUNT } from "../data/stages.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
 import { receiveChat, clearChat } from "./chat.js";
@@ -145,9 +152,11 @@ export const hostTick = () => {
   host.guests = host.guests.filter(
     ({ quietTicks }) => quietTicks < GUEST_GONE_TICKS,
   );
-  // (without guests and bots, the host races as alone, with the opponents of the stage)
+  // (without guests, the host races as alone, with the opponents of the stage, unless it
+  // starts the room's race from the lobby with bots)
   const guests = link.role == ROLE.host ? waitingGuests() : [];
-  const bots = link.role == ROLE.host ? host.bots : [];
+  const bots =
+    guests.length > 0 || raceSetup.kind == RACE_KIND.together ? host.bots : [];
   field.roomCarTypes =
     guests.length + bots.length > 0
       ? [...guests.map(({ carType }) => carType), ...bots]
@@ -189,7 +198,8 @@ export const startHostedRace = () => {
   if (
     link.role != ROLE.host ||
     guests.length == 0 ||
-    game.mode != MODE.championship
+    game.mode != MODE.championship ||
+    game.carCount == 1
   ) {
     game.humans = [];
     return;

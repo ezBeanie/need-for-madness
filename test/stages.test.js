@@ -155,21 +155,28 @@ test("a rock pile has the original's shape and colours", () => {
   ).toEqual(originalPile.colors);
 });
 
-test("the stage select opens again on the original's stage last played, not on this game's last open", async () => {
-  const { openCarSelect } = await import("./harness/race.js");
-  const { PHASE } = await import("../src/core/state.js");
-  const { ctx, key, step, stepUntil } = await openCarSelect();
-  ctx.game.unlocked = 17;
-  ctx.track.stage = 30;
-  for (let i = 0; i < 60; i++) {
+// (the campaign, which races this game's stages only, opens on its newest)
+for (const [kind, stage] of [
+  ["quickRace", 30],
+  ["campaign", 4],
+]) {
+  test(`after the original's stage 30, the stage select of a ${kind} opens on stage ${stage}`, async () => {
+    const { openCarSelect } = await import("./harness/race.js");
+    const { PHASE } = await import("../src/core/state.js");
+    const { ctx, key, step, stepUntil } = await openCarSelect();
+    ctx.career.progress = 4;
+    ctx.chooseRaceKind(ctx.RACE_KIND[kind]);
+    ctx.track.stage = 30;
+    for (let i = 0; i < 60; i++) {
+      step();
+    }
+    key(13, true);
     step();
-  }
-  key(13, true);
-  step();
-  key(13, false);
-  stepUntil(() => ctx.game.phase === PHASE.stageSelect, 300, "stage select");
-  expect(ctx.track.stage).toBe(30);
-});
+    key(13, false);
+    stepUntil(() => ctx.game.phase === PHASE.stageSelect, 300, "stage select");
+    expect(ctx.track.stage).toBe(stage);
+  });
+}
 
 test("this game's stages play their own music in the classic look too", async () => {
   const { startRace } = await import("./harness/race.js");

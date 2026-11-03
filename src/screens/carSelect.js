@@ -10,7 +10,7 @@ import {
   startClassicCarSelect,
 } from "../classic/carSelect.js";
 import { random } from "../core/random.js";
-import { MODE, PHASE, game } from "../core/state.js";
+import { MODE, PHASE, RACE_KIND, game, raceSetup } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
 import { CAR, carStats } from "../data/carStats.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
@@ -286,11 +286,26 @@ const switchCar = () => {
 // (with the next tick, which poses it first), from lower down, so the cars go by as fast
 // as they are asked for.
 let switchesAsked = [];
+// the car browsed to so far: the one shown, after the switches still to come
+const carAsked = () => {
+  const coming =
+    showcase.motion == SHOWCASE.flyingOut
+      ? [switchingTo, ...switchesAsked]
+      : switchesAsked;
+  return coming.reduce((type, to) => type + to, game.carTypes[0]);
+};
 const flyOut = (to) => {
   if (showcase.motion == SHOWCASE.hovering) {
     switchingTo = to;
     showcase.motion = SHOWCASE.flyingOut;
-  } else {
+    return;
+  }
+  // (no further than the first and the last car)
+  const asked = carAsked();
+  if (
+    (to == SWITCH.next && asked < LAST_CAR) ||
+    (to == SWITCH.previous && asked > FIRST_CAR)
+  ) {
     switchesAsked.push(to);
   }
 };
@@ -716,9 +731,13 @@ const classicTick = () => {
 
 const openStageSelect = () => {
   saveSetting("carsel", game.carTypes[0]);
-  // the original's stages and the player's own are all open; of this game's own only those won
-  if (ownStage(track.stage) && track.stage > game.unlocked) {
-    track.stage = game.unlocked;
+  // the original's stages and the player's own are all open; of this game's own only those
+  // won, and the campaign races no others
+  if (
+    (ownStage(track.stage) && track.stage > game.unlocked) ||
+    (!ownStage(track.stage) && raceSetup.kind == RACE_KIND.campaign)
+  ) {
+    track.stage = Math.min(game.unlocked, LAST_STAGE);
   }
   // switch mode needs all stages won
   if (game.unlocked != LAST_STAGE && game.mode == MODE.switchCars) {

@@ -843,6 +843,8 @@ const drawPracticeButton = (colors) => {
 
 const practise = () => {
   game.carCount = 1;
+  // (switch mode, from a race before, has no place alone)
+  game.mode = MODE.championship;
   pauseMenuMusic();
   flashIntoRace();
 };
