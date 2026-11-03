@@ -89,6 +89,7 @@ import { guest, guestWaitingTick, startGuesting } from "./net/guest.js";
 import { spectateTick, watchingOthers } from "./race/spectate.js";
 import { otherEnginesTick } from "./audio/otherEngines.js";
 import { voiceTick } from "./net/voice.js";
+import { forgetRoomCars } from "./net/roomCars.js";
 import { ROLE, link } from "./net/link.js";
 import {
   OUT_OF_SYNC,
@@ -239,9 +240,16 @@ const TICKS = [
 
 let musicPaused = false;
 
+// the screens between races
+const MENU_PHASES = [PHASE.mainMenu, PHASE.carSelect, PHASE.stageSelect];
+
 export function runTick() {
   fitToWindow();
   pollGamepads();
+  // (a guest learns of the next race of the room here, a host as it starts)
+  if (MENU_PHASES.includes(game.phase)) {
+    forgetRoomCars();
+  }
   guestWaitingTick();
   hostTick();
   lockstepTick();

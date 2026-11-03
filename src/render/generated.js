@@ -167,12 +167,19 @@ export function raceCarTextures() {
         shared = true;
       }
     }
+    // (a copy of a race before goes, with what it holds on the GPU)
+    const old = racers[c].body;
+    if (old?.copied) {
+      gl.deleteTexture(old.texture[1]);
+      gl.deleteBuffer(old.vbuf);
+    }
     racers[c].body = model;
     bodyDamage.repair?.(c);
     const skin = skinOf(c);
     if (shared || skin) {
       racers[c].body = {
         ...model,
+        copied: true,
         texture: [model.texture[0], null],
         vbuf: null,
         // (fixcar makes the race texture of these, the glass kept)

@@ -2,9 +2,11 @@ import { createHmac } from "node:crypto";
 import { expect, test } from "vitest";
 import { iceServers } from "../server/ice.js";
 
-test("without a TURN server the games find each other only in the same network", () => {
+test("without a host the games find each other only in the same network, without a secret by STUN alone", () => {
   expect(iceServers(undefined, "secret")).toEqual([]);
-  expect(iceServers("turn.example", undefined)).toEqual([]);
+  expect(iceServers("turn.example", undefined)).toEqual([
+    { urls: "stun:turn.example:3478" },
+  ]);
 });
 
 // coturn's use-auth-secret: the username is when the login runs out, the password its

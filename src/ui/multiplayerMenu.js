@@ -209,6 +209,13 @@ const showChoices = () => {
   const talkButton = element("lobbyTalk");
   talkButton.hidden = !voice.on;
   talkButton.setAttribute("aria-pressed", voice.talking ? "true" : "false");
+  const hint = voice.on
+    ? "Hold to talk, or tap to talk until you tap again. In a race hold P."
+    : "Voice chat is off. Switch it on in the options to talk with the others.";
+  const talkHint = element("lobbyTalkHint");
+  if (talkHint.textContent != hint) {
+    talkHint.textContent = hint;
+  }
   const ready = element("lobbyReady");
   ready.hidden = isHost;
   ready.setAttribute("aria-pressed", guest.ready ? "true" : "false");
@@ -435,23 +442,62 @@ export const installMultiplayerMenu = () => {
     }
     tellHost();
   });
-  // (held: pressed with the mouse, a finger or the space bar)
+  // Talk: held, the player talks while it is down; tapped, until tapped again (screen
+  // readers and Enter tap it). The mouse, a finger and the space bar hold it.
   const talkButton = element("lobbyTalk");
-  talkButton.addEventListener("pointerdown", () => talk(true));
-  for (const up of ["pointerup", "pointercancel", "pointerleave"]) {
-    talkButton.addEventListener(up, () => talk(false));
-  }
-  talkButton.addEventListener("keydown", (event) => {
-    if (event.key == " " && !event.repeat) {
-      event.preventDefault();
+  const HOLD_MS = 300;
+  let pressedAt = null;
+  const press = () => {
+    if (pressedAt === null && !voice.talking) {
+      pressedAt = performance.now();
       talk(true);
     }
+  };
+  const release = () => {
+    if (pressedAt === null) {
+      talk(false);
+      return;
+    }
+    // (a tap keeps talking)
+    if (performance.now() - pressedAt >= HOLD_MS) {
+      talk(false);
+    }
+    pressedAt = null;
+  };
+  talkButton.addEventListener("pointerdown", press);
+  talkButton.addEventListener("pointerup", release);
+  talkButton.addEventListener("pointercancel", release);
+  talkButton.addEventListener("pointerleave", () => {
+    if (pressedAt !== null) {
+      pressedAt = null;
+      talk(false);
+    }
   });
-  talkButton.addEventListener(
-    "keyup",
-    (event) => event.key == " " && talk(false),
-  );
-  talkButton.addEventListener("blur", () => talk(false));
+  talkButton.addEventListener("keydown", (event) => {
+    if (event.key == " ") {
+      event.preventDefault();
+      if (!event.repeat) {
+        press();
+      }
+    }
+  });
+  talkButton.addEventListener("keyup", (event) => {
+    if (event.key == " ") {
+      // (no click after it: the key did its work)
+      event.preventDefault();
+      release();
+    }
+  });
+  // (Enter, and a screen reader's activation, click without a pointer)
+  talkButton.addEventListener("click", (event) => {
+    if (event.detail == 0 && pressedAt === null) {
+      talk(!voice.talking);
+    }
+  });
+  talkButton.addEventListener("blur", () => {
+    pressedAt = null;
+    talk(false);
+  });
   element("lobbyStage").addEventListener("change", (event) =>
     chooseRoomStage(Number(event.target.value)),
   );

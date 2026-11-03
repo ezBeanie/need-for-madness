@@ -347,11 +347,11 @@ const classicBuffer = (file) => {
 };
 
 // A sound's way through a panner to out, from the side (-1 left .. 1 right) and front
-// (-1 behind .. 1 before) given, heard as from there (HRTF: before and behind too); its
-// loudness is the caller's.
-export const placedIn = (context, out) => {
+// (-1 behind .. 1 before) given; its loudness is the caller's. HRTF is heard before and
+// behind too, but costs: the many short sounds of a pile-up take the plain panning.
+export const placedIn = (context, out, model = "HRTF") => {
   const panner = context.createPanner();
-  panner.panningModel = "HRTF";
+  panner.panningModel = model;
   panner.distanceModel = "linear";
   panner.rolloffFactor = 0;
   panner.connect(out);
@@ -375,7 +375,7 @@ const playBuffer = (buffer, rate, place = null) => {
   if (place) {
     const volume = contexts.sounds.createGain();
     volume.gain.value = place.volume;
-    const panner = placedIn(contexts.sounds, contexts.soundsOut);
+    const panner = placedIn(contexts.sounds, contexts.soundsOut, "equalpower");
     placeSound(panner, place.side, place.front);
     source.connect(volume).connect(panner);
   } else {

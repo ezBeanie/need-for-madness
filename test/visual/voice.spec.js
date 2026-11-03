@@ -37,15 +37,25 @@ const voiceOf = (page) =>
 
 test("two games of a room hear each other while one holds its talk key, and not otherwise", async ({
   context,
-}) => {
+}, testInfo) => {
   const games = [];
-  for (const url of ["/?host=voice", "/?join=voice"]) {
+  // (a room of its own, also for a test run again beside itself)
+  const room = `voice-${testInfo.repeatEachIndex}-${testInfo.retry}`;
+  // (the voice chat is off until switched on: the guest's still is)
+  for (const [url, voiceChat] of [
+    [`/?host=${room}`, "1"],
+    [`/?join=${room}`, "0"],
+  ]) {
     const page = await context.newPage();
     // (the tests keep the game silent; the voices need Web Audio, see src/net/voice.js)
     await page.addInitScript(() => {
       window.keptAudioContext = window.AudioContext;
     });
-    const game = await openGame(page, { storage: { carsel: "5" }, url });
+    // (the tabs share their storage: each says its own)
+    const game = await openGame(page, {
+      storage: { carsel: "5", voiceChat },
+      url,
+    });
     await page.evaluate(() => {
       window.AudioContext = window.keptAudioContext;
     });
@@ -53,6 +63,11 @@ test("two games of a room hear each other while one holds its talk key, and not 
     games.push({ game, page });
   }
   const [host, guest] = games;
+  await advanceBoth(games, 40);
+  expect((await voiceOf(guest.page)).peers).toBe(0);
+  expect((await voiceOf(host.page)).state).not.toBe("connected");
+  // switched on later, the host's offer, ignored before, is made anew
+  await guest.page.evaluate(() => window.gameState.toggleVoice());
   await expect
     .poll(
       async () => {
@@ -61,7 +76,7 @@ test("two games of a room hear each other while one holds its talk key, and not 
           ({ state, heard }) => `${state} ${heard}`,
         );
       },
-      { timeout: 30_000 },
+      { timeout: 60_000 },
     )
     .toEqual(["connected true", "connected true"]);
   // silent until the guest talks
@@ -77,7 +92,11 @@ test("two games of a room hear each other while one holds its talk key, and not 
       { timeout: 15_000 },
     )
     .toBe(true);
-  await guest.page.evaluate(() => window.gameState.talk(false));
+  // (the key let go where the game does not hear it: leaving the window lets go of it)
+  await guest.page.evaluate(() => window.dispatchEvent(new Event("blur")));
+  expect(await guest.page.evaluate(() => window.gameState.voice.talking)).toBe(
+    false,
+  );
   await expect
     .poll(
       async () => {

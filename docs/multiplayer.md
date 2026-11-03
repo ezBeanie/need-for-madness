@@ -270,6 +270,9 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
   IP-Adressen (so steht es auch in den Optionen).
 - STUN/TURN: Das Relay gibt unter `/net/ice` die Server und einen Tag lang gültige
   TURN-Zugangsdaten heraus (`server/ice.js`, coturn mit `use-auth-secret`). Dazu braucht das
-  Relay `TURN_HOST` und `TURN_SECRET` in seiner Env-Datei auf beanie; ohne sie finden sich die
-  Spiele nur im selben Netz. coturn läuft als eigener Container auf beanie, Port 3478 (UDP und
-  TCP) und ein Bereich für die Weiterleitung müssen im Router freigegeben sein.
+  Relay `TURN_HOST` (nur STUN) und für TURN zusätzlich `TURN_SECRET` in seiner Env-Datei auf
+  beanie; ohne `TURN_HOST` finden sich die Spiele nur im selben Netz. coturn läuft als eigener
+  Container auf beanie; Port 3478 (UDP und TCP) muss im Router freigegeben sein, für TURN
+  zusätzlich ein Portbereich für die Weiterleitung. STUN allein reicht in den meisten
+  Heimnetzen; TURN braucht es für Mobilfunk und strenge Firewalls, und coturn muss dafür die
+  öffentliche Adresse kennen, die bei beanie wechselt (DynDNS).

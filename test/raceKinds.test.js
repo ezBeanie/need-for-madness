@@ -95,3 +95,15 @@ test("a host's bots race only the room's races, and its guests no race of one al
   ctx.startHostedRace();
   expect(ctx.game.humans).toEqual([]);
 });
+
+// (a race of a room leaves its players in game.humans: its cars' names and paints must not
+// pass to the next race, which may be no room's)
+test("a room race's names and paints are forgotten back in the menus", async () => {
+  const { ctx, step } = await openMainMenu();
+  ctx.setRoomCars(["Hosti", "Gasti"], [1, 5]);
+  ctx.game.humans = [0, 1];
+  expect(ctx.skinOf(1)).toBe(5);
+  step();
+  expect(ctx.skinOf(1)).toBe(0);
+  expect(ctx.nameOfCar(1)).toBe(ctx.carStats.names[ctx.game.carTypes[1]]);
+});

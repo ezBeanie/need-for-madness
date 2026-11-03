@@ -1,7 +1,7 @@
 // The race in the classic look: the original game's own models drawn the original's way
 // (see draw.js) onto a canvas of its own, 450 pixels high, where the modern look's 3D
 // canvas is. The game logic, the camera and the HUD stay the same.
-import { PHASE, game } from "../core/state.js";
+import { MAX_CARS, PHASE, game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { raceEvents } from "../race/events.js";
 import { car, racers } from "../race/racers.js";
@@ -445,10 +445,10 @@ export const drawClassicCar = (
 };
 
 // A car on a card of the lobby (see render/carPreviews.js), w x h into what is bound: each
-// type and skin its own copy of the model, after the cars of a race and the car select's.
+// type and skin its own copy of the model, after the cars of any race and the car select's.
 export const drawClassicPreview = (instance, type, skin, w, h) => {
   startFrame(NO_STAGE, w, h);
-  const slot = game.carCount + 1 + type * SKINS.length + skin;
+  const slot = MAX_CARS + 1 + type * SKINS.length + skin;
   const object = carObject(slot, instance, type, skin);
   if (object) {
     object.shadowBelow = true;

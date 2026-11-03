@@ -40,9 +40,14 @@ export const setOwnSkin = (skin) => {
   }
 };
 
-// (a host's race with guests, from the lobby or not, or the lobby's with bots alone)
+// (a host's race with guests, from the lobby or not, or the lobby's with bots alone; the
+// cars are told with its start, and forgotten back in the menus, see forgetRoomCars)
 export const inRoomRace = () =>
-  game.humans.length > 0 || raceSetup.kind == RACE_KIND.together;
+  roomCars.names.length > 0 &&
+  (game.humans.length > 0 || raceSetup.kind == RACE_KIND.together);
+
+// Back in the menus: the next race may be no room's.
+export const forgetRoomCars = () => setRoomCars([], []);
 
 export const setRoomCars = (names, skins) => {
   roomCars.names = Array.isArray(names)

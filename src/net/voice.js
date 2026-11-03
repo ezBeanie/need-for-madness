@@ -1,8 +1,9 @@
-// The room's voice chat: every two games of a room talk directly (WebRTC), set up through
-// the relay's messages; the relay only tells them how to find each other (ICE_PATH: the
-// STUN and TURN servers, see server/ice.js). A player is heard only while holding the talk
-// key (push to talk: the microphone is asked for at the first press). In a race each voice
-// comes from its car, quieter the farther away; in the lobby all are heard alike.
+// The room's voice chat, off until the player switches it on (the games of a room then learn
+// each other's internet address): every two games of a room talk directly (WebRTC), set up
+// through the relay's messages; the relay only tells them how to find each other
+// (ICE_PATH: the STUN and TURN servers, see server/ice.js). A player is heard only while
+// talking (push to talk: the microphone is asked for at the first press). In a race each
+// voice comes from its car, quieter the farther away; in the lobby all are heard alike.
 
 import { audio, placeSound, placedIn } from "../audio/audio.js";
 import { loadSetting, saveSetting } from "../core/storage.js";
@@ -16,13 +17,17 @@ const ICE_PATH = "/net/ice";
 // how far another car's voice is heard: fully up to NEAR, fading out at FAR
 const NEAR = 300;
 const FAR = 4000;
-// how loud a voice must be to show its player talking
+// how loud a voice must be to show its player talking, and for how long after (ms)
 const TALKING = 0.02;
+const TALKING_AFTER_MS = 600;
+// a voice not connected after this many ticks (the other game ignored the offer, its voice
+// off then) is set up anew
+const RETRY_TICKS = 150;
 
 // on: the voice chat at all (an option); talking: the talk key held; microphone: whether
 // the player allowed it (null: not asked yet); peers: by game id
 export const voice = {
-  on: loadSetting("voiceChat") != 0,
+  on: loadSetting("voiceChat") == 1,
   talking: false,
   microphone: null,
   peers: new Map(),
@@ -61,9 +66,13 @@ const hear = (peer, stream) => {
   peer.gain = ctx.createGain();
   peer.panner = placedIn(ctx, out);
   peer.level = ctx.createAnalyser();
-  peer.level.fftSize = 256;
+  peer.level.fftSize = 2048;
+  peer.samples = new Float32Array(peer.level.fftSize);
   peer.source.connect(peer.level);
   peer.source.connect(peer.gain).connect(peer.panner);
+  // (a context made outside a click starts suspended in Safari: see the listeners below)
+  ctx.resume().catch(() => {});
+  peer.element.play().catch(() => {});
 };
 
 const signal = (to, data) => link.send({ type: MESSAGE.voice, to, ...data });
@@ -97,7 +106,8 @@ const connect = async (id) => {
     return voice.peers.get(id);
   }
   const connection = new RTCPeerConnection({ iceServers: servers });
-  const peer = { connection, heardTicks: 0 };
+  // ticks since set up; the candidates that came before the other's description
+  const peer = { connection, ticks: 0, early: [] };
   voice.peers.set(id, peer);
   // (the offer sends from the start, silent until the microphone comes: no new offer
   // then; the answer sends on what the offer brought, see receiveVoice)
@@ -114,8 +124,12 @@ const connect = async (id) => {
     }
   };
   if (peer.sender) {
-    await connection.setLocalDescription(await connection.createOffer());
-    signal(id, { description: connection.localDescription.toJSON() });
+    try {
+      await connection.setLocalDescription(await connection.createOffer());
+      signal(id, { description: connection.localDescription.toJSON() });
+    } catch {
+      // (closed meanwhile: the game left the room, or the other did)
+    }
   }
   return peer;
 };
@@ -134,15 +148,31 @@ export const receiveVoice = async (message) => {
   ) {
     return;
   }
+  // (an offer to a voice set up before: the other game set its own up anew)
+  if (
+    message.description?.type == "offer" &&
+    voice.peers.get(message.from)?.connection.remoteDescription
+  ) {
+    closePeer(message.from);
+  }
   const peer = voice.peers.get(message.from) ?? (await connect(message.from));
   if (!peer) {
     return;
   }
-  peer.heardTicks = 0;
   const { connection } = peer;
   try {
+    if (message.candidate && typeof message.candidate == "object") {
+      if (connection.remoteDescription) {
+        await connection.addIceCandidate(message.candidate);
+      } else {
+        peer.early.push(message.candidate);
+      }
+    }
     if (isDescription(message.description)) {
       await connection.setRemoteDescription(message.description);
+      for (const candidate of peer.early.splice(0)) {
+        await connection.addIceCandidate(candidate);
+      }
       if (message.description.type == "offer") {
         const [transceiver] = connection.getTransceivers();
         transceiver.direction = "sendrecv";
@@ -152,9 +182,6 @@ export const receiveVoice = async (message) => {
           description: connection.localDescription.toJSON(),
         });
       }
-    }
-    if (message.candidate && typeof message.candidate == "object") {
-      await connection.addIceCandidate(message.candidate);
     }
   } catch {
     // (a broken message from another game: its voice stays away)
@@ -171,6 +198,12 @@ const openMicrophone = () =>
       audio: { echoCancellation: true, noiseSuppression: true },
     })
     .then((stream) => {
+      // (let go of the key, or switched off, while the browser asked)
+      if (!voice.on || link.role == ROLE.none) {
+        stream.getTracks().forEach((given) => given.stop());
+        asking = null;
+        return;
+      }
       [track] = stream.getAudioTracks();
       track.enabled = voice.talking;
       voice.microphone = true;
@@ -182,15 +215,28 @@ const openMicrophone = () =>
       voice.microphone = false;
     }));
 
+// The microphone given back (the browser stops showing it in use), once the voice chat is
+// off or the room left; the next talk asks for it again.
+const closeMicrophone = () => {
+  track?.stop();
+  track = null;
+  asking = null;
+  for (const peer of voice.peers.values()) {
+    peer.sender?.replaceTrack(null);
+  }
+};
+
 export const toggleVoice = () => {
   voice.on = !voice.on;
   saveSetting("voiceChat", voice.on ? 1 : 0);
   if (!voice.on) {
     talk(false);
+    closeMicrophone();
   }
 };
 
-// The talk key, pressed or let go.
+// The talk key, pressed or let go. (A key let go in another window, or in a dialog the game
+// leaves keys to, never comes: leaving the page lets go of it too.)
 export const talk = (pressed) => {
   voice.talking = pressed && voice.on && link.role != ROLE.none;
   if (voice.talking && !track && navigator.mediaDevices) {
@@ -199,22 +245,42 @@ export const talk = (pressed) => {
   if (track) {
     track.enabled = voice.talking;
   }
-  context?.resume();
+  context?.resume().catch(() => {});
 };
+
+globalThis.addEventListener?.("blur", () => talk(false));
+globalThis.document?.addEventListener?.("visibilitychange", () => talk(false));
+globalThis.addEventListener?.("keyup", (event) => {
+  if (event.code == "KeyP") {
+    talk(false);
+  }
+});
+// (Safari lets a context play only after a click or a key)
+globalThis.addEventListener?.("pointerdown", () =>
+  context?.resume().catch(() => {}),
+);
 
 // whether the player of game id is heard talking now
 export const isTalking = (id) => {
-  const level = voice.peers.get(id)?.level;
-  if (!level) {
-    return false;
+  const loudAt = voice.peers.get(id)?.loudAt;
+  return loudAt !== undefined && performance.now() - loudAt < TALKING_AFTER_MS;
+};
+
+// Every tick: when each voice was last loud.
+const listen = () => {
+  for (const peer of voice.peers.values()) {
+    if (!peer.level) {
+      continue;
+    }
+    peer.level.getFloatTimeDomainData(peer.samples);
+    let sum = 0;
+    for (let i = 0; i < peer.samples.length; i++) {
+      sum += peer.samples[i] * peer.samples[i];
+    }
+    if (Math.sqrt(sum / peer.samples.length) > TALKING) {
+      peer.loudAt = performance.now();
+    }
   }
-  const samples = new Float32Array(level.fftSize);
-  level.getFloatTimeDomainData(samples);
-  let sum = 0;
-  for (const sample of samples) {
-    sum += sample * sample;
-  }
-  return Math.sqrt(sum / samples.length) > TALKING;
 };
 
 // Each voice from its car in a race, quieter the farther; in the lobby all alike.
@@ -238,14 +304,20 @@ const placeVoices = () => {
 
 // Every tick: a voice for every other game in the room, none for those gone or when off.
 export const voiceTick = (playerIds) => {
-  const wanted =
-    voice.on && link.role != ROLE.none && link.open
-      ? new Set(others(playerIds))
-      : new Set();
-  for (const id of [...voice.peers.keys()]) {
-    if (!wanted.has(id)) {
+  const inRoom = voice.on && link.role != ROLE.none;
+  const wanted = inRoom && link.open ? new Set(others(playerIds)) : new Set();
+  for (const [id, peer] of [...voice.peers]) {
+    peer.ticks++;
+    const stuck =
+      peer.ticks > RETRY_TICKS &&
+      peer.connection.connectionState != "connected";
+    if (!wanted.has(id) || stuck) {
       closePeer(id);
     }
+  }
+  if (!inRoom && track) {
+    talk(false);
+    closeMicrophone();
   }
   for (const id of wanted) {
     // (the smaller id offers; the other waits to be asked)
@@ -254,4 +326,5 @@ export const voiceTick = (playerIds) => {
     }
   }
   placeVoices();
+  listen();
 };
