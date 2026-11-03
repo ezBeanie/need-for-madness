@@ -1,15 +1,16 @@
 import { createServer } from "node:http";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { WebSocket } from "ws";
-import { ROOM_FULL, attachRelay } from "../server/relay.js";
+import { ROOM_FULL, answerRooms, attachRelay } from "../server/relay.js";
 
 let server;
 let url;
+let report;
 const sockets = [];
 
 beforeEach(async () => {
   server = createServer();
-  attachRelay(server);
+  report = attachRelay(server);
   await new Promise((resolve) => server.listen(0, resolve));
   url = `ws://localhost:${server.address().port}`;
 });
@@ -20,9 +21,9 @@ afterEach(async () => {
 });
 
 // A game in a room, with every message it gets.
-const enter = (path) =>
+const enter = (path, headers) =>
   new Promise((resolve, reject) => {
-    const socket = new WebSocket(url + path);
+    const socket = new WebSocket(url + path, { headers });
     sockets.push(socket);
     socket.received = [];
     socket.on("message", (data) => socket.received.push(String(data)));
@@ -30,7 +31,8 @@ const enter = (path) =>
     socket.on("error", reject);
   });
 
-const delivered = () => new Promise((resolve) => setTimeout(resolve, 50));
+// (generous: under a full parallel run the sockets answer late)
+const delivered = () => new Promise((resolve) => setTimeout(resolve, 200));
 
 test("a message goes to the other games of its room, and only there", async () => {
   const host = await enter("/net?room=race-1");
@@ -70,4 +72,53 @@ test("a game sending a broken message is dropped, and the relay goes on", async 
   await delivered();
   expect(guest.received).toEqual(["still there"]);
   expect(broken.readyState).not.toBe(WebSocket.OPEN);
+});
+
+test("the rooms report counts each room's games and tells racing ones, without names", async () => {
+  expect(report().rooms).toEqual([]);
+  const host = await enter("/net?room=secret-1");
+  await enter("/net?room=secret-1");
+  await enter("/net?room=secret-2");
+  host.send("keys");
+  await delivered();
+  expect(
+    report().rooms.map(({ games, racing }) => ({ games, racing })),
+  ).toEqual([
+    { games: 2, racing: true },
+    { games: 1, racing: false },
+  ]);
+  let body = "";
+  answerRooms(report)(null, {
+    writeHead: () => {},
+    end: (text) => (body = text),
+  });
+  expect(body).not.toContain("secret");
+  expect(JSON.parse(body).rooms).toHaveLength(2);
+});
+
+test("a room's host is told by the network of the first game in it, never the whole address", async () => {
+  await enter("/net?room=hosted", { "X-Real-IP": "2a02:8071:1234:5678::9" });
+  await enter("/net?room=hosted", { "X-Real-IP": "89.12.34.56" });
+  await delivered();
+  expect(report().rooms[0].host).toBe("2a02:8071:1234::");
+  expect(JSON.stringify(report())).not.toContain("5678");
+});
+
+test("a room no game is left in goes from the report into the past ones", async () => {
+  const host = await enter("/net?room=short", { "X-Real-IP": "89.12.34.56" });
+  const guest = await enter("/net?room=short");
+  host.send("join");
+  await delivered();
+  host.close();
+  guest.close();
+  await delivered();
+  const { rooms, past } = report();
+  expect(rooms).toEqual([]);
+  expect(past).toHaveLength(1);
+  expect(past[0]).toMatchObject({
+    host: "89.12.x.x",
+    mostGames: 2,
+    raced: false,
+  });
+  expect(past[0].until).toBeGreaterThanOrEqual(past[0].since);
 });

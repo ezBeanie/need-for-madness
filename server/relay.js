@@ -1,10 +1,14 @@
 // The relay between the games of a race (see src/net/link.js): each message a game sends
-// goes to the other games in its room, as it is. It keeps nothing and logs nothing, so no
-// player's address is stored.
+// goes to the other games in its room, as it is. It logs nothing; of a player's address it
+// keeps only the network of a room's host, for the rooms' history (see sessions.js).
 
 import { WebSocket, WebSocketServer } from "ws";
+import { keepSessions, shortAddress } from "./sessions.js";
 
 export const RELAY_PATH = "/net";
+// what the rooms are like right now and were, for lobbies.html: no room names (they let one
+// in) and no whole addresses
+export const ROOMS_PATH = "/net/rooms";
 const ROOM_NAME = /^[a-z0-9-]{1,32}$/i;
 const MOST_IN_ROOM = 8;
 // what a game coming into a full room is closed with, to tell it so (see src/net/link.js)
@@ -17,11 +21,17 @@ const MOST_PER_SECOND = 120;
 // a game this far behind in receiving misses messages instead of piling them up
 const MOST_BUFFERED_BYTES = 1024 * 1024;
 const PING_EVERY_MS = 30_000;
+// games racing send keys all the time, in a lobby they are quiet
+const RACING_IF_HEARD_MS = 3000;
+// a lobby says a few dozen things, a race thirty a second for each game
+const RACED_IF_MESSAGES = 300;
 
 // Lets the http server take the relay's connections; the others (e.g. Vite's own) it
-// leaves alone.
-export const attachRelay = (httpServer) => {
+// leaves alone. Gives back what the rooms are like and were (see answerRooms), the past
+// ones kept in historyFile, if given.
+export const attachRelay = (httpServer, historyFile) => {
   const rooms = new Map();
+  const sessions = keepSessions(historyFile);
   // (the ticks of a race, as JSON, shrink to a fraction compressed)
   const relay = new WebSocketServer({
     noServer: true,
@@ -29,10 +39,19 @@ export const attachRelay = (httpServer) => {
     perMessageDeflate: true,
   });
 
-  const join = (socket, name) => {
-    const room = rooms.get(name) ?? new Set();
+  // (the first game in a room is its host's; the web server in front says whose it is)
+  const join = (socket, name, address) => {
+    const room =
+      rooms.get(name) ??
+      Object.assign(new Set(), {
+        since: Date.now(),
+        host: shortAddress(address),
+        mostGames: 0,
+        messages: 0,
+      });
     rooms.set(name, room);
     room.add(socket);
+    room.mostGames = Math.max(room.mostGames, room.size);
     let second = Date.now();
     let sentThisSecond = 0;
     socket.alive = true;
@@ -49,6 +68,8 @@ export const attachRelay = (httpServer) => {
       if (++sentThisSecond > MOST_PER_SECOND) {
         return;
       }
+      room.heard = now;
+      room.messages++;
       for (const other of room) {
         if (
           other != socket &&
@@ -63,6 +84,13 @@ export const attachRelay = (httpServer) => {
       room.delete(socket);
       if (room.size == 0) {
         rooms.delete(name);
+        sessions.add({
+          since: room.since,
+          until: Date.now(),
+          host: room.host,
+          mostGames: room.mostGames,
+          raced: room.messages >= RACED_IF_MESSAGES,
+        });
       }
     });
   };
@@ -82,7 +110,13 @@ export const attachRelay = (httpServer) => {
     }
     const full = (rooms.get(name)?.size ?? 0) >= MOST_IN_ROOM;
     relay.handleUpgrade(request, socket, head, (ws) =>
-      full ? ws.close(ROOM_FULL, "full") : join(ws, name),
+      full
+        ? ws.close(ROOM_FULL, "full")
+        : join(
+            ws,
+            name,
+            request.headers["x-real-ip"] ?? request.socket.remoteAddress,
+          ),
     );
   });
 
@@ -98,4 +132,26 @@ export const attachRelay = (httpServer) => {
     }
   }, PING_EVERY_MS);
   httpServer.on("close", () => clearInterval(pings));
+
+  return () => {
+    const now = Date.now();
+    return {
+      rooms: [...rooms.values()].map((room) => ({
+        games: room.size,
+        since: room.since,
+        host: room.host,
+        racing: now - (room.heard ?? 0) < RACING_IF_HEARD_MS,
+      })),
+      past: sessions.past(),
+    };
+  };
+};
+
+// The answer to a request for ROOMS_PATH, from what attachRelay gave back.
+export const answerRooms = (report) => (request, response) => {
+  response.writeHead(200, {
+    "Content-Type": "application/json",
+    "Cache-Control": "no-store",
+  });
+  response.end(JSON.stringify({ now: Date.now(), ...report() }));
 };
