@@ -437,7 +437,9 @@ export const placeMultiplayerButton = () => {
       game.phase == PHASE.race &&
       (game.humans.length > 0 || raceSetup.kind == RACE_KIND.together);
     dialog.close?.();
+    // (a race lights its stage: the cards need the car select's light again after it)
     previews.root = null;
+    previews.lit = false;
     return;
   }
   if (raced && game.phase == PHASE.mainMenu) {

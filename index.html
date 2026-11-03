@@ -99,8 +99,9 @@ src: url(data/verdana.ttf);
 .view .go, .view .back, .view .go:hover, .view .back:hover { justify-content: center; background: linear-gradient(90deg, #FF3D01, #FFB401); }
 .view .go[aria-pressed="true"] { background: linear-gradient(90deg, #0FA84A, #5FE38A); }
 .view button:disabled, .view button:disabled:hover { filter: none; opacity: 1; background: rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.75); }
-/* (an outline would be cut off with the corners: the focused button turns white) */
-.view button:focus-visible { outline: none; background: #ffffff; }
+/* (an outline would be cut off with the corners: the focused button turns white, also
+   pressed or hovered) */
+.view button:focus-visible, .view .go:focus-visible, .view .back:focus-visible { outline: none; background: #ffffff; }
 .view .back { width: auto; margin-left: auto; padding: 8px 36px; }
 .view .row { display: flex; gap: 8px; }
 .view .row input { flex: 1; min-width: 0; }

@@ -111,3 +111,48 @@ test("the lobby shows each player's and bot's car on its card", async ({
   await game.advance();
   expect(await page.evaluate(() => window.gameState.previews.root)).toBeNull();
 });
+
+test("the lobby lights its cars anew after the game was away from the menus", async ({
+  page,
+}) => {
+  const game = await toMainMenu(page);
+  await page.locator("#menuMultiplayer").click();
+  await page.getByRole("button", { name: "Host a race" }).click();
+  await game.advance(2);
+  const MENU_LIGHT = [0, -0.05, 0.6];
+  const tint = () => page.evaluate(() => window.gameState.scene.tint);
+  expect(await tint()).toEqual(MENU_LIGHT);
+  // away (as in a race, which lights its stage), then back in the lobby at once (as the
+  // main menu opens it after a race of the room)
+  await page.evaluate(() => {
+    const s = window.gameState;
+    s.game.phase = s.PHASE.instructions;
+  });
+  await game.advance();
+  await page.evaluate(() => {
+    const s = window.gameState;
+    s.scene.tint = [0.3, 0.3, 0.3];
+    s.game.phase = s.PHASE.mainMenu;
+    s.openMultiplayer();
+  });
+  await game.advance(2);
+  expect(await tint()).toEqual(MENU_LIGHT);
+});
+
+test("the views' buttons show the keyboard's focus also hovered", async ({
+  page,
+}) => {
+  await toMainMenu(page);
+  await page.locator("#menuOptions").click();
+  const back = page.getByRole("button", { name: "Back" }).first();
+  await back.hover();
+  // (by the keyboard, so the focus shows: back from the first switch)
+  await page.locator("#option-toggleLook").focus();
+  await page.keyboard.press("Shift+Tab");
+  await expect(back).toBeFocused();
+  const face = await back.evaluate((button) => {
+    const style = getComputedStyle(button);
+    return [style.backgroundImage, style.backgroundColor];
+  });
+  expect(face).toEqual(["none", "rgb(255, 255, 255)"]);
+});
