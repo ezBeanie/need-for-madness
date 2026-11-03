@@ -89,6 +89,29 @@ export const resetClassicEngine = () => {
 // One tick of the original's engine and air sounds for the player's car. loop(channel,
 // file) keeps a file looping on a channel (null: silent); the engine's loops sound one at
 // a time, and so do the rushes of air.
+// Another car's engine, heard from where it is (see audio/otherEngines.js): the original's
+// loop for how far into its gear the car is, without the player's own engine's waits and
+// rushes of air (which would take the effects' random numbers).
+export const classicEngineFileOf = (car, type) => {
+  const speed = Math.abs(car.speed);
+  const gears = carStats.swits[type];
+  const pedal = (car.u.up && car.speed > 0) || (car.u.down && car.speed < 1);
+  let n = 0;
+  if (pedal && car.grounded && !(car.u.up && car.speed < 1)) {
+    if (car.capsized) {
+      n = 4;
+    } else {
+      const gear = speed <= gears[0] ? 0 : speed <= gears[1] ? 1 : 2;
+      const from = gear == 0 ? 0 : gears[gear - 1];
+      n = Math.min(
+        3,
+        Math.trunc((3 * (speed - from)) / (gears[gear] - from)) + 1,
+      );
+    }
+  }
+  return `${ENGINE[type]}${n}`;
+};
+
 export const classicEngineTick = (car, type, loop) => {
   const engine = (n) =>
     loop("engine", n >= 0 && n <= 4 ? `${ENGINE[type]}${n}` : null);

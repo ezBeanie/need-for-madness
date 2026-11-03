@@ -43,6 +43,32 @@ export const BUTTON = {
   imageThenText: 3,
 };
 
+// Whether the button id, an area of the screen (pixels), is pressed now by a finger, the
+// mouse or its key, and whether it was clicked: pressed and released on it.
+export const pressOn = (id, left, top, width, height) => {
+  let clicked = false;
+  let pressed = buttons.pressedByKey == id;
+  for (let i = 0; i < Math.max(pointer.count, 1); i++) {
+    if (
+      pointer.x[i] > left &&
+      pointer.x[i] < left + width &&
+      pointer.y[i] > top &&
+      pointer.y[i] < top + height
+    ) {
+      if (pointer.down) {
+        buttons.pressedBy[i] = id;
+        pressed = true;
+      } else if (buttons.pressedBy[i] == id) {
+        clicked = true;
+        buttons.pressedBy[i] = 0;
+      }
+    } else if (buttons.pressedBy[i] == id) {
+      buttons.pressedBy[i] = 0;
+    }
+  }
+  return { clicked, pressed };
+};
+
 // Draws a button centered on x with its top at y (width and height in design units) and
 // returns whether it was clicked: pressed and released on it. The face has a gradient of
 // faceTop to faceBottom over a shadow (shadowTop to shadowBottom) that it covers while
@@ -69,29 +95,13 @@ export const drawButton = ({
   height = height * view.scale;
   let faceX = x - width * 0.5 + 5 * view.scale;
   let faceY = y + 4 * view.scale;
-  let clicked = false;
-  let pressed = false;
-  for (let i = 0; i < Math.max(pointer.count, 1); i++) {
-    if (
-      pointer.x[i] > faceX - height * 0.3 &&
-      pointer.x[i] < faceX + width + height * 0.3 &&
-      pointer.y[i] > faceY &&
-      pointer.y[i] < faceY + height
-    ) {
-      if (pointer.down) {
-        buttons.pressedBy[i] = id;
-        pressed = true;
-      } else if (buttons.pressedBy[i] == id) {
-        clicked = true;
-        buttons.pressedBy[i] = 0;
-      }
-    } else if (buttons.pressedBy[i] == id) {
-      buttons.pressedBy[i] = 0;
-    }
-  }
-  if (buttons.pressedByKey == id) {
-    pressed = true;
-  }
+  const { clicked, pressed } = pressOn(
+    id,
+    faceX - height * 0.3,
+    faceY,
+    width + height * 0.6,
+    height,
+  );
   const pulseWidth = pulsing ? buttons.pulseWidth : 2;
   const pulseHeight = pulsing ? buttons.pulseHeight : 0.5;
   const face = (top, bottom) => {

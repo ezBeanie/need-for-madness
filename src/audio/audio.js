@@ -463,15 +463,32 @@ export const startPlacedEngine = (carType) => {
       },
     );
   }
-  if (!placedEngineBuffers[carType]) {
+  return placedLoop(
+    contexts.engines,
+    contexts.enginesOut,
+    placedEngineBuffers[carType],
+  );
+};
+
+// One of the original's engine loops for another car (see startPlacedEngine), on the
+// sound context as the classic look's own engine.
+export const startPlacedClassicLoop = (file) => {
+  if (!contexts || audio.muteSound) {
     return null;
   }
-  const source = contexts.engines.createBufferSource();
-  source.buffer = placedEngineBuffers[carType];
+  return placedLoop(contexts.sounds, contexts.soundsOut, classicBuffer(file));
+};
+
+const placedLoop = (context, out, buffer) => {
+  if (!buffer) {
+    return null;
+  }
+  const source = context.createBufferSource();
+  source.buffer = buffer;
   source.loop = true;
-  const volume = contexts.engines.createGain();
+  const volume = context.createGain();
   volume.gain.value = 0;
-  const panner = placedIn(contexts.engines, contexts.enginesOut);
+  const panner = placedIn(context, out);
   source.connect(volume).connect(panner);
   source.start();
   return { source, volume, panner };

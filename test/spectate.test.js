@@ -8,8 +8,9 @@ const waste = (ctx, c) => {
   ctx.racers[c].damage = ctx.carStats.maxmag[ctx.car[c].typ];
 };
 
-// Racing together (game.humans), the player's car wasted: the camera stays on the wreck a
-// while, then follows the cars still racing, a further one each time the player steers.
+// Racing together (game.humans), the player's car wasted: the camera stays on the wreck
+// until the player chooses to watch, then follows the cars still racing, a further one
+// each time the player steers.
 test("a player whose car is wasted watches the cars still racing", async () => {
   const { ctx, step } = await startRace({ stage: 1, car: 5, cars: 4 });
   ctx.game.humans = [0];
@@ -27,14 +28,13 @@ test("a player whose car is wasted watches the cars still racing", async () => {
   while (!ctx.racers[0].wasted) {
     stepWith();
   }
-  for (let i = 0; i < 30; i++) {
+  for (let i = 0; i < 100; i++) {
     stepWith();
   }
-  // (the wreck first)
+  // (the wreck, until Watch Race)
   expect(ctx.camera.target).toBe(0);
-  for (let i = 0; i < 20; i++) {
-    stepWith();
-  }
+  ctx.startWatching();
+  stepWith();
   expect(ctx.game.phase).toBe(PHASE.race);
   expect(ctx.camera.target).toBe(1);
   stepWith({ right: true });
@@ -61,4 +61,34 @@ test("a player racing alone sees its wreck, not the others", async () => {
     step();
   }
   expect(ctx.camera.target).toBe(0);
+});
+
+test("watching, V switches the cameras, the free one too, which the steering keys fly", async () => {
+  const { ctx, step } = await startRace({ stage: 1, car: 5, cars: 4 });
+  ctx.game.humans = [0];
+  while (ctx.raceEvents.countdown > 0) {
+    step();
+  }
+  waste(ctx, 0);
+  while (!ctx.racers[0].wasted) {
+    step();
+  }
+  ctx.startWatching();
+  step();
+  const modes = [];
+  for (let i = 0; i < 4; i++) {
+    ctx.nextCamera();
+    modes.push(ctx.camera.mode);
+  }
+  expect(modes).toContain(ctx.CAMERA.free);
+  while (ctx.camera.mode != ctx.CAMERA.free) {
+    ctx.nextCamera();
+  }
+  // (steering does not switch the car while flying)
+  const watched = ctx.camera.target;
+  ctx.racers[0].u.right = true;
+  step();
+  ctx.racers[0].u.right = false;
+  step();
+  expect(ctx.camera.target).toBe(watched);
 });
