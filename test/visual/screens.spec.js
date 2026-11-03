@@ -72,7 +72,7 @@ test("screens: the car select and the stage select in the classic look", async (
   await expect.soft(page).toHaveScreenshot("car-select-classic.png");
   // the next car dropping in, its shadow on the floor below it
   await game.tap("ArrowRight");
-  await game.advance(35);
+  await game.advance(25);
   await page.waitForTimeout(100);
   await expect.soft(page).toHaveScreenshot("car-select-classic-dropping.png");
   await game.tap("ArrowLeft");
