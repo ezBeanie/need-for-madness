@@ -16,7 +16,7 @@ const layer = document.getElementById("nameTags");
 // farther than this (the depth of the projection) a car's name is gone
 const FAR = 2500;
 // the name's height above the car's middle, in the view's pixels (720 high) at a depth of 1
-const ABOVE = 2600;
+const ABOVE = 8000;
 
 const tags = [];
 
