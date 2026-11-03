@@ -800,15 +800,15 @@ const drawWatchedCar = () => {
         id,
         x,
         y: 140 * view.scaleY,
-        width: 200,
-        height: 50,
+        width: 110,
+        height: 36,
         faceTop: "#019DFF",
         faceBottom: "#01BAFF",
         shadowTop: "#004A78",
         shadowBottom: "#015777",
         layout: BUTTON.textOnly,
         text,
-        fontSize: 18,
+        fontSize: 14,
         textOpacity: 0.8,
         image: null,
         imageOpacity: 0,
@@ -818,8 +818,8 @@ const drawWatchedCar = () => {
       watchNext(step);
     }
   };
-  watchButton(40, 640 * view.scaleX - 120 * view.scale, "< Before", -1);
-  watchButton(41, 640 * view.scaleX + 120 * view.scale, "Next >", 1);
+  watchButton(40, 640 * view.scaleX - 76 * view.scale, "< Before", -1);
+  watchButton(41, 640 * view.scaleX + 76 * view.scale, "Next >", 1);
 };
 
 // After the race: remembers the unlocked stage, waits for "Continue" (or the handbrake)

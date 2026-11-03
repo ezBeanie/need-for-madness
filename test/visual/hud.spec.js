@@ -125,6 +125,22 @@ test("hud: player wasted", async ({ page }) => {
   await expect.soft(page).toHaveScreenshot("hud-player-wasted.png");
 });
 
+test("hud: watching the race on after a wreck, racing together", async ({
+  page,
+}) => {
+  const game = await racing(page);
+  await set(page, async () => {
+    const s = window.gameState;
+    const { fixcar } = await import("/src/race/physics.js");
+    // (as a race together has it: people drive)
+    s.game.humans = [0];
+    fixcar(0);
+    s.racers[0].damage = 1e9;
+  });
+  await game.advance(80);
+  await expect.soft(page).toHaveScreenshot("hud-watching.png");
+});
+
 test("hud: the minimap", async ({ page }) => {
   await racing(page, 300, { minimap: "1" });
   await expect.soft(page).toHaveScreenshot("hud-minimap.png");

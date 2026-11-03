@@ -258,3 +258,21 @@ test("the menus' music stops a stage's still playing, as after a race left toget
     globalThis.AudioContext.prototype.createBufferSource = createBufferSource;
   }
 });
+
+test("the engine stops in the menus, also after a race left together without the pause", async () => {
+  const { startRace } = await import("./harness/race.js");
+  const { ctx, key, step } = await startRace({ stage: 1, car: 5 });
+  ctx.unlockAudio(true);
+  // (as the stage select loads it)
+  ctx.loadEngine(ctx.game.carTypes[0]);
+  key(38, true);
+  for (let i = 0; i < 400 && !ctx.engine.started; i++) {
+    step();
+  }
+  expect(ctx.engine.started).toBe(true);
+  key(38, false);
+  // (as Leave Race goes: straight to the main menu)
+  ctx.game.phase = ctx.PHASE.mainMenu;
+  step();
+  expect(ctx.engine.started).toBe(false);
+});
