@@ -6,5 +6,5 @@ export const loading = {
   step: 0,
   // loaded so far and in all, in the loading bar's units (fewer files on phones)
   loaded: 500,
-  total: isPhone ? 3777 : 3823,
+  total: isPhone ? 3784 : 3830,
 };
