@@ -10,9 +10,11 @@ import {
   moveAfter,
   newObject,
   onMap,
+  orderPathByPlace,
   placeInOrder,
   problemsOf,
   readEditedStage,
+  reversePath,
   setSetting,
   settingOf,
   shapeOf,
@@ -174,6 +176,25 @@ test("the path's order changes a step at a time or by moving a piece after anoth
   expect(objects).toEqual([b, a, c, tree]);
   expect(moveAfter(objects, 0, 2)).toBe(2);
   expect(objects).toEqual([a, c, b, tree]);
+});
+
+test("the path turns round from the start, or is ordered by where its points lie, the rest staying put", () => {
+  // a square lap: start, then the corners in a muddled order, a tree among them
+  const start = newObject(47, 0, 0, 0);
+  const north = newObject(10, 0, 10000, 0);
+  const corner = newObject(14, 10000, 10000, 0);
+  const east = newObject(10, 10000, 0, 0);
+  const tree = newObject(65, 5000, 5000, 0);
+  const objects = [start, east, tree, north, corner];
+  orderPathByPlace(objects);
+  expect(objects).toEqual([start, east, tree, corner, north]);
+  reversePath(objects);
+  expect(objects).toEqual([start, north, tree, corner, east]);
+  // (no path, nothing to do)
+  const scenery = [tree];
+  reversePath(scenery);
+  orderPathByPlace(scenery);
+  expect(scenery).toEqual([tree]);
 });
 
 test("a fix hoop is no point of the path, the drivers head for it by where it is", () => {

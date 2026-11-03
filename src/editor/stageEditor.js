@@ -18,12 +18,25 @@ import { loadSetting, loadText, saveSetting } from "../core/storage.js";
 import { menu } from "../screens/menuState.js";
 import { loadShapes, shapes } from "./pieceShapes.js";
 import {
+  flightDrag,
+  flightKey,
+  flightPointer,
+  flightTick,
+  flightWheel,
+  showFlight,
+  showStageText,
+} from "./editorFlight.js";
+import { editorView } from "./editorView.js";
+import { piecePreview } from "../render/piecePreview.js";
+import {
   HEIGHTS,
   PATH_KINDS,
   PIECE_GROUPS,
   boxOf,
   copyLook,
   fromOriginal,
+  orderPathByPlace,
+  reversePath,
   isPathPoint,
   moveAfter,
   nameOf,
@@ -153,7 +166,62 @@ const changed = () => {
   showState();
   showSelected();
   drawMap();
+  showIn3D();
 };
+
+// The piece about to be placed, or the one selected, in 3D as it lies on the map.
+const showPreview = () => {
+  const object = editor.placing ?? selected();
+  piecePreview.canvas = element("editorPiecePreview");
+  piecePreview.piece = object?.piece ?? -1;
+  piecePreview.rotation = object?.rotation ?? 0;
+  element("editorPreview").hidden = !object;
+};
+
+// --- the 3D view ---
+
+// What the 3D view shows: the stage as it is, the selected piece standing out (the game's
+// units: the stage file's tenths, x the other way).
+const showIn3D = () => {
+  showStageText(writeEditedStage(editor.stage));
+  const object = selected();
+  editorView.marked =
+    object && object.command != "fix"
+      ? { typ: object.piece, x: -object.x / 10, z: object.z / 10 }
+      : null;
+};
+
+const toggle3D = () => {
+  const shown = !editorView.shown;
+  if (shown) {
+    // (the stage's own number: what it reads from its file depends on it)
+    track.stage = FIRST_OWN_STAGE + editor.current;
+    editor.placing = null;
+    editor.ordering = null;
+    showIn3D();
+  }
+  const start = selected() ?? editor.stage.objects.find(isPathPoint) ?? null;
+  showFlight(shown, start);
+  dialog.classList.toggle("three-d", shown);
+  map.setAttribute(
+    "aria-label",
+    shown ? "The stage in 3D, flown over" : "The stage from above",
+  );
+  showState();
+  drawMap();
+};
+
+// The 3D view, the camera behind the selected piece.
+const seeIn3D = () => {
+  if (editorView.shown) {
+    showFlight(true, selected());
+  } else {
+    toggle3D();
+  }
+};
+
+// Every tick while the editor is open.
+export const stageEditorTick = () => flightTick();
 
 const undoOrRedo = (from, to) => {
   if (from.length == 0) {
@@ -180,6 +248,7 @@ const selected = () => editor.stage.objects[editor.selected];
 const rotateSelected = (degrees) => {
   if (editor.placing) {
     editor.placing.rotation = turned(editor.placing.rotation, degrees);
+    showPreview();
     drawMap();
     return;
   }
@@ -463,6 +532,11 @@ export const drawMap = () => {
     map.height = height;
   }
   draw2D.setTransform(1, 0, 0, 1, 0, 0);
+  // (the 3D view shows through)
+  if (editorView.shown) {
+    draw2D.clearRect(0, 0, map.width, map.height);
+    return;
+  }
   draw2D.fillStyle = "#1c2a1f";
   draw2D.fillRect(0, 0, map.width, map.height);
   drawGrid();
@@ -544,6 +618,10 @@ const placeNear = (object, x, z, others) => {
 const onPointerDown = (event) => {
   map.focus();
   map.setPointerCapture(event.pointerId);
+  if (editorView.shown) {
+    flightPointer(event, true);
+    return;
+  }
   const at = pointerOnMap(event);
   pointers.set(event.pointerId, at);
   if (pointers.size == 2) {
@@ -593,6 +671,10 @@ const onPointerDown = (event) => {
 };
 
 const onPointerMove = (event) => {
+  if (editorView.shown) {
+    flightDrag(event);
+    return;
+  }
   const at = pointerOnMap(event);
   const before = pointers.get(event.pointerId);
   if (before) {
@@ -643,6 +725,10 @@ const onPointerMove = (event) => {
 };
 
 const onPointerUp = (event) => {
+  if (editorView.shown) {
+    flightPointer(event, false);
+    return;
+  }
   pointers.delete(event.pointerId);
   if (drag?.piece >= 0 && drag.moved) {
     editor.undo.push(drag.from);
@@ -656,6 +742,10 @@ const onPointerUp = (event) => {
 
 const onWheel = (event) => {
   event.preventDefault();
+  if (editorView.shown) {
+    flightWheel(event);
+    return;
+  }
   const at = pointerOnMap(event);
   zoom(Math.exp(-event.deltaY * 0.002), at.x, at.y);
 };
@@ -663,6 +753,10 @@ const onWheel = (event) => {
 // --- the palette ---
 
 const startPlacing = (piece) => {
+  // (pieces are placed on the map)
+  if (editorView.shown) {
+    toggle3D();
+  }
   editor.placing = { piece, rotation: 0, at: null, joined: null };
   editor.ordering = null;
   editor.selected = -1;
@@ -746,19 +840,24 @@ const showState = () => {
     "aria-pressed",
     String(!!editor.ordering),
   );
+  element("editor3D").setAttribute("aria-pressed", String(editorView.shown));
+  showPreview();
+  showPath();
   element("editorRotate").disabled = !selected() && !editor.placing;
   element("editorDelete").disabled = !selected();
   element("editorTestDrive").disabled = problemsOf(editor.stage).length > 0;
   element("editorUndo").disabled = editor.undo.length == 0;
   element("editorRedo").disabled = editor.redo.length == 0;
   const pieces = editor.stage.objects.length;
-  const text = editor.ordering
-    ? "Ordering the path: click the pieces in the order the cars drive them, the start first. Escape to stop."
-    : editor.placing
-      ? `Placing ${pieceName(editor.placing.piece)}: click to place, R to turn, Escape to stop.`
-      : selected()
-        ? `${pieceName(selected().piece ?? 0)} selected: drag or arrow keys to move, R to turn, D for another, Del to take away, , and . along the path.`
-        : `${pieces} piece${pieces == 1 ? "" : "s"}. Pick a piece on the left, drag the map to look around, scroll to zoom. ? for the keys and how the path works.`;
+  const text = editorView.shown
+    ? "3D view: W A S D to fly, Q and E down and up, Shift faster, drag to look round, scroll forward and back. V for the map."
+    : editor.ordering
+      ? "Ordering the path: click the pieces in the order the cars drive them, the start first. Escape to stop."
+      : editor.placing
+        ? `Placing ${pieceName(editor.placing.piece)}: click to place, R to turn, Escape to stop.`
+        : selected()
+          ? `${pieceName(selected().piece ?? 0)} selected: drag or arrow keys to move, R to turn, D for another, Del to take away, , and . along the path.`
+          : `${pieces} piece${pieces == 1 ? "" : "s"}. Pick a piece on the left, drag the map to look around, scroll to zoom. ? for the keys and how the path works.`;
   const status = element("editorStatus");
   if (status.textContent != text) {
     status.textContent = text;
@@ -832,6 +931,72 @@ const nextPathKind = () => {
   changed();
 };
 
+// the list's button to focus once it is shown anew (the point moved keeps it)
+let pathFocus = null;
+
+// The path's points as a list: each selects its piece, and moves a step earlier or later.
+const showPath = () => {
+  const list = element("editorPath");
+  const points = editor.stage.objects
+    .map((object, index) => ({ object, index }))
+    .filter(({ object }) => isPathPoint(object));
+  list.replaceChildren(
+    ...points.map(({ object, index }, k) => {
+      const item = field("li");
+      const kind = PATH_KINDS.find(([suffix]) => suffix == object.suffix)?.[1];
+      const name = `${k + 1}. ${pieceName(object.piece ?? 0)}`;
+      const pick = field("button", {
+        type: "button",
+        // (the first is the start, whatever piece it is)
+        textContent: k == 0 && !/start/i.test(name) ? `${name} (start)` : name,
+        title: kind ?? "",
+      });
+      pick.dataset.focus = `pick ${index}`;
+      pick.setAttribute("aria-current", String(index == editor.selected));
+      pick.addEventListener("click", () => select(index));
+      const move = (steps, text, label) => {
+        const button = field("button", {
+          type: "button",
+          className: "step",
+          textContent: text,
+          disabled: k + steps < 0 || k + steps >= points.length,
+        });
+        button.setAttribute("aria-label", `${label} ${name}`);
+        button.dataset.focus = `${label} ${index}`;
+        button.addEventListener("click", () => {
+          pathFocus = `${label} ${points[k + steps].index}`;
+          editor.selected = index;
+          step(steps);
+        });
+        return button;
+      };
+      item.append(
+        pick,
+        move(-1, "\u2191", "Earlier:"),
+        move(1, "\u2193", "Later:"),
+      );
+      return item;
+    }),
+  );
+  if (pathFocus) {
+    const button = list.querySelector(`[data-focus="${pathFocus}"]`);
+    pathFocus = null;
+    // (at the path's end it goes the other way)
+    (button?.disabled
+      ? (button.nextElementSibling ?? button.previousElementSibling)
+      : button
+    )?.focus();
+  }
+};
+
+const changePath = (change) => {
+  remember();
+  const object = selected();
+  change(editor.stage.objects);
+  editor.selected = editor.stage.objects.indexOf(object);
+  changed();
+};
+
 const makeStart = () => {
   remember();
   editor.selected = moveAfter(editor.stage.objects, editor.selected, -1);
@@ -850,6 +1015,8 @@ const labelled = (text, control) => {
 };
 
 const heightOf = (object) => -(object.y ?? 0);
+// the slider's top (the original's stages go to 6000)
+const MOST_HEIGHT = 8000;
 
 const showSelected = () => {
   const panel = element("editorSelected");
@@ -885,11 +1052,38 @@ const showSelected = () => {
     panel.append(...labelled("Path", kind));
   }
   if (object.piece == 64 || object.command == "fix") {
+    // (the slider for a feel of it, the number for an exact height)
     const height = field("input", {
       id: "editorHeight",
       type: "number",
       step: 100,
       value: heightOf(object),
+    });
+    const slider = field("input", {
+      id: "editorHeightSlider",
+      type: "range",
+      min: 0,
+      max: MOST_HEIGHT,
+      step: 100,
+      value: heightOf(object),
+    });
+    slider.setAttribute("aria-label", "Height");
+    // (a drag is one change to undo; the panel stays as it is while it lasts)
+    let dragging = false;
+    slider.addEventListener("input", () => {
+      if (!dragging) {
+        remember();
+        dragging = true;
+      }
+      object.y = -Number(slider.value);
+      height.value = slider.value;
+      save();
+      drawMap();
+      showIn3D();
+    });
+    slider.addEventListener("change", () => {
+      dragging = false;
+      changed();
     });
     height.addEventListener("change", () => {
       const value = Math.round(Number(height.value));
@@ -899,7 +1093,7 @@ const showSelected = () => {
         changed();
       }
     });
-    panel.append(...labelled("Height", height));
+    panel.append(...labelled("Height", height), slider);
   }
   if (object.command == "fix") {
     const off = field("input", {
@@ -960,6 +1154,14 @@ const showSelected = () => {
     buttons.append(earlier, later, start);
     panel.append(buttons);
   }
+  const see = field("button", {
+    type: "button",
+    id: "editorSeeIn3D",
+    textContent: "See in 3D",
+  });
+  see.addEventListener("click", seeIn3D);
+  panel.append(field("div", { className: "row" }));
+  panel.lastChild.append(see);
   if (focused && element(focused)) {
     element(focused).focus();
   }
@@ -1114,6 +1316,8 @@ export const openStageEditor = () => {
   showState();
   showSelected();
   drawMap();
+  track.stage = FIRST_OWN_STAGE + editor.current;
+  showIn3D();
   loadShapes((piece) => {
     const icon = icons.get(piece);
     if (icon) {
@@ -1226,6 +1430,10 @@ const onKey = (event) => {
   if (event.target.closest?.("input, select, .menu-dialog")) {
     return;
   }
+  if (flightKey(event, true)) {
+    event.preventDefault();
+    return;
+  }
   const key = event.key.toLowerCase();
   const control = event.ctrlKey || event.metaKey;
   const arrow = ARROWS[key];
@@ -1269,6 +1477,8 @@ const onKey = (event) => {
     placeAnother();
   } else if (key == "o") {
     startOrdering();
+  } else if (key == "v") {
+    toggle3D();
   } else if (key == "f") {
     fitView();
     drawMap();
@@ -1361,6 +1571,14 @@ export const installStageEditor = () => {
     }
   });
   dialog.addEventListener("keydown", onKey);
+  dialog.addEventListener("keyup", (event) => flightKey(event, false));
+  element("editor3D").addEventListener("click", toggle3D);
+  element("editorReverse").addEventListener("click", () =>
+    changePath(reversePath),
+  );
+  element("editorOrderByPlace").addEventListener("click", () =>
+    changePath(orderPathByPlace),
+  );
   map.addEventListener("pointerdown", onPointerDown);
   map.addEventListener("pointermove", onPointerMove);
   map.addEventListener("pointerup", onPointerUp);

@@ -441,6 +441,23 @@ const addWall = (x, z, degrees) => {
   pieces.count++;
 };
 
+// A stage's text built to be seen, not raced (the stage editor's 3D view): its pieces,
+// sky and light as in a race, no cars.
+export const showStage = (text) => {
+  readStage(text);
+  skyTexture(skyColor, scene.fog, cloudColor, cloudType);
+  setClassicSky(skyColor);
+  colorCheckpointText();
+  setWorld(
+    scene.tint,
+    scene.fog,
+    scene.light[0],
+    scene.light[1],
+    scene.light[2],
+    scene.fogDistance,
+  );
+};
+
 // After the file: the cars, the sky, the textures the stage tints, and the light.
 const prepareStage = () => {
   setUpField();

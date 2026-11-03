@@ -480,6 +480,47 @@ export const stepAlongPath = (objects, index, step) => {
   return other;
 };
 
+// The path's points in a new order (each a point of it), where its points were before: the
+// other objects keep their places.
+const reorderPath = (objects, order) => {
+  const places = objects
+    .map((object, i) => (isPathPoint(object) ? i : -1))
+    .filter((i) => i >= 0);
+  places.forEach((place, k) => {
+    objects[place] = order[k];
+  });
+};
+
+// The cars go round the other way: the start stays first.
+export const reversePath = (objects) => {
+  const [start, ...rest] = objects.filter(isPathPoint);
+  if (start) {
+    reorderPath(objects, [start, ...rest.reverse()]);
+  }
+};
+
+// The path ordered by where its points are: from the start each time the nearest point not
+// yet on it, the way a lap built piece by piece goes round.
+export const orderPathByPlace = (objects) => {
+  const [start, ...left] = objects.filter(isPathPoint);
+  if (!start) {
+    return;
+  }
+  const order = [start];
+  while (left.length > 0) {
+    const last = order[order.length - 1];
+    let nearest = 0;
+    left.forEach((object, k) => {
+      const far = (o) => Math.hypot(o.x - last.x, o.z - last.z);
+      if (far(object) < far(left[nearest])) {
+        nearest = k;
+      }
+    });
+    order.push(...left.splice(nearest, 1));
+  }
+  reorderPath(objects, order);
+};
+
 // What keeps the stage from racing well, each with the object it is about (or -1).
 export const problemsOf = ({ objects }) => {
   const problems = [];
