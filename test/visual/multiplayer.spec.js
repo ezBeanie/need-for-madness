@@ -1005,3 +1005,73 @@ test("the lobby shows each player's name and paint, and a name set in the option
   await host.advance(2);
   await expect(hostPage.locator("#multiplayerPlayers")).toContainText("Gasti");
 });
+
+test("a guest coming to the room during its race watches it, running on alike from what the host sends", async ({
+  context,
+}) => {
+  const { hostPage, guestPage, both } = await raceTogether(context, "watch", 1);
+  await guestPage.keyboard.down("ArrowUp");
+  await advanceBoth(...both, 250);
+  const thirdPage = await context.newPage();
+  const third = await openGame(thirdPage, {
+    storage: { ...UNNAMED, carsel: "2", unlocked: "3" },
+    url: "/?join=watch",
+  });
+  await third.advanceUntil(PHASE.mainMenu);
+  const all = [...both, { game: third, page: thirdPage }];
+  // the lobby offers the race going on
+  await thirdPage.evaluate(() => window.gameState.openMultiplayer());
+  await expect
+    .poll(async () => {
+      await advanceAll(all, 5);
+      return thirdPage.locator("#lobbyWatch").isVisible();
+    })
+    .toBe(true);
+  await thirdPage.locator("#lobbyWatch").click();
+  await expect
+    .poll(
+      async () => {
+        await advanceAll(all, 5);
+        return thirdPage.evaluate(() => window.gameState.game.phase);
+      },
+      { timeout: 30_000 },
+    )
+    .toBe(PHASE.race);
+  // watching only: no car of its own, the camera on the cars racing
+  expect(
+    await thirdPage.evaluate(() => {
+      const { game, lockstep, spectate } = window.gameState;
+      return [
+        game.player == game.carCount,
+        lockstep.watching,
+        spectate.watching,
+      ];
+    }),
+  ).toEqual([true, true, true]);
+  await advanceAll(all, 150);
+  await sameRaces(all);
+  // (its fingerprints were the players' too)
+  expect(
+    await thirdPage.evaluate(() => window.gameState.lockstep.alike),
+  ).toBeGreaterThan(0);
+  // the players never heard of it in the race
+  expect(await hostPage.evaluate(() => window.gameState.game.humans)).toEqual([
+    0, 1,
+  ]);
+  await thirdPage.screenshot({ path: "test-results/multiplayer-watcher.png" });
+  // the race over, it goes back to the lobby
+  await thirdPage.evaluate(() => (window.gameState.track.haltall = true));
+  await advanceAll(all, 2);
+  // (the players race on: its race too, which waits for their keys)
+  await thirdPage.keyboard.down("Enter");
+  await advanceAll(all, 2);
+  await thirdPage.keyboard.up("Enter");
+  await advanceAll(all, 5);
+  expect(
+    await thirdPage.evaluate(() => {
+      const { game, lockstep } = window.gameState;
+      return [game.phase, lockstep.active];
+    }),
+  ).toEqual([PHASE.mainMenu, false]);
+  await guestPage.keyboard.up("ArrowUp");
+});

@@ -31,6 +31,7 @@ import {
   drawClassicStanding,
 } from "../classic/hud.js";
 import { isPhone } from "../core/platform.js";
+import { menu } from "../screens/menuState.js";
 import { random } from "../core/random.js";
 import { MAX_CARS, MODE, PHASE, game, raceSetup } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
@@ -878,6 +879,47 @@ const drawWatchBar = () => {
   }
 };
 
+// A game that came only to watch the race going on (see net/watch.js): the bar of the car
+// watched; once the race is over, a Continue back to the menu.
+const drawWatcherHud = () => {
+  if (watchingOthers()) {
+    if (confirm.state == CONFIRM.pressed) {
+      confirm.state = CONFIRM.used;
+      pause();
+    }
+    drawWatchBar();
+  } else if (track.haltall) {
+    drawCenteredText(120, "Race over", 255, 255, 255, TEXT.heading);
+    if (
+      drawButton({
+        id: 7,
+        x: 640 * view.scaleX,
+        y: view.height - 60 * view.scale - 40 * view.scaleY,
+        width: 250,
+        height: 60,
+        faceTop: "#019DFF",
+        faceBottom: "#01BAFF",
+        shadowTop: "#004A78",
+        shadowBottom: "#015777",
+        layout: BUTTON.textThenImage,
+        text: "Continue ",
+        fontSize: 20,
+        textOpacity: 0.8,
+        image: images.buttons[1],
+        imageOpacity: 0.8,
+        pulsing: false,
+      }) ||
+      confirm.state == CONFIRM.pressed
+    ) {
+      confirm.state = CONFIRM.used;
+      menu.animation = 0;
+      menu.continuesToCarSelect = false;
+      game.phase = PHASE.mainMenu;
+    }
+  }
+  drawCornerButtons(false);
+};
+
 // After the race: remembers the unlocked stage, waits for "Continue" (or the handbrake)
 // and goes on to the highlight replay or the race end.
 const afterRaceOver = () => {
@@ -1683,6 +1725,10 @@ const announceEvents = () => {
 // Everything drawn over the race, every tick.
 export function drawHud() {
   rd.clearRect(0, 0, view.width, view.height);
+  if (lockstep.watching) {
+    drawWatcherHud();
+    return;
+  }
   // (the arrow names it again whenever it is drawn)
   camera.aimedCar = -1;
   if (touchControlsShown()) {
@@ -1744,7 +1790,8 @@ export function drawHud() {
       drawArrowButton();
     }
     drawMeters();
-    drawCornerButtons(raceOver);
+    // (watching the race go on, the menu leaves it)
+    drawCornerButtons(raceOver && !watchingOthers());
     if (
       !isPhone &&
       track.stage >= 2 &&

@@ -32,6 +32,10 @@ export const MESSAGE = {
   chat: "chat",
   // the voice chat's setting up between two games (see voice.js)
   voice: "voice",
+  // a guest asks the host to watch the race going on, and the host's answer: the race
+  // from a frame on, in parts (see watch.js)
+  watch: "watch",
+  watched: "watched",
 };
 
 // the most games in a room, as the relay takes them

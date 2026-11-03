@@ -30,6 +30,7 @@ import {
   hostThere,
   joinRoom,
   setReady,
+  watchRoomRace,
   tellHost,
 } from "../net/guest.js";
 import { menu } from "../screens/menuState.js";
@@ -81,6 +82,9 @@ const status = () => {
   }
   if (!hostThere()) {
     return "Waiting for the host...";
+  }
+  if (guest.racing) {
+    return "A race is going on: watch it, or wait for the next one.";
   }
   return guest.ready
     ? "You are ready. The race starts when the host starts it."
@@ -226,6 +230,13 @@ const showChoices = () => {
   const readyText = guest.ready ? "Ready!" : "Ready";
   if (ready.textContent != readyText) {
     ready.textContent = readyText;
+  }
+  const watch = element("lobbyWatch");
+  watch.hidden = isHost || !guest.racing;
+  watch.disabled = guest.watchAsked;
+  const watchText = guest.watchAsked ? "Asking the host..." : "Watch the race";
+  if (watch.textContent != watchText) {
+    watch.textContent = watchText;
   }
   const start = element("lobbyStart");
   start.hidden = !isHost;
@@ -507,6 +518,10 @@ export const installMultiplayerMenu = () => {
   );
   element("lobbyReady").addEventListener("click", () => {
     setReady(!guest.ready);
+    showRoom();
+  });
+  element("lobbyWatch").addEventListener("click", () => {
+    watchRoomRace();
     showRoom();
   });
   element("lobbyStart").addEventListener("click", () => {

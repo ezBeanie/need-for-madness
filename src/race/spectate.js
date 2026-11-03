@@ -1,9 +1,10 @@
 // Racing together, a player whose car is wasted may watch the race go on (the HUD's Watch
-// Race): the camera follows one of the cars still racing, the next or the one before as
+// Race), as may a game that came to the race going on only to watch it: the camera follows one of the cars still racing, the next or the one before as
 // the player steers (or with the HUD's arrows), flying over as the replay viewer's does
 // (see replayViewer.js); V switches the camera, the free one too. The menu leaves.
 
 import { game } from "../core/state.js";
+import { lockstep } from "../net/lockstep.js";
 import { CAMERA, camera } from "../render/camera.js";
 import { racers } from "./racers.js";
 import { followCar } from "./replayViewer.js";
@@ -14,9 +15,12 @@ import { track } from "./track.js";
 export const spectate = { watching: false };
 const held = { left: false, right: false };
 
-// whether the player could watch the race go on
+// whether the player could watch the race go on: its car wasted, or watching only (see
+// net/watch.js)
 export const spectating = () =>
-  game.humans.length > 0 && racers[game.player].wasted && !track.haltall;
+  game.humans.length > 0 &&
+  (lockstep.watching || racers[game.player].wasted) &&
+  !track.haltall;
 
 const stillRacing = (c) => c != game.player && !racers[c].wasted;
 

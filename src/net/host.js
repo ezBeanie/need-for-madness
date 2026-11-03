@@ -24,7 +24,8 @@ import { saveRace } from "./raceState.js";
 import { receiveVoice } from "./voice.js";
 import { cleanName, own, roomCars, setRoomCars } from "./roomCars.js";
 import { isSkin } from "../render/skins.js";
-import { receiveRaceMessage, startLockstep } from "./lockstep.js";
+import { lockstep, receiveRaceMessage, startLockstep } from "./lockstep.js";
+import { answerWatch } from "./watch.js";
 import {
   MESSAGE,
   MOST_PLAYERS,
@@ -77,6 +78,8 @@ export const sendPlayers = () =>
     })),
     bots: host.bots,
     stage: host.stage,
+    // (a guest may watch the race going on, see watch.js)
+    racing: lockstep.active,
   });
 
 // the stages a room races: the game's and the original's, which every game has
@@ -160,6 +163,9 @@ const receive = (message) => {
   guest.quietTicks = 0;
   if (message.type == MESSAGE.bye) {
     host.guests = host.guests.filter((other) => other != guest);
+  }
+  if (message.type == MESSAGE.watch) {
+    answerWatch(guest.id);
   }
   if (message.type == MESSAGE.ping && Number.isFinite(message.ping)) {
     link.send({ type: MESSAGE.pong, to: guest.id, ping: message.ping });

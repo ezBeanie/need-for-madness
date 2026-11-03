@@ -99,6 +99,7 @@ import {
   leftNotice,
   lockstep,
   lockstepTick,
+  catchUpWatching,
   lockstepWaits,
   outOfSync,
   pressFrameKeys,
@@ -143,6 +144,7 @@ function raceTick() {
     } else {
       waitedTicks = 0;
       raceRan = true;
+      catchUpWatching(runRaceFrameAgain);
       pressFrameKeys(runRaceFrameAgain);
       if (raceEvents.countdown == 0) {
         drive();
