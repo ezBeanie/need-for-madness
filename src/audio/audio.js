@@ -346,22 +346,38 @@ const classicBuffer = (file) => {
   return classicBuffers.get(file);
 };
 
-// place: null, or { volume (0..1), pan (-1 left .. 1 right) } for a sound heard from afar
+// A sound's way through a panner to out, from the side (-1 left .. 1 right) and front
+// (-1 behind .. 1 before) given; its loudness is the caller's. HRTF is heard before and
+// behind too, but costs: the many short sounds of a pile-up take the plain panning.
+export const placedIn = (context, out, model = "HRTF") => {
+  const panner = context.createPanner();
+  panner.panningModel = model;
+  panner.distanceModel = "linear";
+  panner.rolloffFactor = 0;
+  panner.connect(out);
+  return panner;
+};
+
+export const placeSound = (panner, side, front) => {
+  // (the listener looks along -z; older Safaris know only setPosition)
+  if (panner.positionX) {
+    panner.positionX.value = side;
+    panner.positionZ.value = -front;
+  } else {
+    panner.setPosition(side, 0, -front);
+  }
+};
+
+// place: null, or { volume (0..1), side, front } for a sound heard from afar (see placeSound)
 const playBuffer = (buffer, rate, place = null) => {
   const source = contexts.sounds.createBufferSource();
   source.buffer = buffer;
   if (place) {
     const volume = contexts.sounds.createGain();
     volume.gain.value = place.volume;
-    source.connect(volume);
-    // (browsers without stereo panning play it in the middle)
-    if (contexts.sounds.createStereoPanner) {
-      const panner = contexts.sounds.createStereoPanner();
-      panner.pan.value = place.pan;
-      volume.connect(panner).connect(contexts.soundsOut);
-    } else {
-      volume.connect(contexts.soundsOut);
-    }
+    const panner = placedIn(contexts.sounds, contexts.soundsOut, "equalpower");
+    placeSound(panner, place.side, place.front);
+    source.connect(volume).connect(panner);
   } else {
     source.connect(contexts.soundsOut);
   }
@@ -414,6 +430,42 @@ export const startEngine = (carType, loop) => {
     engine.source.start();
     engine.started = true;
   }
+};
+
+// The other cars' engine sounds, by car type, loaded apart from the player's: when the
+// player's engine starts decides which random numbers its revs take, and so the race's
+// effects (see engineSound.js).
+const placedEngineBuffers = [];
+
+// Another car's engine, looping silent until turned up, heard from where it is (see
+// otherEngines.js): its source, loudness and panner; null while its sound has not come.
+export const startPlacedEngine = (carType) => {
+  if (!contexts || audio.muteSound) {
+    return null;
+  }
+  if (placedEngineBuffers[carType] === undefined) {
+    placedEngineBuffers[carType] = null;
+    loadBuffer(
+      contexts.engines,
+      `data/sounds/eng${carType}.wav`,
+      () => {},
+      (buffer) => {
+        placedEngineBuffers[carType] = buffer;
+      },
+    );
+  }
+  if (!placedEngineBuffers[carType]) {
+    return null;
+  }
+  const source = contexts.engines.createBufferSource();
+  source.buffer = placedEngineBuffers[carType];
+  source.loop = true;
+  const volume = contexts.engines.createGain();
+  volume.gain.value = 0;
+  const panner = placedIn(contexts.engines, contexts.enginesOut);
+  source.connect(volume).connect(panner);
+  source.start();
+  return { source, volume, panner };
 };
 
 // The classic look's looping sounds, by channel (its engine, the rushes of air): each plays

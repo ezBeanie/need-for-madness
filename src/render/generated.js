@@ -7,7 +7,9 @@ import { bodyDamage, fixcar } from "../race/physics.js";
 import { car, racers } from "../race/racers.js";
 import { hslToRgb, rgbToHsl } from "../ui/color.js";
 import { images } from "../ui/images.js";
+import { skinOf } from "../net/roomCars.js";
 import { gl, keepDamageTexture } from "./renderer.js";
+import { paint, paintPixels } from "./skins.js";
 import {
   carModels,
   carTextures,
@@ -83,26 +85,44 @@ const isGlass = (pixels, p) =>
   pixels[p + 1] == GLASS[1] &&
   pixels[p + 2] == GLASS[2];
 
-// The menu textures of the cars: windows light blue and see-through.
+// (the race textures' windows have the sky's colour and are see-through)
+const isSeeThrough = (pixels, p) => pixels[p + 3] != 255;
+
+// The menu texture of a car type: windows light blue and see-through, the rest in the
+// skin's paint.
+const menuCarTexture = (type, skin) =>
+  recoloredTexture(carTextures[type], 256, clamped, (pixels, p) => {
+    if (isGlass(pixels, p)) {
+      pixels[p] = 92;
+      pixels[p + 1] = 155;
+      pixels[p + 2] = 184;
+      pixels[p + 3] = 200;
+    } else if (skin) {
+      pixels.set(paint(pixels[p], pixels[p + 1], pixels[p + 2], skin), p);
+    }
+  }).texture;
+
 export function menuCarTextures() {
   for (let i = 0; i < CAR_TYPES; i++) {
     carModels[i].nt = 2;
     carModels[i].texture = [];
-    carModels[i].texture[0] = recoloredTexture(
-      carTextures[i],
-      256,
-      clamped,
-      (pixels, p) => {
-        if (isGlass(pixels, p)) {
-          pixels[p] = 92;
-          pixels[p + 1] = 155;
-          pixels[p + 2] = 184;
-          pixels[p + 3] = 200;
-        }
-      },
-    ).texture;
+    carModels[i].texture[0] = menuCarTexture(i, 0);
   }
 }
+
+// the menu textures in the skins, by type and skin, made when first shown (the lobby's)
+const skinnedMenuTextures = new Map();
+
+export const skinnedMenuTexture = (type, skin) => {
+  if (skin == 0) {
+    return carModels[type].texture[0];
+  }
+  const key = `${type} ${skin}`;
+  if (!skinnedMenuTextures.has(key)) {
+    skinnedMenuTextures.set(key, menuCarTexture(type, skin));
+  }
+  return skinnedMenuTextures.get(key);
+};
 
 // which of a car model's textures it shows (model.shownTexture): the menus' one with
 // light blue windows, or the race's with the sky's colour in them and the damage
@@ -137,8 +157,8 @@ export function raceCarTextures() {
     model.loaded = 4;
   }
   // The first car of a type dents the type's model, as every car did when all types
-  // differed. Further cars of that type get their own copy to dent and scratch, sharing
-  // what never changes (normals, texture coordinates, the paint texture).
+  // differed. Further cars of that type, and any in a skin, get their own copy to dent and
+  // scratch, sharing what never changes (normals, texture coordinates, the menu texture).
   for (let c = 0; c < game.carCount; c++) {
     const model = carModels[car[c].typ];
     let shared = false;
@@ -147,13 +167,30 @@ export function raceCarTextures() {
         shared = true;
       }
     }
+    // (a copy of a race before goes, with what it holds on the GPU)
+    const old = racers[c].body;
+    if (old?.copied) {
+      gl.deleteTexture(old.texture[1]);
+      gl.deleteBuffer(old.vbuf);
+    }
     racers[c].body = model;
     bodyDamage.repair?.(c);
-    if (shared) {
+    const skin = skinOf(c);
+    if (shared || skin) {
       racers[c].body = {
         ...model,
+        copied: true,
         texture: [model.texture[0], null],
         vbuf: null,
+        // (fixcar makes the race texture of these, the glass kept)
+        cleanPixels:
+          skin && model.cleanPixels
+            ? paintPixels(
+                Uint8Array.from(model.cleanPixels),
+                skin,
+                isSeeThrough,
+              )
+            : model.cleanPixels,
       };
       fixcar(c);
     }

@@ -21,6 +21,9 @@ import { field, setUpField } from "../race/field.js";
 import { raceCarTextures } from "../render/generated.js";
 import { track } from "../race/track.js";
 import { saveRace } from "./raceState.js";
+import { receiveVoice } from "./voice.js";
+import { cleanName, own, roomCars, setRoomCars } from "./roomCars.js";
+import { isSkin } from "../render/skins.js";
 import { receiveRaceMessage, startLockstep } from "./lockstep.js";
 import {
   MESSAGE,
@@ -39,9 +42,9 @@ const GUEST_GONE_TICKS = 100;
 const GUEST_WAITING_TICKS = 60;
 
 // guests: the players in the room but the host, in the order they came, each with its id,
-// the car it chose, whether it is ready to race, and the ticks since it was last heard and
-// since it last joined; bots: the cars the computer drives in the room's races, as the host
-// added them; stage: the stage the host chose in the lobby
+// name, the car and skin it chose, whether it is ready to race, and the ticks since it was
+// last heard and since it last joined; bots: the cars (carType, skin) the computer drives in
+// the room's races, as the host added them; stage: the stage the host chose in the lobby
 const host = { guests: [], bots: [], stage: 1 };
 
 export const roomGuests = () => host.guests;
@@ -57,9 +60,21 @@ export const sendPlayers = () =>
   link.send({
     type: MESSAGE.players,
     players: [
-      { id: link.id, carType: game.carTypes[0], ready: true },
+      {
+        id: link.id,
+        name: own.name,
+        carType: game.carTypes[0],
+        skin: own.skin,
+        ready: true,
+      },
       ...host.guests,
-    ].map(({ id, carType, ready }) => ({ id, carType, ready })),
+    ].map(({ id, name, carType, skin, ready }) => ({
+      id,
+      name,
+      carType,
+      skin,
+      ready,
+    })),
     bots: host.bots,
     stage: host.stage,
   });
@@ -90,11 +105,10 @@ export const addBot = () => {
   const taken = [
     game.carTypes[0],
     ...host.guests.map(({ carType }) => carType),
+    ...host.bots.map(({ carType }) => carType),
   ];
-  const free = carStats.names.findIndex(
-    (_, type) => !taken.includes(type) && !host.bots.includes(type),
-  );
-  host.bots = [...host.bots, Math.max(free, 0)];
+  const free = carStats.names.findIndex((_, type) => !taken.includes(type));
+  host.bots = [...host.bots, { carType: Math.max(free, 0), skin: 0 }];
   sendPlayers();
 };
 
@@ -105,7 +119,14 @@ export const removeBot = (i) => {
 
 export const chooseBotCar = (i, carType) => {
   if (isIndex(carType, carStats.names.length)) {
-    host.bots = host.bots.map((type, j) => (j == i ? carType : type));
+    host.bots = host.bots.map((bot, j) => (j == i ? { ...bot, carType } : bot));
+    sendPlayers();
+  }
+};
+
+export const chooseBotSkin = (i, skin) => {
+  if (isSkin(skin)) {
+    host.bots = host.bots.map((bot, j) => (j == i ? { ...bot, skin } : bot));
     sendPlayers();
   }
 };
@@ -113,6 +134,7 @@ export const chooseBotCar = (i, carType) => {
 const receive = (message) => {
   receiveRaceMessage(message);
   receiveChat(message);
+  receiveVoice(message);
   let guest = host.guests.find(({ id }) => id == message.from);
   if (
     message.type == MESSAGE.join &&
@@ -124,6 +146,8 @@ const receive = (message) => {
     }
     if (guest) {
       guest.carType = message.carType;
+      guest.name = cleanName(message.name);
+      guest.skin = isSkin(message.skin) ? message.skin : 0;
       guest.ready = message.ready === true;
       guest.joinedTicks = 0;
       // (the answer that tells the guest the host is there)
@@ -159,7 +183,7 @@ export const hostTick = () => {
     guests.length > 0 || raceSetup.kind == RACE_KIND.together ? host.bots : [];
   field.roomCarTypes =
     guests.length + bots.length > 0
-      ? [...guests.map(({ carType }) => carType), ...bots]
+      ? [...guests, ...bots].map(({ carType }) => carType)
       : null;
 };
 
@@ -195,6 +219,15 @@ export const startHosting = () => {
 // get, is off.
 export const startHostedRace = () => {
   const guests = waitingGuests();
+  // (who drives which car, and in which paint: the host, the guests, then the bots)
+  const names = [own.name, ...guests.map(({ name }) => name)];
+  const skins = [own.skin, ...guests.map(({ skin }) => skin)];
+  setRoomCars(
+    [...names, ...host.bots.map(() => null)],
+    [...skins, ...host.bots.map(({ skin }) => skin)],
+  );
+  // (the cars' textures were made as the stage loaded, before their paint was known)
+  const paint = () => roomCars.skins.some(Boolean) && raceCarTextures();
   if (
     link.role != ROLE.host ||
     guests.length == 0 ||
@@ -202,9 +235,12 @@ export const startHostedRace = () => {
     game.carCount == 1
   ) {
     game.humans = [];
+    if (raceSetup.kind == RACE_KIND.together) {
+      paint();
+    }
     return;
   }
-  const others = [...guests.map(({ carType }) => carType), ...host.bots];
+  const others = [...guests, ...host.bots].map(({ carType }) => carType);
   if (
     game.carCount != 1 + others.length ||
     others.some((carType, i) => game.carTypes[i + 1] != carType)
@@ -221,6 +257,7 @@ export const startHostedRace = () => {
   // (the players by car: the host's is the player's car, 0)
   const players = [link.id, ...guests.map(({ id }) => id)];
   game.humans = players.map((_, car) => car);
+  paint();
   random.sim = seededRandom(random.fx() * 2 ** 32);
   random.wreck = seededRandom(random.fx() * 2 ** 32);
   raceEvents.onautocorrect = 0;
@@ -232,6 +269,8 @@ export const startHostedRace = () => {
       stage: track.stage,
       carTypes: game.carTypes.slice(0, game.carCount),
       players,
+      names: roomCars.names,
+      skins: roomCars.skins,
       raceId,
       state: saveRace(),
     }),

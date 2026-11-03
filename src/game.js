@@ -84,8 +84,12 @@ import { updateStandings } from "./race/standings.js";
 import { animateTrack, castShadows, placeWheels } from "./render/raceScene.js";
 import { countDown, flashTick } from "./race/countdown.js";
 import { onKey } from "./input/controls.js";
-import { hostTick, startHosting } from "./net/host.js";
+import { hostTick, roomGuests, startHosting } from "./net/host.js";
 import { guest, guestWaitingTick, startGuesting } from "./net/guest.js";
+import { spectateTick, watchingOthers } from "./race/spectate.js";
+import { otherEnginesTick } from "./audio/otherEngines.js";
+import { voiceTick } from "./net/voice.js";
+import { forgetRoomCars } from "./net/roomCars.js";
 import { ROLE, link } from "./net/link.js";
 import {
   OUT_OF_SYNC,
@@ -147,6 +151,7 @@ function raceTick() {
         control();
         releaseFrameKeys();
         timeAttackTick();
+        spectateTick();
         drawHud();
         updateEngineSound();
       } else {
@@ -192,7 +197,7 @@ function raceTick() {
     drawRewindOverlay();
   }
   moveCamera();
-  if (game.phase == PHASE.replay) {
+  if (game.phase == PHASE.replay || watchingOthers()) {
     flyCamera();
   }
   turnView();
@@ -235,9 +240,16 @@ const TICKS = [
 
 let musicPaused = false;
 
+// the screens between races
+const MENU_PHASES = [PHASE.mainMenu, PHASE.carSelect, PHASE.stageSelect];
+
 export function runTick() {
   fitToWindow();
   pollGamepads();
+  // (a guest learns of the next race of the room here, a host as it starts)
+  if (MENU_PHASES.includes(game.phase)) {
+    forgetRoomCars();
+  }
   guestWaitingTick();
   hostTick();
   lockstepTick();
@@ -263,8 +275,21 @@ export function runTick() {
   placeOptionsButton();
   placeMultiplayerButton();
   placeStageEditorButton();
+  voiceTick(roomPlayerIds());
+  otherEnginesTick();
   interpolation.tick++;
 }
+
+// The games in the room: racing, the race's; else as the lobby lists them.
+const roomPlayerIds = () => {
+  if (lockstep.active) {
+    return lockstep.players;
+  }
+  if (link.role == ROLE.host) {
+    return [link.id, ...roomGuests().map(({ id }) => id)];
+  }
+  return guest.players.map(({ id }) => id);
+};
 
 // The game fills what is on screen: the visual viewport, which is smaller than the window
 // in a zoomed page (Samsung Internet may keep a page zoomed in, even an installed game,

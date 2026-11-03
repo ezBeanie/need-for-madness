@@ -1,7 +1,7 @@
 // The race in the classic look: the original game's own models drawn the original's way
 // (see draw.js) onto a canvas of its own, 450 pixels high, where the modern look's 3D
 // canvas is. The game logic, the camera and the HUD stay the same.
-import { PHASE, game } from "../core/state.js";
+import { MAX_CARS, PHASE, game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { raceEvents } from "../race/events.js";
 import { car, racers } from "../race/racers.js";
@@ -13,10 +13,11 @@ import {
   placeModel,
 } from "../render/interpolation.js";
 import { fetchText } from "../render/models.js";
-import { look } from "../render/look.js";
 import { canvas3D } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 import { PIECE_FILES } from "../loading/assets.js";
+import { skinOf } from "../net/roomCars.js";
+import { SKINS, paint } from "../render/skins.js";
 import { bodyDamage } from "../race/physics.js";
 import { recording } from "../race/recording.js";
 import { flushBatch, setPixelSize, startBatch } from "./batch.js";
@@ -141,10 +142,11 @@ const tintForStage = (colors) => {
   tintedFor = colors;
 };
 
-// The classic look draws on the 3D canvas, made 450 pixels high (see fitCanvas3D).
-const fitScreen = () => {
-  medium.w = canvas3D.width;
-  medium.h = canvas3D.height;
+// The classic look draws on the 3D canvas, made 450 pixels high (see fitCanvas3D), or
+// what else is bound w x h.
+const fitScreen = (w = canvas3D.width, h = canvas3D.height) => {
+  medium.w = w;
+  medium.h = h;
   medium.cx = medium.w / 2;
   medium.cy = medium.h / 2;
   setPixelSize(medium.h / 450);
@@ -171,11 +173,11 @@ const NO_STAGE = {
 };
 
 // Starts a frame: the models (loaded on the first), the colours, the camera.
-const startFrame = (colors = scene.colors ?? NO_STAGE) => {
+const startFrame = (colors = scene.colors ?? NO_STAGE, w, h) => {
   if (!loading) {
     loadModels();
   }
-  fitScreen();
+  fitScreen(w, h);
   startBatch();
   if (tintedFor !== colors) {
     tintForStage(colors);
@@ -187,7 +189,6 @@ const startFrame = (colors = scene.colors ?? NO_STAGE) => {
     (Math.asin(Math.max(-1, Math.min(1, -drawCamera.projection[7]))) * 180) /
     Math.PI;
   medium.flicker = !medium.flicker;
-  medium.depth = look.depth;
   medium.frame++;
   medium.tick = interpolation.tick;
   medium.frozen = recording.frozen;
@@ -285,15 +286,32 @@ export const unstretched = (c, matrix) => {
   return matrix;
 };
 
-// Car c's own copy of its model (the order its polygons are drawn in is its own).
-const carObject = (c, instance, type) => {
+// A model's paint, but its windows, in the skin's colours (see render/skins.js).
+const paintRad = (rad, skin) => {
+  for (const poly of rad.polys) {
+    if (poly.glass == 0) {
+      poly.color = paint(...poly.color, skin);
+    }
+  }
+  tintModel(rad, () => 0);
+};
+
+// Car c's own copy of its model (the order its polygons are drawn in is its own), in its
+// skin.
+const carObject = (c, instance, type, skin = 0) => {
   const file = CAR_FILES[type];
-  if (carModels[c]?.file != file && models.has(file)) {
+  if (
+    (carModels[c]?.file != file || carModels[c].skin != skin) &&
+    models.has(file)
+  ) {
     const rad = structuredClone(models.get(file));
+    if (skin) {
+      paintRad(rad, skin);
+    }
     for (const hit of c < game.carCount ? (hits[c] ?? []) : []) {
       dentClassic(rad, hit);
     }
-    carModels[c] = { file, rad };
+    carModels[c] = { file, skin, rad };
   }
   const rad = carModels[c]?.rad;
   return (
@@ -382,7 +400,7 @@ export const drawClassicRace = () => {
     (piece) => raceEvents.oncheckpoint + 1 == piece.iscp,
   );
   for (let c = 0; c < game.carCount; c++) {
-    const object = carObject(c, car[c], car[c].typ);
+    const object = carObject(c, car[c], car[c].typ, skinOf(c));
     if (object) {
       object.onStage = true;
       objects.push(object);
@@ -424,4 +442,16 @@ export const drawClassicCar = (
   medium.menuShadow = menuFloor ? [87, 85, 57] : null;
   drawInOrder(object ? [object] : []);
   medium.menuShadow = null;
+};
+
+// A car on a card of the lobby (see render/carPreviews.js), w x h into what is bound: each
+// type and skin its own copy of the model, after the cars of any race and the car select's.
+export const drawClassicPreview = (instance, type, skin, w, h) => {
+  startFrame(NO_STAGE, w, h);
+  const slot = MAX_CARS + 1 + type * SKINS.length + skin;
+  const object = carObject(slot, instance, type, skin);
+  if (object) {
+    object.shadowBelow = true;
+  }
+  drawInOrder(object ? [object] : []);
 };

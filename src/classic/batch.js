@@ -3,7 +3,7 @@
 // into one buffer in that order and is drawn at once; with no depth test, the order alone
 // decides what covers what, so fills and outlines must never be split apart.
 //
-// With the depth test (look.depth) the order still decides between objects and between
+// With the depth test (medium.depth) the order still decides between objects and between
 // a polygon and what lies in its plane (a stripe on a door), but within an object the
 // nearer polygon covers the farther one, where the original's order by each polygon's
 // middle got it wrong (a tyre over its rim, a wheel over its arch). Each object drawn

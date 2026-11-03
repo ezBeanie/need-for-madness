@@ -1,4 +1,4 @@
-// The options: a screen of the switches that otherwise have only keys (L, K, J, U, T, G, N,
+// The options: a screen of the switches that otherwise have only keys (L, K, U, T, G, N,
 // M, O), for phones and tablets without a keyboard. The main menu opens it, and an Options
 // button the other menus (outside races: in a race, the pause menu leads there); each switch
 // does what its key does.
@@ -9,6 +9,11 @@ import { onKey } from "../input/controls.js";
 import { camera } from "../render/camera.js";
 import { minimap } from "./minimap.js";
 import { LOOK, classicMenus, look } from "../render/look.js";
+import { tellHost } from "../net/guest.js";
+import { sendPlayers } from "../net/host.js";
+import { ROLE, link } from "../net/link.js";
+import { own, setOwnName } from "../net/roomCars.js";
+import { toggleVoice, voice } from "../net/voice.js";
 
 const button = document.getElementById("optionsButton");
 const dialog = document.getElementById("options");
@@ -17,7 +22,6 @@ const dialog = document.getElementById("options");
 const SWITCHES = [
   ["toggleLook", () => look.current == LOOK.classic, "Classic", "Modern"],
   ["toggleSharp", () => look.sharp, "Sharp", "Original pixels"],
-  ["toggleDepth", () => look.depth, "By depth", "As the original"],
   ["toggleClassicMenus", () => look.menus, "Classic", "Modern"],
   ["toggleAiming", () => camera.aims, "On", "Off"],
   ["toggleMinimap", () => minimap.shown, "On", "Off"],
@@ -52,20 +56,27 @@ const showVolumes = () => {
   }
 };
 
+const showSwitch = (id, on, yes, no) => {
+  const item = document.getElementById(id);
+  item.setAttribute?.("aria-pressed", on ? "true" : "false");
+  const state = item.querySelector?.(".state");
+  if (state) {
+    state.textContent = on ? yes : no;
+  }
+};
+
 const showStates = () => {
   for (const [action, on, yes, no] of SWITCHES) {
-    const item = document.getElementById(`option-${action}`);
-    item.setAttribute?.("aria-pressed", on() ? "true" : "false");
-    const state = item.querySelector?.(".state");
-    if (state) {
-      state.textContent = on() ? yes : no;
-    }
+    showSwitch(`option-${action}`, on(), yes, no);
   }
+  // (the voice chat has no key: its switch is the options' alone)
+  showSwitch("voiceChat", voice.on, "On", "Off");
 };
 
 export const openOptions = () => {
   showStates();
   showVolumes();
+  document.getElementById("playerName").value = own.name;
   dialog.showModal?.();
 };
 
@@ -84,6 +95,20 @@ export const installOptionsMenu = () => {
       showVolumes();
     });
   }
+  document.getElementById("voiceChat").addEventListener("click", () => {
+    toggleVoice();
+    showStates();
+  });
+  // (the room hears of a new name at once)
+  const name = document.getElementById("playerName");
+  name.addEventListener("change", () => {
+    setOwnName(name.value);
+    name.value = own.name;
+    if (link.role == ROLE.host) {
+      sendPlayers();
+    }
+    tellHost();
+  });
   button.addEventListener("click", openOptions);
   document
     .getElementById("optionsClose")

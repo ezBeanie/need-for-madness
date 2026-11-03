@@ -157,18 +157,29 @@ const createCanvasStub = (context) => ({
   getBoundingClientRect: () => ({ left: 0, top: 0, width: 1280, height: 720 }),
 });
 
+// (audio nodes connect as a chain: each connect gives back the node connected to)
+const chain = (node) => node;
+
 const createAudioContextClass = (queue) =>
   class AudioContext {
     destination = {};
     createGain() {
-      return { gain: { value: 1 }, connect: noop };
+      return { gain: { value: 1 }, connect: chain, disconnect: noop };
+    }
+    createPanner() {
+      return {
+        positionX: { value: 0 },
+        positionZ: { value: 0 },
+        connect: chain,
+        disconnect: noop,
+      };
     }
     createBufferSource() {
       return {
         buffer: null,
         loop: false,
         playbackRate: { value: 1 },
-        connect: noop,
+        connect: chain,
         start: noop,
         stop: noop,
       };
@@ -251,6 +262,8 @@ export const createBrowserGlobals = ({
       const clicks = [];
       elements.set(id, {
         style: {},
+        // (the name tags' layer takes its tags)
+        append: noop,
         addEventListener: (type, listener) => {
           if (type == "click") {
             clicks.push(listener);

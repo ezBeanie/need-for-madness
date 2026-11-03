@@ -1,12 +1,14 @@
 // The small turning cars on the lobby's cards of players and bots (see ui/multiplayerMenu.js):
-// each car type shown is drawn once a frame into a framebuffer and copied into every card's
-// canvas of that type.
+// each car type shown, in each skin shown, is drawn once a frame into a framebuffer and
+// copied into every card's canvas of that type and skin.
 
+import { drawClassicPreview } from "../classic/frame.js";
 import { carStats } from "../data/carStats.js";
 import { poseShowcaseCar } from "../screens/showcase.js";
 import { drawWheeledCar } from "./drawFrame.js";
-import { CAR_TEXTURE } from "./generated.js";
+import { CAR_TEXTURE, skinnedMenuTexture } from "./generated.js";
 import { drawCamera } from "./interpolation.js";
+import { LOOK, look } from "./look.js";
 import { gl, setWorld } from "./renderer.js";
 import { carModels, scene, showcaseWheels } from "./scene.js";
 
@@ -43,6 +45,14 @@ const lightCars = () => {
 const shownTypes = (canvases) => [
   ...new Set(canvases.map((canvas) => Number(canvas.dataset.car))),
 ];
+
+// the cars shown, each type in each skin once
+const shownCars = (canvases) => {
+  const keys = new Set(
+    canvases.map(({ dataset }) => `${dataset.car} ${dataset.skin ?? 0}`),
+  );
+  return [...keys].map((key) => key.split(" ").map(Number));
+};
 
 const previewsIn = (root) => [
   ...(root.querySelectorAll?.("canvas.car-preview") ?? []),
@@ -166,21 +176,31 @@ export const drawCarPreviews = () => {
     (PITCH * Math.PI) / 180,
     [1, 0, 0],
   );
-  gl.enable(gl.DEPTH_TEST);
-  gl.depthFunc(gl.LEQUAL);
-  for (const type of shownTypes(canvases).filter((t) => posed.has(t))) {
+  for (const [type, skin] of shownCars(canvases)) {
+    if (!posed.has(type)) {
+      continue;
+    }
+    // (the classic look's batch turns the depth test off when done)
+    gl.enable(gl.DEPTH_TEST);
+    gl.depthFunc(gl.LEQUAL);
+    gl.depthMask(true);
     gl.clearColor(0, 0, 0, 0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    drawWheeledCar(
-      type,
-      carModels[type],
-      showcaseWheels[type],
-      carModels[type],
-      () => true,
-    );
+    const body = carModels[type];
+    if (look.current == LOOK.classic) {
+      drawClassicPreview(body, type, skin, PREVIEW_WIDTH, PREVIEW_HEIGHT);
+    } else {
+      const own = body.texture[0];
+      body.texture[0] = skinnedMenuTexture(type, skin);
+      drawWheeledCar(type, body, showcaseWheels[type], body, () => true);
+      body.texture[0] = own;
+    }
     keepPixels();
     for (const canvas of canvases) {
-      if (Number(canvas.dataset.car) == type) {
+      if (
+        Number(canvas.dataset.car) == type &&
+        Number(canvas.dataset.skin ?? 0) == skin
+      ) {
         const context = canvas.getContext("2d");
         context.clearRect(0, 0, canvas.width, canvas.height);
         context.drawImage(copy, 0, 0);
