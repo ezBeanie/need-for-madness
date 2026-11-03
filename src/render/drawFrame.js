@@ -2,6 +2,8 @@
 // switch screen), the car select, the stage select and the car a stage unlocked. A scene
 // is drawn once a logic tick has moved it (menu.redraw), then every frame of its phase.
 
+import { drawPiecePreview } from "./piecePreview.js";
+import { editorView } from "../editor/editorView.js";
 import { placeNameTags } from "../ui/nameTags.js";
 import {
   drawClassicCar,
@@ -86,6 +88,9 @@ export function render() {
   if (game.phase == PHASE.stageSelect) {
     drawWhenDue(drawStageSelect);
   }
+  if (game.phase == PHASE.stageEditor && editorView.shown) {
+    drawWhenDue(drawEditedStage);
+  }
   if (game.phase == PHASE.raceEnd && menu.animation == UNLOCKED_CAR_SHOWN) {
     drawWhenDue(drawUnlockedCar);
   }
@@ -100,6 +105,7 @@ export function render() {
   // a classic menu's screen, with the 3D just drawn in its middle
   presentScreen();
   drawCarPreviews();
+  drawPiecePreview();
   placeNameTags();
 }
 
@@ -209,13 +215,50 @@ const drawShowcaseCar = (floor = null, menuFloor = floor !== null) => {
 // at a scale of 12000), and the ground reaches 15000 from its middle.
 const GROUND_TILE = (2.5 * 12000) / 17;
 
-const drawRace = () => {
+const drawGroundAndSky = () => {
   // under the camera, a whole number of tiles from where it was: the stage's far ends
   // (The Stretch) on ground too, and its texture stays where it lies
   ground.x = Math.round(camera.x / GROUND_TILE) * GROUND_TILE;
   ground.z = Math.round(camera.z / GROUND_TILE) * GROUND_TILE;
   drawModel(ground);
   drawModel(sky);
+};
+
+// The stage the editor has, from its free camera: the piece selected flashes.
+const drawEditedStage = () => {
+  if (look.current == LOOK.classic) {
+    drawClassicStage(pieces.count);
+    return;
+  }
+  drawGroundAndSky();
+  startDepth();
+  const { marked } = editorView;
+  const flash = Math.floor(interpolation.frame / 12) % 2 == 0;
+  for (let i = 0; i < pieces.count; i++) {
+    const piece = pieces.list[i];
+    const model = pieceModels[piece.typ];
+    model.ownlight =
+      flash &&
+      marked !== null &&
+      piece.typ == marked.typ &&
+      Math.abs(piece.x - marked.x) < 1 &&
+      Math.abs(piece.z - marked.z) < 1;
+    model.ownshade = false;
+    if (piece.typ == WALL) {
+      gl.enable(gl.CULL_FACE);
+      gl.cullFace(gl.FRONT);
+    }
+    drawPiece(piece);
+    if (piece.typ == WALL) {
+      gl.disable(gl.CULL_FACE);
+    }
+    model.ownlight = false;
+  }
+  drawFixHoops();
+};
+
+const drawRace = () => {
+  drawGroundAndSky();
   if (game.phase == PHASE.timeRewind) {
     drawParticle(timeTube);
   }

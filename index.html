@@ -179,6 +179,7 @@ src: url(data/verdana.ttf);
 .stage-editor h2 { margin: 0 8px 0 0; font-size: 18px; }
 .stage-editor .editor-bar .spacer { flex: 1; }
 .stage-editor .editor-bar button { padding: 6px 12px; }
+.stage-editor .editor-bar { flex-wrap: nowrap; overflow-x: auto; }
 #editorName { width: 150px; }
 #editorHelpButton { min-width: 44px; font-weight: bold; }
 .stage-editor button {
@@ -209,10 +210,19 @@ src: url(data/verdana.ttf);
 #editorPalette button[aria-pressed="true"] { background: rgba(1, 234, 255, 0.35); border-color: #01eaff; }
 #editorPalette canvas { width: 40px; height: 40px; flex: none; }
 #editorMap { width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; min-height: 0; }
+/* (the 3D view, drawn on the game's canvas behind, shows through the map) */
+.stage-editor.three-d { background: transparent; }
+.stage-editor.three-d::backdrop { background: transparent; }
+.stage-editor.three-d .editor-bar, .stage-editor.three-d #editorPalette,
+.stage-editor.three-d #editorInspector, .stage-editor.three-d #editorStatus { background: #0b1418; }
+.stage-editor.three-d #editorMap { cursor: grab; }
 #editorInspector { overflow-y: auto; padding: 4px 12px 12px; border-left: 1px solid rgba(1, 234, 255, 0.4); font-size: 14px; }
 #editorInspector h3 { margin: 12px 0 6px; font-size: 14px; color: #01eaff; }
 #editorInspector p { margin: 6px 0; line-height: 1.4; }
 #editorInspector .piece { font-weight: bold; }
+#editorPreview { margin: 0 0 8px; }
+#editorPreview canvas { display: block; width: 100%; aspect-ratio: 3 / 2; border-radius: 10px; background: radial-gradient(circle at 50% 60%, #9fb6c2, #4b6372 80%); }
+#editorPreview figcaption { margin-top: 4px; font-size: 12px; color: rgba(255, 255, 255, 0.75); }
 #editorInspector label { display: block; margin: 10px 0 4px; }
 #editorInspector .row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
 #editorInspector .row label { display: inline; margin: 0; }
@@ -223,6 +233,13 @@ src: url(data/verdana.ttf);
 }
 #editorInspector select:focus-visible, #editorInspector input:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
 #editorProblems { list-style: none; margin: 0; padding: 0; }
+#editorInspector .hint { margin: 4px 0 8px; font-size: 12px; color: rgba(255, 255, 255, 0.75); }
+#editorInspector input[type="range"] { width: 100%; min-height: 44px; margin: 4px 0 0; padding: 0; border: 0; background: none; accent-color: #01EAFF; }
+#editorPath { list-style: none; margin: 0; padding: 0; max-height: 34vh; overflow-y: auto; }
+#editorPath li { display: flex; gap: 4px; margin-top: 4px; }
+#editorPath li > button:first-child { flex: 1; min-width: 0; text-align: left; border-radius: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#editorPath li > button:first-child[aria-current="true"] { background: rgba(255, 180, 1, 0.3); border-color: #FFB401; }
+#editorPath .step { width: 44px; padding: 0; flex: none; }
 #editorProblems li { margin-top: 6px; color: #ffd2c8; }
 #editorProblems .ready { color: #9ff5b4; }
 #editorProblems .ready::before { content: "\2713  "; }
@@ -386,11 +403,12 @@ src: url(data/verdana.ttf);
 <button type="button" id="editorStagesButton" aria-haspopup="dialog" aria-controls="editorStages">Stages</button>
 <button type="button" id="editorUndo" aria-keyshortcuts="Control+Z">Undo</button>
 <button type="button" id="editorRedo" aria-keyshortcuts="Control+Y">Redo</button>
-<button type="button" id="editorRotate" aria-keyshortcuts="R">Turn <kbd>R</kbd></button>
-<button type="button" id="editorDelete" aria-keyshortcuts="Delete">Delete <kbd>Del</kbd></button>
-<button type="button" id="editorOrder" aria-pressed="false" aria-keyshortcuts="O">Order path <kbd>O</kbd></button>
+<button type="button" id="editorRotate" aria-keyshortcuts="R" title="Turn (R)">Turn</button>
+<button type="button" id="editorDelete" aria-keyshortcuts="Delete" title="Delete (Del)">Delete</button>
+<button type="button" id="editorOrder" aria-pressed="false" aria-keyshortcuts="O" title="Order path (O)">Order path</button>
+<button type="button" id="editor3D" aria-pressed="false" aria-keyshortcuts="V" title="3D view (V)">3D view</button>
 <button type="button" id="editorSettingsButton" aria-haspopup="dialog" aria-controls="editorSettings">Settings</button>
-<button type="button" id="editorTestDrive" aria-describedby="editorProblemsTitle" aria-keyshortcuts="T">Test drive <kbd>T</kbd></button>
+<button type="button" id="editorTestDrive" aria-describedby="editorProblemsTitle" aria-keyshortcuts="T" title="Test drive (T)">Test drive</button>
 <span class="spacer"></span>
 <button type="button" id="editorHelpButton" aria-haspopup="dialog" aria-controls="editorHelp" aria-keyshortcuts="Shift+?" aria-label="Help" title="Help (?)">?</button>
 <button type="button" id="editorClose">Close</button>
@@ -398,7 +416,13 @@ src: url(data/verdana.ttf);
 <nav id="editorPalette" aria-label="Pieces"></nav>
 <canvas id="editorMap" tabindex="0" role="img" aria-label="The stage from above"></canvas>
 <aside id="editorInspector" aria-label="Selected piece and problems">
-<section aria-labelledby="editorSelectedTitle"><h3 id="editorSelectedTitle">Selected</h3><div id="editorSelected"></div></section>
+<section aria-labelledby="editorSelectedTitle"><h3 id="editorSelectedTitle">Selected</h3>
+<figure id="editorPreview" hidden><canvas id="editorPiecePreview" width="240" height="160" aria-hidden="true"></canvas><figcaption>As on the map: its top is ahead.</figcaption></figure>
+<div id="editorSelected"></div></section>
+<section aria-labelledby="editorPathTitle"><h3 id="editorPathTitle">Path</h3>
+<div class="row"><button type="button" id="editorReverse">Reverse</button><button type="button" id="editorOrderByPlace" aria-describedby="editorOrderByPlaceHint">Order by place</button></div>
+<p id="editorOrderByPlaceHint" class="hint">From the start, each time to the nearest point.</p>
+<ol id="editorPath" aria-labelledby="editorPathTitle"></ol></section>
 <section aria-labelledby="editorProblemsTitle"><h3 id="editorProblemsTitle">Check</h3><ul id="editorProblems"></ul></section>
 </aside>
 <p id="editorStatus" aria-live="polite"></p>
@@ -422,8 +446,15 @@ src: url(data/verdana.ttf);
 <li>A road dropped onto the end of another joins it and follows it on the path by itself. Build the lap end to end from the start, and the path builds itself.</li>
 <li>A piece dropped anywhere else goes to the end of the path. Put it in its place with <b>Order path</b>: click the pieces one after another the way the cars drive, the start first.</li>
 <li>Or select a point and move it earlier or later on the path, or make it the start.</li>
+<li>The list under <b>Path</b> on the right has every point in order: click one to select it, the arrows move it a step. <b>Reverse</b> sends the cars round the other way, <b>Order by place</b> goes from the start each time to the nearest point.</li>
 <li>A point's kind tells the computer cars how to drive it: a corner they may cut, a ramp they drive straight at, a point they may leave out. Trees and other scenery are not on the path.</li>
 <li>A lap needs a start piece at the middle of the map, a checkpoint and three points.</li>
+</ul>
+<h3>3D</h3>
+<ul class="points">
+<li><b>3D view</b> (<kbd>V</kbd>) shows the stage as it races, the selected piece flashing. Fly with <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>, <kbd>Q</kbd> and <kbd>E</kbd> down and up, <kbd>Shift</kbd> faster; drag to look round, scroll to move forward and back.</li>
+<li><b>See in 3D</b> puts the camera behind the selected piece. A fix hoop's or an air checkpoint's height has a slider.</li>
+<li>The piece being placed or selected shows on the right as it lies on the map: its top is ahead.</li>
 </ul>
 <h3>Keys</h3>
 <dl>
@@ -437,6 +468,7 @@ src: url(data/verdana.ttf);
 <dt><kbd>P</kbd></dt><dd>Change the point's kind</dd>
 <dt><kbd>O</kbd></dt><dd>Order the path by clicking</dd>
 <dt><kbd>F</kbd></dt><dd>Show the whole stage</dd>
+<dt><kbd>V</kbd></dt><dd>The 3D view, or the map</dd>
 <dt><kbd>+</kbd> / <kbd>-</kbd></dt><dd>Zoom in / out (or the mouse wheel)</dd>
 <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></dt><dd>Undo / redo</dd>
 <dt><kbd>T</kbd></dt><dd>Test drive</dd>

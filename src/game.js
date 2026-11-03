@@ -61,6 +61,7 @@ import { installOptionsMenu, placeOptionsButton } from "./ui/optionsMenu.js";
 import {
   installStageEditor,
   placeStageEditorButton,
+  stageEditorTick,
 } from "./editor/stageEditor.js";
 import { raceEvents } from "./race/events.js";
 import { control } from "./race/ai.js";
@@ -236,6 +237,7 @@ const TICKS = [
   ],
   [[PHASE.resetQuestion], resetQuestionTick],
   [[PHASE.startFlash], flashTick],
+  [[PHASE.stageEditor], stageEditorTick],
 ];
 
 let musicPaused = false;

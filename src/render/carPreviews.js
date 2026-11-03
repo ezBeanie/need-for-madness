@@ -7,9 +7,9 @@ import { carStats } from "../data/carStats.js";
 import { poseShowcaseCar } from "../screens/showcase.js";
 import { drawWheeledCar } from "./drawFrame.js";
 import { CAR_TEXTURE, skinnedMenuTexture } from "./generated.js";
-import { drawCamera } from "./interpolation.js";
 import { LOOK, look } from "./look.js";
-import { gl, setWorld } from "./renderer.js";
+import { newOffscreen } from "./offscreen.js";
+import { setWorld } from "./renderer.js";
 import { carModels, scene, showcaseWheels } from "./scene.js";
 
 // a card's canvas, in pixels
@@ -25,11 +25,7 @@ const DISTANCE = 52;
 let spin = 30;
 // the types turned this tick: one chosen since is drawn from the next on
 const posed = new Set();
-let target = null;
-let pixels = null;
-let flipped = null;
-let copy = null;
-const projection = mat4.create();
+const offscreen = newOffscreen(PREVIEW_WIDTH, PREVIEW_HEIGHT);
 
 // the element holding the cards while they show (see ui/multiplayerMenu.js), else null;
 // lit: whether the cars have the car select's light since
@@ -80,112 +76,18 @@ export const turnCarPreviews = () => {
   }
 };
 
-const makeTarget = () => {
-  const texture = gl.createTexture();
-  gl.bindTexture(gl.TEXTURE_2D, texture);
-  gl.texImage2D(
-    gl.TEXTURE_2D,
-    0,
-    gl.RGBA,
-    PREVIEW_WIDTH,
-    PREVIEW_HEIGHT,
-    0,
-    gl.RGBA,
-    gl.UNSIGNED_BYTE,
-    null,
-  );
-  const depth = gl.createRenderbuffer();
-  gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
-  gl.renderbufferStorage(
-    gl.RENDERBUFFER,
-    gl.DEPTH_COMPONENT16,
-    PREVIEW_WIDTH,
-    PREVIEW_HEIGHT,
-  );
-  const framebuffer = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, framebuffer);
-  gl.framebufferTexture2D(
-    gl.FRAMEBUFFER,
-    gl.COLOR_ATTACHMENT0,
-    gl.TEXTURE_2D,
-    texture,
-    0,
-  );
-  gl.framebufferRenderbuffer(
-    gl.FRAMEBUFFER,
-    gl.DEPTH_ATTACHMENT,
-    gl.RENDERBUFFER,
-    depth,
-  );
-  pixels = new Uint8Array(PREVIEW_WIDTH * PREVIEW_HEIGHT * 4);
-  flipped = new ImageData(PREVIEW_WIDTH, PREVIEW_HEIGHT);
-  copy = document.createElement("canvas");
-  copy.width = PREVIEW_WIDTH;
-  copy.height = PREVIEW_HEIGHT;
-  return framebuffer;
-};
-
-// (WebGL reads from the bottom row up)
-const keepPixels = () => {
-  gl.readPixels(
-    0,
-    0,
-    PREVIEW_WIDTH,
-    PREVIEW_HEIGHT,
-    gl.RGBA,
-    gl.UNSIGNED_BYTE,
-    pixels,
-  );
-  const row = PREVIEW_WIDTH * 4;
-  for (let y = 0; y < PREVIEW_HEIGHT; y++) {
-    flipped.data.set(
-      pixels.subarray(
-        (PREVIEW_HEIGHT - 1 - y) * row,
-        (PREVIEW_HEIGHT - y) * row,
-      ),
-      y * row,
-    );
-  }
-  copy.getContext("2d").putImageData(flipped, 0, 0);
-};
-
 // Every frame: the lobby's cars, after the frame's own scene.
 export const drawCarPreviews = () => {
   const canvases = previews.root ? previewsIn(previews.root) : [];
   if (canvases.length == 0) {
     return;
   }
-  target ??= makeTarget();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, target);
-  gl.viewport(0, 0, PREVIEW_WIDTH, PREVIEW_HEIGHT);
-  const { x, y, z } = drawCamera;
-  mat4.copy(projection, drawCamera.projection);
-  drawCamera.x = 0;
-  drawCamera.y = 0;
-  drawCamera.z = 0;
-  mat4.perspective(
-    drawCamera.projection,
-    (FIELD_OF_VIEW * Math.PI) / 180,
-    PREVIEW_WIDTH / PREVIEW_HEIGHT,
-    0.1,
-    1000,
-  );
-  mat4.rotate(
-    drawCamera.projection,
-    drawCamera.projection,
-    (PITCH * Math.PI) / 180,
-    [1, 0, 0],
-  );
+  offscreen.start(FIELD_OF_VIEW, PITCH);
   for (const [type, skin] of shownCars(canvases)) {
     if (!posed.has(type)) {
       continue;
     }
-    // (the classic look's batch turns the depth test off when done)
-    gl.enable(gl.DEPTH_TEST);
-    gl.depthFunc(gl.LEQUAL);
-    gl.depthMask(true);
-    gl.clearColor(0, 0, 0, 0);
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    offscreen.clear();
     const body = carModels[type];
     if (look.current == LOOK.classic) {
       drawClassicPreview(body, type, skin, PREVIEW_WIDTH, PREVIEW_HEIGHT);
@@ -195,21 +97,12 @@ export const drawCarPreviews = () => {
       drawWheeledCar(type, body, showcaseWheels[type], body, () => true);
       body.texture[0] = own;
     }
-    keepPixels();
-    for (const canvas of canvases) {
-      if (
-        Number(canvas.dataset.car) == type &&
-        Number(canvas.dataset.skin ?? 0) == skin
-      ) {
-        const context = canvas.getContext("2d");
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        context.drawImage(copy, 0, 0);
-      }
-    }
+    offscreen.copyTo(
+      canvases.filter(
+        ({ dataset }) =>
+          Number(dataset.car) == type && Number(dataset.skin ?? 0) == skin,
+      ),
+    );
   }
-  gl.disable(gl.DEPTH_TEST);
-  Object.assign(drawCamera, { x, y, z });
-  mat4.copy(drawCamera.projection, projection);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
-  gl.viewport(0, 0, gl.drawingBufferWidth, gl.drawingBufferHeight);
+  offscreen.end();
 };

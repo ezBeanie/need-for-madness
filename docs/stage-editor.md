@@ -130,3 +130,24 @@ Zusammenführen dazu. Dafür reichen drei kleine Änderungen:
 2. `guest.js` `isStart`: `isIndex(stage, VISITING_STAGE + 1)` und für die 51 einen Text
    (`typeof stageText == "string"`, mit einer Längengrenze).
 3. `guest.js` `loadHostedRace`: `track.stage = takeRaceStage(start)`.
+
+## Zweite Runde (2026-11-03)
+
+- **3D-Ansicht** (`V`, `editor/editorFlight.js`): Der Editor baut die Strecke mit `showStage()`
+  aus `loading/stageLoad.js` wie für ein Rennen, aber ohne Autos, und zeichnet sie auf dem
+  Spiel-Canvas hinter dem Dialog (`editorView`, `drawEditedStage` in `render/drawFrame.js`).
+  Freie Kamera wie im Replay-Player (`moveFreeCamera`): W A S D, Q/E, Shift, Ziehen, Mausrad.
+  Das ausgewählte Teil blinkt. Nach jeder Änderung wird die Strecke im nächsten Tick neu
+  gebaut. „See in 3D“ setzt die Kamera hinter das ausgewählte Teil, auf seine Höhe.
+- **Vorschau des Teils** (`render/piecePreview.js`): das zu setzende oder ausgewählte Teil in
+  3D, gedreht wie auf der Karte (oben ist vorn). Gezeichnet offscreen wie die Autos der
+  Lobby (`render/offscreen.js`, von beiden genutzt). Der Fix-Hoop ist Ring plus Scheibe
+  (`fixdisk`).
+- **Pfad**: eine Liste aller Pfadpunkte im rechten Bereich, auswählen und mit Pfeilen
+  verschieben; „Reverse“ dreht die Fahrtrichtung um (der Start bleibt vorn), „Order by
+  place“ ordnet vom Start aus jeweils zum nächstgelegenen Punkt (`reversePath`,
+  `orderPathByPlace` in `editor/stageModel.js`).
+- **Höhen**: Fix-Hoop und Luft-Checkpoint mit Schieberegler (0 bis 8000) neben dem Zahlenfeld;
+  ein Zug ist ein Rückgängig-Schritt.
+- Die Kopfleiste passt in eine Zeile: die Tastenkürzel stehen in `title`,
+  `aria-keyshortcuts`, der Statuszeile und der Hilfe.

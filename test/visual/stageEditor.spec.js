@@ -237,3 +237,205 @@ test("stage editor: the keys select along the path, move, turn, copy and change 
   await expect(page.locator("#editorStatus")).toContainText("1 piece");
   expect(await page.isVisible("#stageEditor")).toBe(true);
 });
+
+// the stage the editor has open
+const opened = (page) =>
+  page.evaluate(
+    () =>
+      JSON.parse(localStorage.getItem("myStages"))[
+        Number(localStorage.getItem("myStageOpen"))
+      ],
+  );
+
+const openedPieces = async (page) =>
+  (await opened(page)).split("\n").filter((line) => line.startsWith("set("));
+
+// the editor opened on a stage of the game's, copied
+const editStage = async (page, stage) => {
+  const game = await openGame(page, { storage: { carsel: "5" } });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance();
+  await page.click("#menuStageEditor");
+  await page.click("#editorStagesButton");
+  await page.locator("#stagesFrom").selectOption(String(stage));
+  await page.click("#stagesCopyGame");
+  await expect(page.locator("#editorName")).not.toHaveValue("My Stage");
+  await page.keyboard.press("Escape");
+  return game;
+};
+
+// (time for the shapes and the pictures, between the game's ticks)
+const settle = async (game, page, ticks = 6) => {
+  for (let i = 0; i < ticks; i++) {
+    await game.advance(2);
+    await page.waitForTimeout(50);
+  }
+};
+
+test("stage editor: the 3D view shows the stage built as it is, flown over with the keys", async ({
+  page,
+}) => {
+  const game = await editStage(page, 3);
+  await page.locator("#editorMap").focus();
+  await page.keyboard.press("v");
+  await expect(page.locator("#editor3D")).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  await settle(game, page);
+  // the stage file's pieces built, as the race builds them
+  const builtAt = () =>
+    page.evaluate(() =>
+      window.gameState.pieces.list
+        .slice(0, window.gameState.pieces.count)
+        .map(({ typ, x, z }) => `${typ + 10},${-x * 10},${z * 10}`),
+    );
+  const placed = (lines) =>
+    lines.map((line) =>
+      line
+        .match(/^set\((\d+),(-?\d+),(-?\d+)/)
+        .slice(1)
+        .join(","),
+    );
+  const built = await builtAt();
+  for (const piece of placed(await openedPieces(page))) {
+    expect(built).toContain(piece);
+  }
+  const where = () =>
+    page.evaluate(() => {
+      const { x, z, yaw } = window.gameState.camera;
+      return { x, z, yaw };
+    });
+  const before = await where();
+  await page.keyboard.down("KeyW");
+  await game.advance(10);
+  await page.keyboard.up("KeyW");
+  const after = await where();
+  expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeGreaterThan(
+    100,
+  );
+  expect(after.yaw).toBe(before.yaw);
+  // a piece placed from the palette: back on the map, the 3D view built anew with it
+  await page.click('#editorPalette button[data-piece="10"]');
+  await expect(page.locator("#editor3D")).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
+  const map = await page.locator("#editorMap").boundingBox();
+  await page.mouse.click(map.x + 40, map.y + 40);
+  await page.keyboard.press("Escape");
+  await page.keyboard.press("v");
+  await settle(game, page);
+  const [newest] = placed((await openedPieces(page)).slice(-1));
+  expect(built).not.toContain(newest);
+  expect(await builtAt()).toContain(newest);
+});
+
+// (seen: how many of the picture's pixels are drawn)
+const previewSeen = (page) =>
+  page.evaluate(() => {
+    const canvas = document.getElementById("editorPiecePreview");
+    const { data } = canvas
+      .getContext("2d")
+      .getImageData(0, 0, canvas.width, canvas.height);
+    let seen = 0;
+    for (let i = 3; i < data.length; i += 4) {
+      seen += data[i] > 0 ? 1 : 0;
+    }
+    return seen;
+  });
+
+test("stage editor: the piece about to be placed and the one selected show in 3D, a fix hoop's height on a slider", async ({
+  page,
+}) => {
+  const game = await openGame(page, { storage: { carsel: "5" } });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance();
+  await page.click("#menuStageEditor");
+  await expect(page.locator("#editorPreview")).toBeHidden();
+  await page.click('#editorPalette button[data-piece="41"]');
+  await settle(game, page);
+  await expect(page.locator("#editorPreview")).toBeVisible();
+  expect(await previewSeen(page)).toBeGreaterThan(1000);
+  const map = await page.locator("#editorMap").boundingBox();
+  await page.mouse.click(map.x + map.width / 2, map.y + 60);
+  await page.keyboard.press("Escape");
+  await page.mouse.click(map.x + map.width / 2, map.y + 60);
+  await expect(page.locator("#editorSelected")).toContainText("Fix hoop");
+  const hoop = async () =>
+    (await draft(page)).split("\n").find((line) => line.startsWith("fix("));
+  expect(await hoop()).toMatch(/^fix\(41,-?\d+,-?\d+,-1200,/);
+  // dragged, one change to undo
+  const slider = page.locator("#editorHeightSlider");
+  const box = await slider.boundingBox();
+  await page.mouse.move(box.x + box.width * 0.15, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(box.x + box.width * 0.3, box.y + box.height / 2, {
+    steps: 5,
+  });
+  await page.mouse.move(box.x + box.width * 0.5, box.y + box.height / 2, {
+    steps: 5,
+  });
+  await page.mouse.up();
+  const height = Number(
+    (await hoop()).match(/^fix\(41,-?\d+,-?\d+,(-?\d+)/)[1],
+  );
+  expect(height).toBeLessThan(-3000);
+  await expect(page.locator("#editorHeight")).toHaveValue(String(-height));
+  await page.click("#editorUndo");
+  expect(await hoop()).toMatch(/^fix\(41,-?\d+,-?\d+,-1200,/);
+});
+
+test("stage editor: the path's list selects and moves its points, turns the lap round and orders it by place", async ({
+  page,
+}) => {
+  await editStage(page, 1);
+  const path = page.locator("#editorPath li");
+  const count = await path.count();
+  expect(count).toBeGreaterThan(5);
+  const order = async () =>
+    (await openedPieces(page)).filter((line) => /\)p[thor]?$/.test(line));
+  const before = await order();
+  // turned round: the start stays first, the rest the other way
+  await page.click("#editorReverse");
+  const reversed = await order();
+  expect(reversed[0]).toBe(before[0]);
+  expect(reversed.slice(1)).toEqual(before.slice(1).reverse());
+  await page.click("#editorReverse");
+  expect(await order()).toEqual(before);
+  // the second point a step later, by its list's button
+  await page.getByRole("button", { name: /^Later: 2\./ }).click();
+  const moved = await order();
+  expect(moved[1]).toBe(before[2]);
+  expect(moved[2]).toBe(before[1]);
+  await expect(page.getByRole("button", { name: /^Later: 3\./ })).toBeFocused();
+  // ordered by place: from the start, each time the nearest point left
+  await page.click("#editorOrderByPlace");
+  const points = (await order()).map((line) =>
+    line
+      .match(/^set\(\d+,(-?\d+),(-?\d+)/)
+      .slice(1)
+      .map(Number),
+  );
+  expect(points[0]).toEqual(
+    before[0]
+      .match(/^set\(\d+,(-?\d+),(-?\d+)/)
+      .slice(1)
+      .map(Number),
+  );
+  const far = ([x0, z0], [x1, z1]) => Math.hypot(x1 - x0, z1 - z0);
+  points.slice(1).forEach((point, k) => {
+    for (const later of points.slice(k + 2)) {
+      expect(far(points[k], point)).toBeLessThanOrEqual(far(points[k], later));
+    }
+  });
+  // a point of the list selects its piece
+  await path.nth(3).getByRole("button").first().click();
+  await expect(path.nth(3).getByRole("button").first()).toHaveAttribute(
+    "aria-current",
+    "true",
+  );
+  await expect(page.locator("#editorSelected")).toContainText(
+    `Point 4 of ${count}`,
+  );
+});
