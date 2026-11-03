@@ -91,11 +91,51 @@
         color: #b8c2c8;
         font-weight: normal;
       }
+      form {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      input,
+      button {
+        font: inherit;
+        min-height: 44px;
+        padding: 0 12px;
+        border-radius: 8px;
+        border: 1px solid #01eaff;
+        background: #001020;
+        color: #ffffff;
+      }
+      button {
+        cursor: pointer;
+      }
+      input:focus-visible,
+      button:focus-visible {
+        outline: 3px solid #ffffff;
+        outline-offset: 2px;
+      }
+      [hidden] {
+        display: none;
+      }
     </style>
   </head>
   <body>
     <main>
       <h1>Multiplayer Lobbies</h1>
+      <form id="login" hidden>
+        <label for="token">Token</label>
+        <input
+          id="token"
+          type="password"
+          autocomplete="current-password"
+          required
+          aria-describedby="loginError"
+        />
+        <button type="submit">Show</button>
+        <p id="loginError" role="alert"></p>
+      </form>
       <div id="rooms" aria-live="polite"><p>Looking…</p></div>
       <p class="muted" id="updated"></p>
       <h2>Past sessions (last 7 days)</h2>
@@ -113,6 +153,21 @@
       const roomsBox = document.getElementById("rooms");
       const pastBox = document.getElementById("past");
       const updated = document.getElementById("updated");
+      const login = document.getElementById("login");
+      const tokenInput = document.getElementById("token");
+      const loginError = document.getElementById("loginError");
+      // (kept in this browser so the page needs it once; storage may be blocked)
+      const STORED = "lobbiesToken";
+      let token = "";
+      try {
+        token = localStorage.getItem(STORED) ?? "";
+      } catch {}
+      const keepToken = (value) => {
+        token = value;
+        try {
+          localStorage.setItem(STORED, value);
+        } catch {}
+      };
 
       const minutesAgo = (since, now) => {
         const minutes = Math.floor((now - since) / 60000);
@@ -191,9 +246,30 @@
         roomsBox.replaceChildren(heading, list);
       };
 
+      const askToken = (error) => {
+        loginError.textContent = error;
+        roomsBox.replaceChildren();
+        pastBox.replaceChildren();
+        updated.textContent = "";
+        login.hidden = false;
+        tokenInput.focus();
+      };
+
       const ask = async () => {
+        if (!token) {
+          askToken("");
+          return;
+        }
         try {
-          const response = await fetch("net/rooms", { cache: "no-store" });
+          const response = await fetch("net/rooms", {
+            cache: "no-store",
+            headers: { Authorization: `Bearer ${token}` },
+          });
+          if (response.status == 401) {
+            keepToken("");
+            askToken("Wrong token.");
+            return;
+          }
           if (!response.ok) {
             throw new Error(response.status);
           }
@@ -204,8 +280,16 @@
         }
       };
 
+      login.addEventListener("submit", (event) => {
+        event.preventDefault();
+        keepToken(tokenInput.value);
+        tokenInput.value = "";
+        login.hidden = true;
+        ask();
+      });
+
       ask();
-      setInterval(ask, ASK_EVERY_MS);
+      setInterval(() => login.hidden && ask(), ASK_EVERY_MS);
     </script>
   </body>
 </html>

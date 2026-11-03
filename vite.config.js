@@ -2,12 +2,13 @@ import { defineConfig } from "vite";
 import { ROOMS_PATH, answerRooms, attachRelay } from "./server/relay.js";
 import { exposeGameState } from "./test/harness/exposeState.js";
 
-// The relay of multiplayer races runs in the dev and preview servers too.
+// The relay of multiplayer races runs in the dev and preview servers too (its rooms report
+// with ROOMS_TOKEN set).
 // (gives back nothing: a function given back would be taken for a hook after Vite's own)
 const withRelay = (server) => {
   server.middlewares.use(
     ROOMS_PATH,
-    answerRooms(attachRelay(server.httpServer)),
+    answerRooms(attachRelay(server.httpServer), process.env.ROOMS_TOKEN),
   );
 };
 const relay = () => ({

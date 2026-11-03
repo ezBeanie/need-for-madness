@@ -97,6 +97,10 @@ Deployment auf beanie (seit 29.10.2026 live):
 - Relay: Quellen nach `/home/janu/nfm-relay` (`package.json`, `package-lock.json`, `server/`),
   dort `docker build -f server/Dockerfile -t nfm-relay .`, Container
   `docker run -d --name nfm-relay --restart unless-stopped -p 127.0.0.1:8787:8787 nfm-relay`.
+- Übersicht `lobbies.html`: Der Relay beantwortet `/net/rooms` nur mit dem Token aus
+  `ROOMS_TOKEN` (ohne gesetzten Token gar nicht). Der Token kommt aus einer Env-Datei, die nur
+  auf beanie liegt und nie ins Repository gehört, z. B. `--env-file /home/janu/nfm-relay.env`
+  mit `ROOMS_TOKEN=…`. Die Seite fragt einmal danach und merkt ihn sich im Browser.
 - nginx: Container `nfm` im Host-Netz, damit das Access-Log die echten Absender zeigt (über
   Dockers Port-Weiterleitung stand dort nur das Docker-Gateway):
   `docker run -d --name nfm --restart unless-stopped --network host -v /home/janu/nfm:/usr/share/nginx/html:ro -v /home/janu/nfm-nginx/default.conf:/etc/nginx/conf.d/default.conf:ro -v /home/janu/nfm-logs:/var/log/nginx nginx:alpine`.

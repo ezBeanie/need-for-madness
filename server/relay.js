@@ -2,6 +2,7 @@
 // goes to the other games in its room, as it is. It logs nothing; of a player's address it
 // keeps only the network of a room's host, for the rooms' history (see sessions.js).
 
+import { createHash, timingSafeEqual } from "node:crypto";
 import { WebSocket, WebSocketServer } from "ws";
 import { keepSessions, shortAddress } from "./sessions.js";
 
@@ -147,8 +148,22 @@ export const attachRelay = (httpServer, historyFile) => {
   };
 };
 
-// The answer to a request for ROOMS_PATH, from what attachRelay gave back.
-export const answerRooms = (report) => (request, response) => {
+// (hashed first: timingSafeEqual wants alike lengths, and the time taken tells nothing)
+const sameToken = (given, token) =>
+  typeof given == "string" &&
+  timingSafeEqual(
+    createHash("sha256").update(given).digest(),
+    createHash("sha256").update(`Bearer ${token}`).digest(),
+  );
+
+// The answer to a request for ROOMS_PATH, from what attachRelay gave back: only to whoever
+// sends the token as "Authorization: Bearer <token>". Without a token set the report is off.
+export const answerRooms = (report, token) => (request, response) => {
+  if (!token || !sameToken(request.headers.authorization, token)) {
+    response.writeHead(token ? 401 : 404, { "Cache-Control": "no-store" });
+    response.end();
+    return;
+  }
   response.writeHead(200, {
     "Content-Type": "application/json",
     "Cache-Control": "no-store",

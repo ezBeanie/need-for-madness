@@ -25,7 +25,8 @@ export default defineConfig({
   },
   webServer: {
     command: `npx vite --port ${PORT} --strictPort`,
-    env: { EXPOSE_GAME_STATE: "1" },
+    // (a made-up token, for lobbies.spec.js)
+    env: { EXPOSE_GAME_STATE: "1", ROOMS_TOKEN: "test-token" },
     url: `http://localhost:${PORT}`,
     reuseExistingServer: false,
   },

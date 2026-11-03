@@ -87,13 +87,34 @@ test("the rooms report counts each room's games and tells racing ones, without n
     { games: 2, racing: true },
     { games: 1, racing: false },
   ]);
-  let body = "";
-  answerRooms(report)(null, {
-    writeHead: () => {},
-    end: (text) => (body = text),
-  });
+  const { body } = askRooms(report, "Bearer token");
   expect(body).not.toContain("secret");
   expect(JSON.parse(body).rooms).toHaveLength(2);
+});
+
+// What answerRooms (with the token "token") answers a request with this authorization.
+const askRooms = (report, authorization, token = "token") => {
+  const answer = {};
+  answerRooms(report, token)(
+    { headers: authorization ? { authorization } : {} },
+    {
+      writeHead: (status) => (answer.status = status),
+      end: (text) => (answer.body = text),
+    },
+  );
+  return answer;
+};
+
+test("the rooms report answers only with the right token, and not at all without one set", () => {
+  expect(askRooms(report, "Bearer token").status).toBe(200);
+  for (const wrong of [undefined, "Bearer tokeN", "Bearer token2", "token"]) {
+    expect(askRooms(report, wrong)).toEqual({ status: 401, body: undefined });
+  }
+  expect(askRooms(report, "Bearer ", "")).toEqual({
+    status: 404,
+    body: undefined,
+  });
+  expect(askRooms(report, "Bearer undefined", null).status).toBe(404);
 });
 
 test("a room's host is told by the network of the first game in it, never the whole address", async () => {
