@@ -159,7 +159,9 @@ const newTrack = (file, classic = look.current == LOOK.classic) => {
 // the menus' track in the look
 const menuFile = () => (look.current == LOOK.classic ? "interface" : "shift");
 
+// (also after a race left while its music played on: racing together nothing pauses)
 export const playMenuMusic = () => {
+  stopStageMusic();
   try {
     if (menuMusic.state == 0 || menuMusic.file != menuFile()) {
       menuMusic.track?.pause();

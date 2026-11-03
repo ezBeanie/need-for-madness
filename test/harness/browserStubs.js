@@ -163,6 +163,13 @@ const chain = (node) => node;
 const createAudioContextClass = (queue) =>
   class AudioContext {
     destination = {};
+    currentTime = 0;
+    resume() {
+      return Promise.resolve();
+    }
+    suspend() {
+      return Promise.resolve();
+    }
     createGain() {
       return { gain: { value: 1 }, connect: chain, disconnect: noop };
     }
