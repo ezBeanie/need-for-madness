@@ -7,6 +7,7 @@ import { editorView } from "../editor/editorView.js";
 import { placeNameTags } from "../ui/nameTags.js";
 import {
   drawClassicCar,
+  drawClassicEditedStage,
   drawClassicRace,
   drawClassicStage,
 } from "../classic/frame.js";
@@ -21,6 +22,7 @@ import { menu } from "../screens/menuState.js";
 import { UNLOCKED_CAR_SHOWN } from "../screens/raceEnd.js";
 import { stageSelect } from "../screens/stageSelect.js";
 import { camera } from "./camera.js";
+import { fadeCorrections } from "./corrections.js";
 import { drawCarPreviews } from "./carPreviews.js";
 import { attachTo, interpolation, placeCamera } from "./interpolation.js";
 import { LOOK, classicMenus, look } from "./look.js";
@@ -75,6 +77,7 @@ export function render() {
     drawnPhase = -1;
     lastPhase = game.phase;
   }
+  fadeCorrections();
   placeCamera(camera.x, camera.y, camera.z, camera.matrix);
   // the classic look draws races the original game's way (see classic/frame.js)
   const classicRace =
@@ -227,7 +230,7 @@ const drawGroundAndSky = () => {
 // The stage the editor has, from its free camera: the piece selected flashes.
 const drawEditedStage = () => {
   if (look.current == LOOK.classic) {
-    drawClassicStage(pieces.count);
+    drawClassicEditedStage();
     return;
   }
   drawGroundAndSky();

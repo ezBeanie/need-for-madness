@@ -185,20 +185,21 @@ test("this game's stages play their own music in the classic look too", async ()
   key(76, false);
   step();
   expect(ctx.look.current).toBe(ctx.LOOK.classic);
-  const played = [];
-  const Audio = globalThis.Audio;
-  globalThis.Audio = class extends Audio {
-    constructor(src) {
-      super();
-      played.push(src);
+  // (the tracks load as the sounds do, to play on Web Audio)
+  const loaded = [];
+  const Request = globalThis.XMLHttpRequest;
+  globalThis.XMLHttpRequest = class extends Request {
+    open(method, url) {
+      super.open(method, url);
+      loaded.push(url);
     }
   };
   try {
     ctx.playStageMusic(2);
   } finally {
-    globalThis.Audio = Audio;
+    globalThis.XMLHttpRequest = Request;
   }
-  expect(played).toEqual(["data/music/stage2.mp3"]);
+  expect(loaded).toEqual(["data/music/stage2.mp3"]);
 });
 
 test("the multiplayer stages load and race, the original's net as a piece of its own", async () => {
@@ -218,4 +219,42 @@ test("the multiplayer stages load and race, the original's net as a piece of its
   const { pieceModels } = await import("../src/race/track.js");
   expect(pieceModels[66].ni).toBeGreaterThan(0);
   expect(pieceModels[66].intershad).toBe(true);
+});
+
+test("the menus' music stops a stage's still playing, as after a race left together", async () => {
+  const { startRace } = await import("./harness/race.js");
+  const { ctx, step } = await startRace({ stage: 1, car: 5 });
+  ctx.unlockAudio(false);
+  // the stage's track, loaded, played and, once the menus start theirs, stopped
+  const playing = new Set();
+  const { createBufferSource } = globalThis.AudioContext.prototype;
+  globalThis.AudioContext.prototype.createBufferSource = function () {
+    const source = createBufferSource.call(this);
+    source.start = () => playing.add(source);
+    source.stop = () => playing.delete(source);
+    return source;
+  };
+  try {
+    const before = new Set(playing);
+    ctx.playStageMusic(2);
+    for (let i = 0; i < 5; i++) {
+      step();
+      // (the track starts once its loop is known, a promise later)
+      await Promise.resolve();
+    }
+    // (the sounds start too; a track sets where it loops)
+    const stage = [...playing].filter(
+      (source) => !before.has(source) && "loopEnd" in source,
+    );
+    expect(stage.length).toBe(1);
+    ctx.playMenuMusic();
+    for (let i = 0; i < 5; i++) {
+      step();
+    }
+    for (const source of stage) {
+      expect(playing.has(source)).toBe(false);
+    }
+  } finally {
+    globalThis.AudioContext.prototype.createBufferSource = createBufferSource;
+  }
 });

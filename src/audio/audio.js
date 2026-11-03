@@ -53,18 +53,19 @@ const stageMusic = {
   pendingPlay: false,
 };
 
-// (iOS leaves the modern look's tracks, audio elements, as loud as they are)
 const turnUp = (music) => {
   if (music.track) {
     music.track.volume = music.level * audio.musicVolume;
   }
 };
 
-// The classic look plays the original's tracks (see tools/classic/music), which loop from
-// a point of their own: on the sound context, not as audio elements.
+// The tracks play on the sound context, not as audio elements: phones take an audio
+// element for music the player listens to, show it among their media and play it on with
+// the game left. The classic look's tracks (the original's, see tools/classic/music) loop
+// from a point of their own, the modern look's whole.
 let musicLoops = null;
 
-const classicTrack = (file) => {
+const newTrack = (file, classic = look.current == LOOK.classic) => {
   const context = contexts?.sounds;
   const track = {
     buffer: null,
@@ -130,17 +131,19 @@ const classicTrack = (file) => {
     },
   };
   if (context) {
-    musicLoops ??= new Promise((resolve) =>
-      fetchText("data/classic/music/loops.json", (text) =>
-        resolve(JSON.parse(text)),
-      ),
-    );
+    if (classic) {
+      musicLoops ??= new Promise((resolve) =>
+        fetchText("data/classic/music/loops.json", (text) =>
+          resolve(JSON.parse(text)),
+        ),
+      );
+    }
     loadBuffer(
       context,
-      `data/classic/music/${file}.mp3`,
+      `data/${classic ? "classic/" : ""}music/${file}.mp3`,
       () => {},
       (buffer) => {
-        musicLoops.then((loops) => {
+        (classic ? musicLoops : Promise.resolve({})).then((loops) => {
           track.loop = loops[file] ?? [0, buffer.duration];
           track.buffer = buffer;
           if (track.wanted) {
@@ -153,13 +156,12 @@ const classicTrack = (file) => {
   return track;
 };
 
-const newTrack = (file, classic = look.current == LOOK.classic) =>
-  classic ? classicTrack(file) : new Audio(`data/music/${file}.mp3`);
-
 // the menus' track in the look
 const menuFile = () => (look.current == LOOK.classic ? "interface" : "shift");
 
+// (also after a race left while its music played on: racing together nothing pauses)
 export const playMenuMusic = () => {
+  stopStageMusic();
   try {
     if (menuMusic.state == 0 || menuMusic.file != menuFile()) {
       menuMusic.track?.pause();
@@ -245,6 +247,13 @@ export const pauseMusic = () => {
     if (music.state == 1 && unlocked) {
       music.track.pause();
     }
+  }
+};
+
+// The game left (held) or come back to: its sound stops, and goes on where it was.
+export const holdAudio = (held) => {
+  for (const context of [contexts?.sounds, contexts?.engines]) {
+    (held ? context?.suspend() : context?.resume())?.catch(() => {});
   }
 };
 

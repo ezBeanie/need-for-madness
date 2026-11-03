@@ -15,6 +15,11 @@ import { raceEvents } from "../race/events.js";
 import { physics } from "../race/physics.js";
 import { cutRaceTapeTo, raceTape } from "../race/raceTape.js";
 import { racers } from "../race/racers.js";
+import {
+  forgetCorrections,
+  noteAfterRollback,
+  noteBeforeRollback,
+} from "../render/corrections.js";
 import { keepRecording, restoreRecording } from "../race/recording.js";
 import {
   MESSAGE,
@@ -147,6 +152,7 @@ const inRace = (car, frame) =>
 
 export const stopLockstep = () => {
   lockstep.active = false;
+  forgetCorrections();
 };
 
 // Another player's keys of a frame (checked: another game sent them).
@@ -485,6 +491,7 @@ const checkGuesses = (runFrameAgain) => {
     return;
   }
   const now = lockstep.frame;
+  noteBeforeRollback();
   restoreKept(lockstep.kept.get(wrongAt));
   for (const map of [lockstep.guessed, lockstep.kept]) {
     for (const frame of map.keys()) {
@@ -502,6 +509,7 @@ const checkGuesses = (runFrameAgain) => {
     tick.fraction = nextFraction(tick.fraction);
   }
   physics.quiet = false;
+  noteAfterRollback();
 };
 
 // Before the cars drive: the keys the player holds go to the other games for INPUT_DELAY

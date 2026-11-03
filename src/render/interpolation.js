@@ -10,11 +10,15 @@ import { distance } from "../core/math.js";
 
 // tick: logic ticks so far, alpha: how far the display frame is past the last tick (0..1),
 // frame: display frames so far, states: what interpolation knows per draw instance.
+// correct and cameraShift: how cars are drawn away from where they are, eased in after
+// the race went back (see corrections.js)
 export const interpolation = {
   tick: 0,
   alpha: 1,
   frame: 0,
   states: new WeakMap(),
+  correct: null,
+  cameraShift: null,
 };
 
 // The model matrix for the instance just placed, relative to the drawn camera.
@@ -211,6 +215,11 @@ export const placeModel = (instance) => {
       }
     }
   }
+  interpolation.correct?.(
+    drawMatrix,
+    instance,
+    entry.parentFrame == interpolation.frame ? entry.parent : null,
+  );
   drawMatrix[12] -= drawCamera.x;
   drawMatrix[13] -= drawCamera.y;
   drawMatrix[14] -= drawCamera.z;
@@ -254,13 +263,19 @@ export const placeCamera = (x, y, z, matrix) => {
     drawCamera.y = y;
     drawCamera.z = z;
     mat4.copy(drawCamera.projection, matrix);
-    return;
+  } else {
+    drawCamera.x = previous.x + (current.x - previous.x) * alpha;
+    drawCamera.y = previous.y + (current.y - previous.y) * alpha;
+    drawCamera.z = previous.z + (current.z - previous.z) * alpha;
+    for (let i = 0; i < 16; i++) {
+      drawCamera.projection[i] =
+        previous.matrix[i] + (current.matrix[i] - previous.matrix[i]) * alpha;
+    }
   }
-  drawCamera.x = previous.x + (current.x - previous.x) * alpha;
-  drawCamera.y = previous.y + (current.y - previous.y) * alpha;
-  drawCamera.z = previous.z + (current.z - previous.z) * alpha;
-  for (let i = 0; i < 16; i++) {
-    drawCamera.projection[i] =
-      previous.matrix[i] + (current.matrix[i] - previous.matrix[i]) * alpha;
+  const shift = interpolation.cameraShift?.();
+  if (shift) {
+    drawCamera.x += shift.x;
+    drawCamera.y += shift.y;
+    drawCamera.z += shift.z;
   }
 };
