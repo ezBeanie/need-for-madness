@@ -207,11 +207,15 @@ const showChoices = () => {
     skin.value = String(own.skin);
   }
   const talkButton = element("lobbyTalk");
-  talkButton.hidden = !voice.on;
+  talkButton.hidden = !voice.on || voice.byVoice;
   talkButton.setAttribute("aria-pressed", voice.talking ? "true" : "false");
-  const hint = voice.on
-    ? "Hold to talk, or tap to talk until you tap again. In a race hold P."
-    : "Voice chat is off. Switch it on in the options to talk with the others.";
+  let hint =
+    "Voice chat is off. Switch it on in the options to talk with the others.";
+  if (voice.on) {
+    hint = voice.byVoice
+      ? "The others hear you whenever you speak."
+      : "Hold to talk, or tap to talk until you tap again. In a race hold P.";
+  }
   const talkHint = element("lobbyTalkHint");
   if (talkHint.textContent != hint) {
     talkHint.textContent = hint;
