@@ -35,25 +35,18 @@ const voiceOf = (page) =>
     };
   });
 
-test("two games of a room hear each other while one holds its talk key, and not otherwise", async ({
-  context,
-}, testInfo) => {
+// Host and guest in a room of their own (also for a test run again beside itself), each with
+// its settings (the tabs share their storage: each says its own).
+const openRoom = async (context, room, settings) => {
   const games = [];
-  // (a room of its own, also for a test run again beside itself)
-  const room = `voice-${testInfo.repeatEachIndex}-${testInfo.retry}`;
-  // (the voice chat is off until switched on: the guest's still is)
-  for (const [url, voiceChat] of [
-    [`/?host=${room}`, "1"],
-    [`/?join=${room}`, "0"],
-  ]) {
+  for (const [i, url] of [`/?host=${room}`, `/?join=${room}`].entries()) {
     const page = await context.newPage();
     // (the tests keep the game silent; the voices need Web Audio, see src/net/voice.js)
     await page.addInitScript(() => {
       window.keptAudioContext = window.AudioContext;
     });
-    // (the tabs share their storage: each says its own)
     const game = await openGame(page, {
-      storage: { carsel: "5", voiceChat },
+      storage: { carsel: "5", ...settings[i] },
       url,
     });
     await page.evaluate(() => {
@@ -62,6 +55,42 @@ test("two games of a room hear each other while one holds its talk key, and not 
     await game.advanceUntil(PHASE.mainMenu);
     games.push({ game, page });
   }
+  return games;
+};
+
+const connected = async (games) =>
+  expect
+    .poll(
+      async () => {
+        await advanceBoth(games, 5);
+        const states = [];
+        for (const { page } of games) {
+          const { state, heard } = await voiceOf(page);
+          states.push(`${state} ${heard}`);
+        }
+        return states;
+      },
+      { timeout: 60_000 },
+    )
+    .toEqual(["connected true", "connected true"]);
+
+const hostHearsGuest = (games) =>
+  expect.poll(
+    async () => {
+      await advanceBoth(games, 2);
+      return (await voiceOf(games[0].page)).talking;
+    },
+    { timeout: 15_000 },
+  );
+
+test("two games of a room hear each other while one holds its talk key, and not otherwise", async ({
+  context,
+}, testInfo) => {
+  // (the voice chat is off until switched on: the guest's still is)
+  const games = await openRoom(context, `voice-${testInfo.repeatEachIndex}`, [
+    { voiceChat: "1", voiceByVoice: "0" },
+    { voiceChat: "0", voiceByVoice: "0" },
+  ]);
   const [host, guest] = games;
   await advanceBoth(games, 40);
   expect((await voiceOf(guest.page)).peers).toBe(0);
@@ -111,4 +140,26 @@ test("two games of a room hear each other while one holds its talk key, and not 
   await advanceBoth(games, 2);
   expect((await voiceOf(host.page)).peers).toBe(0);
   await host.page.evaluate(() => window.gameState.toggleVoice());
+});
+
+// (the test's microphone beeps now and then: it speaks by itself)
+test("by voice a player is heard whenever the microphone hears it, without a key", async ({
+  context,
+}, testInfo) => {
+  const games = await openRoom(
+    context,
+    `by-voice-${testInfo.repeatEachIndex}`,
+    [
+      { voiceChat: "1", voiceByVoice: "0" },
+      { voiceChat: "1", voiceByVoice: "1" },
+    ],
+  );
+  const [, guest] = games;
+  await connected(games);
+  await hostHearsGuest(games).toBe(true);
+  // back to push to talk: silent again until the key
+  await guest.page.evaluate(() => window.gameState.toggleByVoice());
+  await hostHearsGuest(games).toBe(false);
+  await advanceBoth(games, 30);
+  expect((await voiceOf(games[0].page)).talking).toBe(false);
 });

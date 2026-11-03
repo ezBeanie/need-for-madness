@@ -2,8 +2,9 @@
 // each other's internet address): every two games of a room talk directly (WebRTC), set up
 // through the relay's messages; the relay only tells them how to find each other
 // (ICE_PATH: the STUN and TURN servers, see server/ice.js). A player is heard only while
-// talking (push to talk: the microphone is asked for at the first press). In a race each
-// voice comes from its car, quieter the farther away; in the lobby all are heard alike.
+// talking: holding the talk key (push to talk, the microphone asked for at the first press),
+// or, by voice, while the microphone hears the player (asked for on entering the room). In a
+// race each voice comes from its car, quieter the farther away; in the lobby all alike.
 
 import { audio, placeSound, placedIn } from "../audio/audio.js";
 import { loadSetting, saveSetting } from "../core/storage.js";
@@ -20,14 +21,20 @@ const FAR = 4000;
 // how loud a voice must be to show its player talking, and for how long after (ms)
 const TALKING = 0.02;
 const TALKING_AFTER_MS = 600;
+// by voice: how loud the own microphone must be to send, and for how long after (ms), so
+// that the ends of words and short pauses go too
+const SPEAKING = 0.03;
+const SPEAKING_AFTER_MS = 500;
 // a voice not connected after this many ticks (the other game ignored the offer, its voice
 // off then) is set up anew
 const RETRY_TICKS = 150;
 
-// on: the voice chat at all (an option); talking: the talk key held; microphone: whether
-// the player allowed it (null: not asked yet); peers: by game id
+// on: the voice chat at all (an option); byVoice: talking when the microphone hears the
+// player instead of with the talk key (an option); talking: the player heard now;
+// microphone: whether the player allowed it (null: not asked yet); peers: by game id
 export const voice = {
   on: loadSetting("voiceChat") == 1,
+  byVoice: loadSetting("voiceByVoice") == 1,
   talking: false,
   microphone: null,
   peers: new Map(),
@@ -38,6 +45,9 @@ let context = null;
 let out = null;
 let track = null;
 let asking = null;
+// the own microphone's loudness, measured on a copy of it (a track switched off hears
+// nothing), and when it was last loud (by voice)
+const own = { heard: null, level: null, samples: null, loudAt: -Infinity };
 
 const askIceServers = () =>
   (iceServers ??= fetch(ICE_PATH)
@@ -207,6 +217,15 @@ const openMicrophone = () =>
       [track] = stream.getAudioTracks();
       track.enabled = voice.talking;
       voice.microphone = true;
+      // (only measured, never played)
+      own.heard = track.clone();
+      own.heard.enabled = true;
+      own.level = audioContext().createAnalyser();
+      own.level.fftSize = 2048;
+      own.samples = new Float32Array(own.level.fftSize);
+      audioContext()
+        .createMediaStreamSource(new MediaStream([own.heard]))
+        .connect(own.level);
       for (const peer of voice.peers.values()) {
         peer.sender?.replaceTrack(track);
       }
@@ -221,6 +240,9 @@ const closeMicrophone = () => {
   track?.stop();
   track = null;
   asking = null;
+  own.heard?.stop();
+  own.heard = null;
+  own.level = null;
   for (const peer of voice.peers.values()) {
     peer.sender?.replaceTrack(null);
   }
@@ -235,9 +257,19 @@ export const toggleVoice = () => {
   }
 };
 
-// The talk key, pressed or let go. (A key let go in another window, or in a dialog the game
-// leaves keys to, never comes: leaving the page lets go of it too.)
+export const toggleByVoice = () => {
+  voice.byVoice = !voice.byVoice;
+  saveSetting("voiceByVoice", voice.byVoice ? 1 : 0);
+  talk(false);
+};
+
+// The talk key, pressed or let go (by voice it does nothing). (A key let go in another
+// window, or in a dialog the game leaves keys to, never comes: leaving the page lets go of
+// it too.)
 export const talk = (pressed) => {
+  if (voice.byVoice && pressed) {
+    return;
+  }
   voice.talking = pressed && voice.on && link.role != ROLE.none;
   if (voice.talking && !track && navigator.mediaDevices) {
     openMicrophone();
@@ -266,21 +298,43 @@ export const isTalking = (id) => {
   return loudAt !== undefined && performance.now() - loudAt < TALKING_AFTER_MS;
 };
 
+// how loud what an analyser hears now is (its root mean square)
+const loudness = (level, samples) => {
+  level.getFloatTimeDomainData(samples);
+  let sum = 0;
+  for (let i = 0; i < samples.length; i++) {
+    sum += samples[i] * samples[i];
+  }
+  return Math.sqrt(sum / samples.length);
+};
+
 // Every tick: when each voice was last loud.
 const listen = () => {
   for (const peer of voice.peers.values()) {
-    if (!peer.level) {
-      continue;
-    }
-    peer.level.getFloatTimeDomainData(peer.samples);
-    let sum = 0;
-    for (let i = 0; i < peer.samples.length; i++) {
-      sum += peer.samples[i] * peer.samples[i];
-    }
-    if (Math.sqrt(sum / peer.samples.length) > TALKING) {
+    if (peer.level && loudness(peer.level, peer.samples) > TALKING) {
       peer.loudAt = performance.now();
     }
   }
+};
+
+// By voice, every tick: the microphone (asked for once in the room) sends while it hears
+// the player, and a little after.
+const talkByVoice = (inRoom) => {
+  if (!voice.byVoice || !inRoom) {
+    return;
+  }
+  if (!track && voice.microphone !== false && navigator.mediaDevices) {
+    openMicrophone();
+  }
+  if (!own.level) {
+    return;
+  }
+  const now = performance.now();
+  if (loudness(own.level, own.samples) > SPEAKING) {
+    own.loudAt = now;
+  }
+  voice.talking = now - own.loudAt < SPEAKING_AFTER_MS;
+  track.enabled = voice.talking;
 };
 
 // Each voice from its car in a race, quieter the farther; in the lobby all alike.
@@ -325,6 +379,7 @@ export const voiceTick = (playerIds) => {
       connect(id);
     }
   }
+  talkByVoice(inRoom);
   placeVoices();
   listen();
 };

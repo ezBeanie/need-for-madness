@@ -13,7 +13,7 @@ import { tellHost } from "../net/guest.js";
 import { sendPlayers } from "../net/host.js";
 import { ROLE, link } from "../net/link.js";
 import { own, setOwnName } from "../net/roomCars.js";
-import { toggleVoice, voice } from "../net/voice.js";
+import { toggleByVoice, toggleVoice, voice } from "../net/voice.js";
 
 const button = document.getElementById("optionsButton");
 const dialog = document.getElementById("options");
@@ -71,6 +71,7 @@ const showStates = () => {
   }
   // (the voice chat has no key: its switch is the options' alone)
   showSwitch("voiceChat", voice.on, "On", "Off");
+  showSwitch("voiceByVoice", voice.byVoice, "By voice", "Push to talk");
 };
 
 export const openOptions = () => {
@@ -97,6 +98,10 @@ export const installOptionsMenu = () => {
   }
   document.getElementById("voiceChat").addEventListener("click", () => {
     toggleVoice();
+    showStates();
+  });
+  document.getElementById("voiceByVoice").addEventListener("click", () => {
+    toggleByVoice();
     showStates();
   });
   // (the room hears of a new name at once)

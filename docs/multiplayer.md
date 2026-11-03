@@ -212,7 +212,14 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
 
 - **Querformat auf iOS:** Web-Apps können die Drehung dort nicht sperren; bisher ein Hinweis im
   Hochformat. Möglich: das Spiel im Hochformat selbst um 90° drehen, oder eine App-Hülle.
-- Bandbreite (Tasten als Bits, nur bei Änderung), Namen über den Autos, Ergebnisliste für alle.
+- Bandbreite (Tasten als Bits, nur bei Änderung), Ergebnisliste für alle.
+- **Discord-Integration (Idee für später):** Mitspieler im laufenden Discord-Call nach der
+  Position im Spiel leiser/lauter und links/rechts. Discords lokale RPC-Schnittstelle kann das
+  (`SET_USER_VOICE_SETTINGS`: Lautstärke 0–200, Pan links/rechts), braucht aber den von Discord
+  zu genehmigenden Scope `rpc.voice.write`, den Desktop-Client (vermutlich ein Hilfsprogramm,
+  da eine Webseite nicht direkt herankommt), die Verknüpfung jedes Spielers mit seinem
+  Discord-Konto (personenbezogene Daten) und geht nicht auf dem Handy. Ebenfalls prüfen:
+  Discord Activities (Spiel im Sprachkanal) und das Discord Social SDK.
 
 ### Schritt 7: Hintergrund, Bots in der Lobby
 
