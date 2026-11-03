@@ -99,6 +99,8 @@ test("a quick race opens every stage, with the field size and the opponents' str
   expect((await state()).stage).toBe(2);
   // past the stages the campaign opened
   await game.tap("ArrowRight");
+  // (the next stage loads first)
+  await game.advanceUntil(PHASE.stageLoading);
   await game.advanceUntil(PHASE.stageSelect);
   await game.advance(60);
   expect((await state()).stage).toBe(3);
