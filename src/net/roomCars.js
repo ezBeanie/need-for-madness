@@ -75,3 +75,10 @@ export const nameOfCar = (c) => {
   }
   return name || `Player ${c + 1}`;
 };
+
+// What the arrow over the HUD calls car c: its player's name, or its car's for a bot and in
+// other races.
+export const arrowNameOf = (c) =>
+  inRoomRace() && typeof roomCars.names[c] == "string"
+    ? nameOfCar(c)
+    : carStats.names[game.carTypes[c]];

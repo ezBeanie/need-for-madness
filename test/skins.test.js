@@ -2,6 +2,7 @@ import { expect, test } from "vitest";
 import { RACE_KIND, game, raceSetup } from "../src/core/state.js";
 import { carStats } from "../src/data/carStats.js";
 import {
+  arrowNameOf,
   cleanName,
   nameOfCar,
   setRoomCars,
@@ -52,6 +53,21 @@ test("a room's race names each car after its player, or Player n and Bot n, and 
   raceSetup.kind = RACE_KIND.quickRace;
   expect(nameOfCar(1)).toBe(carStats.names[3]);
   expect(skinOf(1)).toBe(0);
+});
+
+test("the arrow names a player's car after the player, and a bot's after its car", () => {
+  game.carTypes[0] = 5;
+  game.carTypes[1] = 3;
+  game.carTypes[2] = 7;
+  setRoomCars(["Jan", "", null], [0, 0, 0]);
+  raceSetup.kind = RACE_KIND.together;
+  expect([0, 1, 2].map(arrowNameOf)).toEqual([
+    "Jan",
+    "Player 2",
+    carStats.names[7],
+  ]);
+  raceSetup.kind = RACE_KIND.quickRace;
+  expect(arrowNameOf(0)).toBe(carStats.names[5]);
 });
 
 test("a name is cut short and has no control characters or runs of spaces", () => {
