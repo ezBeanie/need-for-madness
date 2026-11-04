@@ -5,6 +5,7 @@ import { distanceSquaredXZ } from "../core/math.js";
 import { RACE_MODE, finishingEnds, game, raceSetup } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { tick } from "../core/tick.js";
+import { deathmatchLeft } from "./deathmatch.js";
 import { raceEvents } from "./events.js";
 import { MISSED, car, countMissedCheckpoint, racers } from "./racers.js";
 import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
@@ -38,7 +39,12 @@ export function updateStandings() {
   if (game.humans.length > 0) {
     const cars = racers.slice(0, game.carCount);
     const done = track.nlaps * track.nsp;
-    if (raceSetup.mode == RACE_MODE.timeAttack) {
+    if (raceSetup.mode == RACE_MODE.mostKills) {
+      // (most kills: until the time is up, the wasted coming back)
+      if (deathmatchLeft() == 0) {
+        track.haltall = true;
+      }
+    } else if (raceSetup.mode == RACE_MODE.timeAttack) {
       // (against the clock: until every car is through or wasted)
       if (cars.every((racer) => racer.wasted || racer.clear >= done)) {
         track.haltall = true;

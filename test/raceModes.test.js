@@ -154,3 +154,77 @@ test("in a room's time attack the other cars are seen through, the more the near
   // the car followed itself is solid
   expect(ctx.showsOf(0)).toBe(1);
 });
+
+// A race of most kills, past the countdown, the computer driving every car.
+const mostKills = async () => {
+  const game = await startRace({ stage: 1, car: 5 });
+  const { ctx } = game;
+  reset = () => {
+    ctx.raceSetup.mode = ctx.RACE_MODE.normal;
+    ctx.game.humans = [];
+  };
+  ctx.raceSetup.mode = ctx.RACE_MODE.mostKills;
+  ctx.game.humans = [0, 1];
+  ctx.startDeathmatch();
+  ctx.raceEvents.countdown = 0;
+  // (a body as hit before: its corners to dent and burn)
+  ctx.fixcar(1);
+  return game;
+};
+
+test("in most kills a wasted car counts for the car that hit it last, and comes back whole after a while", async () => {
+  const { ctx } = await mostKills();
+  // car 1, hit by bot 2, damaged beyond what it takes
+  const wreck = () => {
+    ctx.racers[1].lastcolido = 70;
+    ctx.racers[1].lastHitBy = 2;
+    ctx.racers[1].damage = 100000;
+  };
+  wreck();
+  let ticks = 0;
+  while (!ctx.racers[1].wasted && ticks < 200) {
+    ctx.drive();
+    ctx.racers[1].lastcolido = 70;
+    ticks++;
+  }
+  expect(ctx.racers[1].wasted).toBe(true);
+  expect(ctx.deathmatch.kills[2]).toBe(1);
+  expect(ctx.deathmatch.deaths[1]).toBe(1);
+  for (let i = 0; i < ctx.RESPAWN_TICKS; i++) {
+    ctx.drive();
+  }
+  expect(ctx.racers[1].wasted).toBe(false);
+  expect(ctx.racers[1].damage).toBe(0);
+  expect([ctx.car[1].xy, ctx.car[1].zy]).toEqual([0, 0]);
+});
+
+test("a normal race keeps its wrecks and counts no kills", async () => {
+  const { ctx } = await mostKills();
+  ctx.raceSetup.mode = ctx.RACE_MODE.normal;
+  ctx.racers[1].damage = 100000;
+  for (let i = 0; i < 200 + ctx.RESPAWN_TICKS; i++) {
+    ctx.drive();
+  }
+  expect(ctx.racers[1].wasted).toBe(true);
+  expect(ctx.deathmatch.deaths[1]).toBe(0);
+  // (and its state is as it always was)
+  expect(ctx.saveRace().deathmatch).toBeUndefined();
+});
+
+test("most kills ends when its time is up, its clock and kills going with the race's state", async () => {
+  const { ctx } = await mostKills();
+  ctx.deathmatch.kills[3] = 2;
+  ctx.deathmatch.ticks = ctx.DEATHMATCH_TICKS - 1;
+  const saved = ctx.saveRace();
+  expect(ctx.isRaceState(saved, ctx.game.carCount)).toBe(true);
+  ctx.track.haltall = false;
+  ctx.drive();
+  ctx.updateStandings();
+  expect(ctx.track.haltall).toBe(true);
+  expect(ctx.killTable()[0]).toMatchObject({ c: 3, kills: 2 });
+  // (back to before the last tick: the clock and kills too)
+  ctx.deathmatch.kills[3] = 0;
+  ctx.restoreRace(saved);
+  expect(ctx.deathmatch.ticks).toBe(ctx.DEATHMATCH_TICKS - 1);
+  expect(ctx.deathmatch.kills[3]).toBe(2);
+});

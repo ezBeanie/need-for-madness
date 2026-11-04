@@ -2,6 +2,12 @@
 // buttons, and the overlays of replays, winding back time and switch mode.
 
 import {
+  deathmatch,
+  deathmatchLeft,
+  isDeathmatch,
+  killTable,
+} from "../race/deathmatch.js";
+import {
   spectating,
   startWatching,
   watchNext,
@@ -43,7 +49,7 @@ import {
   raceSetup,
 } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
-import { tick } from "../core/tick.js";
+import { TICK_MS, tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { pointer } from "../input/pointer.js";
@@ -781,8 +787,78 @@ const timeAttackOutcome = () => {
   return false;
 };
 
+// the player's car being wasted: a crash, then its burning out
+const soundPlayerWreck = () => {
+  if (racers[game.player].cntdest != 0 && raceEvents.playerWreckTicks < 16) {
+    raceEvents.playerWreckTicks++;
+    if (raceEvents.playerWreckTicks == 1) {
+      playSound(31, 1);
+    }
+    if (raceEvents.playerWreckTicks == 16) {
+      playSound(30, 1);
+    }
+  }
+};
+
+// m:ss
+const clockTime = (ticks) => {
+  const seconds = Math.ceil((ticks * TICK_MS) / 1000);
+  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
+};
+
+// A room's race of most kills: the player's wreck and its way back, and once the time is
+// up every car's kills. Returns whether the race is over.
+const deathmatchOutcome = () => {
+  if (track.haltall) {
+    const table = killTable();
+    const won = table[0]?.c == game.player;
+    drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
+    raceEvents.winner = won;
+    table
+      .slice(0, 8)
+      .forEach(({ c, kills, deaths }, place) =>
+        drawCenteredText(
+          200 + 32 * place,
+          `${placeName(place)}  ${nameOfCar(c)}  ${kills} kills, wasted ${deaths}`,
+          0,
+          0,
+          0,
+          TEXT.label,
+        ),
+      );
+    return true;
+  }
+  if (racers[game.player].wasted) {
+    const back = deathmatch.backAt[game.player] - deathmatch.ticks;
+    drawOutcome("You're Wasted!", "yourwasted");
+    if (back > 0) {
+      drawBlinking(192, `Back in ${clockTime(back)}`, 0, 128, 255);
+    }
+  }
+  soundPlayerWreck();
+  return false;
+};
+
+// Most kills under the race: the time left, the player's kills and who leads.
+const drawDeathmatchClock = () => {
+  const [lead] = killTable();
+  drawCenteredText(
+    636,
+    `Your kills ${deathmatch.kills[game.player]}` +
+      (lead?.kills ? `   Leading: ${nameOfCar(lead.c)} ${lead.kills}` : ""),
+    0,
+    0,
+    0,
+    TEXT.label,
+  );
+  drawCenteredText(670, clockTime(deathmatchLeft()), 0, 0, 0, TEXT.heading);
+};
+
 const raceOutcome = () => {
   let over = false;
+  if (isDeathmatch()) {
+    return deathmatchOutcome();
+  }
   const againstTheClock =
     raceSetup.mode == RACE_MODE.timeAttack && game.humans.length > 0;
   if (againstTheClock && timeAttackOutcome()) {
@@ -830,15 +906,7 @@ const raceOutcome = () => {
       raceEvents.winner = false;
     }
   }
-  if (racers[game.player].cntdest != 0 && raceEvents.playerWreckTicks < 16) {
-    raceEvents.playerWreckTicks++;
-    if (raceEvents.playerWreckTicks == 1) {
-      playSound(31, 1);
-    }
-    if (raceEvents.playerWreckTicks == 16) {
-      playSound(30, 1);
-    }
-  }
+  soundPlayerWreck();
   if (!over && finishingEnds()) {
     for (let i = 0; i < game.carCount; i++) {
       if (track.clear[i] == track.nlaps * track.nsp && track.pos[i] == 0) {
@@ -1777,12 +1845,12 @@ const announceEvents = () => {
         const byYou = knownWrecks[i] == 2 && racers[i].lastHitBy == game.player;
         if (knownWrecks[i] == 1 || (knownWrecks[i] == 2 && !byYou)) {
           messageImportant = true;
-          message = "" + carStats.names[game.carTypes[i]] + " has been wasted!";
+          message = `${nameOfCar(i)} has been wasted!`;
           raceEvents.messageTicks = -15;
         }
         if (byYou) {
           messageImportant = true;
-          message = "You wasted " + carStats.names[game.carTypes[i]] + "!";
+          message = `You wasted ${nameOfCar(i)}!`;
           raceEvents.messageTicks = -15;
         }
       }
@@ -1837,6 +1905,9 @@ export function drawHud() {
     }
     if (isTimeAttack() && raceEvents.countdown == 0) {
       drawClock();
+    }
+    if (isDeathmatch() && raceEvents.countdown == 0) {
+      drawDeathmatchClock();
     }
     if (
       game.carCount != 1 &&

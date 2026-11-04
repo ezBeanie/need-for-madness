@@ -3,6 +3,12 @@
 // its race back to where they were pressed and runs it on again with them. What is only
 // seen or heard (effects, sounds, highlights, the HUD) is left as it is.
 
+import {
+  deathmatchState,
+  isDeathmatch,
+  isDeathmatchState,
+  restoreDeathmatch,
+} from "../race/deathmatch.js";
 import { random } from "../core/random.js";
 import { game } from "../core/state.js";
 import { tick } from "../core/tick.js";
@@ -54,6 +60,8 @@ export const saveRace = () => {
     wreck: randomState(random.wreck),
     fraction: tick.fraction,
     flipWhenGrounded: physics.flipWhenGrounded,
+    // (only racing for most kills: every other race's state as it always was)
+    ...(isDeathmatch() ? { deathmatch: deathmatchState() } : {}),
   };
 };
 
@@ -83,6 +91,9 @@ export const restoreRace = (state) => {
   restoreRandom(random.wreck, state.wreck);
   tick.fraction = state.fraction;
   physics.flipWhenGrounded = state.flipWhenGrounded;
+  if (state.deathmatch) {
+    restoreDeathmatch(state.deathmatch);
+  }
 };
 
 // whether what another game sent can be the state of a race of so many cars
@@ -100,4 +111,5 @@ export const isRaceState = (state, cars) =>
   state.standings.length == STANDINGS.length &&
   state.standings.every(Array.isArray) &&
   typeof state.events == "object" &&
-  Number.isFinite(state.fraction);
+  Number.isFinite(state.fraction) &&
+  (state.deathmatch === undefined || isDeathmatchState(state.deathmatch));

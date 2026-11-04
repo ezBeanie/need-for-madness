@@ -79,19 +79,22 @@ export const RACE_KIND = {
 
 // How a room's race is won (see net/host.js): as any race, finishing first or wasting the
 // others; only racing, no car taking damage; as the last car not wasted, the laps
-// counting for nothing; or against the clock, the cars passing through each other and
-// the race going on until every car is through.
+// counting for nothing; against the clock, the cars passing through each other and the
+// race going on until every car is through; or for a fixed time wasting the others, the
+// wasted coming back, the most kills winning (see race/deathmatch.js).
 export const RACE_MODE = {
   normal: 0,
   onlyRacing: 1,
   lastSurvivor: 2,
   timeAttack: 3,
+  mostKills: 4,
 };
 export const RACE_MODE_NAMES = [
   "Normal race",
   "Only racing",
   "Last survivor",
   "Time attack",
+  "Most kills",
 ];
 
 // whether the first car through its laps ends the race (in a room's time attack every car
