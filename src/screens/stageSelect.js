@@ -68,6 +68,7 @@ import {
   drawCenteredText,
   drawMusicToggle,
   fillRoundedRect,
+  pressOn,
   fillScaledShape,
   pulseButtons,
   strokeScaledPolygon,
@@ -593,13 +594,18 @@ const showCollection = (collection) => {
   );
 };
 
-// up and down: the collection before or after this one, round and round
+// The collection step after (1) or before (-1) this one, round and round.
+const stepCollection = (step) => {
+  const count = shownCollections().length;
+  showCollection((collectionOf(track.stage) + step + count) % count);
+};
+
+// up and down: the collection before or after this one
 const browseCollections = () => {
   const input = racers[0].u;
   const step = input.down ? 1 : input.up ? -1 : 0;
   if (step) {
-    const count = shownCollections().length;
-    showCollection((collectionOf(track.stage) + step + count) % count);
+    stepCollection(step);
   }
   input.up = false;
   input.down = false;
@@ -632,7 +638,7 @@ const drawControls = (hue) => {
   }
   browseCollections();
   if (!inCampaign()) {
-    drawCollectionTabs(colors);
+    drawCollectionPicker(colors, hue);
   }
   if (
     drawButton({
@@ -742,32 +748,41 @@ const drawBestTimes = (hue) => {
   );
 };
 
-// a tab for each collection under the stage's name, the current one bright
-const drawCollectionTabs = (colors) => {
-  collections().forEach((label, collection) => {
-    const current = collection == collectionOf(track.stage);
-    if (
-      drawButton({
-        id: 12 + collection,
-        x:
-          (640 + (collection - (collections().length - 1) / 2) * 170) *
-          view.scaleX,
-        y: 245 * view.scaleY,
-        width: 150,
-        height: 40,
-        ...colors,
-        layout: BUTTON.textOnly,
-        text: label,
-        fontSize: 15,
-        textOpacity: current ? 0.9 : 0.45,
-        image: null,
-        imageOpacity: 0,
-        pulsing: false,
-      })
-    ) {
-      showCollection(collection);
-    }
-  });
+// The collection under the stage's name, between arrows to the one before and after
+// (as up and down do); a tap on its name goes on to the next.
+const drawCollectionPicker = (colors, hue) => {
+  const label = collections()[collectionOf(track.stage)];
+  const arrow = (id, side, text) =>
+    drawButton({
+      id,
+      x: (640 + side * 130) * view.scaleX,
+      y: 245 * view.scaleY,
+      width: 50,
+      height: 40,
+      ...colors,
+      layout: BUTTON.textOnly,
+      text,
+      fontSize: 15,
+      textOpacity: 0.9,
+      image: null,
+      imageOpacity: 0,
+      pulsing: false,
+    });
+  if (arrow(12, -1, "<")) {
+    stepCollection(-1);
+  }
+  if (arrow(13, 1, ">")) {
+    stepCollection(1);
+  }
+  drawCenteredText(272, label, ...hslToRgb(hue, 1, 0.25), TEXT.heading);
+  const width = 180 * view.scale;
+  const height = 40 * view.scale;
+  if (
+    pressOn(14, 640 * view.scaleX - width / 2, 245 * view.scaleY, width, height)
+      .clicked
+  ) {
+    stepCollection(1);
+  }
 };
 
 const browseButton = ({ id, x, colors, layout, text, image }) =>
