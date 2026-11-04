@@ -15,7 +15,8 @@ import { random } from "../core/random.js";
 import { MODE, PHASE, RACE_PHASES, game } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
 import { effects } from "../race/effects.js";
-import { paintDents } from "../race/physics.js";
+import { GHOST, ghost, ghostShown } from "../race/ghost.js";
+import { fixcar, paintDents } from "../race/physics.js";
 import { car, racers } from "../race/racers.js";
 import { pieceModels, pieces, track } from "../race/track.js";
 import { menu } from "../screens/menuState.js";
@@ -33,7 +34,8 @@ import {
   frozenWanted,
   presentScreen,
 } from "../classic/screen.js";
-import { drawModel, drawParticle, fitCanvas3D, gl } from "./renderer.js";
+import { CAR_TEXTURE } from "./generated.js";
+import { BLEND, drawModel, drawParticle, fitCanvas3D, gl } from "./renderer.js";
 import {
   carModels,
   carShadows,
@@ -175,8 +177,16 @@ const drawFixHoops = () => {
 };
 
 // A car with its wheels: the wheels follow the parent's movement between ticks, the treads
-// come before the body and the disks after it.
-export const drawWheeledCar = (type, parent, wheels, body, near) => {
+// come before the body and the disks after it. A ghost (seeThrough) has no treads, and its
+// disks blend in as its body does.
+export const drawWheeledCar = (
+  type,
+  parent,
+  wheels,
+  body,
+  near,
+  seeThrough = false,
+) => {
   for (const wheel of wheels) {
     attachTo(wheel.mat, parent);
   }
@@ -184,7 +194,9 @@ export const drawWheeledCar = (type, parent, wheels, body, near) => {
     const axle = w < 2 ? 0 : 1;
     const tread = (near(wheel) ? wheelTreads : wheelTreadsLow)[type][axle];
     placeAt(tread, wheel);
-    drawParticle(tread);
+    if (!seeThrough) {
+      drawParticle(tread);
+    }
   });
   if (body !== parent) {
     placeAt(body, parent);
@@ -192,9 +204,54 @@ export const drawWheeledCar = (type, parent, wheels, body, near) => {
   drawModel(body);
   wheels.forEach((wheel, w) => {
     const disk = wheelDisks[type][w < 2 ? 0 : 1];
+    const alpha = disk.alpha;
+    if (seeThrough) {
+      disk.alpha = body.alpha;
+    }
     placeAt(disk, wheel);
     drawModel(disk);
+    disk.alpha = alpha;
   });
+};
+
+// The ghost's own clean copy of its car's model (the race's may be dented), in the race's
+// texture, seen through.
+const ghostBody = () => {
+  const model = carModels[ghost.type];
+  const racer = racers[GHOST];
+  if (racer.body?.ghostOf !== model) {
+    const old = racer.body;
+    if (old?.copied) {
+      gl.deleteTexture(old.texture[1]);
+      gl.deleteBuffer(old.vbuf);
+    }
+    racer.body = {
+      ...model,
+      copied: true,
+      ghostOf: model,
+      texture: [model.texture[0], null],
+      vbuf: null,
+      shownTexture: CAR_TEXTURE.race,
+    };
+    fixcar(GHOST);
+  }
+  racer.body.alpha = BLEND.ghost;
+  return racer.body;
+};
+
+// The time attack's ghost, after everything else that is solid.
+const drawGhost = () => {
+  if (!ghostShown() || !carModels[ghost.type].loaded) {
+    return;
+  }
+  drawWheeledCar(
+    ghost.type,
+    car[GHOST],
+    racers[GHOST].wheels,
+    ghostBody(),
+    () => true,
+    true,
+  );
 };
 
 // floor: where the car's shadow lies, null right below its wheels; menuFloor: on the
@@ -338,6 +395,7 @@ const drawRace = () => {
   if (game.mode != MODE.switchCars) {
     drawFixHoops();
   }
+  drawGhost();
   if (game.phase == PHASE.switchScreen) {
     for (let c = 0; c < game.carCount; c++) {
       drawParticle(racers[c].switchLine);

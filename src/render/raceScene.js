@@ -4,6 +4,7 @@
 import { distance } from "../core/math.js";
 import { game } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
+import { GHOST, ghostShown } from "../race/ghost.js";
 import { car, racers } from "../race/racers.js";
 import { pieceModels, pieces, spinFixHoops, track } from "../race/track.js";
 import { camera, faceCamera } from "./camera.js";
@@ -11,30 +12,38 @@ import { carModels, checkpointText, electricity, finishText } from "./scene.js";
 import { SILHOUETTE, layShadow } from "./shadows.js";
 import { isLeftWheel, placeWheel } from "./wheels.js";
 
-// The wheels of every car: the front ones steer, all of them spin (wzy).
+// Car c's wheels: the front ones steer, all of them spin (wzy).
+const placeWheelsOf = (c) => {
+  const body = car[c];
+  for (let w = 0; w < 4; w++) {
+    const wheel = racers[c].wheels[w];
+    placeWheel(wheel, body, body.typ, w, w < 2 ? body.wxz : 0);
+    mat4.rotate(
+      wheel.mat,
+      wheel.mat,
+      body.wzy * (Math.PI / 180),
+      isLeftWheel(w) ? [0, 0, -1] : [0, 0, 1],
+    );
+  }
+  for (const wheel of racers[c].wheels) {
+    wheel.dist = distance(
+      wheel.x,
+      camera.x,
+      wheel.y,
+      camera.y,
+      wheel.z,
+      camera.z,
+    );
+  }
+};
+
+// The wheels of every car, and of the time attack's ghost.
 export const placeWheels = () => {
   for (let c = 0; c < game.carCount; c++) {
-    const body = car[c];
-    for (let w = 0; w < 4; w++) {
-      const wheel = racers[c].wheels[w];
-      placeWheel(wheel, body, body.typ, w, w < 2 ? body.wxz : 0);
-      mat4.rotate(
-        wheel.mat,
-        wheel.mat,
-        body.wzy * (Math.PI / 180),
-        isLeftWheel(w) ? [0, 0, -1] : [0, 0, 1],
-      );
-    }
-    for (const wheel of racers[c].wheels) {
-      wheel.dist = distance(
-        wheel.x,
-        camera.x,
-        wheel.y,
-        camera.y,
-        wheel.z,
-        camera.z,
-      );
-    }
+    placeWheelsOf(c);
+  }
+  if (ghostShown()) {
+    placeWheelsOf(GHOST);
   }
 };
 

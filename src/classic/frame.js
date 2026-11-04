@@ -4,6 +4,7 @@
 import { MAX_CARS, PHASE, game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { raceEvents } from "../race/events.js";
+import { GHOST, ghost, ghostShown } from "../race/ghost.js";
 import { car, racers } from "../race/racers.js";
 import { pieceModels, pieces, track } from "../race/track.js";
 import {
@@ -327,6 +328,9 @@ const carObject = (c, instance, type, skin = 0) => {
   );
 };
 
+// how much of the time attack's ghost shows (of 255)
+const GHOST_SHOWS = 100;
+
 // The objects, those not seen last frame first, then the farthest first; effects know
 // how far they are now and draw themselves.
 const drawInOrder = (objects) => {
@@ -350,6 +354,7 @@ const drawInOrder = (objects) => {
         nextCheckpoint: object.nextCheckpoint,
         angles: object.car,
         beforePolygons: object.beforePolygons,
+        alpha: object.alpha,
         ground: object.ground ?? null,
         shadowCamera: object.onStage ? drawCamera : null,
         // the ground, relative to the camera
@@ -407,6 +412,13 @@ export const drawClassicRace = () => {
     const object = carObject(c, car[c], car[c].typ, skinOf(c));
     if (object) {
       object.onStage = true;
+      objects.push(object);
+    }
+  }
+  if (ghostShown()) {
+    const object = carObject(GHOST, car[GHOST], ghost.type);
+    if (object) {
+      object.alpha = GHOST_SHOWS;
       objects.push(object);
     }
   }

@@ -414,6 +414,10 @@ export const fillNear = (at, n, r, g, b, alpha = 255) => {
   }
 };
 
+// how much of the object being drawn shows (255: all of it; less: the time attack's
+// ghost, without outlines or shadow)
+let shows = 255;
+
 // One polygon (Plane.d), its corners placed: seen at all, how bright, in which colour,
 // outlined or not. size is how big its object looks, or -1 for the next checkpoint.
 const drawPoly = (poly, n, noline, size) => {
@@ -592,7 +596,10 @@ const drawPoly = (poly, n, noline, size) => {
     }
   }
   startPolygon(SX, SY, zs, n);
-  fillPolygon(SX, SY, n, r, g, b);
+  fillPolygon(SX, SY, n, r, g, b, shows);
+  if (shows < 255) {
+    return;
+  }
   if (!race && poly.gr == -10) {
     far = false;
   }
@@ -903,6 +910,7 @@ export const drawObject = (
     shadowCamera = null,
     angles = null,
     beforePolygons = null,
+    alpha = 255,
   } = {},
 ) => {
   // the stage select's preview leaves out the decoration
@@ -947,7 +955,8 @@ export const drawObject = (
   if (medium.depth) {
     startObject(depth - maxR, depth + maxR);
   }
-  if (rad.shadow && depth < 2000) {
+  shows = alpha;
+  if (rad.shadow && depth < 2000 && alpha == 255) {
     drawShadow(rad, matrix, groundY, shadowCamera, ground ?? 0);
   }
   // drawn before its polygons: the fix hoop's electricity, the bubble round a car being
@@ -993,6 +1002,7 @@ export const drawObject = (
   for (let i = 0; i < polys.length; i++) {
     distances[i] = polys[i].av;
   }
+  shows = 255;
   if (medium.depth) {
     endObject();
   }

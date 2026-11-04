@@ -5,6 +5,7 @@ import { RACE_KIND, game, raceSetup } from "../core/state.js";
 import { loadText, saveSetting } from "../core/storage.js";
 import { TICK_MS } from "../core/tick.js";
 import { isCustom } from "../data/stages.js";
+import { forgetGhost, ghostTick, keepGhost, startGhost } from "./ghost.js";
 import { track } from "./track.js";
 
 // ticks: since the start; laps: the ticks of each lap done; best: the stage's best times
@@ -59,6 +60,11 @@ export const startTimeAttack = () => {
   timeAttack.best = bestTimes(track.stage);
   timeAttack.finished = false;
   timeAttack.newBest = { lap: false, race: false };
+  if (isTimeAttack()) {
+    startGhost();
+  } else {
+    forgetGhost();
+  }
 };
 
 const lapStart = () => timeAttack.laps.reduce((sum, lap) => sum + lap, 0);
@@ -90,6 +96,7 @@ export const timeAttackTick = () => {
     return;
   }
   timeAttack.ticks++;
+  ghostTick(timeAttack.ticks);
   const lapsDone = Math.floor(track.clear[game.player] / track.nsp);
   while (timeAttack.laps.length < Math.min(lapsDone, track.nlaps)) {
     timeAttack.laps.push(timeAttack.ticks - lapStart());
@@ -97,5 +104,6 @@ export const timeAttackTick = () => {
   if (timeAttack.laps.length == track.nlaps) {
     timeAttack.finished = true;
     keepBest();
+    keepGhost(timeAttack.ticks);
   }
 };
