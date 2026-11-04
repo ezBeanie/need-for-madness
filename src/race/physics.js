@@ -168,7 +168,8 @@ export function inishmad() {
   }
 }
 export function drive() {
-  if (game.carCount != 1) {
+  // (in a room's time attack the cars pass through each other)
+  if (game.carCount != 1 && raceSetup.mode != RACE_MODE.timeAttack) {
     for (let c = 0; c < game.carCount; c++) {
       for (let xc = 0; xc < game.carCount; xc++) {
         if (xc != c) {

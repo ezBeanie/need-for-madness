@@ -487,8 +487,10 @@ const drawClassicModel = (model) => {
 // black, so the source counts fully) light up burning and electrified cars.
 export const BLEND = { alpha: 1, glow: 2, brightGlow: 3, ghost: 4 };
 
-// how much of the time attack's ghost shows over what is behind it
-const GHOST_SHOWS = 0.4;
+// how much of a ghost shows over what is behind it: the time attack's, or a car of a room's
+// time attack (see race/ghost.js)
+export const GHOST_SHOWS = 0.4;
+export const ghostLook = { shows: GHOST_SHOWS };
 
 const BLENDING = {
   [BLEND.alpha]: () => gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA),
@@ -497,7 +499,7 @@ const BLENDING = {
     gl.blendFunc(gl.ONE_MINUS_CONSTANT_COLOR, gl.DST_ALPHA),
   // (the glows want the blend colour black: drawModel sets it back)
   [BLEND.ghost]: () => {
-    gl.blendColor(0, 0, 0, GHOST_SHOWS);
+    gl.blendColor(0, 0, 0, ghostLook.shows);
     gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA);
   },
 };

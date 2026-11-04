@@ -15,7 +15,7 @@ import { random } from "../core/random.js";
 import { MODE, PHASE, RACE_PHASES, game } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
 import { effects } from "../race/effects.js";
-import { GHOST, ghost, ghostShown } from "../race/ghost.js";
+import { GHOST, ghost, ghostShown, showsOf } from "../race/ghost.js";
 import { fixcar, paintDents } from "../race/physics.js";
 import { car, racers } from "../race/racers.js";
 import { pieceModels, pieces, track } from "../race/track.js";
@@ -35,7 +35,15 @@ import {
   presentScreen,
 } from "../classic/screen.js";
 import { CAR_TEXTURE } from "./generated.js";
-import { BLEND, drawModel, drawParticle, fitCanvas3D, gl } from "./renderer.js";
+import {
+  BLEND,
+  GHOST_SHOWS,
+  drawModel,
+  drawParticle,
+  fitCanvas3D,
+  ghostLook,
+  gl,
+} from "./renderer.js";
 import {
   carModels,
   carShadows,
@@ -366,13 +374,23 @@ const drawRace = () => {
     }
   }
   for (let c = 0; c < game.carCount; c++) {
+    const body = racers[c].body;
+    const shows = showsOf(c);
+    const alpha = body.alpha;
+    if (shows < 1) {
+      body.alpha = BLEND.ghost;
+      ghostLook.shows = shows;
+    }
     drawWheeledCar(
       car[c].typ,
       car[c],
       racers[c].wheels,
-      racers[c].body,
+      body,
       (wheel) => wheel.dist < NEAR_WHEEL,
+      shows < 1,
     );
+    body.alpha = alpha;
+    ghostLook.shows = GHOST_SHOWS;
   }
   // cars being fixed crackle with electricity, turned at random
   if (raceEvents.onelec) {

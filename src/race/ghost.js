@@ -4,7 +4,8 @@
 // recorded car was each tick. Each race alone is recorded; one finished faster than the
 // ghost (or the first) becomes the stage's new ghost.
 
-import { MAX_CARS, PHASE, game } from "../core/state.js";
+import { MAX_CARS, PHASE, RACE_MODE, game, raceSetup } from "../core/state.js";
+import { camera } from "../render/camera.js";
 import { loadText, saveSetting } from "../core/storage.js";
 import { isCustom } from "../data/stages.js";
 import { car } from "./racers.js";
@@ -100,6 +101,28 @@ export const startGhost = () => {
 export const forgetGhost = () => {
   ghost.tape = null;
   ghost.driven = null;
+};
+
+// In a room's time attack the other cars are ghosts too, the more seen through the nearer
+// they come to the car the camera follows: within NEAR as little shows as SHOWS_NEAR, from
+// FAR all of it.
+const NEAR = 40;
+const FAR = 240;
+const SHOWS_NEAR = 0.25;
+
+// How much of car c shows (1: all of it).
+export const showsOf = (c) => {
+  if (
+    raceSetup.mode != RACE_MODE.timeAttack ||
+    game.humans.length == 0 ||
+    c == camera.target
+  ) {
+    return 1;
+  }
+  const followed = car[camera.target];
+  const away = Math.hypot(car[c].x - followed.x, car[c].z - followed.z);
+  const far = Math.min(1, Math.max(0, (away - NEAR) / (FAR - NEAR)));
+  return SHOWS_NEAR + (1 - SHOWS_NEAR) * far;
 };
 
 // whether the ghost is drawn: in a race alone being raced (not in its replay)

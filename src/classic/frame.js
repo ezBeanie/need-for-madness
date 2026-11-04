@@ -4,7 +4,7 @@
 import { MAX_CARS, PHASE, game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { raceEvents } from "../race/events.js";
-import { GHOST, ghost, ghostShown } from "../race/ghost.js";
+import { GHOST, ghost, ghostShown, showsOf } from "../race/ghost.js";
 import { car, racers } from "../race/racers.js";
 import { pieceModels, pieces, track } from "../race/track.js";
 import {
@@ -412,6 +412,11 @@ export const drawClassicRace = () => {
     const object = carObject(c, car[c], car[c].typ, skinOf(c));
     if (object) {
       object.onStage = true;
+      // (a car of a room's time attack, seen through near the one followed)
+      const shows = showsOf(c);
+      if (shows < 1) {
+        object.alpha = Math.round(255 * shows);
+      }
       objects.push(object);
     }
   }

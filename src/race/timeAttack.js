@@ -7,6 +7,7 @@ import { loadText, saveSetting } from "../core/storage.js";
 import { TICK_MS } from "../core/tick.js";
 import { isCustom } from "../data/stages.js";
 import { forgetGhost, ghostTick, keepGhost, startGhost } from "./ghost.js";
+import { raceTape } from "./raceTape.js";
 import { car, racers } from "./racers.js";
 import { track } from "./track.js";
 
@@ -83,20 +84,55 @@ const keepWhereBefore = () => {
   before.z = car[game.player].z;
 };
 
-// When within tick t the player's car crossed the checkpoint it cleared then: from where
-// it was the tick before and is now, along the checkpoint's axis. (A checkpoint counts
-// a little before and after its line, so this may be up to a tick before or after.)
-const crossedAt = (t) => {
-  const c = game.player;
-  const i = racers[c].clearedPathPoint;
+// How far into a tick a car going from (fromX, fromZ) to (toX, toZ) crossed the line of
+// checkpoint i, along the checkpoint's axis: 0 at its start, 1 at its end. (A checkpoint
+// counts a little before and after its line, so this may be up to a tick after.)
+const crossingPart = (i, fromX, fromZ, toX, toZ) => {
   const alongZ = track.typ[i] == 1;
   const line = alongZ ? track.z[i] : track.x[i];
-  const from = alongZ ? before.z : before.x;
-  const to = alongZ ? car[c].z : car[c].x;
-  if (from == to) {
-    return t;
-  }
-  return t - 1 + Math.min(2, Math.max(0, (line - from) / (to - from)));
+  const from = alongZ ? fromZ : fromX;
+  const to = alongZ ? toZ : toX;
+  return from == to ? 1 : Math.min(2, Math.max(0, (line - from) / (to - from)));
+};
+
+// When within tick t the player's car crossed the checkpoint it cleared then.
+const crossedAt = (t) => {
+  const c = game.player;
+  return (
+    t -
+    1 +
+    crossingPart(
+      racers[c].clearedPathPoint,
+      before.x,
+      before.z,
+      car[c].x,
+      car[c].z,
+    )
+  );
+};
+
+// When each car of the race finished its laps, in ticks from the start (as a time attack
+// lap ends, see crossedAt), or null: from the race's tape, which is every game's alike.
+export const finishTimes = () => {
+  const done = track.nlaps * track.nsp;
+  return raceTape.cars.slice(0, game.carCount).map((tape) => {
+    for (let t = 0; t < raceTape.length; t++) {
+      if (tape.clear[t] >= done) {
+        // (index t is the car after tick t + 1)
+        return t == 0
+          ? 1
+          : t +
+              crossingPart(
+                tape.clearedPathPoint[t],
+                tape.x[t - 1],
+                tape.z[t - 1],
+                tape.x[t],
+                tape.z[t],
+              );
+      }
+    }
+    return null;
+  });
 };
 
 // the race's time so far: what the clock shows
