@@ -41,6 +41,9 @@ import { clearChat, receiveChat } from "./chat.js";
 import { receiveVoice } from "./voice.js";
 import { MOST_NAME_CHARACTERS, own, setRoomCars } from "./roomCars.js";
 import { isSkin } from "../render/skins.js";
+import { camera } from "../render/camera.js";
+import { spectate } from "../race/spectate.js";
+import { askToWatch, overhear, receiveWatched } from "./watch.js";
 
 // how often a guest not in a race tells the host it is there (and which car it chose)
 const JOIN_EVERY_TICKS = 30;
@@ -76,6 +79,9 @@ export const guest = {
   hostLeft: false,
   // whether the room ended so, until the multiplayer dialog says so
   roomEnded: false,
+  // whether the host races now (a guest may watch), and whether this guest asked to
+  racing: false,
+  watchAsked: false,
 };
 
 const isPlayers = (players) =>
@@ -120,6 +126,7 @@ const isStart = ({ stage, carTypes, players, names, skins, raceId, state }) =>
 
 const receive = (message) => {
   receiveRaceMessage(message);
+  overhear(message);
   receiveChat(message);
   receiveVoice(message);
   if (
@@ -132,6 +139,7 @@ const receive = (message) => {
     guest.players = message.players;
     guest.bots = message.bots;
     guest.stage = message.stage;
+    guest.racing = message.racing === true;
   }
   if (message.from != guest.hostId) {
     return;
@@ -155,6 +163,14 @@ const receive = (message) => {
       random.wreck = seededRandom(0);
       restoreRace(state);
     });
+  }
+  if (message.type == MESSAGE.watched && guest.watchAsked && !lockstep.active) {
+    const race = receiveWatched(message, isStart);
+    if (race) {
+      guest.watchAsked = false;
+      guest.start = race;
+      guest.car = -1;
+    }
   }
   if (
     message.type == MESSAGE.pong &&
@@ -183,6 +199,14 @@ export const tellHost = () => {
   }
 };
 
+// The lobby's Watch Race: the race going on, from the host (see watch.js).
+export const watchRoomRace = () => {
+  if (link.role == ROLE.guest && guest.racing && !lockstep.active) {
+    guest.watchAsked = true;
+    askToWatch();
+  }
+};
+
 export const setReady = (ready) => {
   guest.ready = ready;
   tellHost();
@@ -202,6 +226,8 @@ export const joinRoom = (room) => {
     hostAnsweredTicks: HOST_GONE_TICKS,
     hostLeft: false,
     roomEnded: false,
+    racing: false,
+    watchAsked: false,
   });
   openLink(ROLE.guest, room, receive);
 };
@@ -271,9 +297,20 @@ export const showHostedRace = () => {
   const { players } = guest.start;
   guest.start = null;
   field.replayCars = null;
+  game.humans = players.map((_, car) => car);
+  // watching, the player's car is one the race has not: its keys drive none of it, and
+  // the camera follows the cars racing (see race/spectate.js)
+  if (lockstep.watching) {
+    game.player = game.carCount;
+    camera.target = 0;
+    spectate.watching = true;
+    playStageMusic(track.stage);
+    menu.redraw = false;
+    game.phase = PHASE.race;
+    return;
+  }
   // (loading the stage made car 0 the player's again)
   game.player = guest.car;
-  game.humans = players.map((_, car) => car);
   // (the stage select loads it, which a guest does not go through)
   if (!isEngineLoaded(game.carTypes[game.player])) {
     loadEngine(game.carTypes[game.player]);

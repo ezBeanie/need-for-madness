@@ -267,13 +267,31 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
   bleiben. Im modernen Look färbt `raceCarTextures` die Textur des Autos (eigene Kopie wie bei
   zweimal demselben Auto), im klassischen Look `paintRad` die Polygone. Rein optisch: die
   Golden Masters bleiben gleich.
-- Zuschauen: Ist das eigene Auto im gemeinsamen Rennen zerstört, folgt die Kamera nach dem
-  Wrack den Autos, die noch fahren (`race/spectate.js`), mit „< Before“, „Next >“ oder durch
-  Lenken; der Kameraflug ist der des Replay-Players (`followCar`).
+- Zuschauen: Ist das eigene Auto im gemeinsamen Rennen zerstört, zeigt das HUD „Watch Race“
+  neben „Continue“; danach folgt die Kamera den Autos, die noch fahren (`race/spectate.js`).
+  Oben eine schmale Leiste: ‹ Name ›, Lenken wechselt das Auto, V oder 📷 die Kamera (Orbit,
+  Behind, Track, Free). Die Freecam (`ui/freeCamera.js`, auch im Replay-Player) fliegt mit
+  W A S D, Q/E, Ziehen; auf Touch mit Steuerkreuz und ▲▼. Kein „Continue“ beim Zuschauen:
+  raus über das Menü („Leave Race“). Allein heißt der Knopf „Watch Replay“.
+- Zuschauen beim Dazukommen (`net/watch.js`): Läuft im Raum ein Rennen (`players.racing`),
+  bietet die Lobby des Gastes „Watch the race“. Der Gast schickt `watch`, der Host antwortet
+  mit `watched` in Teilen zu 64 KB: Strecke, Autos, Namen, Lacke, Spieler, `raceId`, der
+  Zustand des ersten Frames, dessen Tasten noch nicht alle da sind (davor ist das Rennen in
+  allen Spielen gleich, `raceToWatch`), alle Tasten ab dort, die der Host kennt, und wer
+  schon ausgestiegen ist. Tasten und `left`, die der Gast vorher mitgehört hat, kommen dazu
+  (`overhear`). Der Gast lädt die Strecke, setzt den Zustand ein und rechnet weiter
+  (`startWatchingLockstep`): kein eigenes Auto (`game.player` ist ein Platz hinter dem
+  Feld, seine Tasten bewegen nichts), er rät nie, sondern wartet, und holt bis zu 8 Frames je
+  Tick still nach, bis er 3 Frames hinter den Tasten ist (`catchUpWatching`). Er sendet weder
+  Tasten noch Fingerabdrücke, vergleicht aber die der Spieler (`lockstep.alike`). Nach dem
+  Rennen: „Race over“, „Continue“ zurück in die Lobby. Nur der Host antwortet; hat er das
+  Rennen verlassen, gibt es nichts zu sehen. Bei 20 Autos ist kein Platz frei.
+  Test: `test/visual/multiplayer.spec.js` („a guest coming to the room during its race“).
 - Raumklang: Die Geräusche der anderen Autos (Crashs, Kratzen, Rutschen) kommen über einen
-  HRTF-Panner aus ihrer Richtung, auch von vorn oder hinten (`heardFrom` mit `front`). Im
-  modernen Look haben die anderen Autos eigene Motoren (`audio/otherEngines.js`), leiser mit
-  der Entfernung, höher mit der Geschwindigkeit; ihre Sounds laden getrennt vom eigenen Motor,
+  HRTF-Panner aus ihrer Richtung, auch von vorn oder hinten (`heardFrom` mit `front`). Die
+  anderen Autos haben eigene Motoren (`audio/otherEngines.js`), leiser mit der Entfernung, im
+  modernen Look höher mit der Geschwindigkeit, im klassischen die Schleifen des Originals je
+  Gang; ihre Sounds laden getrennt vom eigenen Motor,
   weil dessen Start entscheidet, welche Zufallszahlen die Effekte bekommen.
 - Voice Chat (`net/voice.js`): je zwei Spiele eines Raums direkt per WebRTC, ausgehandelt über
   `voice`-Nachrichten des Relays (das Spiel mit der kleineren Id bietet an). Push-to-talk: im

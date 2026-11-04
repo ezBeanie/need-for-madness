@@ -69,6 +69,11 @@ export function updateEngineSound(
   type = game.carTypes[game.player],
   over = raceEvents.raceOverTicks != 0,
 ) {
+  // (watching a race only, the player has no car in it, see net/watch.js)
+  if (game.player >= game.carCount && car === racers[game.player]) {
+    stopEngine();
+    return;
+  }
   if (look.current == LOOK.classic) {
     updateClassicEngine(car, type, over);
     return;
