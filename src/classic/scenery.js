@@ -2,8 +2,7 @@
 // clouds and mountain ranges, made when a stage loads and drawn behind everything else.
 // Clouds and mountains are far away: they move with the camera at 1/20 and 1/30.
 import { javaRandom } from "../core/javaRandom.js";
-import { fillPolygon } from "./batch.js";
-import { X, Y, Z, placeOrig } from "./draw.js";
+import { X, Y, Z, fillNear, placeOrig } from "./draw.js";
 import { medium, xs, ys } from "./medium.js";
 
 const scenery = { patches: [], clouds: [], mountains: [] };
@@ -302,16 +301,7 @@ const offScreen = (n) => {
   return up == n || down == n || left == n || right == n;
 };
 
-const SX = new Float64Array(64);
-const SY = new Float64Array(64);
-
-const fill = (indices, r, g, b) => {
-  indices.forEach((i, k) => {
-    SX[k] = xs(X[i], Z[i]);
-    SY[k] = ys(Y[i], Z[i]);
-  });
-  fillPolygon(SX, SY, indices.length, r, g, b);
-};
+const fill = (indices, r, g, b) => fillNear(indices, indices.length, r, g, b);
 
 const toward = (c, i) => Math.trunc((c * 7 + medium.cfade[i]) / 8);
 

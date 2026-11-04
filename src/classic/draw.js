@@ -375,10 +375,14 @@ const distanceOf = (poly, n) => {
   return av;
 };
 
+// the corners in their order (see clipNear)
+const IN_ORDER = Array.from({ length: MAX_CORNERS }, (_, i) => i);
+
 // A polygon reaching nearer than its projection holds (xs and ys take a corner nearer
 // than cz as if it were that far, bending what reaches past the screen's edge) cut off
-// there, onto the screen (SX, SY) with its distances (CZ). Returns how many corners.
-const clipNear = (n) => {
+// there, onto the screen (SX, SY) with its distances (CZ). at: which placed corners, in
+// which order. Returns how many corners.
+const clipNear = (n, at = IN_ORDER) => {
   const near = medium.cz;
   let m = 0;
   const keep = (x, y, z) => {
@@ -387,8 +391,9 @@ const clipNear = (n) => {
     CZ[m] = z;
     m++;
   };
-  for (let i = 0; i < n; i++) {
-    const j = (i + 1) % n;
+  for (let k = 0; k < n; k++) {
+    const i = at[k];
+    const j = at[(k + 1) % n];
     if (Z[i] >= near) {
       keep(X[i], Y[i], Z[i]);
     }
@@ -398,6 +403,15 @@ const clipNear = (n) => {
     }
   }
   return m;
+};
+
+// Fills the placed corners at (in that order), cut off before the camera as clipNear does,
+// without the depth test: the ground's patches, dust and chips, which the original bent.
+export const fillNear = (at, n, r, g, b, alpha = 255) => {
+  const m = clipNear(n, at);
+  if (m >= 3) {
+    fillPolygon(SX, SY, m, r, g, b, alpha);
+  }
 };
 
 // One polygon (Plane.d), its corners placed: seen at all, how bright, in which colour,

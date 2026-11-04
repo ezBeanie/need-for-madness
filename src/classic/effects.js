@@ -5,8 +5,8 @@
 import { drawCamera, drawMatrix, placeModel } from "../render/interpolation.js";
 import { effects } from "../race/effects.js";
 import { DUST } from "../race/effects.js";
-import { drawLine, fillPolygon } from "./batch.js";
-import { X, Y, Z, placeSeen } from "./draw.js";
+import { drawLine } from "./batch.js";
+import { X, Y, Z, fillNear, placeSeen } from "./draw.js";
 import { medium, xs, ys } from "./medium.js";
 
 // the original's fog bands over a colour, by distance
@@ -84,8 +84,8 @@ const CORNERS = [
 ];
 // how much wider than our cloud's size: lying flat, seen from the side, it looks thinner
 const SPREAD = 2.5;
-const SX = new Float64Array(8);
-const SY = new Float64Array(8);
+const EIGHT = [0, 1, 2, 3, 4, 5, 6, 7];
+const TRIANGLE = [0, 1, 2];
 
 // A dust cloud: a ragged octagon lying flat where it rose (the original's pdust: not
 // facing the camera, so seen from behind a car it stays low beside it instead of
@@ -112,8 +112,6 @@ const drawDust = (cloud) => {
     if (Z[k] < 10) {
       return;
     }
-    SX[k] = xs(X[k], Z[k]);
-    SY[k] = ys(Y[k], Z[k]);
   }
   const white = medium.snap.map((s) =>
     Math.min(255, Math.max(0, Math.trunc(255 + 255 * (s / 100)))),
@@ -128,7 +126,7 @@ const drawDust = (cloud) => {
   const stage = (cloud.stg * 7) / 10;
   const blend = DUST_BLEND[kind] ?? 0.6;
   const alpha = Math.max(0, blend - stage * (blend / 8));
-  fillPolygon(SX, SY, 8, ...color, Math.round(alpha * 255));
+  fillNear(EIGHT, 8, ...color, Math.round(alpha * 255));
 };
 
 const shade = (c, factor) => Math.min(255, Math.trunc(c * factor));
@@ -146,8 +144,6 @@ const drawChip = (chip, colorOf) => {
       m[1] * px + m[5] * py + m[9] * pz + m[13],
       m[2] * px + m[6] * py + m[10] * pz + m[14],
     );
-    SX[i] = xs(X[i], Z[i]);
-    SY[i] = ys(Y[i], Z[i]);
   }
   if (Z[0] < 10 && Z[1] < 10 && Z[2] < 10) {
     return;
@@ -157,7 +153,7 @@ const drawChip = (chip, colorOf) => {
     const factor = [0.7, 1, 1 / 0.7][Math.floor(shapeRandom() * 3)];
     chip.classic = base.map((c) => shade(c, factor));
   }
-  fillPolygon(SX, SY, 3, ...fogged(chip.classic, Z[0]));
+  fillNear(TRIANGLE, 3, ...fogged(chip.classic, Z[0]));
 };
 
 // The effects to put in the frame's order with the objects: each with its distance and
