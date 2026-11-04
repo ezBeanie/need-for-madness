@@ -3,6 +3,7 @@
 // where every stage and car is open (see raceSetup in core/state.js).
 import {
   RACE_KIND,
+  RACE_MODE,
   RACE_SIZES,
   STRENGTH,
   game,
@@ -36,6 +37,7 @@ export const loadCareer = () => {
 // The main menu's choice: the stages and cars the menus after it offer, and the field size.
 export const chooseRaceKind = (kind) => {
   raceSetup.kind = kind;
+  raceSetup.mode = RACE_MODE.normal;
   if (kind == RACE_KIND.campaign) {
     game.unlocked = career.progress;
     game.raceCars = CAMPAIGN_CARS;

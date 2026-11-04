@@ -33,7 +33,15 @@ import {
 import { isPhone } from "../core/platform.js";
 import { menu } from "../screens/menuState.js";
 import { random } from "../core/random.js";
-import { MAX_CARS, MODE, PHASE, game, raceSetup } from "../core/state.js";
+import {
+  MAX_CARS,
+  MODE,
+  PHASE,
+  RACE_MODE,
+  finishingEnds,
+  game,
+  raceSetup,
+} from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
@@ -53,8 +61,10 @@ import { HIGHLIGHT, startHighlight, recording } from "../race/recording.js";
 import { VIEWER_FROM, nextCamera, openReplay } from "../race/replayViewer.js";
 import {
   currentLapTicks,
+  finishTimes,
   formatTime,
   isTimeAttack,
+  raceTime,
   timeAttack,
 } from "../race/timeAttack.js";
 import { track } from "../race/track.js";
@@ -728,9 +738,61 @@ const drawOutcome = (text, picture) => {
   }
 };
 
+const PLACE_SUFFIX = ["st", "nd", "rd"];
+const placeName = (place) => `${place + 1}${PLACE_SUFFIX[place] ?? "th"}`;
+
+// A room's time attack: the player's place and time once through, and when every car is
+// through (or wasted) the times of all. Returns whether the race is over.
+const timeAttackOutcome = () => {
+  const times = finishTimes();
+  const through = times
+    .map((time, c) => ({ time, c }))
+    .filter(({ time }) => time !== null)
+    .sort((a, b) => a.time - b.time);
+  if (track.haltall) {
+    const won = through[0]?.c == game.player;
+    drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
+    raceEvents.winner = won;
+    through
+      .slice(0, 8)
+      .forEach(({ time, c }, place) =>
+        drawCenteredText(
+          200 + 32 * place,
+          `${placeName(place)}  ${nameOfCar(c)}  ${formatTime(time)}`,
+          0,
+          0,
+          0,
+          TEXT.label,
+        ),
+      );
+    return true;
+  }
+  const place = through.findIndex(({ c }) => c == game.player);
+  if (place != -1) {
+    drawOutcome("Finished!", "youwon");
+    drawBlinking(
+      192,
+      `${placeName(place)} in ${formatTime(through[place].time)}, the others still racing`,
+      0,
+      128,
+      255,
+    );
+  }
+  return false;
+};
+
 const raceOutcome = () => {
   let over = false;
-  if (track.wasted == game.carCount - 1 && game.carCount != 1) {
+  const againstTheClock =
+    raceSetup.mode == RACE_MODE.timeAttack && game.humans.length > 0;
+  if (againstTheClock && timeAttackOutcome()) {
+    return true;
+  }
+  if (
+    track.wasted == game.carCount - 1 &&
+    game.carCount != 1 &&
+    !againstTheClock
+  ) {
     drawOutcome("You Wasted'em!", "youwastedem");
     drawBlinking(192, "You Won, all cars have been wasted!", 0, 128, 255);
     if (!track.haltall) {
@@ -739,6 +801,24 @@ const raceOutcome = () => {
     track.haltall = true;
     over = true;
     raceEvents.winner = true;
+  }
+  // the last car standing wins, the player's wasted before
+  if (!over && raceSetup.mode == RACE_MODE.lastSurvivor && track.haltall) {
+    const last = racers
+      .slice(0, game.carCount)
+      .findIndex((racer) => !racer.wasted);
+    if (last != -1 && last != game.player) {
+      drawOutcome("You Lost!", "youlost");
+      drawBlinking(
+        192,
+        `${nameOfCar(last)} is the last survivor!`,
+        0,
+        128,
+        255,
+      );
+      raceEvents.winner = false;
+      over = true;
+    }
   }
   if (!over) {
     if (racers[game.player].wasted && raceEvents.playerWreckTicks == 16) {
@@ -759,7 +839,7 @@ const raceOutcome = () => {
       playSound(30, 1);
     }
   }
-  if (!over) {
+  if (!over && finishingEnds()) {
     for (let i = 0; i < game.carCount; i++) {
       if (track.clear[i] == track.nlaps * track.nsp && track.pos[i] == 0) {
         if (i == game.player && isTimeAttack()) {
@@ -1042,12 +1122,12 @@ const drawClock = () => {
     0,
     TEXT.label,
   );
-  drawCenteredText(670, formatTime(timeAttack.ticks), 0, 0, 0, TEXT.heading);
+  drawCenteredText(670, formatTime(raceTime()), 0, 0, 0, TEXT.heading);
 };
 
 const finishedIn = () => {
-  const { best, newBest, ticks } = timeAttack;
-  const time = `Your time: ${formatTime(ticks)}`;
+  const { best, newBest } = timeAttack;
+  const time = `Your time: ${formatTime(raceTime())}`;
   if (newBest.race) {
     return `${time}, a new best!`;
   }

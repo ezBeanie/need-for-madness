@@ -485,13 +485,23 @@ const drawClassicModel = (model) => {
 
 // model.alpha: how a model blends in (0 not at all). The glows (the blend colour stays
 // black, so the source counts fully) light up burning and electrified cars.
-export const BLEND = { alpha: 1, glow: 2, brightGlow: 3 };
+export const BLEND = { alpha: 1, glow: 2, brightGlow: 3, ghost: 4 };
+
+// how much of a ghost shows over what is behind it: the time attack's, or a car of a room's
+// time attack (see race/ghost.js)
+export const GHOST_SHOWS = 0.4;
+export const ghostLook = { shows: GHOST_SHOWS };
 
 const BLENDING = {
   [BLEND.alpha]: () => gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA),
   [BLEND.glow]: () => gl.blendFunc(gl.ONE_MINUS_CONSTANT_COLOR, gl.DST_COLOR),
   [BLEND.brightGlow]: () =>
     gl.blendFunc(gl.ONE_MINUS_CONSTANT_COLOR, gl.DST_ALPHA),
+  // (the glows want the blend colour black: drawModel sets it back)
+  [BLEND.ghost]: () => {
+    gl.blendColor(0, 0, 0, ghostLook.shows);
+    gl.blendFunc(gl.CONSTANT_ALPHA, gl.ONE_MINUS_CONSTANT_ALPHA);
+  },
 };
 
 const lightingOf = (model) => {
@@ -546,6 +556,15 @@ const uploadDamage = (model) => {
   }
 };
 
+const endBlending = (model) => {
+  if (model.alpha == BLEND.ghost) {
+    gl.blendColor(0, 0, 0, 0);
+  }
+  if (model.alpha) {
+    gl.disable(gl.BLEND);
+  }
+};
+
 export const drawModel = (model) => {
   if (!model.loaded) {
     return;
@@ -557,9 +576,7 @@ export const drawModel = (model) => {
   }
   if (drawsClassic()) {
     drawClassicModel(model);
-    if (model.alpha) {
-      gl.disable(gl.BLEND);
-    }
+    endBlending(model);
     return;
   }
   const lighting = lightingOf(model);
@@ -589,9 +606,7 @@ export const drawModel = (model) => {
   }
   bindModelTexture(model, uniformLocations.uSampler);
   gl.drawElements(gl.TRIANGLES, model.ni, gl.UNSIGNED_SHORT, 0);
-  if (model.alpha) {
-    gl.disable(gl.BLEND);
-  }
+  endBlending(model);
 };
 
 // Draws a vertex-coloured particle model (loaded with loadparticle) at its x, y, z and mat.

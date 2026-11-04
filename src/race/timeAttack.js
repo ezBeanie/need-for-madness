@@ -1,16 +1,22 @@
 // Time attack: the player alone against the clock, timed in ticks from the start to each
-// lap and to the finish. The best lap and the best race of each stage are kept.
+// lap and to the finish. The best lap and the best race of each stage are kept. A lap ends
+// where within its tick the car crossed the line, so times are finer than ticks.
 
 import { RACE_KIND, game, raceSetup } from "../core/state.js";
 import { loadText, saveSetting } from "../core/storage.js";
 import { TICK_MS } from "../core/tick.js";
 import { isCustom } from "../data/stages.js";
+import { forgetGhost, ghostTick, keepGhost, startGhost } from "./ghost.js";
+import { raceTape } from "./raceTape.js";
+import { car, racers } from "./racers.js";
 import { track } from "./track.js";
 
-// ticks: since the start; laps: the ticks of each lap done; best: the stage's best times
-// before this race ({ lap, race } or null); newBest: what this race bettered
+// ticks: since the start; time: the race's, once finished; laps: the time of each lap
+// done; best: the stage's best times before this race ({ lap, race } or null); newBest:
+// what this race bettered
 export const timeAttack = {
   ticks: 0,
+  time: 0,
   laps: [],
   best: null,
   finished: false,
@@ -36,18 +42,20 @@ export const bestTimes = (stage) => {
     return null;
   }
   const best = allBestTimes()[stage];
-  return Number.isInteger(best?.lap) && Number.isInteger(best?.race)
+  return Number.isFinite(best?.lap) && Number.isFinite(best?.race)
     ? best
     : null;
 };
 
-// m:ss.cc
+// m:ss.mmm
 export const formatTime = (ticks) => {
-  const hundredths = Math.round((ticks * TICK_MS) / 10);
-  const seconds = Math.floor(hundredths / 100);
+  const thousandths = Math.round(ticks * TICK_MS);
+  const seconds = Math.floor(thousandths / 1000);
   const minutes = Math.floor(seconds / 60);
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${minutes}:${pad(seconds % 60)}.${pad(hundredths % 100)}`;
+  return (
+    `${minutes}:${String(seconds % 60).padStart(2, "0")}.` +
+    String(thousandths % 1000).padStart(3, "0")
+  );
 };
 
 export const isTimeAttack = () => raceSetup.kind == RACE_KIND.timeAttack;
@@ -55,16 +63,86 @@ export const isTimeAttack = () => raceSetup.kind == RACE_KIND.timeAttack;
 // As the race begins.
 export const startTimeAttack = () => {
   timeAttack.ticks = 0;
+  timeAttack.time = 0;
   timeAttack.laps = [];
   timeAttack.best = bestTimes(track.stage);
   timeAttack.finished = false;
   timeAttack.newBest = { lap: false, race: false };
+  if (isTimeAttack()) {
+    startGhost();
+  } else {
+    forgetGhost();
+  }
+  keepWhereBefore();
 };
+
+// where the player's car was the tick before
+const before = { x: 0, z: 0 };
+
+const keepWhereBefore = () => {
+  before.x = car[game.player].x;
+  before.z = car[game.player].z;
+};
+
+// How far into a tick a car going from (fromX, fromZ) to (toX, toZ) crossed the line of
+// checkpoint i, along the checkpoint's axis: 0 at its start, 1 at its end. (A checkpoint
+// counts a little before and after its line, so this may be up to a tick after.)
+const crossingPart = (i, fromX, fromZ, toX, toZ) => {
+  const alongZ = track.typ[i] == 1;
+  const line = alongZ ? track.z[i] : track.x[i];
+  const from = alongZ ? fromZ : fromX;
+  const to = alongZ ? toZ : toX;
+  return from == to ? 1 : Math.min(2, Math.max(0, (line - from) / (to - from)));
+};
+
+// When within tick t the player's car crossed the checkpoint it cleared then.
+const crossedAt = (t) => {
+  const c = game.player;
+  return (
+    t -
+    1 +
+    crossingPart(
+      racers[c].clearedPathPoint,
+      before.x,
+      before.z,
+      car[c].x,
+      car[c].z,
+    )
+  );
+};
+
+// When each car of the race finished its laps, in ticks from the start (as a time attack
+// lap ends, see crossedAt), or null: from the race's tape, which is every game's alike.
+export const finishTimes = () => {
+  const done = track.nlaps * track.nsp;
+  return raceTape.cars.slice(0, game.carCount).map((tape) => {
+    for (let t = 0; t < raceTape.length; t++) {
+      if (tape.clear[t] >= done) {
+        // (index t is the car after tick t + 1)
+        return t == 0
+          ? 1
+          : t +
+              crossingPart(
+                tape.clearedPathPoint[t],
+                tape.x[t - 1],
+                tape.z[t - 1],
+                tape.x[t],
+                tape.z[t],
+              );
+      }
+    }
+    return null;
+  });
+};
+
+// the race's time so far: what the clock shows
+export const raceTime = () =>
+  timeAttack.finished ? timeAttack.time : timeAttack.ticks;
 
 const lapStart = () => timeAttack.laps.reduce((sum, lap) => sum + lap, 0);
 
 // The current lap's ticks so far.
-export const currentLapTicks = () => timeAttack.ticks - lapStart();
+export const currentLapTicks = () => Math.max(0, raceTime() - lapStart());
 
 const keepBest = () => {
   if (isCustom(track.stage)) {
@@ -72,14 +150,15 @@ const keepBest = () => {
   }
   const fastestLap = Math.min(...timeAttack.laps);
   const best = timeAttack.best;
+  const { time } = timeAttack;
   timeAttack.newBest = {
     lap: !best || fastestLap < best.lap,
-    race: !best || timeAttack.ticks < best.race,
+    race: !best || time < best.race,
   };
   const times = allBestTimes();
   times[track.stage] = {
     lap: best ? Math.min(best.lap, fastestLap) : fastestLap,
-    race: best ? Math.min(best.race, timeAttack.ticks) : timeAttack.ticks,
+    race: best ? Math.min(best.race, time) : time,
   };
   saveSetting(STORED, JSON.stringify(times));
 };
@@ -90,12 +169,16 @@ export const timeAttackTick = () => {
     return;
   }
   timeAttack.ticks++;
+  ghostTick(timeAttack.ticks);
   const lapsDone = Math.floor(track.clear[game.player] / track.nsp);
   while (timeAttack.laps.length < Math.min(lapsDone, track.nlaps)) {
-    timeAttack.laps.push(timeAttack.ticks - lapStart());
+    timeAttack.laps.push(crossedAt(timeAttack.ticks) - lapStart());
   }
   if (timeAttack.laps.length == track.nlaps) {
     timeAttack.finished = true;
+    timeAttack.time = lapStart();
     keepBest();
+    keepGhost(timeAttack.ticks, timeAttack.time);
   }
+  keepWhereBefore();
 };

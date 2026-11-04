@@ -77,6 +77,30 @@ export const RACE_KIND = {
   together: 4,
 };
 
+// How a room's race is won (see net/host.js): as any race, finishing first or wasting the
+// others; only racing, no car taking damage; as the last car not wasted, the laps
+// counting for nothing; or against the clock, the cars passing through each other and
+// the race going on until every car is through.
+export const RACE_MODE = {
+  normal: 0,
+  onlyRacing: 1,
+  lastSurvivor: 2,
+  timeAttack: 3,
+};
+export const RACE_MODE_NAMES = [
+  "Normal race",
+  "Only racing",
+  "Last survivor",
+  "Time attack",
+];
+
+// whether the first car through its laps ends the race (in a room's time attack every car
+// gets through, in last survivor the laps count for nothing)
+export const finishingEnds = () =>
+  raceSetup.mode == RACE_MODE.normal || raceSetup.mode == RACE_MODE.onlyRacing;
+export const isRaceMode = (mode) =>
+  Number.isInteger(mode) && mode >= 0 && mode < RACE_MODE_NAMES.length;
+
 // how strong the opponents of a quick race are
 export const STRENGTH = { easy: 0, normal: 1, hard: 2 };
 
@@ -84,6 +108,8 @@ export const STRENGTH = { easy: 0, normal: 1, hard: 2 };
 // (see race/career.js): the race reads this, never the career's progress itself.
 export const raceSetup = {
   kind: RACE_KIND.campaign,
+  // a room's race's mode, as its host chose it (normal in every other race)
+  mode: RACE_MODE.normal,
   strength: STRENGTH.normal,
   // the stage whose general driving the opponents have (the stage's own in the campaign)
   aiStage: 1,

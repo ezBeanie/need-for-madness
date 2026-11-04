@@ -9,7 +9,9 @@ import {
   MODE,
   PHASE,
   RACE_KIND,
+  RACE_MODE,
   game,
+  isRaceMode,
   raceSetup,
 } from "../core/state.js";
 import { STAGE_COUNT } from "../data/stages.js";
@@ -45,12 +47,14 @@ const GUEST_WAITING_TICKS = 60;
 // guests: the players in the room but the host, in the order they came, each with its id,
 // name, the car and skin it chose, whether it is ready to race, and the ticks since it was
 // last heard and since it last joined; bots: the cars (carType, skin) the computer drives in
-// the room's races, as the host added them; stage: the stage the host chose in the lobby
-const host = { guests: [], bots: [], stage: 1 };
+// the room's races, as the host added them; stage: the stage the host chose in the lobby,
+// mode: how its race is won (RACE_MODE)
+const host = { guests: [], bots: [], stage: 1, mode: RACE_MODE.normal };
 
 export const roomGuests = () => host.guests;
 export const roomBots = () => host.bots;
 export const roomStage = () => host.stage;
+export const roomMode = () => host.mode;
 
 // the guests a race the host starts takes along
 const waitingGuests = () =>
@@ -78,6 +82,7 @@ export const sendPlayers = () =>
     })),
     bots: host.bots,
     stage: host.stage,
+    mode: host.mode,
     // (a guest may watch the race going on, see watch.js)
     racing: lockstep.active,
   });
@@ -89,6 +94,13 @@ export const isRoomStage = (stage) =>
 export const chooseRoomStage = (stage) => {
   if (isRoomStage(stage)) {
     host.stage = stage;
+    sendPlayers();
+  }
+};
+
+export const chooseRoomMode = (mode) => {
+  if (isRaceMode(mode)) {
+    host.mode = mode;
     sendPlayers();
   }
 };
@@ -206,6 +218,7 @@ export const hostRoom = (room) => {
 // startHostedRace), straight from its loading.
 export const startRoomRace = () => {
   chooseRaceKind(RACE_KIND.together);
+  raceSetup.mode = host.mode;
   track.stage = host.stage;
   game.mode = MODE.championship;
   stageLoad.after = AFTER_LOAD.room;
@@ -273,6 +286,7 @@ export const startHostedRace = () => {
     link.send({
       type: MESSAGE.start,
       stage: track.stage,
+      mode: raceSetup.mode,
       carTypes: game.carTypes.slice(0, game.carCount),
       players,
       names: roomCars.names,

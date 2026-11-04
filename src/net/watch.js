@@ -5,7 +5,7 @@
 // before it asked too (it overhears them), without a car of its own (see lockstep.js).
 
 import { random, seededRandom } from "../core/random.js";
-import { MAX_CARS, game } from "../core/state.js";
+import { MAX_CARS, game, raceSetup } from "../core/state.js";
 import { MESSAGE, decode, encode, isIndex, link } from "./link.js";
 import {
   KEYS,
@@ -30,6 +30,7 @@ export const answerWatch = (id) => {
   }
   const text = encode({
     stage: track.stage,
+    mode: raceSetup.mode,
     carTypes: game.carTypes.slice(0, game.carCount),
     players: lockstep.players,
     names: roomCars.names,

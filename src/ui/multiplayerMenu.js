@@ -5,7 +5,13 @@
 // chat. The host starts the race once everyone is ready, and the lobby comes back after
 // it. The main menu opens it (the classic one with a button beside its Options).
 
-import { PHASE, RACE_KIND, game, raceSetup } from "../core/state.js";
+import {
+  PHASE,
+  RACE_KIND,
+  RACE_MODE_NAMES,
+  game,
+  raceSetup,
+} from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { saveSetting } from "../core/storage.js";
 import { sharedStageGroups, stageLabel } from "../data/stages.js";
@@ -15,12 +21,14 @@ import {
   canAddBot,
   chooseBotCar,
   chooseBotSkin,
+  chooseRoomMode,
   chooseRoomStage,
   everyoneReady,
   hostRoom,
   removeBot,
   roomBots,
   roomGuests,
+  roomMode,
   roomStage,
   sendPlayers,
   startRoomRace,
@@ -197,6 +205,18 @@ const showStage = () => {
   const text = stage ? `Stage: ${stageLabel(stage)}` : "Stage: not chosen yet";
   if (!isHost && name.textContent != text) {
     name.textContent = text;
+  }
+  const mode = isHost ? roomMode() : guest.mode;
+  element("lobbyModeChoice").hidden = !isHost;
+  const modeSelect = element("lobbyMode");
+  if (isHost && modeSelect.value != String(mode)) {
+    modeSelect.value = String(mode);
+  }
+  const modeName = element("lobbyModeName");
+  modeName.hidden = isHost;
+  const modeText = `Mode: ${RACE_MODE_NAMES[mode]}`;
+  if (!isHost && modeName.textContent != modeText) {
+    modeName.textContent = modeText;
   }
 };
 
@@ -428,6 +448,9 @@ const fillChoices = () => {
   element("lobbySkin").append(
     ...SKINS.map((name, skin) => new Option(name, String(skin))),
   );
+  element("lobbyMode").append(
+    ...RACE_MODE_NAMES.map((name, mode) => new Option(name, String(mode))),
+  );
   element("lobbyStage").append(
     ...sharedStageGroups().map(({ label, stages }) => {
       const group = document.createElement("optgroup");
@@ -515,6 +538,9 @@ export const installMultiplayerMenu = () => {
   });
   element("lobbyStage").addEventListener("change", (event) =>
     chooseRoomStage(Number(event.target.value)),
+  );
+  element("lobbyMode").addEventListener("change", (event) =>
+    chooseRoomMode(Number(event.target.value)),
   );
   element("lobbyReady").addEventListener("click", () => {
     setReady(!guest.ready);
