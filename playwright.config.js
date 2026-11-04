@@ -22,6 +22,9 @@ export default defineConfig({
     browserName: "chromium",
     viewport: { width: 1280, height: 720 },
     deviceScaleFactor: 1,
+    // without a window and silent: the sound tests check what plays, nobody needs to hear it
+    headless: true,
+    launchOptions: { args: ["--mute-audio"] },
   },
   webServer: {
     command: `npx vite --port ${PORT} --strictPort`,
