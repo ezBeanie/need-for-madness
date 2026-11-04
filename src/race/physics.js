@@ -16,9 +16,11 @@ import {
   MAX_CARS,
   MODE,
   PHASE,
+  RACE_MODE,
   game,
   isHuman,
   onNewestStage,
+  raceSetup,
 } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
@@ -3337,6 +3339,10 @@ export function paintDents(maxSteps) {
 export const HIT = { alongX: 0, alongZ: 1, fromBelow: 2, onRoof: 3 };
 
 export function regn(hitSide, k, mag, c) {
+  // (only racing: no car is dented or damaged)
+  if (game.phase == PHASE.race && raceSetup.mode == RACE_MODE.onlyRacing) {
+    return;
+  }
   if (game.phase == PHASE.race) {
     mag *= carStats.dammult[car[c].typ];
   }

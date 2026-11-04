@@ -15,6 +15,7 @@ import {
   PHASE,
   RACE_KIND,
   game,
+  isRaceMode,
   raceSetup,
 } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
@@ -62,6 +63,7 @@ export const guest = {
   players: [],
   bots: [],
   stage: null,
+  mode: 0,
   // whether this guest's player is ready to race
   ready: false,
   hostId: null,
@@ -107,8 +109,18 @@ const isBots = (bots) =>
     (bot) => isIndex(bot?.carType, carStats.names.length) && isSkin(bot.skin),
   );
 
-const isStart = ({ stage, carTypes, players, names, skins, raceId, state }) =>
+const isStart = ({
+  stage,
+  mode,
+  carTypes,
+  players,
+  names,
+  skins,
+  raceId,
+  state,
+}) =>
   isIndex(stage, STAGE_COUNT + 1) &&
+  isRaceMode(mode) &&
   Array.isArray(carTypes) &&
   carTypes.length <= MAX_CARS &&
   carTypes.every((type) => isIndex(type, carStats.names.length)) &&
@@ -133,12 +145,14 @@ const receive = (message) => {
     message.type == MESSAGE.players &&
     isPlayers(message.players) &&
     isBots(message.bots) &&
-    isIndex(message.stage, STAGE_COUNT + 1)
+    isIndex(message.stage, STAGE_COUNT + 1) &&
+    isRaceMode(message.mode)
   ) {
     guest.hostId = message.from;
     guest.players = message.players;
     guest.bots = message.bots;
     guest.stage = message.stage;
+    guest.mode = message.mode;
     guest.racing = message.racing === true;
   }
   if (message.from != guest.hostId) {
@@ -159,6 +173,7 @@ const receive = (message) => {
     // (the others' keys come on while the stage loads)
     const { state } = message;
     startLockstep(guest.car, message.players, message.raceId, () => {
+      raceSetup.mode = message.mode;
       random.sim = seededRandom(0);
       random.wreck = seededRandom(0);
       restoreRace(state);
@@ -254,6 +269,7 @@ const loadHostedRace = (start) => {
   // (as the host's: it starts no other)
   game.mode = MODE.championship;
   raceSetup.kind = RACE_KIND.together;
+  raceSetup.mode = start.mode;
   pauseMenuMusic();
   stageLoad.after = AFTER_LOAD.guest;
   stageLoad.progress = STAGE_LOAD.requested;
