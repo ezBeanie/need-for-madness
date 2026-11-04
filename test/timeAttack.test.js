@@ -49,9 +49,35 @@ test("time attack times each lap and the race, and keeps the best of each stage"
   expect(JSON.parse(stored.get("bestTimes"))[own]).toBeUndefined();
   ctx.track.stage = 2;
 
-  // 35 ms a tick
-  expect(ctx.formatTime(220)).toBe("0:07.70");
-  expect(ctx.formatTime(2000)).toBe("1:10.00");
+  // 35 ms a tick, to the thousandth
+  expect(ctx.formatTime(220)).toBe("0:07.700");
+  expect(ctx.formatTime(2000)).toBe("1:10.000");
+  expect(ctx.formatTime(2.5)).toBe("0:00.088");
+});
+
+test("a lap ends where within its tick the car crossed the line, not at the tick's end", async () => {
+  const { ctx } = await startRace({ stage: 2, car: 5 });
+  ctx.chooseRaceKind(ctx.RACE_KIND.timeAttack);
+  ctx.track.nlaps = 1;
+  ctx.track.nsp = 1;
+  // the finish line across z at 25, the car on at 10 a tick from z 0
+  const finish = 0;
+  ctx.track.typ[finish] = 1;
+  ctx.track.z[finish] = 25;
+  ctx.racers[0].clearedPathPoint = finish;
+  ctx.car[0].z = 0;
+  ctx.startTimeAttack();
+  ctx.track.clear[0] = 0;
+  ctx.track.haltall = false;
+  for (let tick = 1; !ctx.timeAttack.finished; tick++) {
+    ctx.car[0].z = 10 * tick;
+    // counted in the third tick, from 20 to 30
+    ctx.track.clear[0] = tick >= 3 ? 1 : 0;
+    ctx.timeAttackTick();
+  }
+  expect(ctx.timeAttack.ticks).toBe(3);
+  expect(ctx.timeAttack.laps).toEqual([2.5]);
+  expect(ctx.raceTime()).toBe(2.5);
 });
 
 test("a race of another kind is not timed", async () => {

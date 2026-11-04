@@ -18,8 +18,8 @@ const POSE = ["x", "y", "z", "xy", "xz", "zy", "wzy", "wxz"];
 // kept to a tenth (a hundredth of a wheel's length): small numbers, and no visible step
 const SCALE = 10;
 
-// tape: the ghost's poses by field, ticks: how long its race took, type: its car;
-// driven: this race's poses so far
+// tape: the ghost's poses by field, ticks: how many, type: its car; driven: this race's
+// poses so far
 export const ghost = { tape: null, ticks: 0, type: 0, driven: null };
 
 const keyOf = (stage) => `ghost-${stage}`;
@@ -60,17 +60,18 @@ export const storedGhost = (stage) => {
   }
   try {
     const stored = JSON.parse(loadText(keyOf(stage)) || "null");
-    const { ticks, type, poses } = stored ?? {};
+    const { ticks, type, poses, time = ticks } = stored ?? {};
     if (
       !Number.isInteger(ticks) ||
       ticks <= 0 ||
       !Number.isInteger(type) ||
       !Array.isArray(poses) ||
-      poses.length != POSE.length
+      poses.length != POSE.length ||
+      !Number.isFinite(time)
     ) {
       return null;
     }
-    return { ticks, type, tape: decode(poses, ticks) };
+    return { ticks, time, type, tape: decode(poses, ticks) };
   } catch {
     return null;
   }
@@ -119,19 +120,20 @@ export const ghostTick = (t) => {
   }
 };
 
-// The race finished in ticks: the stage's ghost if it is the first or faster.
-export const keepGhost = (ticks) => {
+// The race finished in time, over ticks: the stage's ghost if it is the first or faster.
+export const keepGhost = (ticks, time) => {
   if (!ghost.driven || isCustom(track.stage)) {
     return;
   }
   const stored = storedGhost(track.stage);
-  if (stored && stored.ticks <= ticks) {
+  if (stored && stored.time <= time) {
     return;
   }
   saveSetting(
     keyOf(track.stage),
     JSON.stringify({
       ticks,
+      time,
       type: car[game.player].typ,
       poses: encode(ghost.driven),
     }),

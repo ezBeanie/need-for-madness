@@ -55,6 +55,7 @@ import {
   currentLapTicks,
   formatTime,
   isTimeAttack,
+  raceTime,
   timeAttack,
 } from "../race/timeAttack.js";
 import { track } from "../race/track.js";
@@ -1042,12 +1043,12 @@ const drawClock = () => {
     0,
     TEXT.label,
   );
-  drawCenteredText(670, formatTime(timeAttack.ticks), 0, 0, 0, TEXT.heading);
+  drawCenteredText(670, formatTime(raceTime()), 0, 0, 0, TEXT.heading);
 };
 
 const finishedIn = () => {
-  const { best, newBest, ticks } = timeAttack;
-  const time = `Your time: ${formatTime(ticks)}`;
+  const { best, newBest } = timeAttack;
+  const time = `Your time: ${formatTime(raceTime())}`;
   if (newBest.race) {
     return `${time}, a new best!`;
   }
