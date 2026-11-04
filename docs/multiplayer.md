@@ -223,9 +223,11 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
   an alle Spiele). Fertig: Normal, Only racing (kein Schaden, keine Dellen), Last survivor
   (Runden zählen nicht, das letzte nicht gewreckte Auto gewinnt), Time attack (keine Kollision,
   andere Autos in der Nähe durchsichtig, das Rennen läuft bis alle durch oder gewreckt sind,
-  Zeiten aus dem Rennband auf Tausendstel). Offen: Most kills / Deathmatch (feste Zeit,
-  Gewreckte steigen nach kurzer Zeit wieder ein, die meisten Wrecks gewinnen); Bots fahren in
-  Last survivor bisher einfach Runden.
+  Zeiten aus dem Rennband auf Tausendstel), Most kills (3 Minuten, gewreckte Autos steigen
+  nach 3 s an ihrer Stelle repariert wieder ein, ein Wreck zählt für das Auto, das zuletzt
+  gerammt hat, auch für Bots; Uhr, Kills und Wiedereinstiege gehen nur in diesem Modus mit dem
+  Rennzustand, `race/deathmatch.js`). Offen: Bots fahren in Last survivor und Most kills
+  bisher einfach Runden statt gezielt anzugreifen.
 - **Weitere Punkte (außerhalb des Multiplayers):** Auto-Editor.
 - **Discord-Integration (Idee für später):** Mitspieler im laufenden Discord-Call nach der
   Position im Spiel leiser/lauter und links/rechts. Discords lokale RPC-Schnittstelle kann das

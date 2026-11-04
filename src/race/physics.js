@@ -26,6 +26,12 @@ import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
 import { BLEND, gl, keepDamageTexture } from "../render/renderer.js";
 import { carModels, carTextures, scene } from "../render/scene.js";
+import {
+  deathmatchTick,
+  isDeathmatch,
+  noteWasted,
+  startDeathmatch,
+} from "./deathmatch.js";
 import * as allEffects from "./effects.js";
 import { raceEvents } from "./events.js";
 import { MISSED, SKID, STUNT, car, racers, useUpStuntTurns } from "./racers.js";
@@ -60,6 +66,7 @@ const sprks = unlessQuiet(allEffects.sprks);
 const drag = 0.05;
 const lonorm = [];
 export function inishmad() {
+  startDeathmatch();
   for (let c = 0; c < MAX_CARS; c++) {
     // (a wall of the stage before, which may be gone: its piece's model with it)
     racers[c].wall = -1;
@@ -192,6 +199,9 @@ export function drive() {
   }
   for (let c = 0; c < game.carCount; c++) {
     driveCar(c);
+  }
+  if (isDeathmatch()) {
+    deathmatchTick(respawn);
   }
 }
 
@@ -1150,8 +1160,11 @@ function burnWhenWasted(c, type, avgSpeedX, avgSpeedZ) {
           }
         }
       }
-      if (racers[c].cntdest == 4) {
+      if (racers[c].cntdest == 4 && !racers[c].wasted) {
         racers[c].wasted = true;
+        if (isDeathmatch()) {
+          noteWasted(c);
+        }
       }
     }
   }
@@ -3117,12 +3130,13 @@ function crashCorners(c, xc, i, j, at, xat) {
     racers[xc].wheelSpeedZ,
     HIT.alongZ,
   );
-  // (and which human it was, so each one is told whom they wasted)
-  if (isHuman(c)) {
+  // (and which human it was, so each one is told whom they wasted; in most kills any car
+  // scores)
+  if (isHuman(c) || isDeathmatch()) {
     racers[xc].lastcolido = 70;
     racers[xc].lastHitBy = c;
   }
-  if (isHuman(xc)) {
+  if (isHuman(xc) || isDeathmatch()) {
     racers[c].lastcolido = 70;
     racers[c].lastHitBy = xc;
   }
@@ -3572,6 +3586,39 @@ function chipAndScratch(c, rad, i, tmag, modpix, spots) {
     );
   }
 }
+// Most kills: a wasted car back where it lies, a little above it, upright, whole and
+// standing still, its progress round the stage kept.
+function respawn(c) {
+  const racer = racers[c];
+  racer.squash = 0;
+  racer.nbsq = 0;
+  racer.damage = 0;
+  racer.cntdest = 0;
+  racer.wasted = false;
+  racer.embos = 0;
+  racer.embodir = 0;
+  racer.embomag = 0;
+  racer.lastcolido = 0;
+  racer.speed = 0;
+  racer.pitch = 0;
+  racer.roll = 0;
+  racer.stunt = STUNT.none;
+  racer.capsized = false;
+  for (let i = 0; i < 4; i++) {
+    racer.wheelSpeedX[i] = 0;
+    racer.wheelSpeedY[i] = 0;
+    racer.wheelSpeedZ[i] = 0;
+  }
+  car[c].xy = 0;
+  car[c].zy = 0;
+  car[c].y = Math.max(car[c].y, car[c].grat) + 10;
+  if (c == game.player) {
+    raceEvents.playerWreckTicks = 0;
+  }
+  recording.tape.cars[c].wastedAt = 700;
+  fixcar(c);
+}
+
 export function fixcar(c) {
   bodyDamage.repair?.(c);
   let rad = racers[c].body;
