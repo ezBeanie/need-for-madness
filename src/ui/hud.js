@@ -7,7 +7,7 @@ import {
   watchNext,
   watchingOthers,
 } from "../race/spectate.js";
-import { nameOfCar } from "../net/roomCars.js";
+import { arrowNameOf, nameOfCar } from "../net/roomCars.js";
 import {
   audio,
   playSound,
@@ -2194,7 +2194,7 @@ const closestOpponent = () => {
 };
 
 const drawTargetName = (target) => {
-  const name = carStats.names[car[target].typ];
+  const name = arrowNameOf(target);
   drawCenteredText(
     16,
     "[" + "  ".repeat(name.length) + "]",
