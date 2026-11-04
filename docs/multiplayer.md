@@ -219,11 +219,14 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
   Vor einer Store-Veröffentlichung die Rechte am Original klären. Löst auch die Drehsperre
   auf iOS (oben).
 - Bandbreite (Tasten als Bits, nur bei Änderung), Ergebnisliste für alle.
-- **Rennmodi:** nur Wasten, nur Rennen, Time Attack ohne Kollision (andere Spieler wirken aus
-  der Nähe wie Geister, man fährt durch sie hindurch).
-- **Weitere Punkte (außerhalb des Multiplayers):** Geist der eigenen Bestzeit im Time Attack,
-  bessere Auswahl der Streckensammlungen im Stage Select, verzogene Polygone am Bildrand im
-  Classic Look beheben, Auto-Editor.
+- **Rennmodi:** Der Host wählt in der Lobby einen Modus (`raceSetup.mode`, geht mit dem Start
+  an alle Spiele). Fertig: Normal, Only racing (kein Schaden, keine Dellen), Last survivor
+  (Runden zählen nicht, das letzte nicht gewreckte Auto gewinnt), Time attack (keine Kollision,
+  andere Autos in der Nähe durchsichtig, das Rennen läuft bis alle durch oder gewreckt sind,
+  Zeiten aus dem Rennband auf Tausendstel). Offen: Most kills / Deathmatch (feste Zeit,
+  Gewreckte steigen nach kurzer Zeit wieder ein, die meisten Wrecks gewinnen); Bots fahren in
+  Last survivor bisher einfach Runden.
+- **Weitere Punkte (außerhalb des Multiplayers):** Auto-Editor.
 - **Discord-Integration (Idee für später):** Mitspieler im laufenden Discord-Call nach der
   Position im Spiel leiser/lauter und links/rechts. Discords lokale RPC-Schnittstelle kann das
   (`SET_USER_VOICE_SETTINGS`: Lautstärke 0–200, Pan links/rechts), braucht aber den von Discord
