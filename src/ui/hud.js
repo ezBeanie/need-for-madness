@@ -33,7 +33,14 @@ import {
 import { isPhone } from "../core/platform.js";
 import { menu } from "../screens/menuState.js";
 import { random } from "../core/random.js";
-import { MAX_CARS, MODE, PHASE, game, raceSetup } from "../core/state.js";
+import {
+  MAX_CARS,
+  MODE,
+  PHASE,
+  finishingWins,
+  game,
+  raceSetup,
+} from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
@@ -741,6 +748,24 @@ const raceOutcome = () => {
     over = true;
     raceEvents.winner = true;
   }
+  // the last car standing wins, the player's wasted before
+  if (!over && !finishingWins() && track.haltall) {
+    const last = racers
+      .slice(0, game.carCount)
+      .findIndex((racer) => !racer.wasted);
+    if (last != -1 && last != game.player) {
+      drawOutcome("You Lost!", "youlost");
+      drawBlinking(
+        192,
+        `${nameOfCar(last)} is the last survivor!`,
+        0,
+        128,
+        255,
+      );
+      raceEvents.winner = false;
+      over = true;
+    }
+  }
   if (!over) {
     if (racers[game.player].wasted && raceEvents.playerWreckTicks == 16) {
       // (watching the others race on, the wreck's title is gone)
@@ -760,7 +785,7 @@ const raceOutcome = () => {
       playSound(30, 1);
     }
   }
-  if (!over) {
+  if (!over && finishingWins()) {
     for (let i = 0; i < game.carCount; i++) {
       if (track.clear[i] == track.nlaps * track.nsp && track.pos[i] == 0) {
         if (i == game.player && isTimeAttack()) {

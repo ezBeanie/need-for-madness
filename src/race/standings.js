@@ -2,7 +2,7 @@
 // close finish is coming that the highlights should show.
 
 import { distanceSquaredXZ } from "../core/math.js";
-import { game } from "../core/state.js";
+import { finishingWins, game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { tick } from "../core/tick.js";
 import { raceEvents } from "./events.js";
@@ -33,15 +33,17 @@ export function updateStandings() {
     }
   }
   // The HUD stops the race as the player sees it end (see raceOutcome in ui/hud.js);
-  // racing together, it stops alike in every game: one car left, or one finished.
+  // racing together, it stops alike in every game: one car left, or one finished (when
+  // that wins).
   if (game.humans.length > 0) {
     const cars = racers.slice(0, game.carCount);
     if (
       cars.filter((racer) => !racer.wasted).length <= 1 ||
-      cars.some(
-        (_, c) =>
-          track.clear[c] == track.nlaps * track.nsp && track.pos[c] == 0,
-      )
+      (finishingWins() &&
+        cars.some(
+          (_, c) =>
+            track.clear[c] == track.nlaps * track.nsp && track.pos[c] == 0,
+        ))
     ) {
       track.haltall = true;
     }

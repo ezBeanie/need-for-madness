@@ -78,9 +78,13 @@ export const RACE_KIND = {
 };
 
 // How a room's race is won (see net/host.js): as any race, finishing first or wasting the
-// others; or only racing, no car taking damage.
-export const RACE_MODE = { normal: 0, onlyRacing: 1 };
-export const RACE_MODE_NAMES = ["Normal race", "Only racing"];
+// others; only racing, no car taking damage; or as the last car not wasted, the laps
+// counting for nothing.
+export const RACE_MODE = { normal: 0, onlyRacing: 1, lastSurvivor: 2 };
+export const RACE_MODE_NAMES = ["Normal race", "Only racing", "Last survivor"];
+
+// whether finishing the laps first wins the race
+export const finishingWins = () => raceSetup.mode != RACE_MODE.lastSurvivor;
 export const isRaceMode = (mode) =>
   Number.isInteger(mode) && mode >= 0 && mode < RACE_MODE_NAMES.length;
 
