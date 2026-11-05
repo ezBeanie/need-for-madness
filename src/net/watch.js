@@ -31,6 +31,7 @@ export const answerWatch = (id) => {
   const text = encode({
     stage: track.stage,
     mode: raceSetup.mode,
+    rules: raceSetup.rules,
     carTypes: game.carTypes.slice(0, game.carCount),
     players: lockstep.players,
     names: roomCars.names,

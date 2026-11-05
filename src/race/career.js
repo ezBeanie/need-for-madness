@@ -8,6 +8,7 @@ import {
   STRENGTH,
   game,
   raceSetup,
+  roomRules,
 } from "../core/state.js";
 import { loadSetting, saveSetting } from "../core/storage.js";
 import { LAST_STAGE, levelOf } from "../data/stages.js";
@@ -38,6 +39,7 @@ export const loadCareer = () => {
 export const chooseRaceKind = (kind) => {
   raceSetup.kind = kind;
   raceSetup.mode = RACE_MODE.normal;
+  raceSetup.rules = roomRules();
   if (kind == RACE_KIND.campaign) {
     game.unlocked = career.progress;
     game.raceCars = CAMPAIGN_CARS;
@@ -60,16 +62,22 @@ export const setUpRace = () => {
   const campaign = raceSetup.kind == RACE_KIND.campaign;
   raceSetup.newestStage = campaign ? game.unlocked : 0;
   raceSetup.openedStages = campaign ? game.unlocked : LAST_STAGE;
-  raceSetup.aiStage =
-    campaign || raceSetup.kind == RACE_KIND.together
-      ? track.stage
-      : AI_STAGE[raceSetup.strength](track.stage);
+  if (raceSetup.kind == RACE_KIND.together) {
+    setUpRaceTogether();
+    return;
+  }
+  raceSetup.aiStage = campaign
+    ? track.stage
+    : AI_STAGE[raceSetup.strength](track.stage);
 };
 
 // A race of a room's players, whichever kind the host started it from: as every game of
-// it sets it up (see net/guest.js).
+// it sets it up (see net/guest.js), its bots as strong as the host chose (on normal they
+// drive as on the stage).
 export const setUpRaceTogether = () => {
+  const { strength } = raceSetup.rules;
   raceSetup.newestStage = 0;
   raceSetup.openedStages = LAST_STAGE;
-  raceSetup.aiStage = track.stage;
+  raceSetup.aiStage =
+    strength == STRENGTH.normal ? track.stage : AI_STAGE[strength](track.stage);
 };

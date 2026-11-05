@@ -133,8 +133,36 @@ src: url(data/verdana.ttf);
 .view .choose form { margin-top: 20px; }
 .view .room-line { margin: 0; font-size: 16px; }
 .view .room { font-size: 26px; letter-spacing: 3px; color: #01eaff; }
-.lobby:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
-@media (max-width: 1000px) { .lobby:not([hidden]) { grid-template-columns: 1fr; } }
+/* wide: the players, the race, you over the chat (Start in sight); narrower: the race and
+   you side by side over the players and the chat; on a phone one below the other, what to
+   choose first */
+.lobby:not([hidden]) {
+  display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas: "field race you" "field race chat"; grid-template-rows: auto 1fr; gap: 16px; align-items: start;
+}
+.lobby > .field { grid-area: field; }
+.lobby > .race { grid-area: race; }
+.lobby > .you { grid-area: you; }
+.lobby > .chat { grid-area: chat; }
+@media (max-width: 1100px) {
+  .lobby:not([hidden]) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "race you" "field field" "chat chat"; grid-template-rows: none; }
+}
+@media (max-width: 640px) {
+  .lobby:not([hidden]) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "race" "you" "field" "chat"; gap: 12px; }
+  .menu-dialog.view { padding: 12px; }
+  .view .panel { padding: 12px 12px 14px; }
+  .lobby .cards { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
+}
+.lobby .settings:not([hidden]) { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(130px, 100%), 1fr)); gap: 12px; }
+#multiplayerBots h3 { margin-top: 20px; }
+.lobby .settings .wide { grid-column: 1 / -1; }
+.lobby .setting label { margin: 0 0 6px; }
+.lobby .setting select { width: 100%; }
+.lobby .share { margin-bottom: 14px; }
+.lobby .share label { margin-top: 0; }
+.lobby .rules:not([hidden]) { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; font-size: 15px; }
+.lobby .rules dt { color: rgba(255, 255, 255, 0.75); }
+.lobby .rules dd { margin: 0; font-weight: bold; color: #ffffff; }
 .lobby .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
 .view .cards li + li { margin-top: 0; }
 .lobby .cards li { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px 10px; border: 2px solid transparent; border-radius: 12px; background: rgba(255, 255, 255, 0.07); font-size: 14px; }
@@ -149,8 +177,8 @@ src: url(data/verdana.ttf);
 .lobby .cards select { min-height: 36px; padding: 4px 10px; font-size: 14px; }
 .lobby .cards button { min-height: 36px; padding: 4px 18px; font-size: 14px; }
 #multiplayerAddBot { width: auto; margin-top: 10px; }
-.lobby .stage-name { margin: 16px 0 0; font-size: 15px; }
-.lobby .status { margin: 16px 0 10px; color: #01eaff; }
+.lobby .status { margin: 14px 0 6px; color: #01eaff; }
+.lobby .status:empty { display: none; }
 .lobby .panel > button { width: 100%; justify-content: center; margin-top: 8px; }
 #lobbyChat { list-style: none; margin: 0; padding: 8px 12px; height: max(160px, 40vh); overflow-y: auto; border-radius: 12px; background: rgba(0, 0, 0, 0.4); font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
 #lobbyChat li + li { margin-top: 4px; }
@@ -371,6 +399,7 @@ src: url(data/verdana.ttf);
 <ul aria-labelledby="optionsRaceTitle">
 <li><button type="button" id="option-toggleAiming" aria-pressed="false"><span>Camera turns to the arrow's car <span class="key">T</span></span><span class="state"></span></button></li>
 <li><button type="button" id="option-toggleMinimap" aria-pressed="false"><span>Minimap <span class="key">G</span></span><span class="state"></span></button></li>
+<li><button type="button" id="ghostShown" aria-pressed="false" aria-describedby="ghostShownHint"><span>Ghost in time attack</span><span class="state"></span></button><p id="ghostShownHint" class="hint">Your fastest race on the stage, driven again beside you.</p></li>
 </ul>
 </section>
 <section class="panel">
@@ -530,26 +559,27 @@ src: url(data/verdana.ttf);
 <button type="button" id="multiplayerAddBot">Add a bot</button>
 </div>
 </section>
-<section class="panel" aria-labelledby="lobbyRaceTitle">
+<section class="panel race" aria-labelledby="lobbyRaceTitle">
 <h3 id="lobbyRaceTitle">The race</h3>
-<div id="multiplayerShare">
+<div id="multiplayerShare" class="share">
 <label for="multiplayerLink">Link for your guests</label>
 <div class="row"><input id="multiplayerLink" readonly><button type="button" id="multiplayerCopy">Copy</button></div>
 </div>
-<div id="lobbyStageChoice">
-<label for="lobbyStage">Stage</label>
-<select id="lobbyStage"></select>
+<div id="lobbySettings" class="settings">
+<div class="setting wide"><label for="lobbyStage">Stage</label><select id="lobbyStage"></select></div>
+<div class="setting"><label for="lobbyMode">Mode</label><select id="lobbyMode"></select></div>
+<div class="setting"><label for="lobbyStrength">Bot strength</label><select id="lobbyStrength"></select></div>
+<div class="setting" id="lobbyMinutesChoice"><label for="lobbyMinutes">Time</label><select id="lobbyMinutes"></select></div>
+<div class="setting" id="lobbyRespawnChoice"><label for="lobbyRespawn">Back after</label><select id="lobbyRespawn"></select></div>
 </div>
-<p id="lobbyStageName" class="stage-name" hidden></p>
-<div id="lobbyModeChoice">
-<label for="lobbyMode">Mode</label>
-<select id="lobbyMode"></select>
+<dl id="lobbyRules" class="rules" hidden></dl>
+</section>
+<section class="panel you" aria-labelledby="lobbyYouTitle">
+<h3 id="lobbyYouTitle">You</h3>
+<div class="settings">
+<div class="setting"><label for="lobbyCar">Your car</label><select id="lobbyCar"></select></div>
+<div class="setting"><label for="lobbySkin">Your paint</label><select id="lobbySkin"></select></div>
 </div>
-<p id="lobbyModeName" class="stage-name" hidden></p>
-<label for="lobbyCar">Your car</label>
-<select id="lobbyCar"></select>
-<label for="lobbySkin">Your paint</label>
-<select id="lobbySkin"></select>
 <p id="multiplayerStatus" class="status" role="status"></p>
 <button type="button" id="lobbyReady" class="go" aria-pressed="false">Ready</button>
 <button type="button" id="lobbyWatch" class="go" hidden>Watch the race</button>

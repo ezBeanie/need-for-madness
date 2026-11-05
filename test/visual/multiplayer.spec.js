@@ -826,7 +826,7 @@ test("the host leaving the room ends it for its guests, who are told so", async 
   ).toBeVisible();
 });
 
-test("in the lobby the host chooses the stage and the mode, the guest its car, both chat, and the race starts once the guest is ready", async ({
+test("in the lobby the host chooses the stage, the mode and its rules, the guest its car, both chat, and the race starts once the guest is ready", async ({
   context,
 }) => {
   const games = await openTwoGames(context, "/?host=lobby", "/?join=lobby");
@@ -844,20 +844,40 @@ test("in the lobby the host chooses the stage and the mode, the guest its car, b
   await guestPage.locator("#menuMultiplayer").click();
 
   await hostPage.getByLabel("Stage", { exact: true }).selectOption("3");
-  await hostPage
-    .getByLabel("Mode", { exact: true })
-    .selectOption("Only racing");
+  await hostPage.getByLabel("Mode", { exact: true }).selectOption("Most kills");
+  await hostPage.getByLabel("Bot strength").selectOption("Hard");
+  await hostPage.getByLabel("Time", { exact: true }).selectOption("5 min");
   await guestPage.getByLabel("Your car").selectOption("12");
   // (a chat line is text, whatever it says)
   await hostPage.getByLabel("Message").fill("on <b>three</b>?");
   await hostPage.getByRole("button", { name: "Send" }).click();
   await deliver();
-  await expect(guestPage.locator("#lobbyStageName")).toHaveText(
-    "Stage: Stage 3",
-  );
-  await expect(guestPage.locator("#lobbyModeName")).toHaveText(
-    "Mode: Only racing",
-  );
+  await expect(guestPage.locator("#lobbyRules dt")).toHaveText([
+    "Stage",
+    "Mode",
+    "Bot strength",
+    "Time",
+    "Back after",
+  ]);
+  await expect(guestPage.locator("#lobbyRules dd")).toHaveText([
+    "Stage 3",
+    "Most kills",
+    "Hard",
+    "5 min",
+    "3 s",
+  ]);
+  await expect(guestPage.locator("#lobbySettings")).toBeHidden();
+  // (the time and the way back are most kills' alone)
+  await hostPage
+    .getByLabel("Mode", { exact: true })
+    .selectOption("Only racing");
+  await expect(hostPage.getByLabel("Time", { exact: true })).toBeHidden();
+  await deliver();
+  await expect(guestPage.locator("#lobbyRules dd")).toHaveText([
+    "Stage 3",
+    "Only racing",
+    "Hard",
+  ]);
   await expect(guestPage.locator("#lobbyChat li")).toHaveText([
     "Player 1 (host): on <b>three</b>?",
   ]);
@@ -889,10 +909,15 @@ test("in the lobby the host chooses the stage and the mode, the guest its car, b
     page.evaluate(() => ({
       stage: window.gameState.track.stage,
       mode: window.gameState.raceSetup.mode,
+      strength: window.gameState.raceSetup.rules.strength,
       field: window.gameState.game.carTypes.slice(0, 2),
     }));
   // (the tabs share their storage, and with it the host's car: the games are compared)
-  expect(await raced(guestPage)).toMatchObject({ stage: 3, mode: 1 });
+  expect(await raced(guestPage)).toMatchObject({
+    stage: 3,
+    mode: 1,
+    strength: 2,
+  });
   expect((await raced(guestPage)).field[1]).toBe(12);
   expect(await raced(hostPage)).toEqual(await raced(guestPage));
 

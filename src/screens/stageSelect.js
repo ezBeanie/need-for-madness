@@ -24,7 +24,14 @@ import {
 } from "../classic/stageSelect.js";
 import { cosDeg, sinDeg } from "../core/math.js";
 import { random } from "../core/random.js";
-import { MODE, PHASE, RACE_KIND, game, raceSetup } from "../core/state.js";
+import {
+  MODE,
+  PHASE,
+  RACE_KIND,
+  STRENGTH_NAMES,
+  game,
+  raceSetup,
+} from "../core/state.js";
 import { nextStrength } from "../race/career.js";
 import { bestTimes, formatTime } from "../race/timeAttack.js";
 import { applyFieldSize, nextRaceSize } from "../race/field.js";
@@ -101,8 +108,6 @@ const shownCollections = () =>
 // the campaign goes no further than the stages it opened
 const hasNext = () =>
   stageAfter(track.stage) && (!inCampaign() || track.stage < game.unlocked);
-
-const STRENGTH_NAMES = ["Easy", "Normal", "Hard"];
 
 // The camera falls from FALL_FROM to FALL_TO above the stage while it turns and moves its
 // view to the stage's first path point. Then it follows the path, one point every

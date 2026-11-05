@@ -16,6 +16,8 @@ import {
   RACE_KIND,
   game,
   isRaceMode,
+  isRoomRules,
+  roomRules,
   raceSetup,
 } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
@@ -64,6 +66,7 @@ export const guest = {
   bots: [],
   stage: null,
   mode: 0,
+  rules: roomRules(),
   // whether this guest's player is ready to race
   ready: false,
   hostId: null,
@@ -112,6 +115,7 @@ const isBots = (bots) =>
 const isStart = ({
   stage,
   mode,
+  rules,
   carTypes,
   players,
   names,
@@ -121,6 +125,7 @@ const isStart = ({
 }) =>
   isIndex(stage, STAGE_COUNT + 1) &&
   isRaceMode(mode) &&
+  isRoomRules(rules) &&
   Array.isArray(carTypes) &&
   carTypes.length <= MAX_CARS &&
   carTypes.every((type) => isIndex(type, carStats.names.length)) &&
@@ -146,13 +151,15 @@ const receive = (message) => {
     isPlayers(message.players) &&
     isBots(message.bots) &&
     isIndex(message.stage, STAGE_COUNT + 1) &&
-    isRaceMode(message.mode)
+    isRaceMode(message.mode) &&
+    isRoomRules(message.rules)
   ) {
     guest.hostId = message.from;
     guest.players = message.players;
     guest.bots = message.bots;
     guest.stage = message.stage;
     guest.mode = message.mode;
+    guest.rules = message.rules;
     guest.racing = message.racing === true;
   }
   if (message.from != guest.hostId) {
@@ -174,6 +181,7 @@ const receive = (message) => {
     const { state } = message;
     startLockstep(guest.car, message.players, message.raceId, () => {
       raceSetup.mode = message.mode;
+      raceSetup.rules = message.rules;
       random.sim = seededRandom(0);
       random.wreck = seededRandom(0);
       restoreRace(state);
@@ -270,6 +278,7 @@ const loadHostedRace = (start) => {
   game.mode = MODE.championship;
   raceSetup.kind = RACE_KIND.together;
   raceSetup.mode = start.mode;
+  raceSetup.rules = start.rules;
   pauseMenuMusic();
   stageLoad.after = AFTER_LOAD.guest;
   stageLoad.progress = STAGE_LOAD.requested;

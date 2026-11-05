@@ -8,9 +8,11 @@ import { MAX_CARS, RACE_MODE, game, raceSetup } from "../core/state.js";
 import { TICK_MS } from "../core/tick.js";
 import { racers } from "./racers.js";
 
-// how long the race goes on, and a wasted car stays out
-export const DEATHMATCH_TICKS = Math.round((3 * 60 * 1000) / TICK_MS);
-export const RESPAWN_TICKS = Math.round(3000 / TICK_MS);
+// how long the race goes on, and a wasted car stays out, as the host chose
+export const deathmatchTicks = () =>
+  Math.round((raceSetup.rules.minutes * 60 * 1000) / TICK_MS);
+export const respawnTicks = () =>
+  Math.round((raceSetup.rules.respawnSeconds * 1000) / TICK_MS);
 
 // ticks: since the start; kills: by car, how many it wasted; deaths: how often it was;
 // backAt: the tick a wasted car comes back (0: none)
@@ -59,7 +61,7 @@ export const noteWasted = (c) => {
     deathmatch.kills[lastHitBy]++;
   }
   deathmatch.deaths[c]++;
-  deathmatch.backAt[c] = deathmatch.ticks + RESPAWN_TICKS;
+  deathmatch.backAt[c] = deathmatch.ticks + respawnTicks();
 };
 
 // Every tick of the race, after the cars drove: the clock, and the wasted whose time out
@@ -72,12 +74,12 @@ export const deathmatchTick = (respawn) => {
       respawn(c);
     }
   }
-  return deathmatch.ticks >= DEATHMATCH_TICKS;
+  return deathmatch.ticks >= deathmatchTicks();
 };
 
 // the ticks left
 export const deathmatchLeft = () =>
-  Math.max(0, DEATHMATCH_TICKS - deathmatch.ticks);
+  Math.max(0, deathmatchTicks() - deathmatch.ticks);
 
 // The cars by kills, most first (fewer deaths first on a tie).
 export const killTable = () =>

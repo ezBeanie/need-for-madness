@@ -5,6 +5,8 @@ import { random } from "../core/random.js";
 import {
   MAX_CARS,
   MODE,
+  RACE_MODE,
+  STRENGTH,
   aiRival,
   game,
   isHuman,
@@ -480,6 +482,9 @@ function chaseTarget(c) {
     ai[c].attackTicks--;
   }
   if (ai[c].attackTicks <= 0) {
+    ai[c].attackTicks = 0;
+  }
+  if (hunts() && racers[ai[c].attackedCar].wasted) {
     ai[c].attackTicks = 0;
   }
   if (
@@ -2384,7 +2389,54 @@ function chooseWhetherToBully(c) {
   }
 }
 
+// In a room's race of wasting, hard bots hunt (see huntNearest) instead of racing.
+const hunts = () =>
+  raceSetup.rules.strength == STRENGTH.hard &&
+  (raceSetup.mode == RACE_MODE.lastSurvivor ||
+    raceSetup.mode == RACE_MODE.mostKills) &&
+  game.humans.length > 0;
+
+// how long a hunt goes on before the bot looks again for the nearest, and the power below
+// which it rather fixes
+const HUNT_TICKS = 200;
+const HUNT_POWER = 30;
+
+// The nearest car not wasted, chased.
+function huntNearest(c) {
+  if (ai[c].attackTicks != 0 || racers[c].power < HUNT_POWER) {
+    return;
+  }
+  let nearest = -1;
+  let closest = Infinity;
+  for (let other = 0; other < game.carCount; other++) {
+    if (other != c && !racers[other].wasted) {
+      const away = distanceSquaredXZ(
+        car[c].x / 10,
+        car[other].x / 10,
+        car[c].z / 10,
+        car[other].z / 10,
+      );
+      if (away < closest) {
+        closest = away;
+        nearest = other;
+      }
+    }
+  }
+  if (nearest < 0) {
+    return;
+  }
+  ai[c].attackedCar = nearest;
+  ai[c].attackTicks = HUNT_TICKS;
+  ai[c].leadAhead = 0.5;
+  ai[c].afta = true;
+  ai[c].sharpTurn = SHARP_TURN.handbrake;
+}
+
 function chooseWhomToAttack(c) {
+  if (hunts()) {
+    huntNearest(c);
+    return;
+  }
   const type = car[c].typ;
   if (ai[c].attackTicks == 0) {
     const swervesAway = swervesFromCars(c);

@@ -6,9 +6,13 @@
 // it. The main menu opens it (the classic one with a button beside its Options).
 
 import {
+  MATCH_MINUTES,
   PHASE,
   RACE_KIND,
+  RACE_MODE,
   RACE_MODE_NAMES,
+  RESPAWN_SECONDS,
+  STRENGTH_NAMES,
   game,
   raceSetup,
 } from "../core/state.js";
@@ -22,6 +26,7 @@ import {
   chooseBotCar,
   chooseBotSkin,
   chooseRoomMode,
+  chooseRoomRule,
   chooseRoomStage,
   everyoneReady,
   hostRoom,
@@ -29,6 +34,7 @@ import {
   roomBots,
   roomGuests,
   roomMode,
+  roomRulesChosen,
   roomStage,
   sendPlayers,
   startRoomRace,
@@ -191,34 +197,63 @@ const showPlayers = () => {
   }
 };
 
-// The stages to race: the host chooses among them, the guests see the one chosen.
-const showStage = () => {
-  const isHost = link.role == ROLE.host;
-  const stage = isHost ? roomStage() : guest.stage;
-  element("lobbyStageChoice").hidden = !isHost;
-  const select = element("lobbyStage");
-  if (isHost && select.value != String(stage)) {
-    select.value = String(stage);
-  }
-  const name = element("lobbyStageName");
-  name.hidden = isHost;
-  const text = stage ? `Stage: ${stageLabel(stage)}` : "Stage: not chosen yet";
-  if (!isHost && name.textContent != text) {
-    name.textContent = text;
-  }
-  const mode = isHost ? roomMode() : guest.mode;
-  element("lobbyModeChoice").hidden = !isHost;
-  const modeSelect = element("lobbyMode");
-  if (isHost && modeSelect.value != String(mode)) {
-    modeSelect.value = String(mode);
-  }
-  const modeName = element("lobbyModeName");
-  modeName.hidden = isHost;
-  const modeText = `Mode: ${RACE_MODE_NAMES[mode]}`;
-  if (!isHost && modeName.textContent != modeText) {
-    modeName.textContent = modeText;
+// A select set to value (left alone when it is).
+const setSelect = (id, value) => {
+  const select = element(id);
+  if (select.value != String(value)) {
+    select.value = String(value);
   }
 };
+
+// The race's stage, mode and rules: the host chooses them, the guests see them listed.
+const showRace = () => {
+  const isHost = link.role == ROLE.host;
+  const stage = isHost ? roomStage() : guest.stage;
+  const mode = isHost ? roomMode() : guest.mode;
+  const rules = isHost ? roomRulesChosen() : guest.rules;
+  const mostKills = mode == RACE_MODE.mostKills;
+  element("lobbySettings").hidden = !isHost;
+  element("lobbyRules").hidden = isHost;
+  if (isHost) {
+    setSelect("lobbyStage", stage);
+    setSelect("lobbyMode", mode);
+    setSelect("lobbyStrength", rules.strength);
+    setSelect("lobbyMinutes", rules.minutes);
+    setSelect("lobbyRespawn", rules.respawnSeconds);
+    element("lobbyMinutesChoice").hidden = !mostKills;
+    element("lobbyRespawnChoice").hidden = !mostKills;
+    return;
+  }
+  const shown = [
+    ["Stage", stage ? stageLabel(stage) : "not chosen yet"],
+    ["Mode", RACE_MODE_NAMES[mode]],
+    ["Bot strength", STRENGTH_NAMES[rules.strength]],
+  ];
+  if (mostKills) {
+    shown.push(
+      ["Time", minutesText(rules.minutes)],
+      ["Back after", secondsText(rules.respawnSeconds)],
+    );
+  }
+  // (changed only when it changes, for screen readers)
+  const list = element("lobbyRules");
+  const shape = JSON.stringify(shown);
+  if (list.dataset.shape != shape) {
+    list.dataset.shape = shape;
+    list.replaceChildren(
+      ...shown.flatMap(([term, value]) => {
+        const dt = document.createElement("dt");
+        dt.textContent = term;
+        const dd = document.createElement("dd");
+        dd.textContent = value;
+        return [dt, dd];
+      }),
+    );
+  }
+};
+
+const minutesText = (minutes) => `${minutes} min`;
+const secondsText = (seconds) => `${seconds} s`;
 
 const showChoices = () => {
   const isHost = link.role == ROLE.host;
@@ -408,7 +443,7 @@ const showRoom = () => {
   }
   showPlayers();
   showBots();
-  showStage();
+  showRace();
   showChoices();
   showChat();
 };
@@ -450,6 +485,21 @@ const fillChoices = () => {
   );
   element("lobbyMode").append(
     ...RACE_MODE_NAMES.map((name, mode) => new Option(name, String(mode))),
+  );
+  element("lobbyStrength").append(
+    ...STRENGTH_NAMES.map(
+      (name, strength) => new Option(name, String(strength)),
+    ),
+  );
+  element("lobbyMinutes").append(
+    ...MATCH_MINUTES.map(
+      (minutes) => new Option(minutesText(minutes), String(minutes)),
+    ),
+  );
+  element("lobbyRespawn").append(
+    ...RESPAWN_SECONDS.map(
+      (seconds) => new Option(secondsText(seconds), String(seconds)),
+    ),
   );
   element("lobbyStage").append(
     ...sharedStageGroups().map(({ label, stages }) => {
@@ -539,8 +589,19 @@ export const installMultiplayerMenu = () => {
   element("lobbyStage").addEventListener("change", (event) =>
     chooseRoomStage(Number(event.target.value)),
   );
-  element("lobbyMode").addEventListener("change", (event) =>
-    chooseRoomMode(Number(event.target.value)),
+  // (most kills' own rules show at once)
+  element("lobbyMode").addEventListener("change", (event) => {
+    chooseRoomMode(Number(event.target.value));
+    showRoom();
+  });
+  element("lobbyStrength").addEventListener("change", (event) =>
+    chooseRoomRule({ strength: Number(event.target.value) }),
+  );
+  element("lobbyMinutes").addEventListener("change", (event) =>
+    chooseRoomRule({ minutes: Number(event.target.value) }),
+  );
+  element("lobbyRespawn").addEventListener("change", (event) =>
+    chooseRoomRule({ respawnSeconds: Number(event.target.value) }),
   );
   element("lobbyReady").addEventListener("click", () => {
     setReady(!guest.ready);

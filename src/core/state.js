@@ -104,8 +104,27 @@ export const finishingEnds = () =>
 export const isRaceMode = (mode) =>
   Number.isInteger(mode) && mode >= 0 && mode < RACE_MODE_NAMES.length;
 
-// how strong the opponents of a quick race are
+// how strong the opponents of a quick race, or a room's bots, are
 export const STRENGTH = { easy: 0, normal: 1, hard: 2 };
+export const STRENGTH_NAMES = ["Easy", "Normal", "Hard"];
+
+// What a room's host chooses beyond the stage and the mode: how strong its bots are (hard
+// ones hunt the others in the wasting modes) and, in most kills, how long the race lasts
+// and how long a wasted car stays out.
+export const MATCH_MINUTES = [1, 2, 3, 5, 10];
+export const RESPAWN_SECONDS = [1, 3, 5, 10];
+export const roomRules = () => ({
+  strength: STRENGTH.normal,
+  minutes: 3,
+  respawnSeconds: 3,
+});
+export const isRoomRules = (rules) =>
+  rules != null &&
+  Number.isInteger(rules.strength) &&
+  rules.strength >= 0 &&
+  rules.strength < STRENGTH_NAMES.length &&
+  MATCH_MINUTES.includes(rules.minutes) &&
+  RESPAWN_SECONDS.includes(rules.respawnSeconds);
 
 // How the race is set up beyond its stage and its cars, by the menu it was started from
 // (see race/career.js): the race reads this, never the career's progress itself.
@@ -113,6 +132,8 @@ export const raceSetup = {
   kind: RACE_KIND.campaign,
   // a room's race's mode, as its host chose it (normal in every other race)
   mode: RACE_MODE.normal,
+  // and its rules (see roomRules)
+  rules: roomRules(),
   strength: STRENGTH.normal,
   // the stage whose general driving the opponents have (the stage's own in the campaign)
   aiStage: 1,

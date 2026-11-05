@@ -139,6 +139,12 @@ test("time attack's ghost drives the stage's fastest race again, beside the play
   expect(ctx.storedGhost(2).ticks).toBe(30);
   ghostRace(ctx, 4, 20);
   expect(ctx.storedGhost(2).ticks).toBe(20);
+  // switched off it is not seen, yet a faster race still becomes the ghost
+  ctx.toggleGhost();
+  expect(ghostRace(ctx, 5, 15).every((seen) => seen === null)).toBe(true);
+  expect(ctx.storedGhost(2).ticks).toBe(15);
+  ctx.toggleGhost();
+  expect(ghostRace(ctx, 5, 16).some((seen) => seen !== null)).toBe(true);
   // never one of the race's cars
   expect(ctx.GHOST).toBeGreaterThanOrEqual(ctx.game.carCount);
 
