@@ -119,7 +119,7 @@ export const drawMinimap = () => {
     }
     const [x, y] = toMap(car[c].x, car[c].z);
     drawCar(x, y, radius, track.dested[c] ? WASTED : OPPONENT);
-    if (c == camera.aimedCar) {
+    if (c == (camera.lockedCar >= 0 ? camera.lockedCar : camera.aimedCar)) {
       rd.strokeStyle = "#ffe14a";
       rd.lineWidth = 2 * scale;
       rd.beginPath();

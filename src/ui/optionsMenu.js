@@ -14,6 +14,13 @@ import { sendPlayers } from "../net/host.js";
 import { ROLE, link } from "../net/link.js";
 import { own, setOwnName } from "../net/roomCars.js";
 import { toggleByVoice, toggleVoice, voice } from "../net/voice.js";
+import { ghost, toggleGhost } from "../race/ghost.js";
+import { isPhone } from "../core/platform.js";
+import {
+  arrangeTouchControls,
+  setTouchSize,
+  touchLayout,
+} from "./touchLayout.js";
 
 const button = document.getElementById("optionsButton");
 const dialog = document.getElementById("options");
@@ -48,6 +55,12 @@ const VOLUMES = [
   ["soundVolume", setSoundVolume, () => audio.soundVolume],
 ];
 
+const showTouchSize = () => {
+  const percent = Math.round(touchLayout.size * 100);
+  document.getElementById("touchSize").value = String(percent);
+  document.getElementById("touchSizeShown").textContent = `${percent}%`;
+};
+
 const showVolumes = () => {
   for (const [id, , volume] of VOLUMES) {
     const percent = Math.round(volume() * 100);
@@ -69,7 +82,8 @@ const showStates = () => {
   for (const [action, on, yes, no] of SWITCHES) {
     showSwitch(`option-${action}`, on(), yes, no);
   }
-  // (the voice chat has no key: its switch is the options' alone)
+  // (these have no key: their switches are the options' alone)
+  showSwitch("ghostShown", ghost.shown, "On", "Off");
   showSwitch("voiceChat", voice.on, "On", "Off");
   showSwitch("voiceByVoice", voice.byVoice, "By voice", "Push to talk");
 };
@@ -77,6 +91,9 @@ const showStates = () => {
 export const openOptions = () => {
   showStates();
   showVolumes();
+  showTouchSize();
+  // (only where there are touch controls)
+  document.getElementById("optionsTouch").hidden = !isPhone;
   document.getElementById("playerName").value = own.name;
   dialog.showModal?.();
 };
@@ -96,6 +113,17 @@ export const installOptionsMenu = () => {
       showVolumes();
     });
   }
+  document.getElementById("touchSize").addEventListener("input", (event) => {
+    setTouchSize(Number(event.target.value) / 100);
+    showTouchSize();
+  });
+  document
+    .getElementById("touchArrange")
+    .addEventListener("click", arrangeTouchControls);
+  document.getElementById("ghostShown").addEventListener("click", () => {
+    toggleGhost();
+    showStates();
+  });
   document.getElementById("voiceChat").addEventListener("click", () => {
     toggleVoice();
     showStates();

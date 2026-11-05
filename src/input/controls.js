@@ -7,7 +7,7 @@ import {
   switchMusicLook,
   toggleOtherCarSounds,
 } from "../audio/audio.js";
-import { announce } from "../ui/hud.js";
+import { announce, lockedText } from "../ui/hud.js";
 import { PHASE, RACE_KIND, game, raceSetup } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
 import { nextRaceSize } from "../race/field.js";
@@ -27,6 +27,7 @@ import { buttons } from "../ui/widgets.js";
 import { pressConfirm } from "./confirm.js";
 import { talk } from "../net/voice.js";
 import { nextCamera } from "../race/replayViewer.js";
+import { lockNext } from "../render/cameraMoves.js";
 import { watchingOthers } from "../race/spectate.js";
 
 // the button a key shows pressed: the arrow button of the race
@@ -149,6 +150,10 @@ export function onKey(action, pressed) {
   if (!pressed && action == "toggleAiming") {
     toggleAiming();
     announce(camera.aims ? "Target camera: on" : "Target camera: off");
+  }
+  if (!pressed && action == "lockNext" && game.phase == PHASE.race) {
+    lockNext(1);
+    announce(lockedText());
   }
   if (!pressed && action == "toggleClassicMenus") {
     toggleClassicMenus();

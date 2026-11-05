@@ -1,19 +1,25 @@
 // What is drawn over the race: positions, laps, damage and power, the arrow, messages, the
 // buttons, and the overlays of replays, winding back time and switch mode.
 
-import {
-  deathmatch,
-  deathmatchLeft,
-  isDeathmatch,
-  killTable,
-} from "../race/deathmatch.js";
+import { deathmatch, isDeathmatch, killTable } from "../race/deathmatch.js";
 import {
   spectating,
   startWatching,
   watchNext,
   watchingOthers,
 } from "../race/spectate.js";
-import { arrowNameOf, nameOfCar } from "../net/roomCars.js";
+import { arrowNameOf, inRoomRace, nameOfCar } from "../net/roomCars.js";
+import {
+  clearFeed,
+  clockTime,
+  drawDeathmatchBoard,
+  drawFeed,
+  drawResults,
+  noteWreck,
+  placeName,
+  wastedBy,
+  wreckText,
+} from "./scoreboard.js";
 import {
   audio,
   playSound,
@@ -49,7 +55,7 @@ import {
   raceSetup,
 } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
-import { TICK_MS, tick } from "../core/tick.js";
+import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { pointer } from "../input/pointer.js";
@@ -75,6 +81,7 @@ import {
 } from "../race/timeAttack.js";
 import { track } from "../race/track.js";
 import { CAMERA, camera, faceCamera } from "../render/camera.js";
+import { lockNext } from "../render/cameraMoves.js";
 import { LOOK, classicMenus, look } from "../render/look.js";
 import { newParticleModel } from "../render/models.js";
 import { gl } from "../render/renderer.js";
@@ -89,6 +96,7 @@ import {
 } from "./freeCamera.js";
 import { images } from "./images.js";
 import { drawMinimap } from "./minimap.js";
+import { TOUCH_CONTROLS, touchControlAt, touchScale } from "./touchLayout.js";
 import { canvas2D, rd, view } from "./view.js";
 import {
   AREA,
@@ -570,9 +578,11 @@ export function resetHud() {
   for (let i = 0; i < MAX_CARS; i++) {
     knownWrecks[i] = 0;
   }
+  clearFeed();
   raceEvents.raceOverTicks = 0;
   camera.mode = CAMERA.behind;
   camera.target = 0;
+  camera.lockedCar = -1;
   recording.frozen = false;
   raceEvents.playerWreckTicks = 0;
   damageBlinkTicks = 0;
@@ -599,13 +609,8 @@ const drawBlinking = (y, text, r, g, b) => {
 };
 
 // The touch controls of phones: steering, accelerating, braking, the handbrake and the
-// arrow. They press the keys of the player's car while a finger is on them.
-const TOUCH = [
-  { image: 0, x: 130, y: 622, key: "left" },
-  { image: 1, x: 320, y: 662, key: "right" },
-  { image: 3, x: 1150, y: 622, key: "accelerate" },
-  { image: 2, x: 960, y: 662, key: "brake" },
-];
+// arrow (see touchLayout.js for where they lie). They press the keys of the player's car
+// while a finger is on them.
 const CONTROL_FOR = {
   left: "left",
   right: "right",
@@ -627,44 +632,25 @@ const touchControlsShown = () =>
 const arrowButtonShown = () =>
   game.carCount != 1 && (track.stage != 1 || raceSetup.newestStage != 1);
 
-const drawTouchControls = () => {
-  for (const { image, x, y, key } of TOUCH) {
-    if (touchHeld[key]) {
-      rd.globalAlpha = 0.4;
-    }
-    rd.drawImage(
-      images.touchControls[image],
-      x * view.scaleX - 64 * view.scale,
-      y * view.scaleY - 128 * view.scale,
-      128 * view.scale,
-      128 * view.scale,
-    );
-    rd.globalAlpha = 1;
-  }
-  if (touchHeld.handbrake) {
-    rd.globalAlpha = 0.4;
-  }
-  rd.drawImage(
-    images.touchControls[4],
-    1260 * view.scaleX - 154 * view.scale,
-    440 * view.scaleY - 111 * view.scale,
-    154 * view.scale,
-    111 * view.scale,
+// the controls drawn, the arrow's only where it is there
+const shownControls = () =>
+  Object.keys(TOUCH_CONTROLS).filter(
+    (key) => key != "arrow" || arrowButtonShown(),
   );
-  rd.globalAlpha = 1;
-  if (arrowButtonShown()) {
-    if (touchHeld.arrow) {
-      rd.globalAlpha = 0.4;
-    }
+
+const drawTouchControls = () => {
+  for (const key of shownControls()) {
+    const { x, y, width, height } = touchControlAt(key);
+    rd.globalAlpha = touchHeld[key] ? 0.4 : 1;
     rd.drawImage(
-      images.touchControls[5],
-      20 * view.scaleX,
-      440 * view.scaleY - 111 * view.scale,
-      154 * view.scale,
-      111 * view.scale,
+      images.touchControls[TOUCH_CONTROLS[key].image],
+      x - width / 2,
+      y - height / 2,
+      width,
+      height,
     );
-    rd.globalAlpha = 1;
   }
+  rd.globalAlpha = 1;
 };
 
 // Each finger presses the control closest to it (within 200 units).
@@ -680,43 +666,27 @@ const pressTouchControls = () => {
   // a single finger is off it, or when no finger is counted.
   let fingersOffArrow = 0;
   if (pointer.down) {
+    const controls = shownControls().map((key) => ({
+      key,
+      ...touchControlAt(key),
+    }));
     let onArrow = false;
     for (let i = 0; i < pointer.count; i++) {
       onArrow = false;
-      let closest = -1;
-      const xs = [
-        130 * view.scaleX,
-        320 * view.scaleX,
-        1150 * view.scaleX,
-        960 * view.scaleX,
-        1260 * view.scaleX - 77 * view.scale,
-        20 * view.scaleX + 77 * view.scale,
-      ];
-      const ys = [
-        622 * view.scaleY - 64 * view.scale,
-        662 * view.scaleY - 64 * view.scale,
-        622 * view.scaleY - 64 * view.scale,
-        662 * view.scaleY - 64 * view.scale,
-        440 * view.scaleY - 55.5 * view.scale,
-        440 * view.scaleY - 55.5 * view.scale,
-      ];
-      let closestDistance = 200 * view.scale;
-      const controls = arrowButtonShown() ? 6 : 5;
-      for (let k = 0; k < controls; k++) {
-        const distance = py(xs[k], pointer.x[i], ys[k], pointer.y[i]);
+      let closest = null;
+      let closestDistance = 200 * touchScale();
+      for (const control of controls) {
+        const distance = py(control.x, pointer.x[i], control.y, pointer.y[i]);
         if (distance < closestDistance) {
           closestDistance = distance;
-          closest = k;
+          closest = control.key;
         }
       }
-      const key = ["left", "right", "accelerate", "brake", "handbrake"][
-        closest
-      ];
-      if (key) {
-        u[CONTROL_FOR[key]] = true;
-        touchHeld[key] = true;
+      if (CONTROL_FOR[closest]) {
+        u[CONTROL_FOR[closest]] = true;
+        touchHeld[closest] = true;
       }
-      if (closest == 5) {
+      if (closest == "arrow") {
         if (!touchHeld.arrow) {
           u.arrace = !u.arrace;
           touchHeld.arrow = true;
@@ -744,9 +714,6 @@ const drawOutcome = (text, picture) => {
   }
 };
 
-const PLACE_SUFFIX = ["st", "nd", "rd"];
-const placeName = (place) => `${place + 1}${PLACE_SUFFIX[place] ?? "th"}`;
-
 // A room's time attack: the player's place and time once through, and when every car is
 // through (or wasted) the times of all. Returns whether the race is over.
 const timeAttackOutcome = () => {
@@ -759,18 +726,14 @@ const timeAttackOutcome = () => {
     const won = through[0]?.c == game.player;
     drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
     raceEvents.winner = won;
-    through
-      .slice(0, 8)
-      .forEach(({ time, c }, place) =>
-        drawCenteredText(
-          200 + 32 * place,
-          `${placeName(place)}  ${nameOfCar(c)}  ${formatTime(time)}`,
-          0,
-          0,
-          0,
-          TEXT.label,
-        ),
-      );
+    drawResults(
+      ["", "", "Time"],
+      through.slice(0, MAX_CARS).map(({ time, c }, place) => ({
+        cells: [placeName(place), nameOfCar(c), formatTime(time)],
+        mine: c == game.player,
+        line: `${placeName(place)}  ${nameOfCar(c)}  ${formatTime(time)}`,
+      })),
+    );
     return true;
   }
   const place = through.findIndex(({ c }) => c == game.player);
@@ -800,12 +763,6 @@ const soundPlayerWreck = () => {
   }
 };
 
-// m:ss
-const clockTime = (ticks) => {
-  const seconds = Math.ceil((ticks * TICK_MS) / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-};
-
 // A room's race of most kills: the player's wreck and its way back, and once the time is
 // up every car's kills. Returns whether the race is over.
 const deathmatchOutcome = () => {
@@ -814,18 +771,14 @@ const deathmatchOutcome = () => {
     const won = table[0]?.c == game.player;
     drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
     raceEvents.winner = won;
-    table
-      .slice(0, 8)
-      .forEach(({ c, kills, deaths }, place) =>
-        drawCenteredText(
-          200 + 32 * place,
-          `${placeName(place)}  ${nameOfCar(c)}  ${kills} kills, wasted ${deaths}`,
-          0,
-          0,
-          0,
-          TEXT.label,
-        ),
-      );
+    drawResults(
+      ["", "", "Kills", "Wasted"],
+      table.map(({ c, kills, deaths }, place) => ({
+        cells: [placeName(place), nameOfCar(c), String(kills), String(deaths)],
+        mine: c == game.player,
+        line: `${placeName(place)}  ${nameOfCar(c)}  ${kills} kills, wasted ${deaths}`,
+      })),
+    );
     return true;
   }
   if (racers[game.player].wasted) {
@@ -837,21 +790,6 @@ const deathmatchOutcome = () => {
   }
   soundPlayerWreck();
   return false;
-};
-
-// Most kills under the race: the time left, the player's kills and who leads.
-const drawDeathmatchClock = () => {
-  const [lead] = killTable();
-  drawCenteredText(
-    636,
-    `Your kills ${deathmatch.kills[game.player]}` +
-      (lead?.kills ? `   Leading: ${nameOfCar(lead.c)} ${lead.kills}` : ""),
-    0,
-    0,
-    0,
-    TEXT.label,
-  );
-  drawCenteredText(670, clockTime(deathmatchLeft()), 0, 0, 0, TEXT.heading);
 };
 
 const raceOutcome = () => {
@@ -951,6 +889,60 @@ const WATCH_CAMERAS = {
   [CAMERA.behind]: "Behind",
   [CAMERA.trackside]: "Track",
   [CAMERA.free]: "Free",
+};
+
+// The target camera on, behind the player's car: a small bar at the bottom names the car it
+// turns to, arrows beside it choose the one before or the next (F too), after the last
+// none, and the camera stays behind the car.
+export const lockedText = () =>
+  camera.lockedCar < 0
+    ? "Target: none"
+    : `Target: ${nameOfCar(camera.lockedCar)}`;
+
+const drawLockBar = () => {
+  const scale = view.scale;
+  const height = Math.max(isPhone ? 34 : 26, 30 * scale);
+  const top = view.height - height - 14 * view.scaleY;
+  const font = Math.round(height * 0.45);
+  rd.save();
+  rd.font = `${font}px sans-serif`;
+  rd.textBaseline = "middle";
+  rd.textAlign = "center";
+  const name = `🎯 ${lockedText().slice("Target: ".length)}`;
+  const parts = [
+    { id: 43, text: "‹", step: -1 },
+    { id: 0, text: name },
+    { id: 44, text: "›", step: 1 },
+  ];
+  const pad = height * 0.45;
+  const widths = parts.map(({ text, step }) =>
+    step
+      ? height * 1.3
+      : Math.max(rd.measureText(text).width + pad * 2, 140 * scale),
+  );
+  const gap = 4 * scale;
+  const total =
+    widths.reduce((sum, w) => sum + w, 0) + gap * (parts.length - 1);
+  let left = view.width / 2 - total / 2;
+  parts.forEach((part, i) => {
+    const width = widths[i];
+    const { clicked, pressed } = part.step
+      ? pressOn(part.id, left, top, width, height)
+      : { clicked: false, pressed: false };
+    rd.globalAlpha = part.step ? (pressed ? 0.75 : 0.45) : 0.35;
+    rd.fillStyle = "#000000";
+    rd.beginPath();
+    rd.roundRect(left, top, width, height, height / 2);
+    rd.fill();
+    rd.globalAlpha = 0.9;
+    rd.fillStyle = camera.lockedCar < 0 || part.step ? "#FFFFFF" : "#FFE14A";
+    rd.fillText(part.text, left + width / 2, top + height / 2);
+    if (clicked) {
+      lockNext(part.step);
+    }
+    left += width + gap;
+  });
+  rd.restore();
 };
 
 const drawWatchBar = () => {
@@ -1328,6 +1320,10 @@ const drawStanding = () => {
   rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
   rd.textBaseline = "middle";
   rd.textAlign = "left";
+  if (isDeathmatch()) {
+    drawKillStanding();
+    return;
+  }
   rd.fillStyle = "#000000";
   rd.fillText("Lap", 20 * view.scale, 19 * view.scale);
   rd.fillText("Wasted", 130 * view.scale, 19 * view.scale);
@@ -1363,6 +1359,24 @@ const drawStanding = () => {
     (176 + phoneShift) * view.scale + tensWidth,
     55 * view.scale,
   );
+};
+
+// Most kills, top left: the player's kills, how often it was wasted and its place by kills.
+const drawKillStanding = () => {
+  const p = game.player;
+  let x = 20 * view.scale;
+  for (const [label, value] of [
+    ["Kills", deathmatch.kills[p]],
+    ["Wasted", deathmatch.deaths[p]],
+    ["Place", placeName(killTable().findIndex(({ c }) => c == p))],
+  ]) {
+    rd.fillStyle = "#000000";
+    rd.fillText(label, x, 19 * view.scale);
+    x += rd.measureText(label).width + 8 * view.scale;
+    rd.fillStyle = "#000078";
+    rd.fillText(String(value), x, 19 * view.scale);
+    x += rd.measureText(String(value)).width + 24 * view.scale;
+  }
 };
 
 // The button that switches the arrow between the track and the cars.
@@ -1839,21 +1853,30 @@ const announceEvents = () => {
   }
   if (game.carCount != 1) {
     for (let i = 0; i < game.carCount; i++) {
-      if (knownWrecks[i] != track.dested[i] && i != game.player) {
-        knownWrecks[i] = track.dested[i];
-        // (with a guest, a car hit last by the other human was not wasted by this one)
-        const byYou = knownWrecks[i] == 2 && racers[i].lastHitBy == game.player;
-        if (knownWrecks[i] == 1 || (knownWrecks[i] == 2 && !byYou)) {
-          messageImportant = true;
-          message = `${nameOfCar(i)} has been wasted!`;
-          raceEvents.messageTicks = -15;
-        }
-        if (byYou) {
-          messageImportant = true;
-          message = `You wasted ${nameOfCar(i)}!`;
-          raceEvents.messageTicks = -15;
-        }
+      if (knownWrecks[i] == track.dested[i]) {
+        continue;
       }
+      knownWrecks[i] = track.dested[i];
+      if (knownWrecks[i] == 0) {
+        continue;
+      }
+      // (with a guest, a car hit last by the other human was not wasted by this one)
+      const by = wastedBy(i);
+      const room = inRoomRace();
+      if (room) {
+        noteWreck(by, i);
+      }
+      // (the player's own wreck has its title; in a room's race in the modern look the
+      // feed tells of the others)
+      if (i == game.player || (room && !classicMenus() && by != game.player)) {
+        continue;
+      }
+      messageImportant = true;
+      message =
+        room || by == game.player
+          ? `${wreckText(by, i)}!`
+          : `${nameOfCar(i)} has been wasted!`;
+      raceEvents.messageTicks = -15;
     }
   }
   if (raceEvents.checkpointsAnnounced != player.clear && player.clear != 0) {
@@ -1906,8 +1929,11 @@ export function drawHud() {
     if (isTimeAttack() && raceEvents.countdown == 0) {
       drawClock();
     }
-    if (isDeathmatch() && raceEvents.countdown == 0) {
-      drawDeathmatchClock();
+    if (isDeathmatch() && raceEvents.countdown == 0 && !track.haltall) {
+      drawDeathmatchBoard();
+    }
+    if (inRoomRace() && !classicMenus()) {
+      drawFeed();
     }
     if (
       game.carCount != 1 &&
@@ -1934,6 +1960,15 @@ export function drawHud() {
       ) {
         drawTrackWarnings();
       }
+    }
+    if (
+      camera.aims &&
+      !raceOver &&
+      game.carCount != 1 &&
+      camera.mode == CAMERA.behind &&
+      camera.target == game.player
+    ) {
+      drawLockBar();
     }
     drawStanding();
     drawMinimap();

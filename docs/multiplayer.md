@@ -226,8 +226,12 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
   Zeiten aus dem Rennband auf Tausendstel), Most kills (3 Minuten, gewreckte Autos steigen
   nach 3 s an ihrer Stelle repariert wieder ein, ein Wreck zählt für das Auto, das zuletzt
   gerammt hat, auch für Bots; Uhr, Kills und Wiedereinstiege gehen nur in diesem Modus mit dem
-  Rennzustand, `race/deathmatch.js`). Offen: Bots fahren in Last survivor und Most kills
-  bisher einfach Runden statt gezielt anzugreifen.
+  Rennzustand, `race/deathmatch.js`).
+- **Regeln des Raums** (`raceSetup.rules`, gehen mit `players`, `start` und dem Zuschauen an
+  alle Spiele): Bot-Stärke (Easy/Normal/Hard wie im Quick Race; Hard jagt in Last survivor und
+  Most kills das nächste nicht gewreckte Auto), bei Most kills Spielzeit (1–10 min) und
+  Wiedereinstieg (1–10 s). Im Raumrennen zählt jeder Treffer, auch von Bots, für das
+  "X wasted Y" (Feed rechts im modernen Look, Meldung in der Mitte im klassischen).
 - **Weitere Punkte (außerhalb des Multiplayers):** Auto-Editor.
 - **Discord-Integration (Idee für später):** Mitspieler im laufenden Discord-Call nach der
   Position im Spiel leiser/lauter und links/rechts. Discords lokale RPC-Schnittstelle kann das

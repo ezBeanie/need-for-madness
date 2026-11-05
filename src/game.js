@@ -59,6 +59,7 @@ import {
   placeMultiplayerButton,
 } from "./ui/multiplayerMenu.js";
 import { installOptionsMenu, placeOptionsButton } from "./ui/optionsMenu.js";
+import { installTouchLayout } from "./ui/touchLayout.js";
 import {
   installStageEditor,
   placeStageEditorButton,
@@ -368,6 +369,7 @@ installReplayDrop(window);
 startHosting();
 startGuesting();
 installOptionsMenu();
+installTouchLayout();
 installMainMenu();
 installMultiplayerMenu();
 installStageEditor();
@@ -390,6 +392,14 @@ document.addEventListener("click", (event) => {
     keepScreenOn();
   }
 });
+
+// The graphics lost (a phone folded onto its other screen may lose them, or a long while in
+// the background): asked back, and once back the game starts anew, as everything shown
+// would have to be uploaded again (a room's link stays in the address, joining it again).
+canvas3D.addEventListener("webglcontextlost", (event) =>
+  event.preventDefault(),
+);
+canvas3D.addEventListener("webglcontextrestored", () => location.reload());
 
 // A hidden tab is silent and gets its sound settings back when it shows again.
 let mutedBeforeHiding = { music: false, sound: false };

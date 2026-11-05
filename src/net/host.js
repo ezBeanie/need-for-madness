@@ -12,7 +12,9 @@ import {
   RACE_MODE,
   game,
   isRaceMode,
+  isRoomRules,
   raceSetup,
+  roomRules,
 } from "../core/state.js";
 import { STAGE_COUNT } from "../data/stages.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
@@ -48,13 +50,20 @@ const GUEST_WAITING_TICKS = 60;
 // name, the car and skin it chose, whether it is ready to race, and the ticks since it was
 // last heard and since it last joined; bots: the cars (carType, skin) the computer drives in
 // the room's races, as the host added them; stage: the stage the host chose in the lobby,
-// mode: how its race is won (RACE_MODE)
-const host = { guests: [], bots: [], stage: 1, mode: RACE_MODE.normal };
+// mode: how its race is won (RACE_MODE), rules: the rest the host chose (roomRules)
+const host = {
+  guests: [],
+  bots: [],
+  stage: 1,
+  mode: RACE_MODE.normal,
+  rules: roomRules(),
+};
 
 export const roomGuests = () => host.guests;
 export const roomBots = () => host.bots;
 export const roomStage = () => host.stage;
 export const roomMode = () => host.mode;
+export const roomRulesChosen = () => host.rules;
 
 // the guests a race the host starts takes along
 const waitingGuests = () =>
@@ -83,6 +92,7 @@ export const sendPlayers = () =>
     bots: host.bots,
     stage: host.stage,
     mode: host.mode,
+    rules: host.rules,
     // (a guest may watch the race going on, see watch.js)
     racing: lockstep.active,
   });
@@ -101,6 +111,15 @@ export const chooseRoomStage = (stage) => {
 export const chooseRoomMode = (mode) => {
   if (isRaceMode(mode)) {
     host.mode = mode;
+    sendPlayers();
+  }
+};
+
+// One rule changed, e.g. { minutes: 5 }.
+export const chooseRoomRule = (rule) => {
+  const rules = { ...host.rules, ...rule };
+  if (isRoomRules(rules)) {
+    host.rules = rules;
     sendPlayers();
   }
 };
@@ -219,6 +238,7 @@ export const hostRoom = (room) => {
 export const startRoomRace = () => {
   chooseRaceKind(RACE_KIND.together);
   raceSetup.mode = host.mode;
+  raceSetup.rules = host.rules;
   track.stage = host.stage;
   game.mode = MODE.championship;
   stageLoad.after = AFTER_LOAD.room;
@@ -287,6 +307,7 @@ export const startHostedRace = () => {
       type: MESSAGE.start,
       stage: track.stage,
       mode: raceSetup.mode,
+      rules: raceSetup.rules,
       carTypes: game.carTypes.slice(0, game.carCount),
       players,
       names: roomCars.names,

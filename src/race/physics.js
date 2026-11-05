@@ -3130,13 +3130,14 @@ function crashCorners(c, xc, i, j, at, xat) {
     racers[xc].wheelSpeedZ,
     HIT.alongZ,
   );
-  // (and which human it was, so each one is told whom they wasted; in most kills any car
-  // scores)
-  if (isHuman(c) || isDeathmatch()) {
+  // (and which human it was, so each one is told whom they wasted; in a room's race any
+  // car, so everyone sees who wasted whom, and in most kills any car scores)
+  const anyCar = game.humans.length > 0;
+  if (isHuman(c) || anyCar) {
     racers[xc].lastcolido = 70;
     racers[xc].lastHitBy = c;
   }
-  if (isHuman(xc) || isDeathmatch()) {
+  if (isHuman(xc) || anyCar) {
     racers[c].lastcolido = 70;
     racers[c].lastHitBy = xc;
   }

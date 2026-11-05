@@ -3,7 +3,8 @@ import { openGame } from "./driver.js";
 import { PHASE } from "../../src/core/state.js";
 
 // iOS keeps no page sideways, whatever the manifest says: held upright, a phone is asked
-// to be turned, a desktop window as tall is not.
+// to be turned, a desktop window as tall is not, nor an unfolded foldable's almost square
+// screen.
 test("a phone held upright is asked to be turned sideways", async ({
   browser,
   baseURL,
@@ -24,6 +25,25 @@ test("a phone held upright is asked to be turned sideways", async ({
     false,
   );
   expect(await hint({ viewport: { width: 700, height: 900 } })).toBe(false);
+  expect(await hint({ ...phone, viewport: { width: 674, height: 748 } })).toBe(
+    false,
+  );
+});
+
+test("lost graphics come back with the game started anew, the room's link kept", async ({
+  page,
+}) => {
+  const game = await openGame(page, { url: "/?join=again" });
+  await game.advanceUntil(PHASE.mainMenu);
+  await page.evaluate(() => {
+    window.before = true;
+    const gl = document.querySelector("#canvas3D").getContext("webgl");
+    const lose = gl.getExtension("WEBGL_lose_context");
+    lose.loseContext();
+    setTimeout(() => lose.restoreContext(), 50);
+  });
+  await page.waitForFunction(() => window.before === undefined);
+  expect(new URL(page.url()).search).toBe("?join=again");
 });
 
 // (the browser's wake lock and audio as the game asks for them)

@@ -6,7 +6,7 @@
 
 import { MAX_CARS, PHASE, RACE_MODE, game, raceSetup } from "../core/state.js";
 import { camera } from "../render/camera.js";
-import { loadText, saveSetting } from "../core/storage.js";
+import { loadSetting, loadText, saveSetting } from "../core/storage.js";
 import { isCustom } from "../data/stages.js";
 import { car } from "./racers.js";
 import { poseFromTape, turnCarAfterItsAngles } from "./recording.js";
@@ -20,8 +20,19 @@ const POSE = ["x", "y", "z", "xy", "xz", "zy", "wzy", "wxz"];
 const SCALE = 10;
 
 // tape: the ghost's poses by field, ticks: how many, type: its car; driven: this race's
-// poses so far
-export const ghost = { tape: null, ticks: 0, type: 0, driven: null };
+// poses so far; shown: whether the player wants to see it (the best race is kept anyway)
+export const ghost = {
+  tape: null,
+  ticks: 0,
+  type: 0,
+  driven: null,
+  shown: loadSetting("ghost") != 0,
+};
+
+export const toggleGhost = () => {
+  ghost.shown = !ghost.shown;
+  saveSetting("ghost", ghost.shown ? 1 : 0);
+};
 
 const keyOf = (stage) => `ghost-${stage}`;
 
@@ -86,7 +97,7 @@ const poseGhost = (t) => {
 
 // As a race alone begins: the stage's ghost on the grid, and a fresh recording.
 export const startGhost = () => {
-  const stored = storedGhost(track.stage);
+  const stored = ghost.shown ? storedGhost(track.stage) : null;
   ghost.tape = stored?.tape ?? null;
   ghost.ticks = stored?.ticks ?? 0;
   ghost.type = stored?.type ?? 0;

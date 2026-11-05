@@ -90,12 +90,29 @@ const AIM_EASE = 0.2;
 
 const halfTurn = (degrees) => degrees - 360 * Math.round(degrees / 360);
 
-// Behind the player's car in a race, with the arrow at the cars: the camera turns around
-// the car until it looks past it at the car the arrow points at (the ball cam of Rocket
-// League), and back behind the car once it no longer aims.
+// The car the target camera turns to: the next one (step 1) or the one before (-1) of the
+// others, and after the last none.
+export const lockNext = (step) => {
+  let c = camera.lockedCar;
+  do {
+    c += step;
+    if (c >= game.carCount) {
+      c = -1;
+    }
+    if (c < -1) {
+      c = game.carCount - 1;
+    }
+  } while (c == game.player);
+  camera.lockedCar = c;
+};
+
+// Behind the player's car in a race, a car chosen: the camera turns around the car until it
+// looks past it at the chosen one (the ball cam of Rocket League), and back behind the car
+// once it no longer aims.
 const turnToAimedCar = (behindCar) => {
   let aim = 0;
-  const aimed = car[camera.aimedCar];
+  const aimed =
+    camera.lockedCar < game.carCount ? car[camera.lockedCar] : undefined;
   if (
     camera.aims &&
     aimed &&
