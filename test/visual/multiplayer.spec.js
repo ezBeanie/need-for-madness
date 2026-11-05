@@ -616,7 +616,7 @@ test.describe("on a phone", () => {
   });
 });
 
-test("each game's HUD tells its player of the stunts it landed and the cars it wasted", async ({
+test("each game's HUD tells its player of the stunts it landed and the cars it wasted, the others who wasted them", async ({
   context,
 }) => {
   await recordDrawnTexts(context);
@@ -664,9 +664,9 @@ test("each game's HUD tells its player of the stunts it landed and the cars it w
   );
   expect(onGuest.some((text) => /Forward loop/.test(text))).toBe(true);
   expect(onGuest.some((text) => /^You wasted .+!$/.test(text))).toBe(true);
-  // the host did not waste it, nor land the stunt
+  // the host did not waste it, nor land the stunt, and is told who did
   expect(onHost.some((text) => /^You wasted /.test(text))).toBe(false);
-  expect(onHost.some((text) => / has been wasted!$/.test(text))).toBe(true);
+  expect(onHost.some((text) => /^Player 2 wasted .+$/.test(text))).toBe(true);
   expect(onHost.some((text) => /Forward loop/.test(text))).toBe(false);
 });
 
