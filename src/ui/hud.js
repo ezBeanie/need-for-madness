@@ -96,6 +96,7 @@ import {
 } from "./freeCamera.js";
 import { images } from "./images.js";
 import { drawMinimap } from "./minimap.js";
+import { TOUCH_CONTROLS, touchControlAt, touchScale } from "./touchLayout.js";
 import { canvas2D, rd, view } from "./view.js";
 import {
   AREA,
@@ -608,13 +609,8 @@ const drawBlinking = (y, text, r, g, b) => {
 };
 
 // The touch controls of phones: steering, accelerating, braking, the handbrake and the
-// arrow. They press the keys of the player's car while a finger is on them.
-const TOUCH = [
-  { image: 0, x: 130, y: 622, key: "left" },
-  { image: 1, x: 320, y: 662, key: "right" },
-  { image: 3, x: 1150, y: 622, key: "accelerate" },
-  { image: 2, x: 960, y: 662, key: "brake" },
-];
+// arrow (see touchLayout.js for where they lie). They press the keys of the player's car
+// while a finger is on them.
 const CONTROL_FOR = {
   left: "left",
   right: "right",
@@ -636,44 +632,25 @@ const touchControlsShown = () =>
 const arrowButtonShown = () =>
   game.carCount != 1 && (track.stage != 1 || raceSetup.newestStage != 1);
 
-const drawTouchControls = () => {
-  for (const { image, x, y, key } of TOUCH) {
-    if (touchHeld[key]) {
-      rd.globalAlpha = 0.4;
-    }
-    rd.drawImage(
-      images.touchControls[image],
-      x * view.scaleX - 64 * view.scale,
-      y * view.scaleY - 128 * view.scale,
-      128 * view.scale,
-      128 * view.scale,
-    );
-    rd.globalAlpha = 1;
-  }
-  if (touchHeld.handbrake) {
-    rd.globalAlpha = 0.4;
-  }
-  rd.drawImage(
-    images.touchControls[4],
-    1260 * view.scaleX - 154 * view.scale,
-    440 * view.scaleY - 111 * view.scale,
-    154 * view.scale,
-    111 * view.scale,
+// the controls drawn, the arrow's only where it is there
+const shownControls = () =>
+  Object.keys(TOUCH_CONTROLS).filter(
+    (key) => key != "arrow" || arrowButtonShown(),
   );
-  rd.globalAlpha = 1;
-  if (arrowButtonShown()) {
-    if (touchHeld.arrow) {
-      rd.globalAlpha = 0.4;
-    }
+
+const drawTouchControls = () => {
+  for (const key of shownControls()) {
+    const { x, y, width, height } = touchControlAt(key);
+    rd.globalAlpha = touchHeld[key] ? 0.4 : 1;
     rd.drawImage(
-      images.touchControls[5],
-      20 * view.scaleX,
-      440 * view.scaleY - 111 * view.scale,
-      154 * view.scale,
-      111 * view.scale,
+      images.touchControls[TOUCH_CONTROLS[key].image],
+      x - width / 2,
+      y - height / 2,
+      width,
+      height,
     );
-    rd.globalAlpha = 1;
   }
+  rd.globalAlpha = 1;
 };
 
 // Each finger presses the control closest to it (within 200 units).
@@ -689,43 +666,27 @@ const pressTouchControls = () => {
   // a single finger is off it, or when no finger is counted.
   let fingersOffArrow = 0;
   if (pointer.down) {
+    const controls = shownControls().map((key) => ({
+      key,
+      ...touchControlAt(key),
+    }));
     let onArrow = false;
     for (let i = 0; i < pointer.count; i++) {
       onArrow = false;
-      let closest = -1;
-      const xs = [
-        130 * view.scaleX,
-        320 * view.scaleX,
-        1150 * view.scaleX,
-        960 * view.scaleX,
-        1260 * view.scaleX - 77 * view.scale,
-        20 * view.scaleX + 77 * view.scale,
-      ];
-      const ys = [
-        622 * view.scaleY - 64 * view.scale,
-        662 * view.scaleY - 64 * view.scale,
-        622 * view.scaleY - 64 * view.scale,
-        662 * view.scaleY - 64 * view.scale,
-        440 * view.scaleY - 55.5 * view.scale,
-        440 * view.scaleY - 55.5 * view.scale,
-      ];
-      let closestDistance = 200 * view.scale;
-      const controls = arrowButtonShown() ? 6 : 5;
-      for (let k = 0; k < controls; k++) {
-        const distance = py(xs[k], pointer.x[i], ys[k], pointer.y[i]);
+      let closest = null;
+      let closestDistance = 200 * touchScale();
+      for (const control of controls) {
+        const distance = py(control.x, pointer.x[i], control.y, pointer.y[i]);
         if (distance < closestDistance) {
           closestDistance = distance;
-          closest = k;
+          closest = control.key;
         }
       }
-      const key = ["left", "right", "accelerate", "brake", "handbrake"][
-        closest
-      ];
-      if (key) {
-        u[CONTROL_FOR[key]] = true;
-        touchHeld[key] = true;
+      if (CONTROL_FOR[closest]) {
+        u[CONTROL_FOR[closest]] = true;
+        touchHeld[closest] = true;
       }
-      if (closest == 5) {
+      if (closest == "arrow") {
         if (!touchHeld.arrow) {
           u.arrace = !u.arrace;
           touchHeld.arrow = true;

@@ -121,6 +121,14 @@ src: url(data/verdana.ttf);
 #options .volume input:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
 #options .name label { display: block; margin: 0 0 6px; font-family: junk, Verdana, sans-serif; font-size: 17px; color: #ffffff; }
 #options .name input { width: 100%; }
+/* arranging the touch controls: over the whole screen, the race's dim behind them */
+.touch-layout { box-sizing: border-box; width: 100vw; height: 100vh; max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: linear-gradient(160deg, #0a2236, #1d2414); color: #ffffff; }
+.touch-layout::backdrop { background: transparent; }
+.touch-layout h2 { margin: 12px 0 0; font-family: junk, Verdana, sans-serif; font-weight: normal; font-size: 20px; text-align: center; color: #FFB401; }
+.touch-layout .row { position: absolute; left: 50%; top: 48px; transform: translateX(-50%); display: flex; gap: 12px; }
+.view .touch-control, .view .touch-control:hover { position: absolute; min-height: 0; padding: 0; clip-path: none; border: 2px dashed rgba(255, 255, 255, 0.6); border-radius: 12px; background: rgba(255, 255, 255, 0.15); touch-action: none; cursor: grab; }
+.touch-control img { display: block; width: 100%; height: 100%; pointer-events: none; }
+.view .touch-control:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; background: rgba(255, 255, 255, 0.35); }
 .name-tags { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
 .name-tag { position: fixed; left: 0; top: 0; padding: 2px 10px; white-space: nowrap; background: rgba(0, 10, 20, 0.6); border-bottom: 2px solid #01EAFF; color: #ffffff; font-family: junk, Verdana, sans-serif; font-size: 15px; text-shadow: 1px 1px 0 #000000; }
 .name-tag[hidden] { display: none; }
@@ -403,6 +411,13 @@ src: url(data/verdana.ttf);
 <li><button type="button" id="ghostShown" aria-pressed="false" aria-describedby="ghostShownHint"><span>Ghost in time attack</span><span class="state"></span></button><p id="ghostShownHint" class="hint">Your fastest race on the stage, driven again beside you.</p></li>
 </ul>
 </section>
+<section class="panel" id="optionsTouch">
+<h3 id="optionsTouchTitle">Touch controls</h3>
+<ul aria-labelledby="optionsTouchTitle">
+<li class="volume"><label for="touchSize">Size</label><input type="range" id="touchSize" min="60" max="140" step="10"><output id="touchSizeShown" for="touchSize"></output></li>
+<li><button type="button" id="touchArrange" aria-describedby="touchArrangeHint"><span>Arrange the controls</span></button><p id="touchArrangeHint" class="hint">Drag each control where your thumbs want it.</p></li>
+</ul>
+</section>
 <section class="panel">
 <h3 id="optionsSoundTitle">Sound</h3>
 <ul aria-labelledby="optionsSoundTitle">
@@ -531,6 +546,11 @@ src: url(data/verdana.ttf);
 <button type="submit" class="close">Done</button>
 </form>
 </dialog>
+</dialog>
+<dialog id="touchLayout" class="touch-layout view" aria-labelledby="touchLayoutTitle">
+<h2 id="touchLayoutTitle">Drag the controls where you want them</h2>
+<div id="touchLayoutControls"></div>
+<div class="row"><button type="button" id="touchLayoutReset">Reset</button><button type="button" id="touchLayoutDone" class="go">Done</button></div>
 </dialog>
 <button type="button" id="multiplayerButton" class="multiplayer-button" aria-haspopup="dialog" aria-controls="multiplayer" hidden>Multiplayer</button>
 <dialog id="multiplayer" class="menu-dialog view" aria-labelledby="multiplayerTitle">

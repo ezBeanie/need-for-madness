@@ -59,6 +59,7 @@ import {
   placeMultiplayerButton,
 } from "./ui/multiplayerMenu.js";
 import { installOptionsMenu, placeOptionsButton } from "./ui/optionsMenu.js";
+import { installTouchLayout } from "./ui/touchLayout.js";
 import {
   installStageEditor,
   placeStageEditorButton,
@@ -368,6 +369,7 @@ installReplayDrop(window);
 startHosting();
 startGuesting();
 installOptionsMenu();
+installTouchLayout();
 installMainMenu();
 installMultiplayerMenu();
 installStageEditor();
