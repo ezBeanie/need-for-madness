@@ -1,13 +1,14 @@
 // The names over the cars in a room's race: each car but the player's and the one the camera
 // follows shows who drives it (see net/roomCars.js), and a speaker while its player talks.
 // They move with every frame, where the frame draws the car, and only show while it is
-// near enough.
+// near enough and the race goes on (its end has its own words over the cars).
 
 import { RACE_PHASES, game } from "../core/state.js";
 import { lockstep } from "../net/lockstep.js";
 import { inRoomRace, nameOfCar } from "../net/roomCars.js";
 import { isTalking } from "../net/voice.js";
 import { car } from "../race/racers.js";
+import { track } from "../race/track.js";
 import { camera } from "../render/camera.js";
 import { drawCamera, drawMatrix, placeModel } from "../render/interpolation.js";
 import { canvas3D } from "../render/renderer.js";
@@ -40,7 +41,8 @@ const hideFrom = (from) => {
 
 // Every frame, after the race is drawn.
 export const placeNameTags = () => {
-  const shown = RACE_PHASES.includes(game.phase) && inRoomRace();
+  const shown =
+    RACE_PHASES.includes(game.phase) && inRoomRace() && !track.haltall;
   if (!shown) {
     hideFrom(0);
     return;

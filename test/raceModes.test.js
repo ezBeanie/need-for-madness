@@ -297,3 +297,46 @@ test("a room's rules: how long most kills lasts, when the wasted come back, how 
   ctx.chooseRaceKind(ctx.RACE_KIND.quickRace);
   expect(ctx.raceSetup.rules).toEqual(ctx.roomRules());
 });
+
+test("in a room's race the HUD tells who wasted whom, bots too, by the players' names", async () => {
+  const { ctx, step } = await startRace({ stage: 1, car: 5 });
+  reset = () => {
+    ctx.game.humans = [];
+    ctx.setRoomCars([], []);
+    ctx.clearFeed();
+  };
+  for (let i = 0; i < 3; i++) {
+    step();
+  }
+  // bot 3 driving into bot 2: whether bot 2 knows who hit it
+  const start = ctx.saveRace();
+  const hitBy = () => {
+    ctx.restoreRace(start);
+    ctx.racers[2].lastHitBy = null;
+    ctx.car[3].x = ctx.car[2].x + 5;
+    ctx.car[3].z = ctx.car[2].z;
+    ctx.racers[3].speed = 40;
+    ctx.drive();
+    return ctx.racers[2].lastHitBy;
+  };
+  // (alone, as the original: only the player's hits count)
+  expect(hitBy()).toBe(null);
+  ctx.game.humans = [0, 1];
+  expect(hitBy()).toBe(3);
+
+  ctx.setRoomCars(
+    ["Anna", "Ben", null, null, null, null, null],
+    Array(7).fill(0),
+  );
+  ctx.track.dested[2] = 2;
+  expect(ctx.wastedBy(2)).toBe(3);
+  expect(ctx.wreckText(3, 2)).toBe("Bot 2 wasted Bot 1");
+  expect(ctx.wreckText(0, 1)).toBe("You wasted Ben");
+  expect(ctx.wreckText(1, 0)).toBe("Ben wasted you");
+  // (on its own, or hit too long before)
+  ctx.track.dested[2] = 1;
+  expect(ctx.wastedBy(2)).toBe(-1);
+  expect(ctx.wreckText(-1, 2)).toBe("Bot 1 has been wasted");
+  ctx.noteWreck(1, 0);
+  expect(ctx.feed.at(-1)).toMatchObject({ text: "Ben wasted you", mine: true });
+});

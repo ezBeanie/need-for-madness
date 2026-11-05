@@ -1,19 +1,25 @@
 // What is drawn over the race: positions, laps, damage and power, the arrow, messages, the
 // buttons, and the overlays of replays, winding back time and switch mode.
 
-import {
-  deathmatch,
-  deathmatchLeft,
-  isDeathmatch,
-  killTable,
-} from "../race/deathmatch.js";
+import { deathmatch, isDeathmatch, killTable } from "../race/deathmatch.js";
 import {
   spectating,
   startWatching,
   watchNext,
   watchingOthers,
 } from "../race/spectate.js";
-import { arrowNameOf, nameOfCar } from "../net/roomCars.js";
+import { arrowNameOf, inRoomRace, nameOfCar } from "../net/roomCars.js";
+import {
+  clearFeed,
+  clockTime,
+  drawDeathmatchBoard,
+  drawFeed,
+  drawResults,
+  noteWreck,
+  placeName,
+  wastedBy,
+  wreckText,
+} from "./scoreboard.js";
 import {
   audio,
   playSound,
@@ -49,7 +55,7 @@ import {
   raceSetup,
 } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
-import { TICK_MS, tick } from "../core/tick.js";
+import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { pointer } from "../input/pointer.js";
@@ -570,6 +576,7 @@ export function resetHud() {
   for (let i = 0; i < MAX_CARS; i++) {
     knownWrecks[i] = 0;
   }
+  clearFeed();
   raceEvents.raceOverTicks = 0;
   camera.mode = CAMERA.behind;
   camera.target = 0;
@@ -744,9 +751,6 @@ const drawOutcome = (text, picture) => {
   }
 };
 
-const PLACE_SUFFIX = ["st", "nd", "rd"];
-const placeName = (place) => `${place + 1}${PLACE_SUFFIX[place] ?? "th"}`;
-
 // A room's time attack: the player's place and time once through, and when every car is
 // through (or wasted) the times of all. Returns whether the race is over.
 const timeAttackOutcome = () => {
@@ -759,18 +763,14 @@ const timeAttackOutcome = () => {
     const won = through[0]?.c == game.player;
     drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
     raceEvents.winner = won;
-    through
-      .slice(0, 8)
-      .forEach(({ time, c }, place) =>
-        drawCenteredText(
-          200 + 32 * place,
-          `${placeName(place)}  ${nameOfCar(c)}  ${formatTime(time)}`,
-          0,
-          0,
-          0,
-          TEXT.label,
-        ),
-      );
+    drawResults(
+      ["", "", "Time"],
+      through.slice(0, MAX_CARS).map(({ time, c }, place) => ({
+        cells: [placeName(place), nameOfCar(c), formatTime(time)],
+        mine: c == game.player,
+        line: `${placeName(place)}  ${nameOfCar(c)}  ${formatTime(time)}`,
+      })),
+    );
     return true;
   }
   const place = through.findIndex(({ c }) => c == game.player);
@@ -800,12 +800,6 @@ const soundPlayerWreck = () => {
   }
 };
 
-// m:ss
-const clockTime = (ticks) => {
-  const seconds = Math.ceil((ticks * TICK_MS) / 1000);
-  return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
-};
-
 // A room's race of most kills: the player's wreck and its way back, and once the time is
 // up every car's kills. Returns whether the race is over.
 const deathmatchOutcome = () => {
@@ -814,18 +808,14 @@ const deathmatchOutcome = () => {
     const won = table[0]?.c == game.player;
     drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
     raceEvents.winner = won;
-    table
-      .slice(0, 8)
-      .forEach(({ c, kills, deaths }, place) =>
-        drawCenteredText(
-          200 + 32 * place,
-          `${placeName(place)}  ${nameOfCar(c)}  ${kills} kills, wasted ${deaths}`,
-          0,
-          0,
-          0,
-          TEXT.label,
-        ),
-      );
+    drawResults(
+      ["", "", "Kills", "Wasted"],
+      table.map(({ c, kills, deaths }, place) => ({
+        cells: [placeName(place), nameOfCar(c), String(kills), String(deaths)],
+        mine: c == game.player,
+        line: `${placeName(place)}  ${nameOfCar(c)}  ${kills} kills, wasted ${deaths}`,
+      })),
+    );
     return true;
   }
   if (racers[game.player].wasted) {
@@ -837,21 +827,6 @@ const deathmatchOutcome = () => {
   }
   soundPlayerWreck();
   return false;
-};
-
-// Most kills under the race: the time left, the player's kills and who leads.
-const drawDeathmatchClock = () => {
-  const [lead] = killTable();
-  drawCenteredText(
-    636,
-    `Your kills ${deathmatch.kills[game.player]}` +
-      (lead?.kills ? `   Leading: ${nameOfCar(lead.c)} ${lead.kills}` : ""),
-    0,
-    0,
-    0,
-    TEXT.label,
-  );
-  drawCenteredText(670, clockTime(deathmatchLeft()), 0, 0, 0, TEXT.heading);
 };
 
 const raceOutcome = () => {
@@ -1328,6 +1303,10 @@ const drawStanding = () => {
   rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
   rd.textBaseline = "middle";
   rd.textAlign = "left";
+  if (isDeathmatch()) {
+    drawKillStanding();
+    return;
+  }
   rd.fillStyle = "#000000";
   rd.fillText("Lap", 20 * view.scale, 19 * view.scale);
   rd.fillText("Wasted", 130 * view.scale, 19 * view.scale);
@@ -1363,6 +1342,24 @@ const drawStanding = () => {
     (176 + phoneShift) * view.scale + tensWidth,
     55 * view.scale,
   );
+};
+
+// Most kills, top left: the player's kills, how often it was wasted and its place by kills.
+const drawKillStanding = () => {
+  const p = game.player;
+  let x = 20 * view.scale;
+  for (const [label, value] of [
+    ["Kills", deathmatch.kills[p]],
+    ["Wasted", deathmatch.deaths[p]],
+    ["Place", placeName(killTable().findIndex(({ c }) => c == p))],
+  ]) {
+    rd.fillStyle = "#000000";
+    rd.fillText(label, x, 19 * view.scale);
+    x += rd.measureText(label).width + 8 * view.scale;
+    rd.fillStyle = "#000078";
+    rd.fillText(String(value), x, 19 * view.scale);
+    x += rd.measureText(String(value)).width + 24 * view.scale;
+  }
 };
 
 // The button that switches the arrow between the track and the cars.
@@ -1839,21 +1836,30 @@ const announceEvents = () => {
   }
   if (game.carCount != 1) {
     for (let i = 0; i < game.carCount; i++) {
-      if (knownWrecks[i] != track.dested[i] && i != game.player) {
-        knownWrecks[i] = track.dested[i];
-        // (with a guest, a car hit last by the other human was not wasted by this one)
-        const byYou = knownWrecks[i] == 2 && racers[i].lastHitBy == game.player;
-        if (knownWrecks[i] == 1 || (knownWrecks[i] == 2 && !byYou)) {
-          messageImportant = true;
-          message = `${nameOfCar(i)} has been wasted!`;
-          raceEvents.messageTicks = -15;
-        }
-        if (byYou) {
-          messageImportant = true;
-          message = `You wasted ${nameOfCar(i)}!`;
-          raceEvents.messageTicks = -15;
-        }
+      if (knownWrecks[i] == track.dested[i]) {
+        continue;
       }
+      knownWrecks[i] = track.dested[i];
+      if (knownWrecks[i] == 0) {
+        continue;
+      }
+      // (with a guest, a car hit last by the other human was not wasted by this one)
+      const by = wastedBy(i);
+      const room = inRoomRace();
+      if (room) {
+        noteWreck(by, i);
+      }
+      // (the player's own wreck has its title; in a room's race in the modern look the
+      // feed tells of the others)
+      if (i == game.player || (room && !classicMenus() && by != game.player)) {
+        continue;
+      }
+      messageImportant = true;
+      message =
+        room || by == game.player
+          ? `${wreckText(by, i)}!`
+          : `${nameOfCar(i)} has been wasted!`;
+      raceEvents.messageTicks = -15;
     }
   }
   if (raceEvents.checkpointsAnnounced != player.clear && player.clear != 0) {
@@ -1906,8 +1912,11 @@ export function drawHud() {
     if (isTimeAttack() && raceEvents.countdown == 0) {
       drawClock();
     }
-    if (isDeathmatch() && raceEvents.countdown == 0) {
-      drawDeathmatchClock();
+    if (isDeathmatch() && raceEvents.countdown == 0 && !track.haltall) {
+      drawDeathmatchBoard();
+    }
+    if (inRoomRace() && !classicMenus()) {
+      drawFeed();
     }
     if (
       game.carCount != 1 &&
