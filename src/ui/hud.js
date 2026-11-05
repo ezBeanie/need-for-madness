@@ -81,6 +81,7 @@ import {
 } from "../race/timeAttack.js";
 import { track } from "../race/track.js";
 import { CAMERA, camera, faceCamera } from "../render/camera.js";
+import { lockNext } from "../render/cameraMoves.js";
 import { LOOK, classicMenus, look } from "../render/look.js";
 import { newParticleModel } from "../render/models.js";
 import { gl } from "../render/renderer.js";
@@ -580,6 +581,7 @@ export function resetHud() {
   raceEvents.raceOverTicks = 0;
   camera.mode = CAMERA.behind;
   camera.target = 0;
+  camera.lockedCar = -1;
   recording.frozen = false;
   raceEvents.playerWreckTicks = 0;
   damageBlinkTicks = 0;
@@ -926,6 +928,60 @@ const WATCH_CAMERAS = {
   [CAMERA.behind]: "Behind",
   [CAMERA.trackside]: "Track",
   [CAMERA.free]: "Free",
+};
+
+// The target camera on, behind the player's car: a small bar at the bottom names the car it
+// turns to, arrows beside it choose the one before or the next (F too), after the last
+// none, and the camera stays behind the car.
+export const lockedText = () =>
+  camera.lockedCar < 0
+    ? "Target: none"
+    : `Target: ${nameOfCar(camera.lockedCar)}`;
+
+const drawLockBar = () => {
+  const scale = view.scale;
+  const height = Math.max(isPhone ? 34 : 26, 30 * scale);
+  const top = view.height - height - 14 * view.scaleY;
+  const font = Math.round(height * 0.45);
+  rd.save();
+  rd.font = `${font}px sans-serif`;
+  rd.textBaseline = "middle";
+  rd.textAlign = "center";
+  const name = `🎯 ${lockedText().slice("Target: ".length)}`;
+  const parts = [
+    { id: 43, text: "‹", step: -1 },
+    { id: 0, text: name },
+    { id: 44, text: "›", step: 1 },
+  ];
+  const pad = height * 0.45;
+  const widths = parts.map(({ text, step }) =>
+    step
+      ? height * 1.3
+      : Math.max(rd.measureText(text).width + pad * 2, 140 * scale),
+  );
+  const gap = 4 * scale;
+  const total =
+    widths.reduce((sum, w) => sum + w, 0) + gap * (parts.length - 1);
+  let left = view.width / 2 - total / 2;
+  parts.forEach((part, i) => {
+    const width = widths[i];
+    const { clicked, pressed } = part.step
+      ? pressOn(part.id, left, top, width, height)
+      : { clicked: false, pressed: false };
+    rd.globalAlpha = part.step ? (pressed ? 0.75 : 0.45) : 0.35;
+    rd.fillStyle = "#000000";
+    rd.beginPath();
+    rd.roundRect(left, top, width, height, height / 2);
+    rd.fill();
+    rd.globalAlpha = 0.9;
+    rd.fillStyle = camera.lockedCar < 0 || part.step ? "#FFFFFF" : "#FFE14A";
+    rd.fillText(part.text, left + width / 2, top + height / 2);
+    if (clicked) {
+      lockNext(part.step);
+    }
+    left += width + gap;
+  });
+  rd.restore();
 };
 
 const drawWatchBar = () => {
@@ -1943,6 +1999,15 @@ export function drawHud() {
       ) {
         drawTrackWarnings();
       }
+    }
+    if (
+      camera.aims &&
+      !raceOver &&
+      game.carCount != 1 &&
+      camera.mode == CAMERA.behind &&
+      camera.target == game.player
+    ) {
+      drawLockBar();
     }
     drawStanding();
     drawMinimap();

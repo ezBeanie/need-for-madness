@@ -36,11 +36,12 @@ export const camera = {
   relocate: false,
   // flyTo: progress from target to nextTarget, 0..30
   transition: 0,
-  // behind: whether the camera turns to the car the arrow points at (T), that car (-1
-  // while the arrow points along the track) and how far the camera has turned from
-  // behind the car towards it
-  aims: false,
+  // the car the arrow points at (-1 while it points along the track); behind: whether
+  // the camera turns to a car (T), the car chosen for it (F, -1 none: the camera stays
+  // behind) and how far the camera has turned from behind the car towards it
   aimedCar: -1,
+  aims: false,
+  lockedCar: -1,
   aimYaw: 0,
 };
 

@@ -11,12 +11,16 @@ const press = (key, code) => {
 };
 
 // A race on stage 3 past its countdown, driven by the autopilot, with the arrow at the
-// cars and the target camera on or off. Returns the camera's view at every tick.
-const race = async (aiming) => {
+// cars, the target camera on or off and F pressed so often (once: car 1 chosen). Returns
+// the camera's view of car 1 at every tick.
+const race = async (aiming, chosen = 1) => {
   const game = await startRace({ stage: 3, car: 5 });
   const { ctx, step, key } = game;
   if (aiming) {
     press(key, 84);
+  }
+  for (let i = 0; i < chosen; i++) {
+    press(key, 70);
   }
   press(key, 81);
   const views = [];
@@ -26,7 +30,7 @@ const race = async (aiming) => {
     step();
     if (ctx.raceEvents.countdown <= 0) {
       const own = ctx.car[ctx.game.player];
-      const aimed = ctx.car[ctx.camera.aimedCar];
+      const aimed = ctx.car[1];
       // how straight the camera looks at the aimed car past its own: 1 straight at it
       const dx = aimed.x - own.x;
       const dz = aimed.z - own.z;
@@ -40,10 +44,10 @@ const race = async (aiming) => {
   return { ...game, ctx, views, states };
 };
 
-test("T turns the camera behind the car to the car the arrow points at", async () => {
+test("T turns the camera behind the car to the car chosen with F", async () => {
   const { ctx, views } = await race(true);
   expect(ctx.camera.aims).toBe(true);
-  expect(ctx.camera.aimedCar).not.toBe(ctx.game.player);
+  expect(ctx.camera.lockedCar).toBe(1);
   // once it has turned, it keeps looking at the car within a few degrees
   expect(Math.min(...views.slice(60))).toBeGreaterThan(Math.cos(0.15));
 });
@@ -56,11 +60,22 @@ test("the target camera leaves the race as it is", async () => {
   expect(aiming.states).toEqual(behind.states);
 });
 
-test("the target camera aims at no car while the arrow is not drawn", async () => {
-  const { ctx, step, key } = await race(true);
+test("with no car chosen the target camera stays behind the car, wherever the arrow points", async () => {
+  const { ctx, views } = await race(true, 0);
+  expect(ctx.camera.lockedCar).toBe(-1);
   expect(ctx.camera.aimedCar).not.toBe(-1);
-  // another camera than the one behind the car: no arrow
-  press(key, 86);
-  step();
-  expect(ctx.camera.aimedCar).toBe(-1);
+  expect(ctx.camera.aimYaw).toBe(0);
+  expect(Math.min(...views.slice(60))).toBeLessThan(Math.cos(0.15));
+});
+
+test("F chooses the other cars in turn, then none", async () => {
+  const { ctx, key } = await startRace({ stage: 3, car: 5 });
+  const chosen = [];
+  for (let i = 0; i < ctx.game.carCount; i++) {
+    press(key, 70);
+    chosen.push(ctx.camera.lockedCar);
+  }
+  expect(chosen).toEqual([1, 2, 3, 4, 5, 6, -1]);
+  ctx.lockNext(-1);
+  expect(ctx.camera.lockedCar).toBe(6);
 });
