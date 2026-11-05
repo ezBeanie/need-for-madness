@@ -48,6 +48,7 @@ import { racers } from "../race/racers.js";
 import { spinFixHoops, track } from "../race/track.js";
 import {
   camera,
+  fitFieldOfView,
   faceCamera,
   startProjection,
   turnView,
@@ -191,7 +192,7 @@ const classicProjection = () => {
   camera.matrix = mat4.create();
   mat4.perspective(
     camera.matrix,
-    2 * Math.atan(225 / (400 * zoom.now)),
+    fitFieldOfView(2 * Math.atan(225 / (400 * zoom.now))),
     view.aspect,
     0.1,
     7000,

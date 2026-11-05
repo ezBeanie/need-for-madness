@@ -333,9 +333,10 @@ src: url(data/verdana.ttf);
   .main-menu button { clip-path: none; border: 1px solid ButtonText; }
   .main-menu button:focus-visible { outline: 3px solid Highlight; }
 }
-/* phones and tablets held upright: iOS lets no page keep itself sideways */
+/* phones held upright: iOS lets no page keep itself sideways (an unfolded foldable's
+   almost square screen plays upright too, seeing more above and below) */
 #turnDevice { display: none; }
-@media (orientation: portrait) and (pointer: coarse) {
+@media (max-aspect-ratio: 4/5) and (pointer: coarse) {
   #turnDevice {
     display: flex; position: fixed; inset: 0; z-index: 10; align-items: center;
     justify-content: center; padding: 24px; background: #15190D; color: #ffffff;

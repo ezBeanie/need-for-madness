@@ -17,7 +17,12 @@ import { CONFIRM, confirm } from "../input/confirm.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
 import { racers } from "../race/racers.js";
 import { track } from "../race/track.js";
-import { camera, startProjection, turnView } from "../render/camera.js";
+import {
+  camera,
+  fitFieldOfView,
+  startProjection,
+  turnView,
+} from "../render/camera.js";
 import { interpolation, resetMatrix } from "../render/interpolation.js";
 import { classicMenus } from "../render/look.js";
 import {
@@ -679,7 +684,7 @@ const classicTick = () => {
   camera.matrix = mat4.create();
   mat4.perspective(
     camera.matrix,
-    2 * Math.atan(225 / 400),
+    fitFieldOfView(2 * Math.atan(225 / 400)),
     view.aspect,
     0.1,
     7000,

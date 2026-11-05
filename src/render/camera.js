@@ -70,10 +70,25 @@ export const heardFrom = (x, z) => {
   };
 };
 
+// The vertical field of view (in radians) for the window of one as given at 16:9: a wider
+// window sees more at the sides, a narrower one (4:3, a folded phone's cover screen) more
+// above and below, never less of the 16:9 at the sides.
+const WIDE = 16 / 9;
+export const fitFieldOfView = (fieldOfView) =>
+  view.aspect >= WIDE
+    ? fieldOfView
+    : 2 * Math.atan((Math.tan(fieldOfView / 2) * WIDE) / view.aspect);
+
 // A fresh projection with a field of view of 55 degrees; the camera's turns follow it.
 export const startProjection = () => {
   camera.matrix = mat4.create();
-  mat4.perspective(camera.matrix, (55 * Math.PI) / 180, view.aspect, 0.1, 7000);
+  mat4.perspective(
+    camera.matrix,
+    fitFieldOfView((55 * Math.PI) / 180),
+    view.aspect,
+    0.1,
+    7000,
+  );
 };
 
 // Turns a flat model (a sprite) to face the camera.

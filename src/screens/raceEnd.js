@@ -37,6 +37,7 @@ import { insano, pickTalkingPicture } from "../ui/insano.js";
 import { ROLE, link } from "../net/link.js";
 import {
   camera,
+  fitFieldOfView,
   faceCamera,
   startProjection,
   turnView,
@@ -435,7 +436,7 @@ const classicUnlockedCarTick = () => {
   camera.matrix = mat4.create();
   mat4.perspective(
     camera.matrix,
-    2 * Math.atan(225 / 400),
+    fitFieldOfView(2 * Math.atan(225 / 400)),
     view.aspect,
     0.1,
     7000,
