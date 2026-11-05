@@ -38,6 +38,8 @@ import { ROLE, link } from "../net/link.js";
 import {
   camera,
   fitFieldOfView,
+  seenHeight,
+  seenWidth,
   faceCamera,
   startProjection,
   turnView,
@@ -419,9 +421,11 @@ export function unlockedCarTick() {
     }
     poseShowcaseCar(type);
     faceCamera(stageBackdrop);
-    stageBackdrop.mat[0] *= view.aspect * 0.5625;
-    stageBackdrop.mat[1] *= view.aspect * 0.5625;
-    stageBackdrop.mat[2] *= view.aspect * 0.5625;
+    // (stretched to cover the window: its colours only)
+    for (let k = 0; k < 3; k++) {
+      stageBackdrop.mat[k] *= seenWidth();
+      stageBackdrop.mat[k + 4] *= seenHeight();
+    }
     stageBackdrop.x = 0;
     stageBackdrop.y = 0;
     stageBackdrop.z = -90;

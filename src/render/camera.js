@@ -71,13 +71,18 @@ export const heardFrom = (x, z) => {
 };
 
 // The vertical field of view (in radians) for the window of one as given at 16:9: a wider
-// window sees more at the sides, a narrower one (4:3, a folded phone's cover screen) more
-// above and below, never less of the 16:9 at the sides.
-const WIDE = 16 / 9;
+// window sees more at the sides, a narrower one less, down to 4:3; narrower still (an
+// unfolded foldable) it sees more above and below, never less of the 4:3 at the sides.
+const NARROWEST = 4 / 3;
 export const fitFieldOfView = (fieldOfView) =>
-  view.aspect >= WIDE
+  view.aspect >= NARROWEST
     ? fieldOfView
-    : 2 * Math.atan((Math.tan(fieldOfView / 2) * WIDE) / view.aspect);
+    : 2 * Math.atan((Math.tan(fieldOfView / 2) * NARROWEST) / view.aspect);
+
+// How high and how wide the view is against 16:9's, for backdrops to cover the window:
+// higher below 4:3, wider above 16:9, narrower between.
+export const seenHeight = () => Math.max(1, NARROWEST / view.aspect);
+export const seenWidth = () => view.aspect * 0.5625 * seenHeight();
 
 // A fresh projection with a field of view of 55 degrees; the camera's turns follow it.
 export const startProjection = () => {

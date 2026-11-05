@@ -20,6 +20,8 @@ import { track } from "../race/track.js";
 import {
   camera,
   fitFieldOfView,
+  seenHeight,
+  seenWidth,
   startProjection,
   turnView,
 } from "../render/camera.js";
@@ -148,6 +150,9 @@ const placeBackdrop = () => {
     PITCH * (Math.PI / 180),
     [-1, 0, 0],
   );
+  // (the photo grown evenly to cover the window, cut off at the sides or above and below)
+  const cover = Math.max(seenWidth(), seenHeight());
+  mat4.scale(menuBackdrop.mat, menuBackdrop.mat, [cover, cover, cover]);
   menuSmoke.forEach(driftSmoke);
 };
 
