@@ -49,6 +49,7 @@ import {
 } from "../net/guest.js";
 import { menu } from "../screens/menuState.js";
 import { ROLE, ROOM_NAME, leaveRoom, link } from "../net/link.js";
+import { linkedDirectly } from "../net/direct.js";
 import { classicMenus } from "../render/look.js";
 import { SKINS } from "../render/skins.js";
 import { own, setOwnSkin } from "../net/roomCars.js";
@@ -156,7 +157,7 @@ const carText = (carType, skin) =>
     ? `${carStats.names[carType]} in ${SKINS[skin].toLowerCase()}`
     : carStats.names[carType];
 
-const playerItem = ({ id, name, carType, skin, ready, you }, i) => {
+const playerItem = ({ id, name, carType, skin, ready, you, near }, i) => {
   const item = document.createElement("li");
   item.classList?.toggle("you", Boolean(you));
   item.dataset.id = id;
@@ -168,18 +169,26 @@ const playerItem = ({ id, name, carType, skin, ready, you }, i) => {
     unseen(", "),
     textOf(ready ? "ready" : "waiting", ready ? "Ready" : "Not ready"),
   );
+  // (linked directly: the races with this one go without the relay)
+  if (near) {
+    item.append(unseen(", "), textOf("near", "Same network"));
+  }
   return item;
 };
 
 const showPlayers = () => {
-  const all = players();
+  const all = players().map((player) => ({
+    ...player,
+    near: linkedDirectly(player.id),
+  }));
   const shape = JSON.stringify(
-    all.map(({ name, carType, skin, ready, you }) => [
+    all.map(({ name, carType, skin, ready, you, near }) => [
       you ? own.name : name,
       carType,
       skin,
       ready,
       you,
+      near,
     ]),
   );
   const list = element("multiplayerPlayers");

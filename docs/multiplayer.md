@@ -220,12 +220,10 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
   Vor einer Store-Veröffentlichung die Rechte am Original klären. Löst auch die Drehsperre
   auf iOS (oben).
 - Bandbreite (Tasten als Bits, nur bei Änderung), Ergebnisliste für alle.
-- **Lokaler Multiplayer:** ohne Relay im selben WLAN oder über den Hotspot eines Handys, für
-  geringe Latenz. Eine Webseite kann weder einen Server öffnen noch andere Geräte finden:
-  WebRTC-Datenkanäle verbinden lokal, brauchen aber einmal die Vorstellung der Geräte (über das
-  Relay, oder ohne Internet per QR-Codes zwischen Host und Gästen). Als App (Capacitor) könnte
-  das Host-Handy einen lokalen Server mit mDNS-Suche öffnen. Ausgetauscht würde nur der Weg in
-  `net/link.js`, nicht der Netcode.
+- **Lokaler Multiplayer ganz ohne Internet:** Schritt 10 braucht das Relay einmal zum
+  Vorstellen. Ohne Internet ginge das per QR-Code (Host zeigt einen je Gast, Gast zeigt seine
+  Antwort zurück); der Host verteilt schon jetzt wie das Relay. Als App (Capacitor) könnte das
+  Host-Handy stattdessen einen lokalen Server mit mDNS-Suche öffnen.
 - **Rennmodi:** Der Host wählt in der Lobby einen Modus (`raceSetup.mode`, geht mit dem Start
   an alle Spiele). Fertig: Normal, Only racing (kein Schaden, keine Dellen), Last survivor
   (Runden zählen nicht, das letzte nicht gewreckte Auto gewinnt), Time attack (keine Kollision,
@@ -328,3 +326,24 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
   zusätzlich ein Portbereich für die Weiterleitung. STUN allein reicht in den meisten
   Heimnetzen; TURN braucht es für Mobilfunk und strenge Firewalls, und coturn muss dafür die
   öffentliche Adresse kennen, die bei beanie wechselt (DynDNS).
+
+### Schritt 10: Direkt im selben Netz
+
+- Spiele im selben WLAN oder am Hotspot eines Handys verbinden sich direkt (`net/direct.js`):
+  Jeder Gast öffnet einen WebRTC-Datenkanal zum Host, ausgehandelt über `direct`-Nachrichten
+  des Relays, sobald er dessen `players` hört (klappt es nicht, alle 10 s neu). Ohne STUN-Server
+  (`iceServers: []`) gibt es nur Adressen im eigenen Netz: Spiele in verschiedenen Netzen
+  bleiben beim Relay, und niemand erfährt die Internet-Adresse eines anderen.
+- Jede Nachricht geht weiter über das Relay **und** direkt; jede trägt ihre Nummer (`seq`) vom
+  Absender, und `link.js` nimmt nur die erste Ankunft (`firstHeard`). Der Host gibt alles, was
+  er neu hört, an die direkt verbundenen Gäste weiter (außer an den, von dem es kam), wie das
+  Relay. So geht ein Rennen im selben Netz ohne den Umweg über beanie, und reißt das Relay ab,
+  fährt es direkt weiter (`link.open` bleibt an, solange ein Kanal offen ist).
+- Die Lobby zeigt bei direkt verbundenen Spielern „Same network“ (beim Gast der Host, beim Host
+  seine Gäste); der Ping im Rennen zeigt die Zeit über den schnelleren Weg.
+- Grenzen: Chrome und Safari verstecken die lokalen Adressen hinter mDNS-Namen (`….local`);
+  blockt das Netz Multicast (manche Firmen- und Gäste-WLANs), klappt die Direktverbindung nicht
+  und es bleibt beim Relay. Ein Kanal nimmt höchstens 120 Nachrichten pro Sekunde je Gast an
+  (wie das Relay). Nachrichten über der Größe, die ein Kanal nimmt, trägt nur das Relay.
+- Tests: `test/directLink.test.js` (doppelte Nachrichten, Weitergabe), in
+  `test/visual/multiplayer.spec.js` ein Rennen, dem das Relay mittendrin abgeschnitten wird.

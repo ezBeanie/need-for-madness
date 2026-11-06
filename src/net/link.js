@@ -1,10 +1,18 @@
 // The link between the games of a room, the host's and its guests', opened from the
 // multiplayer dialog (see ui/multiplayerMenu.js) or with ?host=<room> and ?join=<room>: a
 // WebSocket to the relay of the server the game came from (see server/relay.js), which
-// passes each message on to the other games in the room. Every message says which game sent
-// it, by an id made up for the room.
+// passes each message on to the other games in the room, and beside it the direct links of
+// games in the same network (see direct.js). Every message says which game sent it, by an id
+// made up for the room, and its number from that game.
 
 import { PHASE } from "../core/state.js";
+import {
+  closeDirect,
+  directLinks,
+  openDirect,
+  receiveDirect,
+  sendDirectly,
+} from "./direct.js";
 
 export const ROLE = { none: 0, host: 1, guest: 2 };
 
@@ -36,6 +44,8 @@ export const MESSAGE = {
   // from a frame on, in parts (see watch.js)
   watch: "watch",
   watched: "watched",
+  // the setting up of a direct link between a guest and the host (see direct.js)
+  direct: "direct",
 };
 
 // the most games in a room, as the relay takes them
@@ -110,7 +120,7 @@ export const link = {
   room: null,
   // this game's id in the room
   id: null,
-  // whether the relay is reached
+  // whether the relay or a game linked directly is reached
   open: false,
   // whether the last room was full, until the multiplayer dialog says so
   full: false,
@@ -118,6 +128,14 @@ export const link = {
 };
 
 let socket = null;
+let relayOpen = false;
+let receiver = () => {};
+// the number of this game's next message
+let sent = 0;
+// from -> the numbers of its messages heard (the latest MOST_HEARD at least): a message
+// comes twice when it comes directly too
+const heard = new Map();
+const MOST_HEARD = 1024;
 
 // (random, so that no game is told by anything of its player's)
 const newPlayerId = () =>
@@ -125,12 +143,78 @@ const newPlayerId = () =>
     (n % 36).toString(36),
   ).join("");
 
+export const linkChanged = () => {
+  link.open = link.role != ROLE.none && (relayOpen || directLinks() > 0);
+};
+
+// Whether a message is heard the first time (one without a number always is).
+export const firstHeard = ({ from, seq }) => {
+  if (!Number.isInteger(seq)) {
+    return true;
+  }
+  let seqs = heard.get(from);
+  if (!seqs) {
+    seqs = new Set();
+    heard.set(from, seqs);
+  }
+  if (seqs.has(seq)) {
+    return false;
+  }
+  seqs.add(seq);
+  if (seqs.size > 2 * MOST_HEARD) {
+    for (const old of seqs) {
+      seqs.delete(old);
+      if (seqs.size <= MOST_HEARD) {
+        break;
+      }
+    }
+  }
+  return true;
+};
+
+// A message of another game, over the relay or directly from the game `by`: the host
+// passes it on to the guests linked with it (but the one it came from).
+// (whatever another game sends is checked before it is used)
+const hear = (text, by = null) => {
+  let message;
+  try {
+    message = decode(text);
+  } catch {
+    return;
+  }
+  if (
+    !message ||
+    typeof message != "object" ||
+    !isPlayerId(message.from) ||
+    message.from == link.id ||
+    !firstHeard(message)
+  ) {
+    return;
+  }
+  if (link.role == ROLE.host) {
+    sendDirectly(text, by ?? message.from);
+  }
+  receiveDirect(message);
+  receiver(message);
+};
+
 // Opens the room as host or guest; receive gets every message the other games send.
 export const openLink = (role, room, receive) => {
   closeLink();
   link.role = role;
   link.room = room;
   link.id = newPlayerId();
+  receiver = receive;
+  sent = 0;
+  heard.clear();
+  openDirect(hear);
+  link.send = (message) => {
+    const text = encode({ ...message, from: link.id, seq: sent++ });
+    if (relayOpen) {
+      socket.send(text);
+    }
+    sendDirectly(text);
+  };
   const scheme = location.protocol == "https:" ? "wss:" : "ws:";
   const connect = () => {
     const own = new WebSocket(
@@ -138,21 +222,10 @@ export const openLink = (role, room, receive) => {
     );
     socket = own;
     own.onopen = () => {
-      link.open = true;
-      link.send = (message) => own.send(encode({ ...message, from: link.id }));
+      relayOpen = true;
+      linkChanged();
     };
-    own.onmessage = (event) => {
-      // (whatever another game sends is checked before it is used)
-      let message;
-      try {
-        message = decode(event.data);
-      } catch {
-        return;
-      }
-      if (message && typeof message == "object" && isPlayerId(message.from)) {
-        receive(message);
-      }
-    };
+    own.onmessage = (event) => hear(event.data);
     own.onclose = (event) => {
       // (a link closed on purpose, or replaced by another, stays closed)
       if (socket != own) {
@@ -163,8 +236,8 @@ export const openLink = (role, room, receive) => {
         link.full = true;
         return;
       }
-      link.open = false;
-      link.send = () => {};
+      relayOpen = false;
+      linkChanged();
       setTimeout(() => socket == own && connect(), RECONNECT_MS);
     };
   };
@@ -174,7 +247,10 @@ export const openLink = (role, room, receive) => {
 export const closeLink = () => {
   const old = socket;
   socket = null;
+  relayOpen = false;
   old?.close();
+  closeDirect();
+  receiver = () => {};
   link.role = ROLE.none;
   link.room = null;
   link.id = null;

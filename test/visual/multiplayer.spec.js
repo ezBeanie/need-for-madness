@@ -461,6 +461,40 @@ test("the AI drives on the car of a guest whose connection is lost", async ({
   expect(Math.abs(onHost.z - start)).toBeGreaterThan(500);
 });
 
+// The relay between the tabs, cut at will both ways (the sockets left open: as a network
+// that reaches the relay no more).
+const cuttableRelay = async (context) => {
+  const relay = { cut: false };
+  await context.routeWebSocket(/\/net\?room=/, (page) => {
+    const server = page.connectToServer();
+    page.onMessage((message) => relay.cut || server.send(message));
+    server.onMessage((message) => relay.cut || page.send(message));
+  });
+  return relay;
+};
+
+const linkedWithHost = (page) =>
+  page.evaluate(() => {
+    const { guest, linkedDirectly } = window.gameState;
+    return linkedDirectly(guest.hostId);
+  });
+
+test("games in the same network link directly and race on without the relay", async ({
+  context,
+}) => {
+  const relay = await cuttableRelay(context);
+  const { hostPage, guestPage, both } = await raceTogether(context, "near");
+  await expect.poll(() => linkedWithHost(guestPage)).toBe(true);
+  relay.cut = true;
+  const frame = await frameOf(hostPage);
+  // (far beyond the frames a game guesses the other's keys for, see src/net/lockstep.js)
+  await advanceBoth(...both, 120);
+  expect(await frameOf(hostPage)).toBeGreaterThan(frame + 100);
+  expect(await frameOf(guestPage)).toBeGreaterThan(frame + 100);
+  expect(await apartAt(hostPage)).toBe(-1);
+  expect(await apartAt(guestPage)).toBe(-1);
+});
+
 test("the multiplayer dialog opens a room, and a guest joins it with its code", async ({
   context,
 }) => {
@@ -502,6 +536,17 @@ test("the multiplayer dialog opens a room, and a guest joins it with its code", 
   await expect(
     guestPage.getByRole("list", { name: "Players" }).getByRole("listitem"),
   ).toHaveText([/^Player 1 \(host\): /, /^Player 2 \(you\): /]);
+  // linked directly, in the same network
+  await expect
+    .poll(async () => {
+      await advanceBoth(...both, 1);
+      return guestPage
+        .getByRole("list", { name: "Players" })
+        .getByRole("listitem")
+        .first()
+        .textContent();
+    })
+    .toMatch(/, Same network$/);
   await hostPage.getByRole("button", { name: "Back" }).click();
   await guestPage.getByRole("button", { name: "Back" }).click();
   await expect(
@@ -891,7 +936,7 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
   await expect(guestPage.locator("#lobbyStart")).toBeHidden();
   await expect(
     hostPage.getByRole("list", { name: "Players" }).getByRole("listitem"),
-  ).toHaveText([/Ready$/, /Not ready$/]);
+  ).toHaveText([/Ready$/, /Not ready(, Same network)?$/]);
 
   await guestPage.getByRole("button", { name: "Ready" }).click();
   await expect(guestPage.locator("#lobbyReady")).toHaveAttribute(
