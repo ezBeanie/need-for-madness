@@ -165,30 +165,124 @@ const install = async (list) => {
   if ((await readMeta("installed")) == list.version) {
     return;
   }
-  const files = await caches.open(FILES);
   const wanted = Object.entries(list.core);
+  progress.installing = { done: 0, total: wanted.length };
+  try {
+    await keepAll(wanted, () => {
+      progress.installing.done++;
+      tell();
+    });
+  } finally {
+    progress.installing = null;
+  }
+  await writeMeta("installed", list.version);
+  await letGo(list.version);
+  tell();
+};
+
+// Keeps the files not kept yet, AT_ONCE at a time; done after each, while still is true.
+const keepAll = async (wanted, done, still = () => true) => {
+  const files = await caches.open(FILES);
   let next = 0;
   const fetchNext = async () => {
-    while (next < wanted.length) {
+    while (next < wanted.length && still()) {
       const [path, hash] = wanted[next++];
       if (!(await files.match(keyOf(path, hash)))) {
         await fetchKept(path, hash);
       }
+      done(path);
     }
   };
   await Promise.all(Array.from({ length: AT_ONCE }, fetchNext));
-  await writeMeta("installed", list.version);
-  await letGo(list.version);
 };
 
-// (one update at a time; a failed one is tried again at the next start)
+// The stages' music, kept for offline races when the player wants it all (see the options'
+// offline section, src/ui/offline.js); else only what was played.
+let musicWanted = null;
+const wantsMusic = async () =>
+  (musicWanted ??= (await readMeta("music")) ?? false);
+const wantMusic = async (wanted) => {
+  musicWanted = wanted;
+  await writeMeta("music", wanted);
+};
+
+let keepingMusic = null;
+const keepMusic = () =>
+  (keepingMusic ??= (async () => {
+    const list = await installedList();
+    if (!list || !(await wantsMusic())) {
+      return;
+    }
+    progress.keepingMusic = true;
+    tell();
+    await keepAll(Object.entries(list.later), tell, () => musicWanted);
+  })()
+    .catch(() => {})
+    .finally(() => {
+      keepingMusic = null;
+      progress.keepingMusic = false;
+      tell();
+    }));
+
+const dropMusic = async () => {
+  await keepingMusic;
+  const list = await installedList();
+  const files = await caches.open(FILES);
+  for (const [path, hash] of Object.entries(list?.later ?? {})) {
+    await files.delete(keyOf(path, hash));
+  }
+};
+
+// (one update at a time; a failed one is tried again at the next start, the music after it)
 let installing = null;
 const update = (newest) => {
   newest.catch(() => {});
   installing ??= newest.then(install).finally(() => {
     installing = null;
   });
-  return installing.catch(() => {});
+  return installing.then(keepMusic, () => {});
+};
+
+// How far an update is, and the music kept, for the options; told every page whenever it
+// changes (at most every TELL_MS).
+const progress = { installing: null, keepingMusic: false };
+const TELL_MS = 250;
+const statusOf = async () => {
+  const list = await installedList();
+  const files = await caches.open(FILES);
+  let kept = 0;
+  let total = 0;
+  for (const [path, hash] of Object.entries(list?.later ?? {})) {
+    const size = list.sizes?.[path] ?? 0;
+    total += size;
+    if (await files.match(keyOf(path, hash))) {
+      kept += size;
+    }
+  }
+  return {
+    ready: Boolean(list),
+    installing: progress.installing && { ...progress.installing },
+    music: {
+      wanted: await wantsMusic(),
+      keeping: progress.keepingMusic,
+      kept,
+      total,
+    },
+  };
+};
+let toldAt = 0;
+let telling = null;
+const tell = () => {
+  telling ??= new Promise((resolve) =>
+    setTimeout(resolve, Math.max(0, toldAt + TELL_MS - Date.now())),
+  ).then(async () => {
+    telling = null;
+    toldAt = Date.now();
+    const offline = await statusOf();
+    for (const client of await self.clients.matchAll()) {
+      client.postMessage({ offline });
+    }
+  });
 };
 
 const waited = (ms) =>
@@ -252,6 +346,32 @@ self.addEventListener("activate", (event) =>
     })(),
   ),
 );
+
+// The options ask how things stand (answered with the version the page plays), and have the
+// music kept or let go.
+self.addEventListener("message", (event) => {
+  const asked = event.data?.offline;
+  if (!asked) {
+    return;
+  }
+  const answer = async () => {
+    if (asked == "keepMusic" || asked == "dropMusic") {
+      await wantMusic(asked == "keepMusic");
+    }
+    if (asked == "dropMusic") {
+      await dropMusic();
+    }
+    const id = event.source?.id;
+    event.source?.postMessage({
+      offline: {
+        ...(await statusOf()),
+        version: (await versionOf(id)) ?? (await readMeta("started")),
+      },
+    });
+  };
+  // (asked how things stand, music once wanted and not all kept is fetched on)
+  event.waitUntil(answer().then(keepMusic));
+});
 
 self.addEventListener("fetch", (event) => {
   const request = event.request;

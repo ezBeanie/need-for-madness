@@ -16,6 +16,7 @@ import { own, setOwnName } from "../net/roomCars.js";
 import { toggleByVoice, toggleVoice, voice } from "../net/voice.js";
 import { ghost, toggleGhost } from "../race/ghost.js";
 import { isPhone } from "../core/platform.js";
+import { askOfflineStatus, installOffline } from "./offline.js";
 import {
   arrangeTouchControls,
   setTouchSize,
@@ -95,10 +96,12 @@ export const openOptions = () => {
   // (only where there are touch controls)
   document.getElementById("optionsTouch").hidden = !isPhone;
   document.getElementById("playerName").value = own.name;
+  askOfflineStatus();
   dialog.showModal?.();
 };
 
 export const installOptionsMenu = () => {
+  installOffline();
   for (const [action] of SWITCHES) {
     document
       .getElementById(`option-${action}`)

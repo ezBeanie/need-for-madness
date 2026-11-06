@@ -45,6 +45,11 @@ test("every file is listed by the hash of its content, the stages' music apart",
     "data/classic/music/mp-stage1.mp3": hashOf("classic stage music"),
     "data/music/stage1.mp3": hashOf("stage music"),
   });
+  // (and how big it is, for the options)
+  expect(list.sizes).toEqual({
+    "data/classic/music/mp-stage1.mp3": "classic stage music".length,
+    "data/music/stage1.mp3": "stage music".length,
+  });
   // the same as the service worker's: 16 hex digits of SHA-256
   expect(hashOf("stage")).toMatch(/^[0-9a-f]{16}$/);
 });

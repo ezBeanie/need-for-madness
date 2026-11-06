@@ -81,11 +81,12 @@ const startServer = async () => {
       for (const [path, body] of Object.entries(changes)) {
         core[path] = hashOf(body);
       }
-      const later = server.list.later;
+      const { later, sizes } = server.list;
       server.list = {
         version: hashOf(JSON.stringify({ core, later })),
         core,
         later,
+        sizes,
       };
     }
     return server.list.version;
@@ -266,5 +267,54 @@ test.describe("installed", () => {
     await page.reload();
     expect(await fetched(page, MUSIC)).not.toMatch(/^failed/);
     expect(await fetched(page, OTHER_MUSIC)).toMatch(/^failed/);
+  });
+
+  test("the options tell the game is ready offline, keep all the music at a switch and let it go at another", async ({
+    page,
+  }) => {
+    await firstStart(page);
+    await page.evaluate(() => document.getElementById("options").showModal());
+    const section = page.locator("#optionsOffline");
+    await expect(section).toBeVisible();
+    await expect(page.locator("#offlineReady")).toHaveText(
+      "Ready to play without the network.",
+    );
+    const music = page.locator("#offlineMusic");
+    await expect(music).toHaveAttribute("aria-pressed", "false");
+    await expect(music).toContainText(/\(\d+ MB\)/);
+    await music.click();
+    await expect(music).toHaveAttribute("aria-pressed", "true");
+    // all kept: the progress goes away
+    await expect(page.locator("#offlineMusicProgress")).toBeHidden({
+      timeout: 60_000,
+    });
+    server.offline = true;
+    await page.reload();
+    expect(await fetched(page, OTHER_MUSIC)).not.toMatch(/^failed/);
+    await page.evaluate(() => document.getElementById("options").showModal());
+    await expect(music).toHaveAttribute("aria-pressed", "true");
+    await music.click();
+    await expect(music).toHaveAttribute("aria-pressed", "false");
+    expect(await fetched(page, OTHER_MUSIC)).toMatch(/^failed/);
+  });
+
+  test("without the network the music kept so far shows, the rest fetched once the network is back", async ({
+    page,
+  }) => {
+    await firstStart(page);
+    await page.evaluate(() => document.getElementById("options").showModal());
+    server.failing.add(OTHER_MUSIC);
+    await page.locator("#offlineMusic").click();
+    await expect(page.locator("#offlineMusicKeptShown")).toContainText(
+      "the rest with the network",
+      { timeout: 60_000 },
+    );
+    await expect(page.locator("#offlineMusicProgress")).toBeVisible();
+    server.failing.clear();
+    await page.reload();
+    await page.evaluate(() => document.getElementById("options").showModal());
+    await expect(page.locator("#offlineMusicProgress")).toBeHidden({
+      timeout: 60_000,
+    });
   });
 });

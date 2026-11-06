@@ -30,16 +30,22 @@ const filesIn = async (dir) => {
     .sort();
 };
 
+// (sizes: the music's, for the options to tell how much keeping it all takes)
 export const listOffline = async (dir) => {
   const core = {};
   const later = {};
+  const sizes = {};
   for (const path of await filesIn(dir)) {
-    (isMusic(path) ? later : core)[path] = hashOf(
-      await readFile(join(dir, path)),
-    );
+    const content = await readFile(join(dir, path));
+    if (isMusic(path)) {
+      later[path] = hashOf(content);
+      sizes[path] = content.length;
+    } else {
+      core[path] = hashOf(content);
+    }
   }
   const version = hashOf(JSON.stringify({ core, later }));
-  return { version, core, later };
+  return { version, core, later, sizes };
 };
 
 export const writeOfflineList = async (dir) => {
