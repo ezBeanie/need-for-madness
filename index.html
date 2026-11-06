@@ -119,6 +119,10 @@ src: url(data/verdana.ttf);
 #options .volume input { width: 100%; min-height: 44px; margin: 0; padding: 0; border: 0; background: none; accent-color: #01EAFF; }
 #options .volume output { color: #01eaff; font-weight: bold; text-align: right; }
 #options .volume input:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
+#options .ready { margin: 0; color: #ffffff; }
+#options .kept { margin-top: 10px; }
+#options .kept progress { width: 100%; height: 10px; accent-color: #01EAFF; }
+#options .kept p { margin: 4px 0 0; color: #01eaff; font-size: 14px; }
 #options .name label { display: block; margin: 0 0 6px; font-family: junk, Verdana, sans-serif; font-size: 17px; color: #ffffff; }
 #options .name input { width: 100%; }
 /* arranging the touch controls: over the whole screen, the race's dim behind them */
@@ -434,6 +438,14 @@ src: url(data/verdana.ttf);
 <li class="name"><label for="playerName">Your name</label><input id="playerName" maxlength="16" autocomplete="nickname" spellcheck="false" aria-describedby="playerNameHint"><p id="playerNameHint" class="hint">The others in a room see it on your car.</p></li>
 <li><button type="button" id="voiceChat" aria-pressed="false" aria-describedby="voiceChatHint"><span>Voice chat</span><span class="state"></span></button><p id="voiceChatHint" class="hint">Voices go straight between the players' games, which so learn each other's internet address.</p></li>
 <li><button type="button" id="voiceByVoice" aria-pressed="false" aria-describedby="voiceByVoiceHint"><span>Talk</span><span class="state"></span></button><p id="voiceByVoiceHint" class="hint">Push to talk: hold P in a race, the Talk button in the lobby. By voice: the others hear you whenever you speak, your microphone open all the time in a room.</p></li>
+</ul>
+</section>
+<section class="panel" id="optionsOffline" hidden>
+<h3 id="optionsOfflineTitle">Offline</h3>
+<ul aria-labelledby="optionsOfflineTitle">
+<li><p id="offlineReady" class="ready" role="status"></p></li>
+<li><button type="button" id="offlineMusic" aria-pressed="false" aria-describedby="offlineMusicHint"><span>Race music offline <span id="offlineMusicSize"></span></span><span class="state"></span></button><p id="offlineMusicHint" class="hint">Keeps every stage's music for races without the network. Off removes it again.</p></li>
+<li class="kept" id="offlineMusicProgress" hidden><progress id="offlineMusicKept" max="1" value="0" aria-labelledby="offlineMusicKeptShown"></progress><p id="offlineMusicKeptShown" role="status"></p></li>
 </ul>
 </section>
 </div>

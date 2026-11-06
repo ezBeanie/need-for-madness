@@ -431,8 +431,10 @@ document.addEventListener("visibilitychange", () => {
 
 // Installed as an app, the game starts without the network too (see public/sw.js); not in
 // the dev server, whose files change with every edit.
+// Its files are asked to be kept, else a browser may clear them after a while unused (Safari).
 if (import.meta.env.PROD && "serviceWorker" in navigator) {
   navigator.serviceWorker.register("sw.js");
+  navigator.storage?.persist?.().catch(() => {});
 }
 
 // (a check for racing together, see net/determinism.js)

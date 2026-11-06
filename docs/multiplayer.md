@@ -214,11 +214,18 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
   Hochformat. Möglich: das Spiel im Hochformat selbst um 90° drehen, oder eine App-Hülle.
 - **Als App bauen (für später):** `dist/` in eine native Hülle packen statt der PWA: Capacitor
   für Android und iOS, Tauri (oder Electron) für Windows, macOS und Linux. Dafür: feste Adresse
-  für Relay und `/net/ice` statt relativer Pfade, kein Service Worker in der App,
+  für Relay und `/net/ice` statt relativer Pfade, kein Service Worker in der App (siehe
+  `docs/offline.md`; der Musik-Download sollte im Spielcode liegen, nicht im Service Worker),
   Mikrofon-Berechtigungstexte, Signieren (Apple-Developer-Account für iOS/macOS, Play-Konto).
   Vor einer Store-Veröffentlichung die Rechte am Original klären. Löst auch die Drehsperre
   auf iOS (oben).
 - Bandbreite (Tasten als Bits, nur bei Änderung), Ergebnisliste für alle.
+- **Lokaler Multiplayer:** ohne Relay im selben WLAN oder über den Hotspot eines Handys, für
+  geringe Latenz. Eine Webseite kann weder einen Server öffnen noch andere Geräte finden:
+  WebRTC-Datenkanäle verbinden lokal, brauchen aber einmal die Vorstellung der Geräte (über das
+  Relay, oder ohne Internet per QR-Codes zwischen Host und Gästen). Als App (Capacitor) könnte
+  das Host-Handy einen lokalen Server mit mDNS-Suche öffnen. Ausgetauscht würde nur der Weg in
+  `net/link.js`, nicht der Netcode.
 - **Rennmodi:** Der Host wählt in der Lobby einen Modus (`raceSetup.mode`, geht mit dem Start
   an alle Spiele). Fertig: Normal, Only racing (kein Schaden, keine Dellen), Last survivor
   (Runden zählen nicht, das letzte nicht gewreckte Auto gewinnt), Time attack (keine Kollision,
