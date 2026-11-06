@@ -34,16 +34,36 @@ Version.
 Die Seite bittet um dauerhaften Speicher (`navigator.storage.persist()`), damit der Browser
 die Dateien nicht nach einer Weile ohne Nutzung wegräumt.
 
+## Optionen: Offline
+
+Der Bereich „Offline“ in den Optionen (`src/ui/offline.js`, nur sichtbar mit Service Worker)
+zeigt, ob das Spiel offline startbereit ist oder wie weit ein Update ist. Der Schalter
+„Stages' music too“ lässt den Service Worker die ganze Streckenmusik beider Looks speichern
+(Größe aus `sizes` in der Liste), mit Fortschritt; aus heißt: alle gespeicherte Musik weg.
+Bricht der Download ab (kein Netz), steht dort, wie viel da ist; der nächste Start oder das
+nächste Öffnen der Optionen macht weiter, ebenso nach einem Update mit neuer Musik.
+Seite und Service Worker reden über `postMessage({ offline: "status" | "keepMusic" |
+"dropMusic" })`; der Service Worker meldet jeden Fortschritt an alle Seiten (höchstens alle
+250 ms).
+
+## Zurück aus dem Hintergrund
+
+Eine App aus dem Hintergrund startet nicht neu. Kommt sie im Hauptmenü zurück (nicht in einem
+Raum, nicht mit offenen Optionen), fragt sie `offline.json` ab und lädt neu, wenn es eine
+neuere Version gibt (`startNewest`).
+
 ## Grenzen
 
-- Ein Update kommt beim Neustart der App an. Aus dem Hintergrund zurückgeholt lädt sie nicht
-  neu.
 - Antwortet der Server langsamer als 4 s, startet der alte Stand; das Update kommt beim
   nächsten Start.
-- Streckenmusik, die noch nie lief, fehlt offline (das Rennen läuft ohne).
+- Streckenmusik, die noch nie lief, fehlt offline, wenn der Schalter aus ist (das Rennen läuft
+  ohne).
+- In einer nativen App (Capacitor) gibt es keinen Service Worker: das Grundpaket steckt dort
+  in der App, der Musik-Download müsste dort neu gebaut werden.
 
 ## Tests
 
 `test/visual/offline.spec.js` baut das Spiel und liefert es über einen eigenen Server aus,
 der einen Deploy, kaputte Dateien, einen langsamen Server und kein Netz nachstellt;
-`test/offlineList.test.js` prüft die Liste.
+`test/offlineList.test.js` prüft die Liste, `test/offline.test.js` die Rückkehr aus dem
+Hintergrund.
