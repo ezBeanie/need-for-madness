@@ -38,7 +38,7 @@ die Dateien nicht nach einer Weile ohne Nutzung wegräumt.
 
 Der Bereich „Offline“ in den Optionen (`src/ui/offline.js`, nur sichtbar mit Service Worker)
 zeigt, ob das Spiel offline startbereit ist oder wie weit ein Update ist. Der Schalter
-„Stages' music too“ lässt den Service Worker die ganze Streckenmusik beider Looks speichern
+„Race music offline“ lässt den Service Worker die ganze Streckenmusik beider Looks speichern
 (Größe aus `sizes` in der Liste), mit Fortschritt; aus heißt: alle gespeicherte Musik weg.
 Bricht der Download ab (kein Netz), steht dort, wie viel da ist; der nächste Start oder das
 nächste Öffnen der Optionen macht weiter, ebenso nach einem Update mit neuer Musik.
