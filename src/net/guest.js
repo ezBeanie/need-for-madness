@@ -41,6 +41,7 @@ import {
 import { lockstep, receiveRaceMessage, startLockstep } from "./lockstep.js";
 import { isRaceState, restoreRace } from "./raceState.js";
 import { clearChat, receiveChat } from "./chat.js";
+import { linkDirectly } from "./direct.js";
 import { receiveVoice } from "./voice.js";
 import { MOST_NAME_CHARACTERS, own, setRoomCars } from "./roomCars.js";
 import { isSkin } from "../render/skins.js";
@@ -155,6 +156,8 @@ const receive = (message) => {
     isRoomRules(message.rules)
   ) {
     guest.hostId = message.from;
+    // (in the same network the race goes quicker without the relay)
+    linkDirectly(message.from);
     guest.players = message.players;
     guest.bots = message.bots;
     guest.stage = message.stage;
