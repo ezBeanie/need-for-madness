@@ -49,6 +49,8 @@ import { spinFixHoops, track } from "../race/track.js";
 import {
   camera,
   fitFieldOfView,
+  seenHeight,
+  seenWidth,
   faceCamera,
   startProjection,
   turnView,
@@ -164,9 +166,11 @@ export function stageSelectTick() {
     raceEvents.checkpointFlash = 0;
   }
   faceCamera(stageBackdrop);
-  stageBackdrop.mat[0] *= view.aspect * 0.5625;
-  stageBackdrop.mat[1] *= view.aspect * 0.5625;
-  stageBackdrop.mat[2] *= view.aspect * 0.5625;
+  // (stretched to cover the window: its colours only)
+  for (let k = 0; k < 3; k++) {
+    stageBackdrop.mat[k] *= seenWidth();
+    stageBackdrop.mat[k + 4] *= seenHeight();
+  }
   stageBackdrop.x = camera.x - 106 * stageBackdrop.mat[8];
   stageBackdrop.y = camera.y - 106 * stageBackdrop.mat[9];
   stageBackdrop.z = camera.z - 106 * stageBackdrop.mat[10];
