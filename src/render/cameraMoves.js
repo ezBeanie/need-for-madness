@@ -10,6 +10,10 @@ import { resetMatrix } from "./interpolation.js";
 import { sky } from "./scene.js";
 
 export const moveCamera = () => {
+  // (a wasted car is no target: the camera turns to none)
+  if (camera.lockedCar >= 0 && racers[camera.lockedCar]?.wasted) {
+    camera.lockedCar = -1;
+  }
   if (camera.mode == CAMERA.behind) {
     followBehind();
   }
@@ -90,20 +94,30 @@ const AIM_EASE = 0.2;
 
 const halfTurn = (degrees) => degrees - 360 * Math.round(degrees / 360);
 
-// The car the target camera turns to: the next one (step 1) or the one before (-1) of the
-// others, and after the last none.
+// The cars the target camera can turn to: the others not wasted, the nearest first.
+const aimable = () => {
+  const own = car[game.player];
+  const distance = (c) => Math.hypot(car[c].x - own.x, car[c].z - own.z);
+  const cars = [];
+  for (let c = 0; c < game.carCount; c++) {
+    if (c != game.player && !racers[c].wasted) {
+      cars.push(c);
+    }
+  }
+  return cars.sort((a, b) => distance(a) - distance(b) || a - b);
+};
+
+// The car the target camera turns to: the next farther one (step 1) or the next nearer
+// (-1), after the farthest none.
 export const lockNext = (step) => {
-  let c = camera.lockedCar;
-  do {
-    c += step;
-    if (c >= game.carCount) {
-      c = -1;
-    }
-    if (c < -1) {
-      c = game.carCount - 1;
-    }
-  } while (c == game.player);
-  camera.lockedCar = c;
+  const cars = [-1, ...aimable()];
+  const at = Math.max(0, cars.indexOf(camera.lockedCar));
+  camera.lockedCar = cars[(at + step + cars.length) % cars.length];
+};
+
+// A car chosen (in the picture), or none.
+export const lockCar = (c) => {
+  camera.lockedCar = aimable().includes(c) ? c : -1;
 };
 
 // Behind the player's car in a race, a car chosen: the camera turns around the car until it

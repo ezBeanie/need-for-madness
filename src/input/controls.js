@@ -28,6 +28,7 @@ import { pressConfirm } from "./confirm.js";
 import { talk } from "../net/voice.js";
 import { nextCamera } from "../race/replayViewer.js";
 import { lockNext } from "../render/cameraMoves.js";
+import { keys } from "./keyboard.js";
 import { watchingOthers } from "../race/spectate.js";
 
 // the button a key shows pressed: the arrow button of the race
@@ -152,7 +153,10 @@ export function onKey(action, pressed) {
     announce(camera.aims ? "Target camera: on" : "Target camera: off");
   }
   if (!pressed && action == "lockNext" && game.phase == PHASE.race) {
-    lockNext(1);
+    // (with Shift the nearer one)
+    lockNext(
+      keys.held.has("ShiftLeft") || keys.held.has("ShiftRight") ? -1 : 1,
+    );
     announce(lockedText());
   }
   if (!pressed && action == "toggleClassicMenus") {
