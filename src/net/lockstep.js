@@ -21,14 +21,8 @@ import {
   noteBeforeRollback,
 } from "../render/corrections.js";
 import { keepRecording, restoreRecording } from "../race/recording.js";
-import {
-  MESSAGE,
-  RACE_GOES_ON,
-  decode,
-  encode,
-  isIndex,
-  link,
-} from "./link.js";
+import { MESSAGE, RACE_GOES_ON, decode, encode, link } from "./link.js";
+import { inParts, joinPart } from "./parts.js";
 import { restoreRace, saveRace, sharedRace } from "./raceState.js";
 
 // 35 ms for the keys to reach the other game before they drive
@@ -291,10 +285,6 @@ const fingerprint = (text) => {
   return hash >>> 0;
 };
 
-// a race of 20 dented cars is about 500 kB, the relay takes 256 kB a message at most
-const APART_PART_LENGTH = 64 * 1024;
-const MOST_APART_PARTS = 64;
-
 // The own fingerprint of a frame and others' there: whether the races went apart.
 const compare = (frame) => {
   const own = lockstep.ownPrints.get(frame);
@@ -315,17 +305,9 @@ const compare = (frame) => {
       lockstep.apartAt = frame;
       lockstep.apartWith = car;
       lockstep.apartRace = own.race;
-      const parts = Math.ceil(own.race.length / APART_PART_LENGTH);
-      for (let part = 0; part < parts; part++) {
-        const start = part * APART_PART_LENGTH;
-        const race = own.race.slice(start, start + APART_PART_LENGTH);
-        send({
-          type: MESSAGE.apart,
-          frame,
-          part,
-          parts,
-          race,
-        });
+      // (a race of 20 dented cars is about 500 kB)
+      for (const part of inParts(own.race)) {
+        send({ type: MESSAGE.apart, frame, ...part });
       }
       console.warn(`The races went apart at frame ${frame}`);
     }
@@ -353,23 +335,16 @@ export const differencesOf = (own, other, path = "", found = []) => {
 // A part of another game's race at the frame the races went apart (checked: another game
 // sent it): once all came, what differs is told, to find what computes apart. (Only the
 // game's whose fingerprint differed first, so that the parts of two do not mix.)
-export const receiveApart = ({ car, frame, part, parts, race }) => {
-  const { otherApart } = lockstep;
-  if (
-    frame !== lockstep.apartAt ||
-    car !== lockstep.apartWith ||
-    !Number.isInteger(parts) ||
-    parts > MOST_APART_PARTS ||
-    !isIndex(part, parts) ||
-    typeof race != "string"
-  ) {
+export const receiveApart = (message) => {
+  const { car, frame } = message;
+  if (frame !== lockstep.apartAt || car !== lockstep.apartWith) {
     return;
   }
-  otherApart[part] = race;
-  if (otherApart.filter((given) => given !== undefined).length == parts) {
+  const race = joinPart(lockstep.otherApart, message);
+  if (race != null) {
     lockstep.differences = differencesOf(
       decode(lockstep.apartRace),
-      decode(otherApart.join("")),
+      decode(race),
     );
     console.warn(
       `At frame ${frame}, the races differ in:\n${lockstep.differences.join("\n")}`,

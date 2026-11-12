@@ -13,13 +13,11 @@ import {
   raceToWatch,
   startWatchingLockstep,
 } from "./lockstep.js";
+import { inParts, joinPart } from "./parts.js";
 import { restoreRace } from "./raceState.js";
 import { roomCars } from "./roomCars.js";
 import { track } from "../race/track.js";
 
-// the parts the race goes in (the relay takes 256 kB a message at most)
-const PART_LENGTH = 64 * 1024;
-const MOST_PARTS = 64;
 // how many frames of keys overheard are kept, by player (30 s)
 const HEARD_FRAMES = 900;
 
@@ -39,15 +37,8 @@ export const answerWatch = (id) => {
     raceId: lockstep.raceId,
     ...raceToWatch(),
   });
-  const parts = Math.ceil(text.length / PART_LENGTH);
-  for (let part = 0; part < parts; part++) {
-    link.send({
-      type: MESSAGE.watched,
-      to: id,
-      part,
-      parts,
-      text: text.slice(part * PART_LENGTH, (part + 1) * PART_LENGTH),
-    });
+  for (const part of inParts(text)) {
+    link.send({ type: MESSAGE.watched, to: id, ...part });
   }
 };
 
@@ -125,26 +116,15 @@ const isWatched = ({ frame, players, keys, leftAt }) =>
 // A part of the host's answer (checked: the host sent it); once all came, the race,
 // checked by isStart, which the guest then watches (see guest.js). Returns it, or null.
 export const receiveWatched = (message, isStart) => {
-  if (
-    message.to != link.id ||
-    !Number.isInteger(message.parts) ||
-    message.parts > MOST_PARTS ||
-    !isIndex(message.part, message.parts) ||
-    typeof message.text != "string"
-  ) {
-    return null;
-  }
-  parts[message.part] = message.text;
-  if (parts.filter((part) => part !== undefined).length != message.parts) {
+  const text = message.to == link.id ? joinPart(parts, message) : null;
+  if (text == null) {
     return null;
   }
   let race = null;
   try {
-    race = decode(parts.join(""));
+    race = decode(text);
   } catch {
     return null;
-  } finally {
-    parts = [];
   }
   if (!race || !isStart(race) || !isWatched(race)) {
     return null;

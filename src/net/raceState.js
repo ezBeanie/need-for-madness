@@ -14,7 +14,7 @@ import { game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { ai } from "../race/ai.js";
 import { raceEvents } from "../race/events.js";
-import { physics } from "../race/physics.js";
+import { physics, undentedVertices } from "../race/physics.js";
 import { racers } from "../race/racers.js";
 import { track } from "../race/track.js";
 import { copyCarState, isCarState, restoreCarState } from "./carState.js";
@@ -33,6 +33,16 @@ const restoreRandom = (source, state) => {
   }
 };
 
+// whether the body's copy of its vertices has no dent: one goes as null, a race's cars
+// mostly have one (each repaired car does) and it is the most of the race
+const isUndented = (body) => {
+  const undented = (body.undented ??= undentedVertices(body));
+  return (
+    undented.length == body.dvert.length &&
+    undented.every((v, i) => Object.is(v, body.dvert[i]))
+  );
+};
+
 export const saveRace = () => {
   const cars = [];
   for (let c = 0; c < game.carCount; c++) {
@@ -43,7 +53,7 @@ export const saveRace = () => {
     cars.push({
       ...copyCarState(c),
       keys: { ...racers[c].u },
-      dents: body.dvert?.slice(),
+      dents: body.dvert && (isUndented(body) ? null : body.dvert.slice()),
       dented: body.iscar,
       driver: { ...ai[c] },
     });
@@ -78,7 +88,8 @@ export const restoreRace = (state) => {
     restoreCarState(c, saved);
     Object.assign(racers[c].u, saved.keys);
     const body = racers[c].body;
-    body.dvert = saved.dents?.slice();
+    body.dvert =
+      saved.dents === null ? undentedVertices(body) : saved.dents?.slice();
     body.iscar = saved.dented;
     body.damagedVertices = true;
     Object.assign(ai[c], saved.driver);

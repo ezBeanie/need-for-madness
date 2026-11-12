@@ -1152,3 +1152,64 @@ test("a guest coming to the room during its race watches it, running on alike fr
   ).toEqual([PHASE.mainMenu, false]);
   await guestPage.keyboard.up("ArrowUp");
 });
+
+test("a start too big for one message goes in parts, and the guest races along", async ({
+  context,
+}) => {
+  // (what the host sends over the relay, which takes 256 kB a message at most)
+  const sent = [];
+  await context.routeWebSocket(/\/net\?room=/, (page) => {
+    const server = page.connectToServer();
+    page.onMessage((message) => {
+      sent.push(String(message));
+      server.send(message);
+    });
+    server.onMessage((message) => page.send(message));
+  });
+  const games = await openTwoGames(context, "/?host=parts", "/?join=parts");
+  const { host, guest, hostPage, guestPage } = games;
+  const both = [
+    { game: host, page: hostPage },
+    { game: guest, page: guestPage },
+  ];
+  const deliver = async () => {
+    await guestPage.waitForTimeout(DELIVERY_MS);
+    await advanceBoth(...both, 35);
+  };
+  await deliver();
+  await hostPage.locator("#menuMultiplayer").click();
+  await guestPage.locator("#menuMultiplayer").click();
+  for (let i = 0; i < 6; i++) {
+    await hostPage.getByRole("button", { name: "Add a bot" }).click();
+  }
+  await deliver();
+  await guestPage.getByRole("button", { name: "Ready" }).click();
+  await deliver();
+  await hostPage.getByRole("button", { name: "Start the race" }).click();
+  while ((await host.phase()) != PHASE.race) {
+    await host.advance();
+  }
+  // every car dented all over, as after a few races of most kills
+  const dents = await hostPage.evaluate(() => {
+    const { game, racers, undentedVertices } = window.gameState;
+    for (let c = 0; c < game.carCount; c++) {
+      const body = racers[c].body;
+      body.dvert = undentedVertices(body).map((v, i) => v + (i % 7) / 3);
+      body.iscar = 2;
+    }
+    return racers[1].body.dvert.slice(0, 3);
+  });
+  await host.advance();
+  await guestPage.waitForTimeout(DELIVERY_MS);
+  await guest.advanceUntil(PHASE.race);
+  const starts = sent.filter((message) => message.includes('"type":"start"'));
+  expect(starts.length).toBeGreaterThan(1);
+  for (const message of sent) {
+    expect(message.length).toBeLessThan(256 * 1024);
+  }
+  expect(
+    await guestPage.evaluate(() =>
+      window.gameState.racers[1].body.dvert.slice(0, 3),
+    ),
+  ).toEqual(dents);
+});
