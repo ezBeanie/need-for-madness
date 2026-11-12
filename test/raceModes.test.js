@@ -354,3 +354,22 @@ test("in a room's race the HUD tells who wasted whom, bots too, by the players' 
   ctx.noteWreck(1, 0);
   expect(ctx.feed.at(-1)).toMatchObject({ text: "Ben wasted you", mine: true });
 });
+
+test("in a room's race a car hit again and again at one corner keeps taking damage", async () => {
+  const { ctx } = await mostKills();
+  // the damage of a hit after a hundred at the same corner
+  const lastHit = () => {
+    ctx.fixcar(1);
+    for (let i = 0; i < 100; i++) {
+      ctx.regn(ctx.HIT.alongZ, 0, 60, 1);
+    }
+    const before = ctx.racers[1].damage;
+    ctx.regn(ctx.HIT.alongZ, 0, 60, 1);
+    return ctx.racers[1].damage - before;
+  };
+  // (a race alone: the corner's vertices are out of the hits' reach, as in the original)
+  ctx.game.humans = [];
+  expect(lastHit()).toBe(0);
+  ctx.game.humans = [0, 1];
+  expect(lastHit()).toBeGreaterThan(20);
+});

@@ -3400,10 +3400,22 @@ export function regn(hitSide, k, mag, c) {
       }
     }
     if (!keepsShape) {
+      const before = racers[c].damage;
       dentBody(c, racers[c].body, hitSide, k, mag);
+      // In a room's race every hit takes its share: a corner hit again and again is
+      // pushed out of the hits' reach, and a car left with only such corners took no
+      // damage any more, unwastable (the original's races were too short for it).
+      if (game.phase == PHASE.race && game.humans.length > 0) {
+        racers[c].damage = Math.max(
+          racers[c].damage,
+          before + Math.abs(mag) * LEAST_DAMAGE,
+        );
+      }
     }
   }
 }
+// the damage a hit takes at least in a room's race, per its magnitude
+const LEAST_DAMAGE = 1;
 
 // How car c's sounds are heard (see audio/carSounds.js): null as the player's own,
 // else as another car's from where it is. Crashes into the player sound as its own.
