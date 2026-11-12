@@ -24,6 +24,7 @@ import { chooseRaceKind, setUpRaceTogether } from "../race/career.js";
 import { field, setUpField } from "../race/field.js";
 import { raceCarTextures } from "../render/generated.js";
 import { track } from "../race/track.js";
+import { inParts } from "./parts.js";
 import { saveRace } from "./raceState.js";
 import { receiveVoice } from "./voice.js";
 import { cleanName, own, roomCars, setRoomCars } from "./roomCars.js";
@@ -34,6 +35,7 @@ import {
   MESSAGE,
   MOST_PLAYERS,
   ROLE,
+  encode,
   isIndex,
   link,
   openLink,
@@ -302,9 +304,8 @@ export const startHostedRace = () => {
   raceEvents.onautocorrect = 0;
   // (that tells this race's messages from those of a race before, see lockstep.js)
   const raceId = Math.floor(random.fx() * 2 ** 32);
-  startLockstep(game.player, players, raceId, () =>
-    link.send({
-      type: MESSAGE.start,
+  startLockstep(game.player, players, raceId, () => {
+    const start = encode({
       stage: track.stage,
       mode: raceSetup.mode,
       rules: raceSetup.rules,
@@ -314,6 +315,9 @@ export const startHostedRace = () => {
       skins: roomCars.skins,
       raceId,
       state: saveRace(),
-    }),
-  );
+    });
+    for (const part of inParts(start)) {
+      link.send({ type: MESSAGE.start, raceId, ...part });
+    }
+  });
 };

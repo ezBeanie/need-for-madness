@@ -229,6 +229,20 @@ test("most kills ends when its time is up, its clock and kills going with the ra
   expect(ctx.deathmatch.kills[3]).toBe(2);
 });
 
+test("a body's copy of its vertices goes in the race's state as null while undented, and comes back as it was", async () => {
+  const { ctx } = await mostKills();
+  const body = ctx.racers[1].body;
+  const undented = body.dvert.slice();
+  const saved = ctx.decode(ctx.encode(ctx.saveRace()));
+  expect(saved.cars[1].dents).toBeNull();
+  body.dvert = [];
+  ctx.restoreRace(saved);
+  expect(body.dvert).toEqual(undented);
+  // a dent goes along
+  body.dvert[0] += 5;
+  expect(ctx.saveRace().cars[1].dents[0]).toBe(undented[0] + 5);
+});
+
 // Bot 2 right behind car 3, the other cars far off, about to think again.
 const besideCar3 = (ctx) => {
   for (let c = 0; c < ctx.game.carCount; c++) {

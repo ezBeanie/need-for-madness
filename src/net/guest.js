@@ -33,12 +33,14 @@ import {
   isPlayerId,
   ROLE,
   closeLink,
+  decode,
   isIndex,
   link,
   openLink,
   urlRoom,
 } from "./link.js";
 import { lockstep, receiveRaceMessage, startLockstep } from "./lockstep.js";
+import { joinPart } from "./parts.js";
 import { isRaceState, restoreRace } from "./raceState.js";
 import { clearChat, receiveChat } from "./chat.js";
 import { linkDirectly } from "./direct.js";
@@ -142,6 +144,22 @@ const isStart = ({
   skins.every(isSkin) &&
   isRaceState(state, carTypes.length);
 
+// the parts of the host's start of the race raceId that came
+const starting = { raceId: null, parts: [] };
+
+// A part of the host's start: the whole start once all its parts came, else null.
+const startOf = (message) => {
+  if (message.raceId !== starting.raceId) {
+    Object.assign(starting, { raceId: message.raceId, parts: [] });
+  }
+  const text = joinPart(starting.parts, message);
+  try {
+    return text == null ? null : decode(text);
+  } catch {
+    return null;
+  }
+};
+
 const receive = (message) => {
   receiveRaceMessage(message);
   overhear(message);
@@ -172,19 +190,16 @@ const receive = (message) => {
   if (message.type == MESSAGE.bye) {
     guest.hostLeft = true;
   }
-  if (
-    message.type == MESSAGE.start &&
-    !lockstep.active &&
-    isStart(message) &&
-    message.players.includes(link.id)
-  ) {
-    guest.start = message;
-    guest.car = message.players.indexOf(link.id);
+  const start =
+    message.type == MESSAGE.start && !lockstep.active ? startOf(message) : null;
+  if (start && isStart(start) && start.players.includes(link.id)) {
+    guest.start = start;
+    guest.car = start.players.indexOf(link.id);
     // (the others' keys come on while the stage loads)
-    const { state } = message;
-    startLockstep(guest.car, message.players, message.raceId, () => {
-      raceSetup.mode = message.mode;
-      raceSetup.rules = message.rules;
+    const { state } = start;
+    startLockstep(guest.car, start.players, start.raceId, () => {
+      raceSetup.mode = start.mode;
+      raceSetup.rules = start.rules;
       random.sim = seededRandom(0);
       random.wreck = seededRandom(0);
       restoreRace(state);

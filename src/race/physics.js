@@ -3468,17 +3468,23 @@ function uprightness(angle) {
   return 0;
 }
 
+// The body's own copy of its vertices, mirrored, before any dent.
+export const undentedVertices = (rad) => {
+  const dvert = [];
+  for (let i = 0; i < rad.ni; i++) {
+    dvert[i * 3] = -rad.vrt[rad.tri[i * 3] * 3];
+    dvert[i * 3 + 1] = rad.vrt[rad.tri[i * 3] * 3 + 1];
+    dvert[i * 3 + 2] = rad.vrt[rad.tri[i * 3] * 3 + 2];
+  }
+  return dvert;
+};
+
 // Moves the body's vertices near corner k (or its roof) by the hit, chipping bits off,
 // and queues the dents for its texture.
 function dentBody(c, rad, hitSide, k, mag) {
   // the body's own copy of its vertices, mirrored, made on its first hit
   if (rad.iscar == 1) {
-    rad.dvert = [];
-    for (let i = 0; i < rad.ni; i++) {
-      rad.dvert[i * 3] = -rad.vrt[rad.tri[i * 3] * 3];
-      rad.dvert[i * 3 + 1] = rad.vrt[rad.tri[i * 3] * 3 + 1];
-      rad.dvert[i * 3 + 2] = rad.vrt[rad.tri[i * 3] * 3 + 2];
-    }
+    rad.dvert = undentedVertices(rad);
     rad.iscar = 2;
   }
   const pixels = rad.damagePixels;
@@ -3624,12 +3630,7 @@ export function fixcar(c) {
   bodyDamage.repair?.(c);
   let rad = racers[c].body;
   rad.alpha = BLEND.alpha;
-  rad.dvert = [];
-  for (var i = 0; i < rad.ni; i++) {
-    rad.dvert[i * 3] = -rad.vrt[rad.tri[i * 3] * 3];
-    rad.dvert[i * 3 + 1] = rad.vrt[rad.tri[i * 3] * 3 + 1];
-    rad.dvert[i * 3 + 2] = rad.vrt[rad.tri[i * 3] * 3 + 2];
-  }
+  rad.dvert = undentedVertices(rad);
   rad.iscar = 2;
   rad.loaded = 0;
   gl.deleteBuffer(rad.vbuf);
