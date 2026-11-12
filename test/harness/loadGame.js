@@ -103,6 +103,9 @@ export const loadGame = async ({
   } finally {
     Math.random = mathRandom;
   }
+  // (the races stunt as the original's: the golden masters were recorded so)
+  const { stunts } = await import("../../src/input/controls.js");
+  stunts.byKey = false;
   ctx.random.sim = seededRandom(seed);
   ctx.random.fx = fxrandom;
   // (one source, as the game's two are: the golden masters recorded them as one)

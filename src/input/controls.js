@@ -30,11 +30,28 @@ import { nextCamera } from "../race/replayViewer.js";
 import { lockNext } from "../render/cameraMoves.js";
 import { keys } from "./keyboard.js";
 import { watchingOthers } from "../race/spectate.js";
+import { loadSetting, saveSetting } from "../core/storage.js";
 
 // the button a key shows pressed: the arrow button of the race
 const ARROW_BUTTON = 1;
 // as in the original; no button of the race has this id
 const REWIND_BUTTON = 11;
+
+// byKey: a stunt only begins with the handbrake in the air, the arrows then turn the car
+// (else, as in the original, an arrow pressed in the air begins one too). It goes with
+// the player's keys as one more (stuntKey), so every game of a race together drives the
+// car alike.
+export const stunts = { byKey: loadSetting("stuntsByKey") != 0 };
+
+export const toggleStuntsByKey = () => {
+  stunts.byKey = !stunts.byKey;
+  saveSetting("stuntsByKey", stunts.byKey ? 1 : 0);
+};
+
+// Every tick of the race, before the cars drive: the player's way of stunting.
+export const holdStuntKey = () => {
+  racers[game.player].u.stuntKey = stunts.byKey;
+};
 
 export function onKey(action, pressed) {
   const input = racers[game.player].u;

@@ -86,7 +86,7 @@ import { loadAssets } from "./loading/assets.js";
 import { updateStandings } from "./race/standings.js";
 import { animateTrack, castShadows, placeWheels } from "./render/raceScene.js";
 import { countDown, flashTick } from "./race/countdown.js";
-import { onKey } from "./input/controls.js";
+import { holdStuntKey, onKey } from "./input/controls.js";
 import { hostTick, roomGuests, startHosting } from "./net/host.js";
 import { guest, guestWaitingTick, startGuesting } from "./net/guest.js";
 import { spectateTick, watchingOthers } from "./race/spectate.js";
@@ -147,6 +147,9 @@ function raceTick() {
       waitedTicks = 0;
       raceRan = true;
       catchUpWatching(runRaceFrameAgain);
+      if (!lockstep.watching) {
+        holdStuntKey();
+      }
       pressFrameKeys(runRaceFrameAgain);
       if (raceEvents.countdown == 0) {
         drive();

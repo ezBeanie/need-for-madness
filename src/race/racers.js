@@ -11,6 +11,8 @@ const newControl = () => ({
   handb: false,
   arrace: false,
   zyinv: false,
+  // (whether the player stunts by key, see stunts in input/controls.js)
+  stuntKey: false,
 });
 
 const newWheel = () => ({ x: 0, y: 0, z: 0, mat: null, dist: 0 });

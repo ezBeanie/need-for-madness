@@ -2503,7 +2503,8 @@ function touchDownFromStunt(c) {
 }
 
 function watchPlayerStuntKeys(c) {
-  if (isHuman(c)) {
+  // (a player stunting by key begins with the handbrake, see startStuntWithHandbrake)
+  if (isHuman(c) && !racers[c].u.stuntKey) {
     if (!racers[c].wheelsTouch) {
       if (racers[c].u.up) {
         if (!racers[c].upHeldFromGround) {

@@ -31,7 +31,8 @@ import { restoreRace, saveRace, sharedRace } from "./raceState.js";
 export const INPUT_DELAY = 1;
 // how many frames a game races on with the other's keys guessed (280 ms) before it waits
 export const MAX_GUESSED = 8;
-export const KEYS = ["up", "down", "left", "right", "handb"];
+// (stuntKey: how the player stunts, see stunts in input/controls.js)
+export const KEYS = ["up", "down", "left", "right", "handb", "stuntKey"];
 const NONE = Object.fromEntries(KEYS.map((key) => [key, false]));
 
 // how much longer a tick of a game ahead of another is, until they are even, and how many
