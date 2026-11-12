@@ -1814,6 +1814,14 @@ function hitPieceWall(c, o, alongZ) {
   }
 }
 
+// In a room's race a wall hit hard dents more than one grazed: the faster, the more (the
+// original's walls hardly hurt a car flying into them).
+const HARD_WALL = 25;
+const wallHit = (mag) =>
+  game.phase == PHASE.race && game.humans.length > 0
+    ? mag * (1 + Math.abs(mag) / HARD_WALL)
+    : mag;
+
 function bounceOffWallFacingPlusZ(
   c,
   k,
@@ -1853,7 +1861,12 @@ function bounceOffWallFacingPlusZ(
     }
   }
   const bounce = wallBounce(c, type, step);
-  regn(HIT.alongZ, k, Math.abs(racers[c].wheelSpeedZ[k] * bounce * damage), c);
+  regn(
+    HIT.alongZ,
+    k,
+    wallHit(Math.abs(racers[c].wheelSpeedZ[k] * bounce * damage)),
+    c,
+  );
   if (racers[c].wheelSpeedZ[k] <= 0) {
     racers[c].wheelSpeedZ[k] += Math.abs(racers[c].wheelSpeedZ[k] * bounce);
   }
@@ -1899,7 +1912,12 @@ function bounceOffWallFacingMinusZ(
     }
   }
   const bounce = wallBounce(c, type, step);
-  regn(HIT.alongZ, k, -Math.abs(racers[c].wheelSpeedZ[k] * bounce * damage), c);
+  regn(
+    HIT.alongZ,
+    k,
+    wallHit(-Math.abs(racers[c].wheelSpeedZ[k] * bounce * damage)),
+    c,
+  );
   if (racers[c].wheelSpeedZ[k] >= 0) {
     racers[c].wheelSpeedZ[k] -= Math.abs(racers[c].wheelSpeedZ[k] * bounce);
   }
@@ -1945,7 +1963,12 @@ function bounceOffWallFacingPlusX(
     }
   }
   const bounce = wallBounce(c, type, step);
-  regn(HIT.alongX, k, Math.abs(racers[c].wheelSpeedX[k] * bounce * damage), c);
+  regn(
+    HIT.alongX,
+    k,
+    wallHit(Math.abs(racers[c].wheelSpeedX[k] * bounce * damage)),
+    c,
+  );
   if (racers[c].wheelSpeedX[k] <= 0) {
     racers[c].wheelSpeedX[k] += Math.abs(racers[c].wheelSpeedX[k] * bounce);
   }
@@ -1991,7 +2014,12 @@ function bounceOffWallFacingMinusX(
     }
   }
   const bounce = wallBounce(c, type, step);
-  regn(HIT.alongX, k, -Math.abs(racers[c].wheelSpeedX[k] * bounce * damage), c);
+  regn(
+    HIT.alongX,
+    k,
+    wallHit(-Math.abs(racers[c].wheelSpeedX[k] * bounce * damage)),
+    c,
+  );
   if (racers[c].wheelSpeedX[k] >= 0) {
     racers[c].wheelSpeedX[k] -= Math.abs(racers[c].wheelSpeedX[k] * bounce);
   }
