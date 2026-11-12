@@ -1358,11 +1358,14 @@ function throwScrapeSparks(c, type, step) {
   }
 }
 
+// The original's limits stop a wheel only within 20 of them: a car faster than that, flying
+// over a ramp at the edge, is through. In a room's race nothing gets out.
 function bounceOffStageLimits(c, type, step) {
+  const fenced = game.humans.length > 0;
   for (let k = 0; k < 4; k++) {
     if (
       step.wheelZ[k] < track.limb + step.reachZ &&
-      step.wheelZ[k] > track.limb + step.reachZ - 20
+      (fenced || step.wheelZ[k] > track.limb + step.reachZ - 20)
     ) {
       bounceOffWallFacingPlusZ(c, k, type, track.limb, 1, true, step);
       step.hitWall = true;
@@ -1370,7 +1373,7 @@ function bounceOffStageLimits(c, type, step) {
     }
     if (
       step.wheelZ[k] > track.limt - step.reachZ &&
-      step.wheelZ[k] < track.limt - step.reachZ + 20
+      (fenced || step.wheelZ[k] < track.limt - step.reachZ + 20)
     ) {
       bounceOffWallFacingMinusZ(c, k, type, track.limt, 1, true, step);
       step.hitWall = true;
@@ -1378,7 +1381,7 @@ function bounceOffStageLimits(c, type, step) {
     }
     if (
       step.wheelX[k] < track.limr + step.reachX &&
-      step.wheelX[k] > track.limr + step.reachX - 20
+      (fenced || step.wheelX[k] > track.limr + step.reachX - 20)
     ) {
       bounceOffWallFacingPlusX(c, k, type, track.limr, 1, true, step);
       step.hitWall = true;
@@ -1386,7 +1389,7 @@ function bounceOffStageLimits(c, type, step) {
     }
     if (
       step.wheelX[k] > track.liml - step.reachX &&
-      step.wheelX[k] < track.liml - step.reachX + 20
+      (fenced || step.wheelX[k] < track.liml - step.reachX + 20)
     ) {
       bounceOffWallFacingMinusX(c, k, type, track.liml, 1, true, step);
       step.hitWall = true;

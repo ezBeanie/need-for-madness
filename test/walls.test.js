@@ -24,3 +24,14 @@ test("in a room's race a car flying hard into a wall takes more damage than in t
   expect(alone.damage).toBeGreaterThan(0);
   expect(room.damage).toBeGreaterThan(alone.damage * 1.5);
 });
+
+test("in a room's race no car flies through the stage's limits, however fast", async () => {
+  // (alone, as in the original, one fast enough is through)
+  expect((await intoTheLimit([], 60)).z).toBeLessThan(
+    (await intoTheLimit([], 0)).ctx.track.limb,
+  );
+  for (const speed of [30, 60, 120]) {
+    const { z, ctx } = await intoTheLimit([0, 1], speed);
+    expect(z).toBeGreaterThan(ctx.track.limb);
+  }
+});
