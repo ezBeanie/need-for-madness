@@ -39,6 +39,24 @@ const hideFrom = (from) => {
   }
 };
 
+// Where car c is in the picture last drawn: its middle in the page's pixels and its depth
+// (1 or less: at or behind the camera).
+const clip = [0, 0, 0, 0];
+export const carOnScreen = (c, box = canvas3D.getBoundingClientRect()) => {
+  const p = drawCamera.projection;
+  placeModel(car[c]);
+  const [x, y, z] = [drawMatrix[12], drawMatrix[13], drawMatrix[14]];
+  for (let row = 0; row < 4; row++) {
+    clip[row] = p[row] * x + p[row + 4] * y + p[row + 8] * z + p[row + 12];
+  }
+  const depth = clip[3];
+  return {
+    left: box.left + ((clip[0] / depth + 1) / 2) * box.width,
+    top: box.top + ((1 - clip[1] / depth) / 2) * box.height,
+    depth,
+  };
+};
+
 // Every frame, after the race is drawn.
 export const placeNameTags = () => {
   const shown =
@@ -48,16 +66,9 @@ export const placeNameTags = () => {
     return;
   }
   const box = canvas3D.getBoundingClientRect();
-  const clip = [0, 0, 0, 0];
-  const p = drawCamera.projection;
   for (let c = 0; c < game.carCount; c++) {
     const tag = tagOf(c);
-    placeModel(car[c]);
-    const [x, y, z] = [drawMatrix[12], drawMatrix[13], drawMatrix[14]];
-    for (let row = 0; row < 4; row++) {
-      clip[row] = p[row] * x + p[row + 4] * y + p[row + 8] * z + p[row + 12];
-    }
-    const depth = clip[3];
+    const { left, top: middle, depth } = carOnScreen(c, box);
     if (c == game.player || c == camera.target || depth <= 1 || depth > FAR) {
       tag.hidden = true;
       continue;
@@ -68,11 +79,7 @@ export const placeNameTags = () => {
     if (tag.textContent != text) {
       tag.textContent = text;
     }
-    const left = box.left + ((clip[0] / depth + 1) / 2) * box.width;
-    const top =
-      box.top +
-      ((1 - clip[1] / depth) / 2) * box.height -
-      ((ABOVE / depth) * box.height) / 720;
+    const top = middle - ((ABOVE / depth) * box.height) / 720;
     tag.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px) translate(-50%, -100%)`;
     tag.hidden = false;
   }

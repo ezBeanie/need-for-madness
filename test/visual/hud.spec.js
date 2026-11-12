@@ -198,4 +198,149 @@ test.describe("on a phone", () => {
     );
     expect(after.yaw).toBe(before.yaw);
   });
+
+  // The fingers on the screen now, by number: those new go down, those gone let go, as the
+  // browser tells it (several at once, one lifted while another stays).
+  const fingers = (page, points) =>
+    page.evaluate(
+      (now) => {
+        const canvas = document.querySelector("#canvas2D");
+        const was = window.fingersDown ?? {};
+        const touchOf = (id, [x, y]) =>
+          new Touch({
+            identifier: Number(id),
+            target: canvas,
+            clientX: x,
+            clientY: y,
+          });
+        const all = Object.entries(now).map(([id, at]) => touchOf(id, at));
+        const send = (type, changed) =>
+          changed.length &&
+          canvas.dispatchEvent(
+            new TouchEvent(type, {
+              touches: all,
+              changedTouches: changed,
+              cancelable: true,
+            }),
+          );
+        send(
+          "touchend",
+          Object.keys(was)
+            .filter((id) => !(id in now))
+            .map((id) => touchOf(id, was[id])),
+        );
+        send(
+          "touchstart",
+          Object.keys(now)
+            .filter((id) => !(id in was))
+            .map((id) => touchOf(id, now[id])),
+        );
+        window.fingersDown = now;
+      },
+      Object.fromEntries(
+        points.map((point, i) => [i, point]).filter(([, point]) => point),
+      ),
+    );
+
+  test("with the target camera on, a car tapped is chosen while a finger drives, tapped again none, and the bar at the top chooses too", async ({
+    page,
+  }) => {
+    const game = await racing(page);
+    await set(page, () => {
+      window.gameState.camera.aims = true;
+    });
+    await game.advance(2);
+    // where the accelerator is, and a car put ahead in the picture
+    const gas = await page.evaluate(() => {
+      const { x, y } = window.gameState.touchControlAt("accelerate");
+      const box = document.querySelector("#canvas2D").getBoundingClientRect();
+      return [box.left + x, box.top + y];
+    });
+    const C = 3;
+    const putAhead = () =>
+      page.evaluate((c) => {
+        const { car, camera, game } = window.gameState;
+        const own = car[game.player];
+        const yaw = (camera.yaw * Math.PI) / 180;
+        car[c].x = own.x + 400 * Math.sin(yaw);
+        car[c].z = own.z - 400 * Math.cos(yaw);
+        car[c].y = own.y;
+        // (the others far off, out of the picture)
+        for (let other = 0; other < game.carCount; other++) {
+          if (other != c && other != game.player) {
+            car[other].x = own.x - 20000 * Math.sin(yaw) + 3000 * other;
+            car[other].z = own.z + 20000 * Math.cos(yaw);
+          }
+        }
+      }, C);
+    const spot = () =>
+      page.evaluate((c) => {
+        const { left, top } = window.gameState.carOnScreen(c);
+        return [left, top];
+      }, C);
+    const state = () =>
+      page.evaluate(() => {
+        const { camera, racers, game } = window.gameState;
+        return { locked: camera.lockedCar, gas: racers[game.player].u.up };
+      });
+
+    await fingers(page, [gas]);
+    await game.advance(2);
+    await putAhead();
+    await game.advance(1);
+    const car = await spot();
+    // a second finger taps the car, the first stays on the gas
+    await fingers(page, [gas, car]);
+    await fingers(page, [gas]);
+    await game.advance(1);
+    expect(await state()).toEqual({ locked: C, gas: true });
+
+    await putAhead();
+    await game.advance(1);
+    const again = await spot();
+    await fingers(page, [gas, again]);
+    await fingers(page, [gas]);
+    await game.advance(1);
+    expect(await state()).toEqual({ locked: -1, gas: true });
+
+    // the bar's arrow to the farther car, at the top, big enough for a finger
+    const next = await page.evaluate(() => {
+      const { view, rd } = window.gameState;
+      const box = document.querySelector("#canvas2D").getBoundingClientRect();
+      const height = Math.max(44, 30 * view.scale);
+      rd.save();
+      rd.font = `${Math.round(height * 0.45)}px sans-serif`;
+      const name = Math.max(
+        rd.measureText("🎯 none").width + height * 0.9,
+        140 * view.scale,
+      );
+      rd.restore();
+      return {
+        x:
+          box.left + view.width / 2 + name / 2 + 4 * view.scale + height * 0.65,
+        y: box.top + 82 * view.scaleY + height / 2,
+        height,
+      };
+    });
+    expect(next.height).toBeGreaterThanOrEqual(44);
+    expect(next.y).toBeLessThan(390 / 2);
+    await expect.soft(page).toHaveScreenshot("hud-target-bar-phone.png");
+    const nearest = await page.evaluate(() => {
+      const { car, game } = window.gameState;
+      const own = car[game.player];
+      const distance = (c) => Math.hypot(car[c].x - own.x, car[c].z - own.z);
+      let best = -1;
+      for (let c = 0; c < game.carCount; c++) {
+        if (c != game.player && (best < 0 || distance(c) < distance(best))) {
+          best = c;
+        }
+      }
+      return best;
+    });
+    await fingers(page, [gas, [next.x, next.y]]);
+    await fingers(page, [gas]);
+    await game.advance(1);
+    expect(await state()).toEqual({ locked: nearest, gas: true });
+    await fingers(page, []);
+  });
 });

@@ -58,7 +58,7 @@ import { saveSetting } from "../core/storage.js";
 import { tick } from "../core/tick.js";
 import { carStats } from "../data/carStats.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
-import { pointer } from "../input/pointer.js";
+import { pointer, takeTaps } from "../input/pointer.js";
 import { COUNTDOWN } from "../race/countdown.js";
 import { raceEvents } from "../race/events.js";
 import {
@@ -81,10 +81,11 @@ import {
 } from "../race/timeAttack.js";
 import { track } from "../race/track.js";
 import { CAMERA, camera, faceCamera } from "../render/camera.js";
-import { lockNext } from "../render/cameraMoves.js";
+import { lockCar, lockNext } from "../render/cameraMoves.js";
 import { LOOK, classicMenus, look } from "../render/look.js";
 import { newParticleModel } from "../render/models.js";
-import { gl } from "../render/renderer.js";
+import { canvas3D, gl } from "../render/renderer.js";
+import { carOnScreen } from "./nameTags.js";
 import { scene, timeTube } from "../render/scene.js";
 import { pauseMenu } from "../screens/pauseMenu.js";
 import { lockstep } from "../net/lockstep.js";
@@ -891,18 +892,76 @@ const WATCH_CAMERAS = {
   [CAMERA.free]: "Free",
 };
 
-// The target camera on, behind the player's car: a small bar at the bottom names the car it
-// turns to, arrows beside it choose the one before or the next (F too), after the last
-// none, and the camera stays behind the car.
+// The target camera on, behind the player's car: a small bar names the car it turns to,
+// arrows beside it choose the next nearer or farther one (F and Shift+F too), after the
+// farthest none, and the camera stays behind the car. On a phone the bar is at the top, out
+// of the fingers' way, and a car tapped in the picture is chosen (tapped again, or the
+// picture away from the cars and controls, none).
 export const lockedText = () =>
   camera.lockedCar < 0
     ? "Target: none"
     : `Target: ${nameOfCar(camera.lockedCar)}`;
 
-const drawLockBar = () => {
+// a tap longer than this held a control rather than picked a car
+const PICK_MS = 300;
+// how near a car's middle a tap picks it, in the page's pixels: at least, and for a car
+// at a depth of 1 (720 high)
+const PICK_NEAREST = 36;
+const PICK_SIZE = 9000;
+
+const within = ({ x, y }, left, top, width, height) =>
+  x > left && x < left + width && y > top && y < top + height;
+
+// (a finger near a control drives: see pressTouchControls)
+const onControl = ({ x, y }) =>
+  isPhone &&
+  shownControls().some((key) => {
+    const control = touchControlAt(key);
+    return Math.hypot(control.x - x, control.y - y) < 200 * touchScale();
+  });
+
+// The car a tap is on, or -1.
+const carTapped = (tap) => {
+  const box = canvas3D.getBoundingClientRect();
+  const page = canvas2D.getBoundingClientRect();
+  let tapped = -1;
+  let nearest = Infinity;
+  for (let c = 0; c < game.carCount; c++) {
+    if (c == game.player) {
+      continue;
+    }
+    const { left, top, depth } = carOnScreen(c, box);
+    const distance = Math.hypot(
+      left - page.left - tap.x,
+      top - page.top - tap.y,
+    );
+    const reach = Math.max(
+      PICK_NEAREST,
+      ((PICK_SIZE / depth) * box.height) / 720,
+    );
+    if (depth > 1 && distance < reach && distance < nearest) {
+      nearest = distance;
+      tapped = c;
+    }
+  }
+  return tapped;
+};
+
+const pickByTap = (tap) => {
+  if (tap.ms > PICK_MS || onControl(tap)) {
+    return;
+  }
+  const c = carTapped(tap);
+  lockCar(c == camera.lockedCar ? -1 : c);
+  announce(lockedText());
+};
+
+const drawLockBar = (taps) => {
   const scale = view.scale;
-  const height = Math.max(isPhone ? 34 : 26, 30 * scale);
-  const top = view.height - height - 14 * view.scaleY;
+  const height = Math.max(isPhone ? 44 : 26, 30 * scale);
+  const top = isPhone
+    ? 82 * view.scaleY
+    : view.height - height - 14 * view.scaleY;
   const font = Math.round(height * 0.45);
   rd.save();
   rd.font = `${font}px sans-serif`;
@@ -924,11 +983,14 @@ const drawLockBar = () => {
   const total =
     widths.reduce((sum, w) => sum + w, 0) + gap * (parts.length - 1);
   let left = view.width / 2 - total / 2;
+  // (a tap on the bar is for the bar, not for a car)
+  const rest = taps.filter((tap) => !within(tap, left, top, total, height));
   parts.forEach((part, i) => {
     const width = widths[i];
-    const { clicked, pressed } = part.step
+    // (pressed shows under a finger; a tap, also one finger's among others, chooses)
+    const { pressed } = part.step
       ? pressOn(part.id, left, top, width, height)
-      : { clicked: false, pressed: false };
+      : { pressed: false };
     rd.globalAlpha = part.step ? (pressed ? 0.75 : 0.45) : 0.35;
     rd.fillStyle = "#000000";
     rd.beginPath();
@@ -937,12 +999,17 @@ const drawLockBar = () => {
     rd.globalAlpha = 0.9;
     rd.fillStyle = camera.lockedCar < 0 || part.step ? "#FFFFFF" : "#FFE14A";
     rd.fillText(part.text, left + width / 2, top + height / 2);
-    if (clicked) {
+    if (
+      part.step &&
+      taps.some((tap) => within(tap, left, top, width, height))
+    ) {
       lockNext(part.step);
+      announce(lockedText());
     }
     left += width + gap;
   });
   rd.restore();
+  rest.forEach(pickByTap);
 };
 
 const drawWatchBar = () => {
@@ -1896,6 +1963,7 @@ const announceEvents = () => {
 // Everything drawn over the race, every tick.
 export function drawHud() {
   rd.clearRect(0, 0, view.width, view.height);
+  const taps = takeTaps();
   if (lockstep.watching) {
     drawWatcherHud();
     return;
@@ -1968,7 +2036,7 @@ export function drawHud() {
       camera.mode == CAMERA.behind &&
       camera.target == game.player
     ) {
-      drawLockBar();
+      drawLockBar(taps);
     }
     drawStanding();
     drawMinimap();

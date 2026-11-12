@@ -1,9 +1,12 @@
 // Gamepads and joysticks: the sticks or the face buttons drive, the shoulder buttons toggle
-// the arrow, pull the handbrake and look back, every further button confirms.
+// the arrow, pull the handbrake and look back, every further button confirms. With the
+// target camera on in a race, the right stick to a side chooses the car it turns to and a
+// click on the left stick lets go of it.
 
-import { game } from "../core/state.js";
+import { PHASE, game } from "../core/state.js";
 import { racers } from "../race/racers.js";
 import { camera } from "../render/camera.js";
+import { lockNext } from "../render/cameraMoves.js";
 import { CONFIRM, confirm } from "./confirm.js";
 
 const BUTTON = {
@@ -17,7 +20,12 @@ const BUTTON = {
   lookBackRight: 7,
   // this one and all after it
   firstConfirm: 8,
+  // the left stick clicked, on a standard gamepad
+  leftStick: 10,
 };
+// how far the right stick is tilted to choose the next target, and back to choose again
+const AIM_TILT = 0.6;
+const AIM_RELEASED = 0.3;
 // pads with fewer buttons have no shoulder buttons
 const SHOULDER_BUTTONS = 8;
 const STICK_DEAD_ZONE = 0.1;
@@ -31,6 +39,8 @@ let searchesLeft = 4;
 // per gamepad
 const releaseTicks = [0, 0, 0, 0, 0, 0, 0, 0];
 let arrowToggleHeld = false;
+// the right stick's last choice of a target (-1, 1), until it comes back
+let aimTilt = 0;
 
 export const lookForGamepads = () => {
   if (!searchesLeft) {
@@ -72,8 +82,9 @@ const readGamepad = (pad, index) => {
     const value = pad.axes[axis];
     return Math.abs(value) > STICK_DEAD_ZONE && value < 0 === towardsNegative;
   };
-  const pressed = (button) => pad.buttons[button].pressed;
+  const pressed = (button) => pad.buttons[button]?.pressed;
   const input = racers[game.player].u;
+  const aiming = camera.aims && game.phase == PHASE.race;
   // a pressed input holds, a released one is let go of only while the pad is in use
   const hold = (isPressed, set) => {
     if (isPressed) {
@@ -83,8 +94,15 @@ const readGamepad = (pad, index) => {
       set(false);
     }
   };
-  const left = tilted(0, true) || tilted(2, true);
-  const right = tilted(0, false) || tilted(2, false);
+  // (aiming, the right stick's sideways chooses the target instead of steering)
+  const left = tilted(0, true) || (!aiming && tilted(2, true));
+  const right = tilted(0, false) || (!aiming && tilted(2, false));
+  if (aiming) {
+    chooseTarget(pad.axes[2] ?? 0);
+    if (pressed(BUTTON.leftStick)) {
+      camera.lockedCar = -1;
+    }
+  }
   const up = tilted(1, true) || tilted(3, true);
   const down = tilted(1, false) || tilted(3, false);
   hold(pressed(BUTTON.accelerate) || up, (on) => (input.up = on));
@@ -104,7 +122,7 @@ const readGamepad = (pad, index) => {
   }
   let confirming = false;
   for (let b = BUTTON.firstConfirm; b < pad.buttons.length; b++) {
-    if (pressed(b)) {
+    if (pressed(b) && !(aiming && b == BUTTON.leftStick)) {
       confirming = true;
     }
   }
@@ -118,6 +136,15 @@ const readGamepad = (pad, index) => {
   });
   if (releaseTicks[index]) {
     releaseTicks[index]--;
+  }
+};
+
+const chooseTarget = (tilt) => {
+  if (Math.abs(tilt) < AIM_RELEASED) {
+    aimTilt = 0;
+  } else if (Math.abs(tilt) > AIM_TILT && aimTilt != Math.sign(tilt)) {
+    aimTilt = Math.sign(tilt);
+    lockNext(aimTilt);
   }
 };
 

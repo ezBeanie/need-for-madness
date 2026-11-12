@@ -19,7 +19,7 @@ const ACTIONS = {
   86: "nextCamera", // V: the camera, in races
   71: "toggleMinimap", // G: the minimap in races
   84: "toggleAiming", // T: the camera behind the car turning to a car chosen
-  70: "lockNext", // F: the car it turns to, the next one (none after the last)
+  70: "lockNext", // F: the car it turns to, the next farther one (Shift: nearer), then none
   78: "muteSound", // N
   77: "muteMusic", // M
   79: "otherCarSounds", // O: the other cars' crashes, scrapes and skids heard or not
