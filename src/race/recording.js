@@ -22,7 +22,7 @@ import { track } from "./track.js";
 export const TAPE_TICKS = 430;
 const LAST_FRAME = TAPE_TICKS - 1;
 // a car's wastedAt until it is wasted
-const NOT_WASTED = 700;
+export const NOT_WASTED = 700;
 // a wasting becomes the highlight once it is this far into the tape, so the highlight
 // shows what led to it and the burning after
 const WASTING_CAUGHT_AT = 328;
@@ -394,8 +394,14 @@ const reapplyHits = (c, tape, fixedAt, matches) => {
 };
 
 // The cars as at frame start of the tape (its first by default): whole, with the hits
-// before it since their last fix before it; wasted ones handled by onWasted.
-export const resetCarsToTapeStart = (tape, onWasted, start = 0) => {
+// before it since their last fix before it; wasted ones handled by onWasted (wastedAtOf:
+// when a car's wrecking before start began).
+export const resetCarsToTapeStart = (
+  tape,
+  onWasted,
+  start = 0,
+  wastedAtOf = (carTape) => carTape.wastedAt,
+) => {
   for (let c = 0; c < game.carCount; c++) {
     const racer = racers[c];
     racer.destnow = false;
@@ -408,7 +414,7 @@ export const resetCarsToTapeStart = (tape, onWasted, start = 0) => {
     fixcar(c);
     racer.body.alpha = BLEND.alpha;
     const carTape = tape.cars[c];
-    if (carTape.wastedAt < start) {
+    if (wastedAtOf(carTape) < start) {
       onWasted(c);
     }
     const fixedAt = lastFix(carTape, (at) => at < start);
@@ -448,8 +454,12 @@ export const playTape = (tape, frozen) => {
   const frame = recording.frame;
   for (let c = 0; c < game.carCount; c++) {
     const carTape = tape.cars[c];
-    if (carTape.wastedAt == frame) {
+    // (the race's tape has every wasting of a car, and when it came back, see raceTape.js)
+    if ((carTape.wastes ?? [carTape.wastedAt]).includes(frame)) {
       racers[c].destnow = true;
+    }
+    if (carTape.backs?.includes(frame)) {
+      unburn(c);
     }
     if (racers[c].destnow) {
       burnWreck(c, carTape, frozen);
@@ -573,6 +583,16 @@ const burnWreck = (c, carTape, frozen) => {
       racer.cntdest++;
     }
   }
+};
+
+// A wreck back in the race (most kills) is no longer one; its fix mends its body.
+const unburn = (c) => {
+  const racer = racers[c];
+  racer.destnow = false;
+  racer.cntdest = 0;
+  racer.embos = 0;
+  racer.embodir = 0;
+  racer.body.alpha = BLEND.alpha;
 };
 
 // A car being fixed crackles with electricity and flashes now and then.

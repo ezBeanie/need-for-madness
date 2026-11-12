@@ -35,7 +35,12 @@ import {
 import * as allEffects from "./effects.js";
 import { raceEvents } from "./events.js";
 import { MISSED, SKID, STUNT, car, racers, useUpStuntTurns } from "./racers.js";
-import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
+import {
+  HIGHLIGHT,
+  NOT_WASTED,
+  catchHighlight,
+  recording,
+} from "./recording.js";
 import { PIECE, pieceModels, pieces, track } from "./track.js";
 import { acos } from "../core/exactMath.js";
 
@@ -3634,7 +3639,11 @@ function respawn(c) {
   if (c == game.player) {
     raceEvents.playerWreckTicks = 0;
   }
-  recording.tape.cars[c].wastedAt = 700;
+  // (and on the tape fixed: the replays mend its body as the race did)
+  const tape = recording.tape.cars[c];
+  tape.wastedAt = NOT_WASTED;
+  tape.fixAt[tape.fixCount] = 430;
+  tape.fixCount++;
   fixcar(c);
 }
 

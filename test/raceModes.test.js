@@ -373,3 +373,44 @@ test("in a room's race a car hit again and again at one corner keeps taking dama
   ctx.game.humans = [0, 1];
   expect(lastHit()).toBeGreaterThan(20);
 });
+
+test("in most kills the race tape has every wasting of a car and its coming back, as the replay shows it", async () => {
+  const { ctx, step } = await mostKills();
+  const tape = () => ctx.raceTape.cars[1];
+  const wreck = () => {
+    ctx.racers[1].lastcolido = 70;
+    ctx.racers[1].lastHitBy = 2;
+    ctx.racers[1].damage = 100000;
+  };
+  wreck();
+  for (let i = 0; i < 300 && tape().backs.length < 1; i++) {
+    step();
+  }
+  for (let i = 0; i < 20; i++) {
+    step();
+  }
+  wreck();
+  for (let i = 0; i < 300 && tape().wastes.length < 2; i++) {
+    step();
+  }
+  const [first, second] = tape().wastes;
+  const [back] = tape().backs;
+  expect(first < back && back < second).toBe(true);
+  expect(ctx.wastedSince(tape(), first + 1)).toBe(first);
+  expect(ctx.wastedSince(tape(), back)).toBe(Infinity);
+  expect(ctx.wastedSince(tape(), second)).toBe(second);
+  // the replay shows the wreck burning, then whole again, then burning
+  ctx.openReplay(ctx.VIEWER_FROM.pauseMenu, first + 20);
+  expect(ctx.racers[1].destnow).toBe(true);
+  ctx.seekReplay(back + 2);
+  expect(ctx.racers[1].destnow).toBe(false);
+  ctx.seekReplay(second + 1);
+  expect(ctx.racers[1].destnow).toBe(true);
+  // (and played on, as well)
+  ctx.seekReplay(back - 3);
+  for (let i = 0; i < 50 && ctx.viewer.frame < back + 2; i++) {
+    step();
+  }
+  expect(ctx.racers[1].destnow).toBe(false);
+  ctx.closeReplay();
+});

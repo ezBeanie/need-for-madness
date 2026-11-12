@@ -12,11 +12,26 @@ import {
   RECORDED_PER_TICK,
   TAPE_TICKS,
   newCarTape,
+  NOT_WASTED,
   recording,
 } from "./recording.js";
 
 // a car's wastedAt until it is wasted
 export const NEVER_WASTED = Infinity;
+
+// When the car's wrecking that it was a wreck at the frame began (NEVER_WASTED: it was
+// none): in most kills a wreck comes back, and may be wasted again.
+export const wastedSince = (tape, frame) => {
+  let since = NEVER_WASTED;
+  for (const at of tape.wastes) {
+    if (at <= frame) {
+      since = at;
+    }
+  }
+  return tape.backs.some((at) => at > since && at <= frame)
+    ? NEVER_WASTED
+    : since;
+};
 
 // the frame recording's tape writes the tick to
 const NEWEST = TAPE_TICKS - 1;
@@ -77,7 +92,10 @@ const newRaceCarTape = () => {
     tape[field] = [];
   }
   tape.soundCount = 0;
+  // the first wasting; wastes: every one, backs: when the car came back after each
   tape.wastedAt = NEVER_WASTED;
+  tape.wastes = [];
+  tape.backs = [];
   return tape;
 };
 
@@ -155,7 +173,13 @@ export const recordRaceTick = () => {
       }
     }
     if (from.wastedAt == NEWEST) {
-      to.wastedAt = at;
+      to.wastes.push(at);
+      to.wastedAt = to.wastes[0];
+    } else if (
+      to.wastes.length > to.backs.length &&
+      from.wastedAt == NOT_WASTED
+    ) {
+      to.backs.push(at);
     }
   }
   const sparks = live.sparks;
@@ -204,9 +228,9 @@ export const cutRaceTapeTo = (length) => {
     cutEvents(tape, ["fixAt"], "fixCount", length);
     cutEvents(tape, DUST, "dustCount", length);
     cutEvents(tape, SOUND, "soundCount", length);
-    if (tape.wastedAt >= length) {
-      tape.wastedAt = NEVER_WASTED;
-    }
+    tape.wastes = tape.wastes.filter((at) => at < length);
+    tape.backs = tape.backs.filter((at) => at < length);
+    tape.wastedAt = tape.wastes[0] ?? NEVER_WASTED;
   }
   cutEvents(raceTape.sparks, SPARK, "count", length);
   raceTape.checkpoint.length = length;

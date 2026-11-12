@@ -11,7 +11,7 @@ import { CAMERA, camera } from "../render/camera.js";
 import { BLEND, gl } from "../render/renderer.js";
 import { burn, effects } from "./effects.js";
 import { raceEvents } from "./events.js";
-import { raceTape } from "./raceTape.js";
+import { raceTape, wastedSince } from "./raceTape.js";
 import { car, racers } from "./racers.js";
 import {
   playTape,
@@ -251,10 +251,12 @@ export const seekReplay = (frame) => {
   viewer.between = 0;
   // (the hits dent the cars again without chips flying off)
   recording.frozen = true;
+  const wastedAtOf = (carTape) => wastedSince(carTape, viewer.frame);
   resetCarsToTapeStart(
     raceTape,
-    (c) => burntFor(c, viewer.frame - raceTape.cars[c].wastedAt),
+    (c) => burntFor(c, viewer.frame - wastedAtOf(raceTape.cars[c])),
     viewer.frame + 1,
+    wastedAtOf,
   );
   recording.frozen = false;
   pose();
@@ -265,7 +267,8 @@ export const seekReplay = (frame) => {
 const changedBetween = (from, to) =>
   raceTape.cars.some(
     (tape) =>
-      (tape.wastedAt > from && tape.wastedAt <= to) ||
+      tape.wastes.some((at) => at > from && at <= to) ||
+      tape.backs.some((at) => at > from && at <= to) ||
       tape.hitAt.some((at) => at > from && at <= to) ||
       tape.fixAt.some((at) => at > from && at <= to),
   );

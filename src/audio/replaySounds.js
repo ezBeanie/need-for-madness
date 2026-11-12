@@ -66,10 +66,10 @@ const eventsAt = (c, frame) => {
   if (followed && tape.fixAt.includes(frame)) {
     playSound(SOUND.fixed, 1);
   }
-  if (followed && tape.wastedAt == frame) {
+  if (followed && tape.wastes.includes(frame)) {
     playSound(SOUND.wasted, 1);
   }
-  if (followed && tape.wastedAt + WASTED_FLAMES_AFTER == frame) {
+  if (followed && tape.wastes.includes(frame - WASTED_FLAMES_AFTER)) {
     playSound(SOUND.flames, 1);
   }
   // its scrapes and skids as the race played them (see carSoundTape in physics.js)
