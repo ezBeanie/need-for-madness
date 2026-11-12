@@ -105,6 +105,7 @@ import {
   outOfSync,
   pressFrameKeys,
   releaseFrameKeys,
+  tickMs,
   waitingNotice,
 } from "./net/lockstep.js";
 
@@ -350,11 +351,14 @@ export function runFrame(now) {
   }
   pendingMs += Math.min(now - lastFrameTime, MAX_CATCH_UP_MS);
   lastFrameTime = now;
-  while (pendingMs >= TICK_MS) {
+  // (racing together, a game ahead of the others ticks slower, see net/lockstep.js)
+  let ms = tickMs();
+  while (pendingMs >= ms) {
     runTick();
-    pendingMs -= TICK_MS;
+    pendingMs -= ms;
+    ms = tickMs();
   }
-  interpolation.alpha = pendingMs / TICK_MS;
+  interpolation.alpha = pendingMs / ms;
   render();
   requestAnimationFrame(runFrame);
 }

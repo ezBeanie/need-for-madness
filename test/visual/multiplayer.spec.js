@@ -75,6 +75,14 @@ const drawnTexts = async (page) => {
 // (the tabs share their storage: each says its own)
 const UNNAMED = { playerName: "", carSkin: "0" };
 
+// A key held for two frames: a game run ahead of the other one's ticks slower than the frames
+// come (see tickMs in lockstep.js), and a key let go before a tick is never seen.
+const pressInRace = async (game, page, key) => {
+  await page.keyboard.down(key);
+  await game.advance(2);
+  await page.keyboard.up(key);
+};
+
 // Two tabs, linked by the relay of the dev server: the host's game starts the race, and
 // both compute it.
 const openTwoGames = async (
@@ -968,9 +976,9 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
 
   // the guest leaves the race: the lobby is back, to get ready again
   await advanceBoth(...both, 150);
-  await guest.tap("Escape");
-  await guest.tap("ArrowDown");
-  await guest.tap("Enter");
+  for (const key of ["Escape", "ArrowDown", "Enter"]) {
+    await pressInRace(guest, guestPage, key);
+  }
   await guest.advanceUntil(PHASE.mainMenu);
   await guest.advance(2);
   await expect(guestPage.locator("#multiplayer")).toBeVisible();

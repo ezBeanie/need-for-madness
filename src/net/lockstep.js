@@ -4,13 +4,15 @@
 // later, in every game alike. A game whose keys of a frame from another game are not there
 // yet guesses them (the ones pressed last) and races on; guessed wrong, it goes back to that
 // frame and computes the frames since again, quietly, with the right ones (rollback). A game
-// too far ahead of another's keys waits for them. Every so many frames, the games compare
+// too far ahead of another's keys waits for them, and one ahead of another at all runs a little
+// slower until they are even: else it guesses the other's keys every frame, and goes back
+// many frames whenever that player presses another. Every so many frames, the games compare
 // fingerprints of their races: a race that went apart in one stays apart. A player who
 // leaves the race (or whose game is gone) leaves its car to the AI from a frame on, in
 // every game alike.
 
 import { PHASE, game } from "../core/state.js";
-import { nextFraction, tick } from "../core/tick.js";
+import { TICK_MS, nextFraction, tick } from "../core/tick.js";
 import { raceEvents } from "../race/events.js";
 import { physics } from "../race/physics.js";
 import { cutRaceTapeTo, raceTape } from "../race/raceTape.js";
@@ -31,6 +33,11 @@ export const INPUT_DELAY = 1;
 export const MAX_GUESSED = 8;
 export const KEYS = ["up", "down", "left", "right", "handb"];
 const NONE = Object.fromEntries(KEYS.map((key) => [key, false]));
+
+// how much longer a tick of a game ahead of another is, until they are even, and how many
+// frames ahead still count as even (as the keys come, sooner or later)
+const SLOWER = 1.1;
+const EVEN_FRAMES = 1;
 
 // 1 s of the race between fingerprints
 export const SYNC_EVERY = 30;
@@ -54,7 +61,8 @@ const playerName = (car) => (car == 0 ? "the host" : `player ${car + 1}`);
 // players: the ids of the players' games by car (see link.js); raceId: what tells this
 // race's messages from those of a race before; own: the car of this game's player;
 // ownKeys: its keys by frame; otherKeys: the other players' keys by car, by frame;
-// lastOther: their last keys there, and their frame, by car; guessed: the others' keys
+// lastOther: their last keys there, and their frame, by car; theirAhead: how many frames each
+// is ahead of this game's keys, as it last said (see framesAhead), by car; guessed: the others' keys
 // guessed, by frame, by car, until they come; kept: the race as it was before each of
 // those frames; atFirstFrame: what starts the race alike in all games; unsentPrints: the
 // fingerprints of frames that ran on guessed keys, by frame, sent once the guesses were
@@ -125,6 +133,7 @@ export const startLockstep = (own, players, raceId, atFirstFrame) => {
     lastOther: new Map(
       others.map((car) => [car, { frame: INPUT_DELAY - 1, keys: NONE }]),
     ),
+    theirAhead: new Map(),
     guessed: new Map(),
     kept: new Map(),
     atFirstFrame,
@@ -181,10 +190,14 @@ export const stopLockstep = () => {
 };
 
 // Another player's keys of a frame (checked: another game sent them).
-export const receiveKeys = ({ car, frame, keys }) => {
+export const receiveKeys = ({ car, frame, keys, ahead }) => {
   const last = lockstep.lastOther.get(car);
   if (!last || !Number.isInteger(frame) || !keys || typeof keys != "object") {
     return;
+  }
+  const theirs = Array.isArray(ahead) ? ahead[lockstep.own] : undefined;
+  if (Number.isInteger(theirs)) {
+    lockstep.theirAhead.set(car, theirs);
   }
   if (frame > last.frame) {
     const given = { frame, keys: keysOf(keys) };
@@ -377,6 +390,28 @@ const waitedFor = () =>
   )?.[0];
 
 export const lockstepWaits = () => lockstep.active && waitedFor() !== undefined;
+
+// how many frames this game is ahead of the last keys of a car's player
+const aheadOf = (car) => lockstep.frame - lockstep.lastOther.get(car).frame;
+
+// How many frames this game runs ahead of the game furthest behind: half of how much more it
+// is ahead of that one's keys than that one of its own (the time the keys take counts alike
+// both ways).
+const framesAhead = () => {
+  let most = 0;
+  for (const [car, theirs] of lockstep.theirAhead) {
+    if (inRace(car, lockstep.frame)) {
+      most = Math.max(most, (aheadOf(car) - theirs) / 2);
+    }
+  }
+  return most;
+};
+
+// How long the next tick is: a game ahead of another one runs slower.
+export const tickMs = () =>
+  lockstep.active && !lockstep.watching && framesAhead() > EVEN_FRAMES
+    ? TICK_MS * SLOWER
+    : TICK_MS;
 
 // what a game waiting for another one's keys says
 export const waitingNotice = () => `Waiting for ${playerName(waitedFor())}...`;
@@ -577,6 +612,9 @@ export const pressFrameKeys = (runFrameAgain) => {
     type: MESSAGE.keys,
     frame: frame + INPUT_DELAY,
     keys: held,
+    ahead: lockstep.players.map((_, car) =>
+      lockstep.lastOther.has(car) ? aheadOf(car) : 0,
+    ),
   });
   checkGuesses(runFrameAgain);
   settle();
