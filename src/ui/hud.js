@@ -8,7 +8,7 @@ import {
   watchNext,
   watchingOthers,
 } from "../race/spectate.js";
-import { arrowNameOf, inRoomRace, nameOfCar } from "../net/roomCars.js";
+import { inRoomRace, nameOfCar } from "../net/roomCars.js";
 import {
   clearFeed,
   clockTime,
@@ -2448,7 +2448,7 @@ const closestOpponent = () => {
 };
 
 const drawTargetName = (target) => {
-  const name = arrowNameOf(target);
+  const name = nameOfCar(target);
   drawCenteredText(
     16,
     "[" + "  ".repeat(name.length) + "]",

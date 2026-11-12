@@ -2,7 +2,7 @@ import { expect, test } from "vitest";
 import { RACE_KIND, game, raceSetup } from "../src/core/state.js";
 import { carStats } from "../src/data/carStats.js";
 import {
-  arrowNameOf,
+  botNames,
   cleanName,
   nameOfCar,
   setRoomCars,
@@ -34,40 +34,41 @@ test("a skin paints a car's colours, but its greys, and the standard paints noth
   }
 });
 
-test("a room's race names each car after its player, or Player n and Bot n, and paints it", () => {
+test("a room's race names each car after its player, Player n or its bot, and paints it", () => {
   game.carTypes[0] = 5;
   game.carTypes[1] = 3;
   game.carTypes[2] = 3;
   game.carTypes[3] = 7;
-  setRoomCars(["Jan", "", null, null], [0, RED, BLUE, 99]);
+  game.carTypes[4] = 3;
+  setRoomCars(["Jan", "", null, null, null], [0, RED, BLUE, 99, 0]);
   raceSetup.kind = RACE_KIND.together;
-  expect([0, 1, 2, 3].map(nameOfCar)).toEqual([
+  // (only the bots count: car 1 shares the car with two)
+  expect([0, 1, 2, 3, 4].map(nameOfCar)).toEqual([
     "Jan",
     "Player 2",
-    "Bot 1",
-    "Bot 2",
+    `${carStats.names[3]} 1`,
+    carStats.names[7],
+    `${carStats.names[3]} 2`,
   ]);
   // (a skin no game knows is the standard)
   expect([0, 1, 2, 3].map(skinOf)).toEqual([0, RED, BLUE, 0]);
   // another race: the cars' own names and paint
   raceSetup.kind = RACE_KIND.quickRace;
   expect(nameOfCar(1)).toBe(carStats.names[3]);
+  expect(nameOfCar(2)).toBe(carStats.names[3]);
   expect(skinOf(1)).toBe(0);
 });
 
-test("the arrow names a player's car after the player, and a bot's after its car", () => {
-  game.carTypes[0] = 5;
-  game.carTypes[1] = 3;
-  game.carTypes[2] = 7;
-  setRoomCars(["Jan", "", null], [0, 0, 0]);
-  raceSetup.kind = RACE_KIND.together;
-  expect([0, 1, 2].map(arrowNameOf)).toEqual([
-    "Jan",
-    "Player 2",
-    carStats.names[7],
+test("bots are named after their cars, numbered in their order where they share one", () => {
+  const [a, b, c] = carStats.names;
+  expect(botNames([0, 1, 0, 2, 0])).toEqual([
+    `${a} 1`,
+    b,
+    `${a} 2`,
+    c,
+    `${a} 3`,
   ]);
-  raceSetup.kind = RACE_KIND.quickRace;
-  expect(arrowNameOf(0)).toBe(carStats.names[5]);
+  expect(botNames([])).toEqual([]);
 });
 
 test("a name is cut short and has no control characters or runs of spaces", () => {

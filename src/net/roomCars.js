@@ -61,24 +61,32 @@ export const setRoomCars = (names, skins) => {
 // the skin car c races in
 export const skinOf = (c) => (inRoomRace() ? (roomCars.skins[c] ?? 0) : 0);
 
-// What car c is called: in a room's race its player's name (or "Player n", "Bot n" when
-// it has none), else its car's.
+// What a room's bots, by their cars, are called: after their cars, and where bots share a
+// car numbered in their order ("Radical One 1", "Radical One 2"). The lobby and every game
+// of the race know the same cars in the same order, so all show the same names.
+export const botNames = (carTypes) =>
+  carTypes.map((type, i) => {
+    const sharing = carTypes.filter((other) => other == type).length;
+    const nth = carTypes
+      .slice(0, i + 1)
+      .filter((other) => other == type).length;
+    return sharing > 1
+      ? `${carStats.names[type]} ${nth}`
+      : carStats.names[type];
+  });
+
+// What car c is called: in a room's race its player's name (or "Player n" when it has
+// none) or its bot's, else its car's.
 export const nameOfCar = (c) => {
-  const carName = carStats.names[game.carTypes[c]];
   if (!inRoomRace() || c >= roomCars.names.length) {
-    return carName;
+    return carStats.names[game.carTypes[c]];
   }
   const name = roomCars.names[c];
   if (name === null) {
-    const bot = roomCars.names.slice(0, c + 1).filter((n) => n === null);
-    return `Bot ${bot.length}`;
+    const bots = roomCars.names
+      .map((_, k) => k)
+      .filter((k) => roomCars.names[k] === null);
+    return botNames(bots.map((k) => game.carTypes[k]))[bots.indexOf(c)];
   }
   return name || `Player ${c + 1}`;
 };
-
-// What the arrow over the HUD calls car c: its player's name, or its car's for a bot and in
-// other races.
-export const arrowNameOf = (c) =>
-  inRoomRace() && typeof roomCars.names[c] == "string"
-    ? nameOfCar(c)
-    : carStats.names[game.carTypes[c]];

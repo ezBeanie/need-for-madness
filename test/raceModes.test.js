@@ -344,13 +344,13 @@ test("in a room's race the HUD tells who wasted whom, bots too, by the players' 
   );
   ctx.track.dested[2] = 2;
   expect(ctx.wastedBy(2)).toBe(3);
-  expect(ctx.wreckText(3, 2)).toBe("Bot 2 wasted Bot 1");
+  expect(ctx.wreckText(3, 2)).toBe("Radical One wasted Kool Kat");
   expect(ctx.wreckText(0, 1)).toBe("You wasted Ben");
   expect(ctx.wreckText(1, 0)).toBe("Ben wasted you");
   // (on its own, or hit too long before)
   ctx.track.dested[2] = 1;
   expect(ctx.wastedBy(2)).toBe(-1);
-  expect(ctx.wreckText(-1, 2)).toBe("Bot 1 has been wasted");
+  expect(ctx.wreckText(-1, 2)).toBe("Kool Kat has been wasted");
   ctx.noteWreck(1, 0);
   expect(ctx.feed.at(-1)).toMatchObject({ text: "Ben wasted you", mine: true });
 });
