@@ -1,12 +1,13 @@
 // The replay viewer's controls over the race (see race/replayViewer.js): the title, time
-// and car followed; a hint, and the controls only when asked for (H, or the hint
-// clicked): a bar of the whole race to jump along and a low row of buttons, each with
-// its key; and the cars to follow, driving in at the screen's edges (Tab). The viewer
-// reads the keys by their place on the keyboard: W A S D are the free camera's, not the
-// arrows' as in races.
+// and car followed; the way out, always in sight (a button of the page's, beside
+// Options); a hint, and the controls only when asked for (H, or the hint clicked): a bar
+// of the whole race to jump along and a low row of buttons, each with its key; and the
+// cars to follow, driving in at the screen's edges (Tab). The viewer reads the keys by
+// their place on the keyboard: W A S D are the free camera's, not the arrows' as in
+// races.
 
 import { nameOfCar } from "../net/roomCars.js";
-import { game } from "../core/state.js";
+import { PHASE, game } from "../core/state.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { keys, takePressedKeys } from "../input/keyboard.js";
 import { pointer } from "../input/pointer.js";
@@ -150,8 +151,6 @@ const COLORS = {
     played: "#FFB401",
     unplayed: "rgba(255,255,255,0.18)",
     face: ["#019DFF", "#01EAFF"],
-    // the way out, as the screens' Back
-    away: ["#FF3D01", "#FFB401"],
     shadow: "#004A78",
     over: "rgba(1,234,255,0.25)",
     label: "#1B0F05",
@@ -175,13 +174,13 @@ const slanted = (x, y, width, height) => {
 
 // A modern button's face: its shadow below right, the blue across it, white while
 // pressed.
-const drawFace = (colors, x, y, width, height, hovered, down, away) => {
+const drawFace = (colors, x, y, width, height, hovered, down) => {
   const drop = Math.max(2, height * 0.1);
   rd.fillStyle = colors.shadow;
   slanted(x + drop, y + drop, width, height);
   rd.fill();
   const face = rd.createLinearGradient(x, 0, x + width, 0);
-  const [from, to] = away ? colors.away : colors.face;
+  const [from, to] = colors.face;
   face.addColorStop(0, from);
   face.addColorStop(1, to);
   rd.fillStyle = down ? colors.pressed : face;
@@ -264,7 +263,7 @@ const drawSeekBar = (colors, { seek }) => {
 // the button pressed, by its index
 let pressed = -1;
 
-const button = (index, box, label, key, colors, away = false) => {
+const button = (index, box, label, key, colors) => {
   const { x, y, width, height: h } = box;
   const hovered = over(x, y, width, h);
   if (pointer.down && hovered && !draggingBar && pressed == -1) {
@@ -272,7 +271,7 @@ const button = (index, box, label, key, colors, away = false) => {
   }
   const down = pressed == index && hovered;
   if (colors.face) {
-    drawFace(colors, x, y, width, h, hovered, down, away);
+    drawFace(colors, x, y, width, h, hovered, down);
   } else {
     rd.fillStyle = hovered ? colors.over : colors.panel;
     rounded(x, y, width, h, h / 2);
@@ -306,6 +305,19 @@ const exit = () => {
   }
 };
 
+const exitButton = document.getElementById("replayExit");
+
+export const installReplayExit = () =>
+  exitButton.addEventListener("click", exit);
+
+// Every tick: the way out shows while the viewer does, the controls hidden or not.
+export const placeReplayExit = () => {
+  const hidden = game.phase != PHASE.replay;
+  if (exitButton.hidden != hidden) {
+    exitButton.hidden = hidden;
+  }
+};
+
 const jump = (frames) => seekReplay(viewer.frame + frames);
 const canSave = () => viewer.from != VIEWER_FROM.file;
 const save = () => {
@@ -314,8 +326,8 @@ const save = () => {
   }
 };
 
-// The controls: [label, key shown, what it does, whether it leaves]. A replay file needs
-// no saving again.
+// The controls: [label, key shown, what it does]. A replay file needs no saving again; the
+// way out has a button of its own.
 const controls = () => [
   ["<< 5 s", "\u21e7\u2190", () => jump(-JUMP_FRAMES)],
   [viewer.playing ? "Pause" : "Play", "Space", togglePlaying],
@@ -325,7 +337,6 @@ const controls = () => [
   [CAMERA_NAMES[camera.mode] ?? "Camera", "V", nextCamera],
   ["Cars", "Tab", togglePicker],
   ...(canSave() ? [["Save", "Ctrl+S", save]] : []),
-  ["Exit", "Esc", exit, true],
 ];
 
 // what the keys do that have no button of their own, or more than one key
@@ -655,8 +666,8 @@ const drawControls = (colors) => {
   drawSeekBar(colors, place);
   const all = controls();
   const chosen = all
-    .map(([label, key, , away], i) =>
-      button(i, place.buttonAt(i), label, place.touch ? "" : key, colors, away),
+    .map(([label, key], i) =>
+      button(i, place.buttonAt(i), label, place.touch ? "" : key, colors),
     )
     .indexOf(true);
   all[chosen]?.[2]();

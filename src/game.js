@@ -52,7 +52,12 @@ import {
   viewer,
 } from "./race/replayViewer.js";
 import { replaySoundsTick } from "./audio/replaySounds.js";
-import { drawReplayOverlay, heldArrow } from "./ui/replayControls.js";
+import {
+  drawReplayOverlay,
+  heldArrow,
+  installReplayExit,
+  placeReplayExit,
+} from "./ui/replayControls.js";
 import { installReplayDrop } from "./screens/replays.js";
 import {
   installMultiplayerMenu,
@@ -282,6 +287,7 @@ export function runTick() {
   }
   placeMainMenu();
   placeOptionsButton();
+  placeReplayExit();
   placeMultiplayerButton();
   placeStageEditorButton();
   voiceTick(roomPlayerIds());
@@ -373,6 +379,7 @@ installReplayDrop(window);
 startHosting();
 startGuesting();
 installOptionsMenu();
+installReplayExit();
 installTouchLayout();
 installMainMenu();
 installMultiplayerMenu();
