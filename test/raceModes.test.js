@@ -527,3 +527,26 @@ test("most kills' results show each car's kills, assists, damage dealt and wasti
   expect(row.cells.slice(2)).toEqual(["3", "2", "146%", "4"]);
   expect(row.line).toContain("2 assists, 146% damage");
 });
+
+test("racing together, a guest finishing just ahead of another car catches the close finish", async () => {
+  const { ctx, step } = await startRace({ stage: 3, car: 5 });
+  reset = () => {
+    ctx.game.humans = [];
+    ctx.game.player = 0;
+    ctx.track.haltall = false;
+  };
+  for (let i = 0; i < 3; i++) {
+    step();
+  }
+  // the guest's car 1 through, the host's car 0 right behind it, a lap less
+  ctx.game.humans = [0, 1];
+  ctx.game.player = 1;
+  const done = ctx.track.nlaps * ctx.track.nsp;
+  ctx.racers[1].clear = done;
+  ctx.racers[0].clear = done - 1;
+  ctx.car[0].x = ctx.car[1].x + 30;
+  ctx.car[0].z = ctx.car[1].z;
+  ctx.recording.finishCatchTicks = 0;
+  ctx.updateStandings();
+  expect(ctx.recording.finishCatchTicks).toBeGreaterThan(0);
+});
