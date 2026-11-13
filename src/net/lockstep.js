@@ -12,6 +12,7 @@
 // every game alike.
 
 import { PHASE, game } from "../core/state.js";
+import { t } from "../core/language.js";
 import { TICK_MS, nextFraction, tick } from "../core/tick.js";
 import { raceEvents } from "../race/events.js";
 import { physics } from "../race/physics.js";
@@ -57,8 +58,10 @@ const LEFT_SHOWN_TICKS = 100;
 // the phases a game stays in the race in: a guest's begins it while its stage loads
 const IN_RACE = [...RACE_GOES_ON, PHASE.stageLoading];
 
-// (the host drives car 0, the guests the cars after it, see net/host.js)
-const playerName = (car) => (car == 0 ? "the host" : `player ${car + 1}`);
+// A notice about the player of car: the host drives car 0, the guests the cars after it
+// (see net/host.js).
+const aboutPlayer = (car, aboutHost, aboutGuest) =>
+  car == 0 ? t(aboutHost) : t(aboutGuest, { number: car + 1 });
 
 // players: the ids of the players' games by car (see link.js); raceId: what tells this
 // race's messages from those of a race before; own: the car of this game's player;
@@ -239,9 +242,12 @@ export const receiveLeft = ({ car, frame }) => {
   lockstep.leftAt.set(car, frame);
   lockstep.quietTicks.delete(car);
   lockstep.goBackTo = Math.min(lockstep.goBackTo, frame);
-  const name = playerName(car);
   lockstep.notice = {
-    text: `${name[0].toUpperCase()}${name.slice(1)} left the race`,
+    text: aboutPlayer(
+      car,
+      "The host left the race",
+      "Player {number} left the race",
+    ),
     ticks: LEFT_SHOWN_TICKS,
   };
 };
@@ -450,7 +456,12 @@ export const tickMs = () =>
     : TICK_MS;
 
 // what a game waiting for another one's keys says
-export const waitingNotice = () => `Waiting for ${playerName(waitedFor())}...`;
+export const waitingNotice = () =>
+  aboutPlayer(
+    waitedFor(),
+    "Waiting for the host...",
+    "Waiting for player {number}...",
+  );
 
 // what a game whose player left the race says, a while
 export const leftNotice = () =>
