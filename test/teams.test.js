@@ -1,4 +1,5 @@
 import { afterEach, expect, test } from "vitest";
+import { canvasCalls } from "./harness/browserStubs.js";
 import { startRace } from "./harness/race.js";
 
 let reset = null;
@@ -136,6 +137,18 @@ test("most kills in teams ends with the teams' results before the cars'", async 
     "Team Red",
     ctx.nameOfCar(0),
   ]);
+  // the HUD says each team's kills, the team ahead first
+  const drawn = [];
+  canvasCalls.listener = (name, args, call) => {
+    if (name == "fillText") {
+      drawn.push(String(args[0]));
+    }
+    return call();
+  };
+  ctx.drawHud();
+  canvasCalls.listener = null;
+  const blue = drawn.indexOf("Blue");
+  expect(drawn.slice(blue, blue + 4)).toEqual(["Blue", "3", "Red", "2"]);
   // red ahead, though car 1 has the most kills
   ctx.deathmatch.kills[0] = 2;
   ctx.deathmatch.kills[2] = 2;

@@ -13,7 +13,7 @@ import {
   watchNext,
   watchingOthers,
 } from "../race/spectate.js";
-import { inRoomRace, nameOfCar, teamOf } from "../net/roomCars.js";
+import { TEAM_COLORS, inRoomRace, nameOfCar, teamOf } from "../net/roomCars.js";
 import {
   clearFeed,
   clockTime,
@@ -1526,6 +1526,28 @@ const drawKillStanding = () => {
     rd.fillStyle = "#000078";
     rd.fillText(String(value), x, 19 * view.scale);
     x += rd.measureText(String(value)).width + 24 * view.scale;
+  }
+  drawTeamKills();
+};
+
+// and below, in teams, each team's kills, the team ahead first, each by its colour and name
+const drawTeamKills = () => {
+  const size = 10 * view.scale;
+  let x = ((isPhone ? 70 : 0) + 60) * view.scale;
+  const y = 55 * view.scale;
+  for (const { team, kills } of teamTable()) {
+    rd.fillStyle = TEAM_COLORS[team];
+    rd.fillRect(x, y - size / 2, size, size);
+    rd.strokeStyle = "#000000";
+    rd.lineWidth = 1;
+    rd.strokeRect(x, y - size / 2, size, size);
+    x += size + 6 * view.scale;
+    rd.fillStyle = "#000000";
+    rd.fillText(TEAM_NAMES[team], x, y);
+    x += rd.measureText(TEAM_NAMES[team]).width + 8 * view.scale;
+    rd.fillStyle = "#000078";
+    rd.fillText(String(kills), x, y);
+    x += rd.measureText(String(kills)).width + 24 * view.scale;
   }
 };
 

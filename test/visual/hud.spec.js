@@ -412,9 +412,9 @@ const overlapsOf = (boxes) => {
   return found;
 };
 
-// A room's race of most kills with its HUD as full as it gets: the board, the feed, the
-// minimap, the target camera's bar, the player wasted and waiting to come back, and a game
-// waited for. Returns what the HUD drew in that frame.
+// A room's race of most kills in two teams with its HUD as full as it gets: the board, the
+// teams' kills, the feed, the minimap, the target camera's bar, the player wasted and
+// waiting to come back, and a game waited for. Returns what the HUD drew in that frame.
 const fullMostKillsHud = async (page) => {
   await recordHudBoxes(page);
   const game = await racing(page, 200, { minimap: "1" });
@@ -423,9 +423,11 @@ const fullMostKillsHud = async (page) => {
     s.game.humans = [0];
     s.raceSetup.mode = s.RACE_MODE.mostKills;
     s.startDeathmatch();
+    s.raceSetup.rules = { ...s.raceSetup.rules, teams: 2 };
     s.setRoomCars(
       Array.from({ length: s.game.carCount }, (_, c) => `Player ${c + 1}`),
       [],
+      Array.from({ length: s.game.carCount }, (_, c) => c % 2),
     );
     s.camera.aims = true;
     for (let c = 1; c < 6; c++) {
@@ -447,7 +449,13 @@ const fullMostKillsHud = async (page) => {
   });
 };
 
-const FULL_HUD = ["You're Wasted!", "Waiting for Player 2...", "Ping 120 ms"];
+const FULL_HUD = [
+  "You're Wasted!",
+  "Waiting for Player 2...",
+  "Ping 120 ms",
+  "Red",
+  "Blue",
+];
 
 test("hud: nothing of a full HUD of most kills lies over anything else", async ({
   page,
@@ -559,9 +567,11 @@ test("hud: in a bunch of cars, a name lies over no other", async ({ page }) => {
   await set(page, () => {
     const s = window.gameState;
     s.game.humans = [0];
+    s.raceSetup.rules = { ...s.raceSetup.rules, teams: 2 };
     s.setRoomCars(
       Array.from({ length: s.game.carCount }, (_, c) => `Player ${c + 1}`),
       [],
+      Array.from({ length: s.game.carCount }, (_, c) => c % 2),
     );
   });
   await put();
