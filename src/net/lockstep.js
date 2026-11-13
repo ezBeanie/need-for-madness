@@ -299,6 +299,26 @@ const fingerprint = (text) => {
   return hash >>> 0;
 };
 
+// The dents' fingerprint, over their numbers' bits, found once for each array: a saved
+// race's dents are never changed (see savedDents in raceState.js), and they are the most of
+// a race.
+const dentPrints = new WeakMap();
+const dentPrint = (dents) => {
+  if (!Array.isArray(dents)) {
+    return fingerprint(String(dents));
+  }
+  let print = dentPrints.get(dents);
+  if (print === undefined) {
+    print = 2166136261;
+    for (const word of new Uint32Array(Float64Array.from(dents).buffer)) {
+      print = Math.imul(print ^ word, 16777619);
+    }
+    print >>>= 0;
+    dentPrints.set(dents, print);
+  }
+  return print;
+};
+
 // The own fingerprint of a frame and others' there: whether the races went apart.
 const compare = (frame) => {
   const own = lockstep.ownPrints.get(frame);
@@ -318,9 +338,9 @@ const compare = (frame) => {
     } else if (print != own.print && lockstep.apartAt < 0) {
       lockstep.apartAt = frame;
       lockstep.apartWith = car;
-      lockstep.apartRace = own.race;
+      lockstep.apartRace = encode(inOrder(own.race));
       // (a race of 20 dented cars is about 500 kB)
-      for (const part of inParts(own.race)) {
+      for (const part of inParts(lockstep.apartRace)) {
         send({ type: MESSAGE.apart, frame, ...part });
       }
       console.warn(`The races went apart at frame ${frame}`);
@@ -421,12 +441,17 @@ export const waitingNotice = () => `Waiting for ${playerName(waitedFor())}...`;
 export const leftNotice = () =>
   lockstep.notice.ticks > 0 ? lockstep.notice.text : null;
 
-// (a deep copy: the race runs on from the one it was kept from)
-const keepRace = () => ({
-  race: structuredClone(saveRace()),
-  recording: keepRecording(),
-  tapeLength: raceTape.length,
-});
+// (a deep copy, the race runs on from the one it was kept from, but for the dents, which
+// the cars never change in place: see savedDents in raceState.js)
+const keepRace = () => {
+  const { cars, ...rest } = saveRace();
+  const race = structuredClone({
+    ...rest,
+    cars: cars.map(({ dents, ...car }) => car),
+  });
+  race.cars.forEach((car, c) => (car.dents = cars[c].dents));
+  return { race, recording: keepRecording(), tapeLength: raceTape.length };
+};
 
 const restoreKept = ({ race, recording, tapeLength }) => {
   restoreRace(race);
@@ -478,10 +503,17 @@ const inOrder = (value) => {
   return ordered;
 };
 
-// The race as written for its fingerprint, and the fingerprint.
+// The race's fingerprint, and the race (written out only if the races went apart).
 export const printOf = (race) => {
-  const text = encode(inOrder(race));
-  return { print: fingerprint(text), race: text };
+  let print = fingerprint(
+    encode(
+      inOrder({ ...race, cars: race.cars.map(({ dents, ...car }) => car) }),
+    ),
+  );
+  for (const { dents } of race.cars) {
+    print = Math.imul(print ^ dentPrint(dents), 16777619) >>> 0;
+  }
+  return { print, race };
 };
 
 const takePrint = (frame) => {

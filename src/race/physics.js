@@ -3664,6 +3664,10 @@ function dentBody(c, rad, hitSide, k, mag) {
     rad.dvert = undentedVertices(rad);
     rad.iscar = 2;
   }
+  // (never dented in place once a saved race shares them, see saveRace in net/raceState.js)
+  if (rad.sharedDents === rad.dvert) {
+    rad.dvert = rad.dvert.slice();
+  }
   const pixels = rad.damagePixels;
   const spots = pixels != null ? [] : null;
   if (hitSide == HIT.onRoof) {
