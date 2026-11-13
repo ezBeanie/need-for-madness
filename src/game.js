@@ -364,7 +364,8 @@ fitCanvas3D();
 let pendingMs = 0;
 let lastFrameTime = -1;
 
-export function runFrame(now) {
+// The ticks due by now (a time as requestAnimationFrame gives it).
+const runTicksUntil = (now) => {
   if (lastFrameTime == -1) {
     lastFrameTime = now - TICK_MS;
   }
@@ -377,10 +378,55 @@ export function runFrame(now) {
     pendingMs -= ms;
     ms = tickMs();
   }
+  return ms;
+};
+
+export function runFrame(now) {
+  const ms = runTicksUntil(now);
   interpolation.alpha = pendingMs / ms;
   render();
   requestAnimationFrame(runFrame);
 }
+
+// A hidden tab draws no frames, and its timers run seldom: in a room, the game goes on by a
+// worker's clock, unseen, so that its player stays in the race and joins the next one the
+// host starts. (A browser that stops the whole page, as iOS does, stops this too: see
+// hiddenTicks.)
+const HIDDEN_CLOCK = `setInterval(() => postMessage(0), ${TICK_MS});`;
+let hiddenClock = null;
+let hiddenSince = 0;
+let hiddenTicks = 0;
+
+// (each clock's time counted from its first tick)
+const goOnHidden = () => {
+  hiddenSince = performance.now();
+  hiddenTicks = 0;
+  lastFrameTime = -1;
+  if (link.role == ROLE.none || typeof Worker != "function") {
+    return;
+  }
+  hiddenClock = new Worker(
+    URL.createObjectURL(new Blob([HIDDEN_CLOCK], { type: "text/javascript" })),
+  );
+  hiddenClock.onmessage = () => {
+    if (document.visibilityState == "hidden") {
+      hiddenTicks++;
+      runTicksUntil(performance.now());
+    }
+  };
+};
+
+// Whether the game stood still for a while unseen: racing together, the others took it for
+// gone.
+const stoodStillHidden = () => {
+  hiddenClock?.terminate();
+  hiddenClock = null;
+  lastFrameTime = -1;
+  const missed = (performance.now() - hiddenSince) / TICK_MS - hiddenTicks;
+  return missed * TICK_MS > LEFT_UNSEEN_MS;
+};
+// (as a game silent for PLAYER_GONE_TICKS, see net/lockstep.js, with a margin)
+const LEFT_UNSEEN_MS = 2000;
 
 // its random draws belong here, between the others made while loading
 scatterMenuSmoke();
@@ -433,6 +479,11 @@ document.addEventListener("visibilitychange", () => {
     audio.muteSound = mutedBeforeHiding.sound;
     holdAudio(false);
     keepScreenOn();
+    // (its player raced on as it shows again, which the others' races did without)
+    if (stoodStillHidden() && lockstep.active) {
+      leaveLockstep();
+      quitRace();
+    }
   } else {
     mutedBeforeHiding = { music: audio.muteMusic, sound: audio.muteSound };
     audio.muteMusic = true;
@@ -444,12 +495,7 @@ document.addEventListener("visibilitychange", () => {
       musicPaused = true;
     }
     holdAudio(true);
-    // (a hidden game runs no ticks: racing together, the others would take it for gone
-    // while its player raced on once it shows again, so it leaves the race at once)
-    if (lockstep.active) {
-      leaveLockstep();
-      quitRace();
-    }
+    goOnHidden();
   }
 });
 
