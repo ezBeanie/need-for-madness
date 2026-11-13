@@ -308,12 +308,13 @@ export const drawClassicCountdown = (number) => {
   draw(`${number}c`, fromMiddle(number != 0 ? 385 : 363), 50);
 };
 
-// The original's centred messages: bold Arial in the given colour, tinted for the stage.
-export const drawClassicMessage = (y, text, r, g, b) => {
+// The original's centred messages: bold Arial in the given colour, tinted for the stage
+// (centred on x, in pixels, where not on the middle).
+export const drawClassicMessage = (y, text, r, g, b, x = view.width / 2) => {
   bold(13);
   rd.textAlign = "center";
   rd.fillStyle = snapped([r, g, b]);
-  rd.fillText(text, view.width / 2, y * view.scaleY);
+  rd.fillText(text, x, y * view.scaleY);
 };
 
 // flickers once a tick

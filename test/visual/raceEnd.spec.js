@@ -72,3 +72,60 @@ test("race end after practice", async ({ page }) => {
   await game.advance(60);
   await expect.soft(page).toHaveScreenshot("race-end-practice.png");
 });
+
+// A room's race of twenty cars: every car's result in sight, above the buttons under the
+// table, in both looks and on a phone held sideways too.
+for (const [width, height] of [
+  [1280, 720],
+  [844, 390],
+]) {
+  test(`the results of twenty cars fit a screen of ${width}x${height}`, async ({
+    page,
+  }) => {
+    await page.addInitScript(() => {
+      window.drawnTexts = [];
+      const fillText = CanvasRenderingContext2D.prototype.fillText;
+      CanvasRenderingContext2D.prototype.fillText = function (text, x, y) {
+        const { width } = this.measureText(text);
+        window.drawnTexts.push({ text: String(text), x, y, width });
+        return fillText.call(this, text, x, y);
+      };
+    });
+    const game = await openGame(page);
+    await game.advanceUntil(PHASE.mainMenu);
+    await page.setViewportSize({ width, height });
+    await game.advance();
+    for (const classic of [false, true]) {
+      const drawn = await page.evaluate((classic) => {
+        const { drawResults, look, LOOK, view } = window.gameState;
+        look.current = classic ? LOOK.classic : LOOK.modern;
+        look.menus = classic;
+        const names = Array.from({ length: 20 }, (_, c) => `Car ${c + 1}`);
+        window.drawnTexts = [];
+        drawResults(
+          ["", "", "Kills", "Wasted"],
+          names.map((name, place) => ({
+            cells: [`${place + 1}th`, name, "0", "0"],
+            mine: false,
+            line: `${place + 1}th  ${name}  0 kills, wasted 0`,
+          })),
+        );
+        // (the buttons' top: see afterRaceOver in ui/hud.js)
+        const buttonsTop = view.height - 90 * view.scale - 40 * view.scaleY;
+        return names.map((name) => {
+          const at = window.drawnTexts.find(({ text }) =>
+            classic ? text.includes(`  ${name}  `) : text == name,
+          );
+          return (
+            at != undefined &&
+            at.y > 0 &&
+            at.y < buttonsTop &&
+            at.x - (classic ? at.width / 2 : 0) >= 0 &&
+            at.x + at.width / (classic ? 2 : 1) <= view.width
+          );
+        });
+      }, classic);
+      expect(drawn).toEqual(Array(20).fill(true));
+    }
+  });
+}

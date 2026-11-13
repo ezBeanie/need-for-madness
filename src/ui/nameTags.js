@@ -20,6 +20,8 @@ const FAR = 2500;
 const ABOVE = 12000;
 
 const tags = [];
+// by car, the name its tag shows and how big it is, in pixels
+const sizes = [];
 
 const tagOf = (c) => {
   if (!tags[c]) {
@@ -66,9 +68,16 @@ export const placeNameTags = () => {
     return;
   }
   const box = canvas3D.getBoundingClientRect();
+  // the nearest cars' names first: a name that would lie over a nearer one's is left out
+  // (in a bunch of cars, as at the start, they would cover each other)
+  const cars = [];
   for (let c = 0; c < game.carCount; c++) {
+    cars.push({ c, ...carOnScreen(c, box) });
+  }
+  cars.sort((a, b) => a.depth - b.depth);
+  const placed = [];
+  for (const { c, left, top: middle, depth } of cars) {
     const tag = tagOf(c);
-    const { left, top: middle, depth } = carOnScreen(c, box);
     if (c == game.player || c == camera.target || depth <= 1 || depth > FAR) {
       tag.hidden = true;
       continue;
@@ -79,9 +88,31 @@ export const placeNameTags = () => {
     if (tag.textContent != text) {
       tag.textContent = text;
     }
+    // (measured once a name, not every frame)
+    if (sizes[c]?.text != text) {
+      tag.hidden = false;
+      sizes[c] = { text, width: tag.offsetWidth, height: tag.offsetHeight };
+    }
+    const { width, height } = sizes[c];
     const top = middle - ((ABOVE / depth) * box.height) / 720;
-    tag.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px) translate(-50%, -100%)`;
-    tag.hidden = false;
+    const at = {
+      left: left - width / 2,
+      right: left + width / 2,
+      top: top - height,
+      bottom: top,
+    };
+    const covered = placed.some(
+      (other) =>
+        at.left < other.right &&
+        other.left < at.right &&
+        at.top < other.bottom &&
+        other.top < at.bottom,
+    );
+    tag.hidden = covered;
+    if (!covered) {
+      placed.push(at);
+      tag.style.transform = `translate(${left.toFixed(1)}px, ${top.toFixed(1)}px) translate(-50%, -100%)`;
+    }
   }
   hideFrom(game.carCount);
 };

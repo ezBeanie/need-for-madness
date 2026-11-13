@@ -639,6 +639,16 @@ const shownControls = () =>
     (key) => key != "arrow" || arrowButtonShown(),
   );
 
+// Where touch control key begins at the top, with a little room, in pixels (the screen's
+// bottom when it is not drawn), for what is drawn above it.
+const aboveTouchControl = (key) => {
+  if (!touchControlsShown() || !shownControls().includes(key)) {
+    return view.height;
+  }
+  const { y, height } = touchControlAt(key);
+  return y - height / 2 - 6 * view.scale;
+};
+
 const drawTouchControls = () => {
   for (const key of shownControls()) {
     const { x, y, width, height } = touchControlAt(key);
@@ -956,12 +966,13 @@ const pickByTap = (tap) => {
   announce(lockedText());
 };
 
+// The target camera's bar, at the top in the middle: under it come the original's messages,
+// at the bottom the clocks and the ping, and on phones the touch controls would take its
+// taps.
 const drawLockBar = (taps) => {
   const scale = view.scale;
   const height = Math.max(isPhone ? 44 : 26, 30 * scale);
-  const top = isPhone
-    ? 82 * view.scaleY
-    : view.height - height - 14 * view.scaleY;
+  const top = 8 * scale;
   const font = Math.round(height * 0.45);
   rd.save();
   rd.font = `${font}px sans-serif`;
@@ -1568,10 +1579,13 @@ const drawToggle = (id, y, muted, toggle, onImage) => {
   rd.globalAlpha = 1;
 };
 
+// narrow screens leave the meters room above the buttons
+const cornerButtonsShift = () =>
+  view.width / view.height < 1.3 ? 76 * view.scale : 0;
+
 // Top right corner: pause, sound and music.
 const drawCornerButtons = (raceOver) => {
-  // narrow screens leave the meters room above the buttons
-  const shift = view.width / view.height < 1.3 ? 76 * view.scale : 0;
+  const shift = cornerButtonsShift();
   const pauseX = view.width - 87 * view.scale;
   const pauseArea = touchArea(
     2,
@@ -1997,11 +2011,17 @@ export function drawHud() {
     if (isTimeAttack() && raceEvents.countdown == 0) {
       drawClock();
     }
+    // the left under the standing (and the arrow button, not up there on phones), down to
+    // the touch controls' arrow
+    let left = (isPhone ? 70 : 165) * view.scale;
     if (isDeathmatch() && raceEvents.countdown == 0 && !track.haltall) {
-      drawDeathmatchBoard();
+      left = drawDeathmatchBoard(left);
     }
     if (inRoomRace() && !classicMenus()) {
-      drawFeed();
+      drawFeed(
+        190 * view.scale + cornerButtonsShift(),
+        aboveTouchControl("handbrake"),
+      );
     }
     if (
       game.carCount != 1 &&
@@ -2039,7 +2059,7 @@ export function drawHud() {
       drawLockBar(taps);
     }
     drawStanding();
-    drawMinimap();
+    drawMinimap(left, aboveTouchControl("arrow"));
     if (!isPhone && arrowButtonShown()) {
       drawArrowButton();
     }
@@ -2104,14 +2124,18 @@ export const drawWaitingHud = (first) => {
 };
 
 // Racing together: what the HUD tells about the other games, a line each, and how long a
-// message takes to the host and back (the first thing to know when the race waits).
+// message takes to the host and back (the first thing to know when the race waits). The
+// lines go under the race's own, e.g. "Back in 0:05" when wasted in most kills.
 export const drawNetNotice = (notices, ping) => {
   notices
     .filter(Boolean)
     .forEach((notice, i) =>
-      drawCenteredText(192 + 40 * i, notice, 0, 0, 0, TEXT.label),
+      drawCenteredText(232 + 40 * i, notice, 0, 0, 0, TEXT.label),
     );
   if (ping != null) {
+    // (a race waiting stands as drawn last, the ping of then with it: off with that one)
+    const top = 690 * view.scaleY;
+    rd.clearRect(view.width / 3, top, view.width / 3, view.height - top);
     drawCenteredText(706, `Ping ${ping} ms`, 0, 0, 0, TEXT.small);
   }
 };
