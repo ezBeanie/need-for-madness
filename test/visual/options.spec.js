@@ -28,3 +28,44 @@ test("the options switch the look and the classic polygons without a keyboard", 
   await page.locator("#optionsClose").click();
   await expect(page.locator("#options")).toBeHidden();
 });
+
+test("the name typed in the options is kept at once, though the game is left before the field is", async ({
+  page,
+}) => {
+  const game = await openGame(page, {
+    storage: { carsel: "5", unlocked: "17" },
+  });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance(2);
+  await page.locator("#menuOptions").click();
+  await page.getByLabel("Your name").pressSequentially("Hosti");
+  // (gone at once, as a phone's app swiped away: the field never loses its focus)
+  await page.reload();
+  await page.waitForFunction(() => window.advanceFrames !== undefined);
+  expect(await page.evaluate(() => localStorage.getItem("playerName"))).toBe(
+    "Hosti",
+  );
+});
+
+test("cars crash solid without ramps unless chosen otherwise in the options, and a room hosted begins with the choice", async ({
+  page,
+}) => {
+  const game = await openGame(page, {
+    storage: { carsel: "5", unlocked: "17" },
+    url: "/?host=crashes",
+  });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance(2);
+  await page.locator("#menuOptions").click();
+  const chosen = page.locator("#options").getByLabel("Collisions");
+  await expect(chosen).toHaveValue("2");
+  await chosen.selectOption("Solid");
+  expect(await page.evaluate(() => localStorage.getItem("collisions"))).toBe(
+    "1",
+  );
+  await page.locator("#optionsClose").click();
+  // (the room was opened with the page, before the choice: hosted anew it has it)
+  await page.evaluate(() => window.gameState.hostRoom("crashes-again"));
+  await page.locator("#menuMultiplayer").click();
+  await expect(page.locator("#lobbyCollisions")).toHaveValue("1");
+});

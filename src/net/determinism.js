@@ -7,7 +7,8 @@
 import { stopStageMusic } from "../audio/audio.js";
 import { atan } from "../core/exactMath.js";
 import { random, seededRandom } from "../core/random.js";
-import { PHASE, game } from "../core/state.js";
+import { COLLISIONS, PHASE, game } from "../core/state.js";
+import { collisionChoice } from "../race/physics.js";
 import { tick } from "../core/tick.js";
 import { stunts } from "../input/controls.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
@@ -101,8 +102,9 @@ export const beginFingerprintRace = () => {
   flashIntoRace();
   // (nor the help of a game that has no car stored yet, off as racing together, see host.js)
   raceEvents.onautocorrect = 0;
-  // (and stunts as the original's, whatever the player chose; not stored)
+  // (and stunts and crashes as the original's, whatever the player chose; not stored)
   stunts.byKey = false;
+  collisionChoice.value = COLLISIONS.original;
 };
 
 // (the cars people drive steered, see isHuman)

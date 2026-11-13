@@ -5,7 +5,8 @@ import { PHASE } from "../../src/core/state.js";
 // A race on stage 3 with all stages unlocked, past the countdown.
 const racing = async (page, frames = 200, storage = {}) => {
   const game = await openGame(page, {
-    storage: { carsel: "5", unlocked: "17", ...storage },
+    // (crashing as the original's: the pictures were taken so)
+    storage: { carsel: "5", unlocked: "17", collisions: "0", ...storage },
   });
   await game.advanceUntil(PHASE.mainMenu);
   await game.settle();
@@ -471,6 +472,43 @@ test.describe("on a phone, most kills", () => {
     expect(overlapsOf(boxes)).toEqual([]);
   });
 });
+
+// The target camera's bar with the arrow pointing at cars: the car it points at named
+// under it. Returns what the HUD drew in that frame.
+const aimingAtCars = async (page) => {
+  await recordHudBoxes(page);
+  const game = await racing(page, 250);
+  await set(page, () => {
+    const s = window.gameState;
+    s.camera.aims = true;
+    s.racers[s.game.player].u.arrace = true;
+  });
+  await game.advance(2);
+  await set(page, () => (window.hudBoxes = []));
+  await game.advance();
+  return page.evaluate(() => window.hudBoxes);
+};
+
+for (const [where, viewport] of [
+  ["", { width: 1280, height: 720 }],
+  [" on a phone", { width: 844, height: 390 }],
+]) {
+  test(`hud: the target camera's bar and the name of the car the arrow points at lie apart${where}`, async ({
+    page,
+  }) => {
+    await page.setViewportSize(viewport);
+    const boxes = await aimingAtCars(page);
+    const name = await page.evaluate(() => {
+      const s = window.gameState;
+      return s.nameOfCar(s.camera.aimedCar);
+    });
+    expect(boxes.some(({ what }) => what == name)).toBe(true);
+    // (but the name in its brackets, as the original draws it)
+    const inBrackets = (pair) =>
+      pair.startsWith("text [") && pair.includes(` / text ${name} at`);
+    expect(overlapsOf(boxes).filter((pair) => !inBrackets(pair))).toEqual([]);
+  });
+}
 
 test("hud: the ping drawn over a race waiting, as it was drawn last, shows only the new one", async ({
   page,

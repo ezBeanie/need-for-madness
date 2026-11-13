@@ -31,6 +31,7 @@ import {
   chooseBotSkin,
   chooseBotTeam,
   chooseRoomMode,
+  chooseRoomPublic,
   chooseRoomRule,
   chooseRoomStage,
   everyoneReady,
@@ -39,6 +40,7 @@ import {
   roomBots,
   roomGuests,
   roomMode,
+  roomPublic,
   roomRulesChosen,
   roomStage,
   sendPlayers,
@@ -301,6 +303,7 @@ const showRace = () => {
   element("lobbySettings").hidden = !isHost;
   element("lobbyRules").hidden = isHost;
   if (isHost) {
+    setSelect("lobbyPublic", roomPublic() ? 1 : 0);
     setSelect("lobbyStage", stage);
     setSelect("lobbyMode", mode);
     setSelect("lobbyStrength", rules.strength);
@@ -573,6 +576,111 @@ const showBots = () => {
   }
 };
 
+// The public rooms, as the relay last listed them (null: not yet), whether it could not be
+// asked, and when it was asked last: every few seconds while the choice shows.
+const browser = {
+  rooms: null,
+  failed: false,
+  asking: false,
+  askedAt: -Infinity,
+};
+const ASK_EVERY_MS = 3000;
+const PUBLIC_PATH = "/net/public";
+
+// (only rooms that can be shown and joined)
+const isListedRoom = (room) =>
+  room != null &&
+  typeof room.room == "string" &&
+  ROOM_NAME.test(room.room) &&
+  ["name", "mode", "stage"].every((key) => typeof room[key] == "string") &&
+  Number.isInteger(room.players) &&
+  Number.isInteger(room.bots);
+
+const askForRooms = () => {
+  if (browser.asking || performance.now() - browser.askedAt < ASK_EVERY_MS) {
+    return;
+  }
+  browser.asking = true;
+  browser.askedAt = performance.now();
+  fetch(PUBLIC_PATH, { cache: "no-store" })
+    .then((response) => (response.ok ? response.json() : Promise.reject()))
+    .then(({ rooms }) => {
+      browser.rooms = Array.isArray(rooms) ? rooms.filter(isListedRoom) : [];
+      browser.failed = false;
+    })
+    .catch(() => {
+      browser.failed = true;
+    })
+    .finally(() => {
+      browser.asking = false;
+    });
+};
+
+const countText = (count, one) => `${count} ${one}${count == 1 ? "" : "s"}`;
+
+// (its lines read as one: "Hosti's room: Most kills on Stage 3, 2 players and 1 bot")
+const listedRoomItem = ({
+  room,
+  name,
+  mode,
+  stage,
+  players,
+  bots,
+  racing,
+  full,
+}) => {
+  const item = document.createElement("li");
+  const title = name ? `${name}'s room` : "A room";
+  const counts = [
+    countText(players, "player"),
+    ...(bots > 0 ? [countText(bots, "bot")] : []),
+  ].join(" and ");
+  const join = document.createElement("button");
+  join.type = "button";
+  join.textContent = full ? "Full" : "Join";
+  join.disabled = full === true;
+  join.setAttribute("aria-label", full ? `${title} is full` : `Join ${title}`);
+  join.addEventListener("click", () => {
+    showNotice("");
+    joinRoom(room);
+    showRoom();
+  });
+  item.append(
+    textOf("who", title),
+    unseen(": "),
+    textOf("race", `${mode} on ${stage}`),
+    unseen(", "),
+    textOf("count", racing ? `${counts}, racing now` : counts),
+    join,
+  );
+  return item;
+};
+
+const showBrowser = () => {
+  askForRooms();
+  let text = "";
+  if (browser.failed) {
+    text =
+      "The public rooms could not be loaded. You can still join with a code.";
+  } else if (browser.rooms === null) {
+    text = "Looking for public rooms...";
+  } else if (browser.rooms.length == 0) {
+    text = "No public rooms right now: host one, or join with a code.";
+  }
+  const line = element("multiplayerBrowserStatus");
+  if (line.textContent != text) {
+    line.textContent = text;
+  }
+  const rooms = browser.failed ? [] : (browser.rooms ?? []);
+  const list = element("multiplayerRoomList");
+  // (changed only when it changes, so screen readers announce each change once)
+  const shape = JSON.stringify(rooms);
+  if (list.dataset.shape != shape) {
+    list.dataset.shape = shape;
+    list.replaceChildren(...rooms.map(listedRoomItem));
+  }
+};
+
 // What the screen and its button show: the choice, or the room the game is in.
 const showRoom = () => {
   const inRoom = link.role != ROLE.none;
@@ -589,6 +697,9 @@ const showRoom = () => {
   element("multiplayerRoom").hidden = !inRoom;
   element("multiplayerRoomLine").hidden = !inRoom;
   if (!inRoom) {
+    if (dialog.open) {
+      showBrowser();
+    }
     return;
   }
   element("multiplayerRoomName").textContent = link.room;
@@ -752,6 +863,9 @@ export const installMultiplayerMenu = () => {
     pressedAt = null;
     talk(false);
   });
+  element("lobbyPublic").addEventListener("change", (event) =>
+    chooseRoomPublic(event.target.value == "1"),
+  );
   element("lobbyStage").addEventListener("change", (event) =>
     chooseRoomStage(Number(event.target.value)),
   );

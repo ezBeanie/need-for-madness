@@ -1029,6 +1029,14 @@ const pickByTap = (tap) => {
   announce(lockedText());
 };
 
+// whether the target camera's bar shows: the camera behind the player's car turning to cars
+const lockBarShown = () =>
+  camera.aims &&
+  !track.haltall &&
+  game.carCount != 1 &&
+  camera.mode == CAMERA.behind &&
+  camera.target == game.player;
+
 // The target camera's bar, at the top in the middle: under it come the original's messages,
 // at the bottom the clocks and the ping, and on phones the touch controls would take its
 // taps.
@@ -2113,13 +2121,7 @@ export function drawHud() {
         drawTrackWarnings();
       }
     }
-    if (
-      camera.aims &&
-      !raceOver &&
-      game.carCount != 1 &&
-      camera.mode == CAMERA.behind &&
-      camera.target == game.player
-    ) {
+    if (!raceOver && lockBarShown()) {
       drawLockBar(taps);
     }
     drawStanding();
@@ -2535,18 +2537,21 @@ const closestOpponent = () => {
   return target;
 };
 
+// (under the arrow while the target camera's bar is over it)
 const drawTargetName = (target) => {
   const name = nameOfCar(target);
+  const below = lockBarShown() ? TARGET_NAME_BELOW : 0;
   drawCenteredText(
-    16,
+    16 + below,
     "[" + "  ".repeat(name.length) + "]",
     76,
     67,
     240,
     TEXT.label,
   );
-  drawCenteredText(18, name, 0, 0, 0, TEXT.label);
+  drawCenteredText(18 + below, name, 0, 0, 0, TEXT.label);
 };
+const TARGET_NAME_BELOW = 108;
 
 // Turns the drawn arrow towards the heading: in steps of 10 degrees, or 15 the other way
 // round when that is shorter.

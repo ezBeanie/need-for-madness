@@ -97,6 +97,12 @@ Deployment auf beanie (seit 29.10.2026 live):
 - Relay: Quellen nach `/home/janu/nfm-relay` (`package.json`, `package-lock.json`, `server/`),
   dort `docker build -f server/Dockerfile -t nfm-relay .`, Container
   `docker run -d --name nfm-relay --restart unless-stopped -p 127.0.0.1:8787:8787 nfm-relay`.
+- Raumliste: Der Relay beantwortet `/net/public` jedem, mit den Räumen, die ihr Host in der
+  Lobby öffentlich gemacht hat ("Who can join"): Raumcode, Name des Hosts, Modus, Strecke,
+  Spieler und Bots, ob gerade gefahren wird. Keine Adressen. Der Host schickt dazu dem Relay
+  `{"relay":"listing","listing":{…}}` (geht an kein Spiel), alle paar Sekunden neu und `null`,
+  wenn der Raum wieder privat ist; verlässt er den Raum, ist die Listung weg. Standard: privat.
+  Der Mehrspieler-Dialog zeigt die Liste über "Host a race" und dem Beitreten per Code.
 - Übersicht `lobbies.html`: Der Relay beantwortet `/net/rooms` nur mit dem Token aus
   `ROOMS_TOKEN` (ohne gesetzten Token gar nicht). Der Token kommt aus einer Env-Datei, die nur
   auf beanie liegt und nie ins Repository gehört, z. B. `--env-file /home/janu/nfm-relay.env`

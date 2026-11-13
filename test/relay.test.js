@@ -1,16 +1,22 @@
 import { createServer } from "node:http";
 import { afterEach, beforeEach, expect, test } from "vitest";
 import { WebSocket } from "ws";
-import { ROOM_FULL, answerRooms, attachRelay } from "../server/relay.js";
+import {
+  ROOM_FULL,
+  answerPublic,
+  answerRooms,
+  attachRelay,
+} from "../server/relay.js";
 
 let server;
 let url;
 let report;
+let listed;
 const sockets = [];
 
 beforeEach(async () => {
   server = createServer();
-  report = attachRelay(server);
+  ({ report, listed } = attachRelay(server));
   await new Promise((resolve) => server.listen(0, resolve));
   url = `ws://localhost:${server.address().port}`;
 });
@@ -142,4 +148,73 @@ test("a room no game is left in goes from the report into the past ones", async 
     raced: false,
   });
   expect(past[0].until).toBeGreaterThanOrEqual(past[0].since);
+});
+
+// what a host lists its room with (see src/net/link.js)
+const listing = (fields) =>
+  JSON.stringify({ relay: "listing", listing: fields });
+
+test("a room its host lists is listed for everyone, with what the host said, until it is no longer", async () => {
+  const host = await enter("/net?room=open-1");
+  const guest = await enter("/net?room=open-1");
+  await enter("/net?room=closed-1");
+  expect(listed()).toEqual([]);
+  host.send(
+    listing({
+      name: "Hosti\u0007",
+      mode: "Most kills",
+      stage: "Stage 3",
+      players: 2,
+      bots: 99,
+      racing: true,
+      address: "not passed on",
+    }),
+  );
+  await delivered();
+  expect(listed()).toEqual([
+    {
+      room: "open-1",
+      name: "Hosti ",
+      mode: "Most kills",
+      stage: "Stage 3",
+      players: 2,
+      bots: 0,
+      racing: true,
+      full: false,
+    },
+  ]);
+  // (the listing goes to no game; a guest's does not replace the host's)
+  expect(guest.received).toEqual([]);
+  guest.send(listing({ name: "Gasti" }));
+  await delivered();
+  expect(listed()[0].name).toBe("Hosti ");
+  expect(host.received).toEqual([]);
+  host.send(listing(null));
+  await delivered();
+  expect(listed()).toEqual([]);
+});
+
+test("a listed room is no longer listed once its host leaves it", async () => {
+  const host = await enter("/net?room=open-2");
+  await enter("/net?room=open-2");
+  host.send(listing({ name: "Hosti", players: 2 }));
+  await delivered();
+  expect(listed().map(({ room }) => room)).toEqual(["open-2"]);
+  host.close();
+  await delivered();
+  expect(listed()).toEqual([]);
+});
+
+test("the rooms listed are answered to anyone", () => {
+  let status;
+  let body = "";
+  answerPublic(() => [{ room: "open-3" }])(
+    {},
+    {
+      writeHead: (code) => (status = code),
+      end: (text) => (body = text),
+    },
+  );
+  expect(status).toBe(200);
+  expect(JSON.parse(body)).toEqual({ rooms: [{ room: "open-3" }] });
 });
