@@ -8,7 +8,7 @@ import { stopStageMusic } from "../audio/audio.js";
 import { atan } from "../core/exactMath.js";
 import { random, seededRandom } from "../core/random.js";
 import { COLLISIONS, PHASE, game } from "../core/state.js";
-import { collisionChoice } from "../race/physics.js";
+import { collisionChoice, physics } from "../race/physics.js";
 import { tick } from "../core/tick.js";
 import { stunts } from "../input/controls.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
@@ -105,6 +105,7 @@ export const beginFingerprintRace = () => {
   // (and stunts and crashes as the original's, whatever the player chose; not stored)
   stunts.byKey = false;
   collisionChoice.value = COLLISIONS.original;
+  physics.asOriginal = true;
 };
 
 // (the cars people drive steered, see isHuman)

@@ -55,7 +55,17 @@ import { acos } from "../core/exactMath.js";
 // since again with the right ones (see net/lockstep.js).
 // flipWhenGrounded: the player's capsized car, auto-corrected, left the ground and turns
 // upright when it touches it again; part of the race (see net/raceState.js).
-export const physics = { quiet: false, flipWhenGrounded: false };
+// asOriginal: a race alone as the original's, without this game's fixes (see fixed): for
+// the tests recorded from the original, never in the game.
+export const physics = {
+  quiet: false,
+  flipWhenGrounded: false,
+  asOriginal: false,
+};
+
+// Whether the race has this game's fixes of the original: every room's race, and the
+// player's own unless as the original's.
+const fixed = () => game.humans.length > 0 || !physics.asOriginal;
 const unlessQuiet =
   (act) =>
   (...args) =>
@@ -1180,12 +1190,11 @@ function burnWhenWasted(c, type, avgSpeedX, avgSpeedZ) {
           }
         }
       }
-      // (in a room's race also a wreck burning on, not wasted: seen in a playtest, its cause
+      // (with the fixes also a wreck burning on, not wasted: seen in a playtest, its cause
       // not found, it drove on and could not be wasted again)
       if (
         !racers[c].wasted &&
-        (racers[c].cntdest == 4 ||
-          (game.humans.length > 0 && racers[c].cntdest > 4))
+        (racers[c].cntdest == 4 || (fixed() && racers[c].cntdest > 4))
       ) {
         racers[c].wasted = true;
         if (isDeathmatch()) {
@@ -1380,9 +1389,9 @@ function throwScrapeSparks(c, type, step) {
 }
 
 // The original's limits stop a wheel only within 20 of them: a car faster than that, flying
-// over a ramp at the edge, is through. In a room's race nothing gets out.
+// over a ramp at the edge, is through. With the fixes nothing gets out.
 function bounceOffStageLimits(c, type, step) {
-  const fenced = game.humans.length > 0;
+  const fenced = fixed();
   for (let k = 0; k < 4; k++) {
     if (
       step.wheelZ[k] < track.limb + step.reachZ &&
@@ -1838,11 +1847,11 @@ function hitPieceWall(c, o, alongZ) {
   }
 }
 
-// In a room's race a wall hit hard dents more than one grazed: the faster, the more (the
+// With the fixes a wall hit hard dents more than one grazed: the faster, the more (the
 // original's walls hardly hurt a car flying into them).
 const HARD_WALL = 25;
 const wallHit = (mag) =>
-  game.phase == PHASE.race && game.humans.length > 0
+  game.phase == PHASE.race && fixed()
     ? mag * (1 + Math.abs(mag) / HARD_WALL)
     : mag;
 
@@ -3558,10 +3567,10 @@ export function regn(hitSide, k, mag, c) {
     if (!keepsShape) {
       const before = racers[c].damage;
       dentBody(c, racers[c].body, hitSide, k, mag);
-      // In a room's race every hit takes its share: a corner hit again and again is
+      // With the fixes every hit takes its share: a corner hit again and again is
       // pushed out of the hits' reach, and a car left with only such corners took no
       // damage any more, unwastable (the original's races were too short for it).
-      if (game.phase == PHASE.race && game.humans.length > 0) {
+      if (game.phase == PHASE.race && fixed()) {
         racers[c].damage = Math.max(
           racers[c].damage,
           before + Math.abs(mag) * LEAST_DAMAGE,
@@ -3570,7 +3579,7 @@ export function regn(hitSide, k, mag, c) {
     }
   }
 }
-// the damage a hit takes at least in a room's race, per its magnitude
+// the damage a hit takes at least with the fixes, per its magnitude
 const LEAST_DAMAGE = 1;
 
 // How car c's sounds are heard (see audio/carSounds.js): null as the player's own,

@@ -355,7 +355,7 @@ test("in a room's race the HUD tells who wasted whom, bots too, by the players' 
   expect(ctx.feed.at(-1)).toMatchObject({ text: "Ben wasted you", mine: true });
 });
 
-test("in a room's race a wreck burning on but not wasted is wasted", async () => {
+test("a wreck burning on but not wasted is wasted, in a room's race and alone", async () => {
   const { ctx } = await mostKills();
   // car 1 burnt out, yet driving
   const burningOn = () => {
@@ -365,15 +365,23 @@ test("in a room's race a wreck burning on but not wasted is wasted", async () =>
     ctx.drive();
     return ctx.racers[1].wasted;
   };
-  // (a race alone: as the original)
+  // (a race alone as the original's: as the original)
   ctx.game.humans = [];
   expect(burningOn()).toBe(false);
   ctx.game.humans = [0, 1];
   expect(burningOn()).toBe(true);
   expect(ctx.deathmatch.deaths[1]).toBe(1);
+  // (alone with the fixes: as in a room)
+  ctx.game.humans = [];
+  ctx.physics.asOriginal = false;
+  try {
+    expect(burningOn()).toBe(true);
+  } finally {
+    ctx.physics.asOriginal = true;
+  }
 });
 
-test("in a room's race a car hit again and again at one corner keeps taking damage", async () => {
+test("a car hit again and again at one corner keeps taking damage, in a room's race and alone", async () => {
   const { ctx } = await mostKills();
   // the damage of a hit after a hundred at the same corner
   const lastHit = () => {
@@ -385,11 +393,19 @@ test("in a room's race a car hit again and again at one corner keeps taking dama
     ctx.regn(ctx.HIT.alongZ, 0, 60, 1);
     return ctx.racers[1].damage - before;
   };
-  // (a race alone: the corner's vertices are out of the hits' reach, as in the original)
+  // (a race alone as the original's: the corner's vertices are out of the hits' reach)
   ctx.game.humans = [];
   expect(lastHit()).toBe(0);
   ctx.game.humans = [0, 1];
   expect(lastHit()).toBeGreaterThan(20);
+  // (alone with the fixes: as in a room)
+  ctx.game.humans = [];
+  ctx.physics.asOriginal = false;
+  try {
+    expect(lastHit()).toBeGreaterThan(20);
+  } finally {
+    ctx.physics.asOriginal = true;
+  }
 });
 
 test("in most kills the race tape has every wasting of a car and its coming back, as the replay shows it", async () => {
