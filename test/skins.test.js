@@ -8,8 +8,8 @@ import {
   setRoomCars,
   skinOf,
 } from "../src/net/roomCars.js";
-import { rgbToHsb } from "../src/classic/color.js";
-import { SKINS, paint } from "../src/render/skins.js";
+import { hsbToRgb, rgbToHsb } from "../src/classic/color.js";
+import { SKINS, isSkin, paint } from "../src/render/skins.js";
 
 const RED = SKINS.indexOf("Red");
 const BLUE = SKINS.indexOf("Blue");
@@ -31,6 +31,61 @@ test("a skin paints a car's colours, but its greys, and the standard paints noth
     [200, 200, 205],
   ]) {
     expect(paint(...grey, RED)).toEqual(grey);
+  }
+});
+
+test("the first paints keep their numbers and colours, stored and sent as before", () => {
+  expect(SKINS.slice(0, 9)).toEqual([
+    "Standard",
+    "Red",
+    "Orange",
+    "Yellow",
+    "Green",
+    "Blue",
+    "Purple",
+    "Black",
+    "White",
+  ]);
+  // (as they were painted before there were more)
+  const hues = [null, 0, 0.07, 0.15, 0.33, 0.6, 0.78];
+  for (const colour of [
+    [230, 120, 30],
+    [20, 90, 200],
+    [120, 40, 60],
+  ]) {
+    const [, saturation, brightness] = rgbToHsb(...colour);
+    for (let skin = 1; skin < hues.length; skin++) {
+      expect(paint(...colour, skin)).toEqual(
+        hsbToRgb(hues[skin], saturation, brightness),
+      );
+    }
+    expect(paint(...colour, 7)).toEqual(hsbToRgb(0, 0, brightness * 0.3));
+    expect(paint(...colour, 8)).toEqual(hsbToRgb(0, 0, 0.6 + brightness * 0.4));
+  }
+});
+
+test("there are twice the paints, each telling a car apart from the others", () => {
+  expect(SKINS.length).toBe(18);
+  expect(new Set(SKINS).size).toBe(SKINS.length);
+  expect(isSkin(SKINS.length - 1)).toBe(true);
+  expect(isSkin(SKINS.length)).toBe(false);
+  // (no two of them closer than the red and the orange there were: the standard paint is
+  // the car's own, which may be either)
+  const apart = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+  for (const colour of [
+    [200, 60, 40],
+    [60, 160, 60],
+  ]) {
+    const painted = SKINS.map((_, skin) => paint(...colour, skin));
+    const least = apart(painted[1], painted[2]);
+    for (let a = 1; a < painted.length; a++) {
+      for (let b = a + 1; b < painted.length; b++) {
+        expect(
+          apart(painted[a], painted[b]),
+          `${SKINS[a]}, ${SKINS[b]}`,
+        ).toBeGreaterThanOrEqual(least);
+      }
+    }
   }
 });
 

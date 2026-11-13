@@ -1,24 +1,33 @@
 // The paints a car can have in a room's races besides its own (the lobby chooses one per
-// player and bot): its coloured parts take the paint's hue, or turn black or white; grey,
-// black and white parts (tyres, grilles, glass) stay as they are.
+// player and bot): its coloured parts take the paint's hue, saturation and brightness
+// scaled, so their shading stays; grey, black and white parts (tyres, grilles, glass) stay
+// as they are.
 
 import { hsbToRgb, rgbToHsb } from "../classic/color.js";
 
-export const SKINS = [
-  "Standard",
-  "Red",
-  "Orange",
-  "Yellow",
-  "Green",
-  "Blue",
-  "Purple",
-  "Black",
-  "White",
+// name, hue, saturation times, brightness plus and times. A skin is its index, kept in
+// storage and sent to the room: new paints only ever go at the end.
+const PAINTS = [
+  ["Standard"],
+  ["Red", 0, 1, 0, 1],
+  ["Orange", 0.07, 1, 0, 1],
+  ["Yellow", 0.15, 1, 0, 1],
+  ["Green", 0.33, 1, 0, 1],
+  ["Blue", 0.6, 1, 0, 1],
+  ["Purple", 0.78, 1, 0, 1],
+  ["Black", 0, 0, 0, 0.3],
+  ["White", 0, 0, 0.6, 0.4],
+  ["Pink", 0.92, 0.75, 0.15, 0.85],
+  ["Lime", 0.25, 1, 0.1, 0.9],
+  ["Cyan", 0.5, 1, 0, 1],
+  ["Grey", 0, 0, 0.3, 0.4],
+  ["Maroon", 0.96, 1, 0.1, 0.5],
+  ["Teal", 0.48, 1, 0.1, 0.6],
+  ["Dark green", 0.36, 1, 0.1, 0.45],
+  ["Navy", 0.65, 1, 0.1, 0.55],
+  ["Sky blue", 0.55, 0.45, 0.35, 0.65],
 ];
-// the hue of each paint, null for black and white
-const HUES = [null, 0, 0.07, 0.15, 0.33, 0.6, 0.78, null, null];
-const BLACK = 7;
-const WHITE = 8;
+export const SKINS = PAINTS.map(([name]) => name);
 // parts less saturated than this keep their colour
 const GREY = 0.25;
 
@@ -31,13 +40,12 @@ export const paint = (r, g, b, skin) => {
   if (skin == 0 || saturation < GREY) {
     return [r, g, b];
   }
-  if (skin == BLACK) {
-    return hsbToRgb(0, 0, brightness * 0.3);
-  }
-  if (skin == WHITE) {
-    return hsbToRgb(0, 0, 0.6 + brightness * 0.4);
-  }
-  return hsbToRgb(HUES[skin], saturation, brightness);
+  const [, hue, timesSaturation, plus, timesBrightness] = PAINTS[skin];
+  return hsbToRgb(
+    hue,
+    saturation * timesSaturation,
+    plus + brightness * timesBrightness,
+  );
 };
 
 // Paints the pixels (RGBA) of a car's texture in place, but where keep(pixels, p) says.
