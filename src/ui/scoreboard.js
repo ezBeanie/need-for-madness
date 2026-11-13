@@ -30,7 +30,8 @@ export const wastedBy = (c) => {
     : -1;
 };
 
-// "Bot 2 wasted Anna", "You wasted Bot 2", "Anna wasted you", "Bot 3 has been wasted"
+// "Kool Kat wasted Anna", "You wasted Kool Kat", "Anna wasted you", "Kool Kat has been
+// wasted"
 export const wreckText = (by, c) => {
   const victim = c == game.player ? "you" : nameOfCar(c);
   if (by == -1) {

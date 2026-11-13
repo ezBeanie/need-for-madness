@@ -574,23 +574,32 @@ test("a room's race has only its players' cars, and the bots the host adds with 
       const { game } = window.gameState;
       return game.carTypes.slice(0, game.carCount);
     });
-  // two bots added, the first's car chosen, then the other taken away again: one left
+  // two bots added, both in the same car: named after it and numbered; then the second
+  // taken away again: one left, named after its car alone
   await guest.advance(30);
   await hostPage.waitForTimeout(DELIVERY_MS);
   await hostPage.getByRole("button", { name: "Room bots" }).click();
   await hostPage.getByRole("button", { name: "Add a bot" }).click();
   await hostPage.getByRole("button", { name: "Add a bot" }).click();
   await hostPage
-    .getByLabel("Bot 1", { exact: true })
+    .locator("#multiplayerBot0")
     .selectOption({ label: "Kool Kat" });
-  await hostPage.getByRole("button", { name: "Remove Bot 2" }).click();
+  await hostPage
+    .locator("#multiplayerBot1")
+    .selectOption({ label: "Kool Kat" });
+  await expect(
+    hostPage.getByLabel("Kool Kat 1", { exact: true }),
+  ).toBeVisible();
+  await expect(hostPage.getByLabel("Paint of Kool Kat 2")).toBeAttached();
+  await hostPage.getByRole("button", { name: "Remove Kool Kat 2" }).click();
+  await expect(hostPage.getByLabel("Kool Kat", { exact: true })).toBeVisible();
   await hostPage.getByRole("button", { name: "Back" }).click();
   // the guest's dialog lists it
   await guestPage.waitForTimeout(DELIVERY_MS);
   await guest.advance(2);
   await guestPage.getByRole("button", { name: "Room bots" }).click();
   await expect(guestPage.locator("#multiplayerBotList")).toHaveText(
-    "Bot 1: Kool Kat",
+    "Kool Kat: Kool Kat",
   );
   await guestPage.getByRole("button", { name: "Back" }).click();
   await hostStartsRace(games);
@@ -1040,10 +1049,15 @@ test("each game names the cars after their players and paints them as chosen, a 
         ownBody: s.racers[c].body !== s.carModels[s.car[c].typ],
       }));
     });
+  // (the bot after its car)
+  const botCar = await hostPage.evaluate(() => {
+    const { carStats, game } = window.gameState;
+    return carStats.names[game.carTypes[2]];
+  });
   const expected = [
     { name: "Hosti", skin: 1, ownBody: true },
     { name: "Gasti", skin: 5, ownBody: true },
-    { name: "Bot 1", skin: 0, ownBody: false },
+    { name: botCar, skin: 0, ownBody: false },
   ];
   expect(await cars(hostPage)).toEqual(expected);
   expect(await cars(guestPage)).toEqual(expected);

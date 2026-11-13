@@ -52,7 +52,7 @@ import { ROLE, ROOM_NAME, leaveRoom, link } from "../net/link.js";
 import { linkedDirectly } from "../net/direct.js";
 import { classicMenus } from "../render/look.js";
 import { SKINS } from "../render/skins.js";
-import { own, setOwnSkin } from "../net/roomCars.js";
+import { botNames, own, setOwnSkin } from "../net/roomCars.js";
 import { isTalking, talk, voice } from "../net/voice.js";
 import {
   PREVIEW_HEIGHT,
@@ -342,8 +342,6 @@ const showChat = () => {
   log.scrollTop = log.scrollHeight;
 };
 
-const botName = (i) => `Bot ${i + 1}`;
-
 // (each a car to choose, so a list rebuilt only when bots come or go: one chosen in keeps
 // its focus)
 const skinChoice = (id, label, skin, choose) => {
@@ -359,12 +357,12 @@ const skinChoice = (id, label, skin, choose) => {
   return [choice, select];
 };
 
+// (its name, from its car, is told by nameHostBots)
 const hostBotItem = ({ carType, skin }, i) => {
   const item = document.createElement("li");
   const preview = carPreview(carType, skin);
   const label = document.createElement("label");
   label.htmlFor = `multiplayerBot${i}`;
-  label.textContent = botName(i);
   const select = document.createElement("select");
   select.id = `multiplayerBot${i}`;
   select.append(
@@ -374,38 +372,48 @@ const hostBotItem = ({ carType, skin }, i) => {
   select.addEventListener("change", () => {
     chooseBotCar(i, Number(select.value));
     preview.dataset.car = select.value;
+    showBots();
   });
   const remove = document.createElement("button");
   remove.type = "button";
   remove.textContent = "Remove";
-  remove.setAttribute("aria-label", `Remove ${botName(i)}`);
   remove.addEventListener("click", () => {
     removeBot(i);
     showBots();
     element("multiplayerAddBot").focus();
   });
-  const paint = skinChoice(
-    `multiplayerBotSkin${i}`,
-    `Paint of ${botName(i)}`,
-    skin,
-    (chosen) => {
-      chooseBotSkin(i, chosen);
-      preview.dataset.skin = String(chosen);
-    },
-  );
+  const paint = skinChoice(`multiplayerBotSkin${i}`, "", skin, (chosen) => {
+    chooseBotSkin(i, chosen);
+    preview.dataset.skin = String(chosen);
+  });
   item.append(preview, label, select, ...paint, remove);
   return item;
 };
 
-const guestBotItem = ({ carType, skin }, i) => {
+const guestBotItem = (name, { carType, skin }) => {
   const item = document.createElement("li");
   item.append(
     carPreview(carType, skin),
-    textOf("who", botName(i)),
+    textOf("who", name),
     unseen(": "),
     textOf("car", carText(carType, skin)),
   );
   return item;
+};
+
+// (a car chosen renames its bot, and others in the same car, in place: the list kept, the
+// choice keeps its focus)
+const nameHostBots = (list, names) => {
+  [...list.children].forEach((item, i) => {
+    const [label, skinLabel] = item.querySelectorAll("label");
+    if (label.textContent != names[i]) {
+      label.textContent = names[i];
+      skinLabel.textContent = `Paint of ${names[i]}`;
+      item
+        .querySelector("button")
+        .setAttribute("aria-label", `Remove ${names[i]}`);
+    }
+  });
 };
 
 const showBots = () => {
@@ -418,9 +426,17 @@ const showBots = () => {
   const shape = isHost
     ? `host ${bots.length}`
     : `guest ${JSON.stringify(bots)}`;
+  const names = botNames(bots.map(({ carType }) => carType));
   if (list.dataset.shape != shape) {
     list.dataset.shape = shape;
-    list.replaceChildren(...bots.map(isHost ? hostBotItem : guestBotItem));
+    list.replaceChildren(
+      ...bots.map((bot, i) =>
+        isHost ? hostBotItem(bot, i) : guestBotItem(names[i], bot),
+      ),
+    );
+  }
+  if (isHost) {
+    nameHostBots(list, names);
   }
 };
 

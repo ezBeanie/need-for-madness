@@ -74,7 +74,7 @@ test("the lobby shows each player's and bot's car on its card", async ({
   await expect(page.getByRole("dialog", { name: "Multiplayer" })).toBeVisible();
   await page.getByRole("button", { name: "Host a race" }).click();
   await page.getByRole("button", { name: "Add a bot" }).click();
-  await page.getByLabel("Bot 1", { exact: true }).selectOption("3");
+  await page.locator("#multiplayerBot0").selectOption("3");
   await game.advance(4);
   const cards = page.locator("#multiplayer canvas.car-preview");
   await expect(cards).toHaveCount(2);
@@ -195,7 +195,7 @@ test("a bot's paint chosen shows on its card", async ({ page }) => {
   await page.locator("#menuMultiplayer").click();
   await page.getByRole("button", { name: "Host a race" }).click();
   await page.getByRole("button", { name: "Add a bot" }).click();
-  await page.getByLabel("Bot 1", { exact: true }).selectOption("5");
+  await page.locator("#multiplayerBot0").selectOption("5");
   await game.advance(4);
   // the reddest share of the card's car
   const red = () =>
@@ -219,7 +219,7 @@ test("a bot's paint chosen shows on its card", async ({ page }) => {
       return reddish / seen;
     });
   const before = await red();
-  await page.getByLabel("Paint of Bot 1").selectOption("Red");
+  await page.locator("#multiplayerBotSkin0").selectOption("Red");
   await game.advance(2);
   expect(await red()).toBeGreaterThan(before + 0.1);
 });
