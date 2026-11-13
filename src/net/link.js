@@ -46,6 +46,8 @@ export const MESSAGE = {
   watched: "watched",
   // the setting up of a direct link between a guest and the host (see direct.js)
   direct: "direct",
+  // what a guest out of the lobby does (PLAYER_STATUS), for the host to list
+  status: "status",
 };
 
 // the most games in a room, as the relay takes them
@@ -59,6 +61,40 @@ export const isPlayerId = (id) =>
 // race leaves it too: its game sends no keys while it plays, and the others' would wait for
 // them, the race over and its Continue not shown.
 export const RACE_GOES_ON = [PHASE.race, PHASE.paused];
+
+// What a player of the room does, as the lobby lists it: in the lobby (the menus), in a race,
+// watching the highlight or the replay after it, at the race's results, or elsewhere (the
+// stage editor, the instructions).
+export const PLAYER_STATUS = {
+  lobby: 0,
+  racing: 1,
+  highlight: 2,
+  replay: 3,
+  results: 4,
+  away: 5,
+};
+
+const STATUS_BY_PHASE = new Map([
+  [PHASE.mainMenu, PLAYER_STATUS.lobby],
+  [PHASE.carSelect, PLAYER_STATUS.lobby],
+  [PHASE.stageSelect, PLAYER_STATUS.lobby],
+  [PHASE.stageLoading, PLAYER_STATUS.racing],
+  [PHASE.startFlash, PLAYER_STATUS.racing],
+  [PHASE.race, PLAYER_STATUS.racing],
+  [PHASE.paused, PLAYER_STATUS.racing],
+  [PHASE.switchScreen, PLAYER_STATUS.racing],
+  [PHASE.timeRewind, PLAYER_STATUS.racing],
+  [PHASE.replayRewind, PLAYER_STATUS.racing],
+  [PHASE.highlights, PLAYER_STATUS.highlight],
+  [PHASE.replay, PLAYER_STATUS.replay],
+  [PHASE.raceEnd, PLAYER_STATUS.results],
+]);
+
+export const statusOf = (phase) =>
+  STATUS_BY_PHASE.get(phase) ?? PLAYER_STATUS.away;
+
+export const isPlayerStatus = (status) =>
+  isIndex(status, Object.keys(PLAYER_STATUS).length);
 
 // whether n is a whole number from 0 up to below `below`: what another game sends is checked
 export const isIndex = (n, below) => Number.isInteger(n) && n >= 0 && n < below;

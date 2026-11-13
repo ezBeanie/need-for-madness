@@ -1,6 +1,7 @@
 // The multiplayer screen: hosting a race (a room with a code and a link for the guests) or
 // joining one with the host's code, then the room's lobby: its players, each on a card with
-// its car turning (see render/carPreviews.js) and whether it is ready, its bots, which the
+// its car turning (see render/carPreviews.js) and whether it is ready or what it does out of
+// the lobby (in a race, watching the highlight, ...), its bots, which the
 // host adds and chooses the cars of, the stage the host chooses, each player's car, and a
 // chat. The host starts the race once everyone is ready, and the lobby comes back after
 // it. The main menu opens it (the classic one with a button beside its Options).
@@ -49,7 +50,14 @@ import {
   tellHost,
 } from "../net/guest.js";
 import { menu } from "../screens/menuState.js";
-import { ROLE, ROOM_NAME, leaveRoom, link } from "../net/link.js";
+import {
+  PLAYER_STATUS,
+  ROLE,
+  ROOM_NAME,
+  leaveRoom,
+  link,
+  statusOf,
+} from "../net/link.js";
 import { linkedDirectly } from "../net/direct.js";
 import { classicMenus } from "../render/look.js";
 import { SKINS } from "../render/skins.js";
@@ -92,9 +100,13 @@ const status = () => {
     if (roomGuests().length == 0) {
       return "Waiting for others to join. You can also start a race with bots now.";
     }
-    return everyoneReady()
+    if (!everyoneReady()) {
+      return "Waiting for everyone to be ready...";
+    }
+    // (those still in the race, its highlight or results race the next one)
+    return roomGuests().every(({ status }) => status == PLAYER_STATUS.lobby)
       ? "Everyone is ready: start a race when you like."
-      : "Waiting for everyone to be ready...";
+      : "Everyone in the lobby is ready: start a race when you like. The others can join the next one.";
   }
   if (!hostThere()) {
     return "Waiting for the host...";
@@ -158,7 +170,28 @@ const carText = (carType, skin) =>
     ? `${carStats.names[carType]} in ${SKINS[skin].toLowerCase()}`
     : carStats.names[carType];
 
-const playerItem = ({ id, name, carType, skin, ready, you, near }, i) => {
+// (by PLAYER_STATUS, but in the lobby, where the card says whether the player is ready)
+const STATUS_TEXT = [
+  null,
+  "In a race",
+  "Watching the highlight",
+  "Watching the replay",
+  "At the results",
+  "Away",
+];
+
+// whether the player is ready, or what it does out of the lobby
+const stateText = (ready, status) => {
+  if (status != PLAYER_STATUS.lobby) {
+    return textOf("away", STATUS_TEXT[status]);
+  }
+  return textOf(ready ? "ready" : "waiting", ready ? "Ready" : "Not ready");
+};
+
+const playerItem = (
+  { id, name, carType, skin, ready, status, you, near },
+  i,
+) => {
   const item = document.createElement("li");
   item.classList?.toggle("you", Boolean(you));
   item.dataset.id = id;
@@ -168,7 +201,7 @@ const playerItem = ({ id, name, carType, skin, ready, you, near }, i) => {
     unseen(": "),
     textOf("car", carText(carType, skin)),
     unseen(", "),
-    textOf(ready ? "ready" : "waiting", ready ? "Ready" : "Not ready"),
+    stateText(ready, you ? statusOf(game.phase) : status),
   );
   // (linked directly: the races with this one go without the relay)
   if (near) {
@@ -183,11 +216,12 @@ const showPlayers = () => {
     near: linkedDirectly(player.id),
   }));
   const shape = JSON.stringify(
-    all.map(({ name, carType, skin, ready, you, near }) => [
+    all.map(({ name, carType, skin, ready, status, you, near }) => [
       you ? own.name : name,
       carType,
       skin,
       ready,
+      you ? statusOf(game.phase) : status,
       you,
       near,
     ]),

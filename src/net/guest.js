@@ -35,8 +35,10 @@ import {
   closeLink,
   decode,
   isIndex,
+  isPlayerStatus,
   link,
   openLink,
+  statusOf,
   urlRoom,
 } from "./link.js";
 import { lockstep, receiveRaceMessage, startLockstep } from "./lockstep.js";
@@ -51,7 +53,8 @@ import { camera } from "../render/camera.js";
 import { spectate } from "../race/spectate.js";
 import { askToWatch, overhear, receiveWatched } from "./watch.js";
 
-// how often a guest not in a race tells the host it is there (and which car it chose)
+// how often a guest tells the host it is there (and which car it chose, or what it does out
+// of the lobby)
 const JOIN_EVERY_TICKS = 30;
 // the screens a race of the host's takes the guest away from
 const WAITING_PHASES = [PHASE.mainMenu, PHASE.carSelect, PHASE.stageSelect];
@@ -63,8 +66,9 @@ export const guest = {
   start: null,
   // the time to the host and back, in ms (null until measured)
   ping: null,
-  // the room's players as the host last told, each with its id, name, car, skin and
-  // whether it is ready, the host's first, its bots' cars and skins and the stage it chose
+  // the room's players as the host last told, each with its id, name, car, skin, whether
+  // it is ready and what it does (PLAYER_STATUS), the host's first, its bots' cars and skins
+  // and the stage it chose
   players: [],
   bots: [],
   stage: null,
@@ -73,6 +77,8 @@ export const guest = {
   // whether this guest's player is ready to race
   ready: false,
   hostId: null,
+  // what the guest does, as it last told the host
+  status: null,
   // the car the guest drives in the host's race
   car: 0,
   // the guest's own car type, car and stage, given back after the race
@@ -101,7 +107,8 @@ const isPlayers = (players) =>
       isName(player.name) &&
       isIndex(player.carType, carStats.names.length) &&
       isSkin(player.skin) &&
-      typeof player.ready == "boolean",
+      typeof player.ready == "boolean" &&
+      isPlayerStatus(player.status),
   );
 
 // (shown only as text, see ui/multiplayerMenu.js)
@@ -263,6 +270,7 @@ export const joinRoom = (room) => {
     stage: null,
     ready: false,
     hostId: null,
+    status: null,
     joinTicks: 0,
     hostAnsweredTicks: HOST_GONE_TICKS,
     hostLeft: false,
@@ -303,11 +311,21 @@ const loadHostedRace = (start) => {
   game.phase = PHASE.stageLoading;
 };
 
-// Every tick, outside the race: tells the host the guest is there, goes to the race the
-// host starts, and is back to its own car after one. A host that left, or was there and
-// is gone, ends the room.
+// Every tick: tells the host what the guest does, at once when that changed. Outside the
+// race: tells the host the guest is there, goes to the race the host starts, and is back to
+// its own car after one. A host that left, or was there and is gone, ends the room.
 export const guestWaitingTick = () => {
-  if (link.role != ROLE.guest || !WAITING_PHASES.includes(game.phase)) {
+  if (link.role != ROLE.guest) {
+    return;
+  }
+  const status = statusOf(game.phase);
+  const changed = status != guest.status;
+  guest.status = status;
+  if (!WAITING_PHASES.includes(game.phase)) {
+    // (out of the lobby too: a guest silent through its highlight would be taken for gone)
+    if (changed || guest.joinTicks++ % JOIN_EVERY_TICKS == 0) {
+      link.send({ type: MESSAGE.status, status });
+    }
     return;
   }
   if (!guest.ownBack) {
@@ -322,7 +340,7 @@ export const guestWaitingTick = () => {
     guest.roomEnded = true;
     return;
   }
-  if (guest.joinTicks++ % JOIN_EVERY_TICKS == 0) {
+  if (changed || guest.joinTicks++ % JOIN_EVERY_TICKS == 0) {
     sendJoin();
   }
   // (a race left while its stage loaded, see game.js, is not loaded again)
