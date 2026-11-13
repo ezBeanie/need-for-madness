@@ -216,16 +216,13 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
 
 ### Offen
 
-- **Querformat auf iOS:** Web-Apps können die Drehung dort nicht sperren; bisher ein Hinweis im
-  Hochformat. Möglich: das Spiel im Hochformat selbst um 90° drehen, oder eine App-Hülle.
 - **Als App bauen (für später):** `dist/` in eine native Hülle packen statt der PWA: Capacitor
   für Android und iOS, Tauri (oder Electron) für Windows, macOS und Linux. Dafür: feste Adresse
   für Relay und `/net/ice` statt relativer Pfade, kein Service Worker in der App (siehe
   `docs/offline.md`; der Musik-Download sollte im Spielcode liegen, nicht im Service Worker),
   Mikrofon-Berechtigungstexte, Signieren (Apple-Developer-Account für iOS/macOS, Play-Konto).
-  Vor einer Store-Veröffentlichung die Rechte am Original klären. Löst auch die Drehsperre
-  auf iOS (oben).
-- Bandbreite (Tasten als Bits, nur bei Änderung), Ergebnisliste für alle.
+  Vor einer Store-Veröffentlichung die Rechte am Original klären.
+- Bandbreite: Tasten nur bei Änderung senden (als Bits gehen sie schon), Ergebnisliste für alle.
 - **Lokaler Multiplayer ganz ohne Internet:** Schritt 10 braucht das Relay einmal zum
   Vorstellen. Ohne Internet ginge das per QR-Code (Host zeigt einen je Gast, Gast zeigt seine
   Antwort zurück); der Host verteilt schon jetzt wie das Relay. Als App (Capacitor) könnte das
@@ -258,6 +255,10 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
   es nach 100 Ticks für ausgestiegen, während es danach weiterfuhr. Jetzt verlässt es das
   Rennen beim Verstecken sofort (`left`, wie „Leave Race“), auch während die Strecke noch lädt
   (der Start wird dann verworfen). Zurück ist es im Menü und im Raum.
+  Seit 1.1.0 läuft ein verstecktes Spiel in einem Raum nach dem Takt eines Web Workers weiter
+  (`goOnHidden` in `game.js`, ohne Zeichnen): es bleibt im Rennen und kommt auch in eines, das
+  der Host startet, während der Tab versteckt ist. Nur wenn es trotzdem stillstand (iOS hält
+  versteckte Seiten an), verlässt es das Rennen beim Zurückkommen wie früher.
 - `?determinism` schaltet die Landehilfe neuer Spieler ab wie der Host; die Hashes hängen nicht
   mehr vom gespeicherten Auto ab.
 - Lobby: Mit Gästen fahren im Raum nur die Spieler (`field.roomCarTypes`), keine KI zum
