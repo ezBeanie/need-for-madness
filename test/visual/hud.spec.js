@@ -5,7 +5,8 @@ import { PHASE } from "../../src/core/state.js";
 // A race on stage 3 with all stages unlocked, past the countdown.
 const racing = async (page, frames = 200, storage = {}) => {
   const game = await openGame(page, {
-    storage: { carsel: "5", unlocked: "17", ...storage },
+    // (crashing as the original's: the pictures were taken so)
+    storage: { carsel: "5", unlocked: "17", collisions: "0", ...storage },
   });
   await game.advanceUntil(PHASE.mainMenu);
   await game.settle();

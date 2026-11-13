@@ -879,7 +879,7 @@ test("the host leaving the room ends it for its guests, who are told so", async 
   await hostPage.waitForTimeout(DELIVERY_MS);
   await guest.advance(2);
   await expect(guestPage.getByRole("dialog")).toBeVisible();
-  await expect(guestPage.getByRole("status")).toHaveText(
+  await expect(guestPage.locator("#multiplayerNotice")).toHaveText(
     "The host left the room.",
   );
   await expect(
@@ -907,7 +907,10 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
   await hostPage.getByLabel("Stage", { exact: true }).selectOption("3");
   await hostPage.getByLabel("Mode", { exact: true }).selectOption("Most kills");
   await hostPage.getByLabel("Bot strength").selectOption("Hard");
-  await hostPage.getByLabel("Collisions").selectOption("Solid");
+  await hostPage
+    .getByRole("region", { name: "The race" })
+    .getByLabel("Collisions")
+    .selectOption("Solid");
   await hostPage.getByLabel("Time", { exact: true }).selectOption("5 min");
   await guestPage.getByLabel("Your car").selectOption("12");
   // (a chat line is text, whatever it says)
