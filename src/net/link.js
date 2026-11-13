@@ -55,13 +55,10 @@ export const MOST_PLAYERS = 8;
 export const isPlayerId = (id) =>
   typeof id == "string" && /^[a-z0-9]{8}$/.test(id);
 
-// the phases a race together goes on in; any other one leaves it
-export const RACE_GOES_ON = [
-  PHASE.race,
-  PHASE.paused,
-  PHASE.replay,
-  PHASE.replayRewind,
-];
+// the phases a race together goes on in; any other one leaves it. The replay after the
+// race leaves it too: its game sends no keys while it plays, and the others' would wait for
+// them, the race over and its Continue not shown.
+export const RACE_GOES_ON = [PHASE.race, PHASE.paused];
 
 // whether n is a whole number from 0 up to below `below`: what another game sends is checked
 export const isIndex = (n, below) => Number.isInteger(n) && n >= 0 && n < below;

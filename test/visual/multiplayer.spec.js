@@ -1241,3 +1241,55 @@ test("a start too big for one message goes in parts, and the guest races along",
     ),
   ).toEqual(dents);
 });
+
+// Ends the race in both games at the same frame: the host's car crosses the line.
+const hostFinishes = async (both) => {
+  await inStep(...both);
+  for (const { page } of both) {
+    await page.evaluate(() => {
+      const { racers, track } = window.gameState;
+      racers[0].clear = track.nlaps * track.nsp;
+    });
+  }
+  await advanceBoth(...both, 60);
+};
+
+test("a player watching the replay after the race keeps no one waiting, and the lobby offers no race that is over", async ({
+  context,
+}) => {
+  test.setTimeout(240_000);
+  const { guest, hostPage, guestPage, both } = await raceTogether(
+    context,
+    "replay",
+    1,
+  );
+  await advanceBoth(...both, 200);
+  await hostFinishes(both);
+  // (as the race over's Watch Replay does)
+  await hostPage.evaluate(() => {
+    const { VIEWER_FROM, openReplay } = window.gameState;
+    openReplay(VIEWER_FROM.raceOver, 0);
+  });
+  await advanceBoth(...both, 30);
+  // the guest goes on past the race over, its race not waiting for the host's keys
+  expect(await guestPage.evaluate(() => window.gameState.lockstepWaits())).toBe(
+    false,
+  );
+  await pressInRace(guest, guestPage, "Enter");
+  await advanceBoth(...both, 5);
+  expect(await guest.phase()).toBe(PHASE.raceEnd);
+  // (the race end takes Continue once it faded in)
+  while ((await guest.phase()) != PHASE.mainMenu) {
+    await pressInRace(guest, guestPage, "Enter");
+    await advanceBoth(...both, 10);
+  }
+  await advanceBoth(...both, 35);
+  await expect(guestPage.locator("#multiplayer")).toBeVisible();
+  await expect(guestPage.locator("#lobbyWatch")).toBeHidden();
+  await expect(guestPage.getByRole("status")).toHaveText(
+    "Choose your car, then say you are ready.",
+  );
+  expect(await hostPage.evaluate(() => window.gameState.game.phase)).toBe(
+    PHASE.replay,
+  );
+});
