@@ -107,7 +107,10 @@ export const loadGame = async ({
   const { stunts } = await import("../../src/input/controls.js");
   stunts.byKey = false;
   // (and crash as the original's)
-  const { collisionChoice } = await import("../../src/race/physics.js");
+  const { collisionChoice, physics } = await import(
+    "../../src/race/physics.js"
+  );
+  physics.asOriginal = true;
   const { COLLISIONS } = await import("../../src/core/state.js");
   collisionChoice.value = COLLISIONS.original;
   ctx.random.sim = seededRandom(seed);
