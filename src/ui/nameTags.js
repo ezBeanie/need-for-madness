@@ -1,5 +1,6 @@
 // The names over the cars in a room's race: each car but the player's and the one the camera
-// follows shows who drives it (see net/roomCars.js), and a speaker while its player talks.
+// follows shows who drives it (see net/roomCars.js), and a speaker while its player talks,
+// over two small bars: its damage and its power, as the HUD shows the player's own.
 // They move with every frame, where the frame draws the car, and only show while it is
 // near enough and the race goes on (its end has its own words over the cars).
 
@@ -7,7 +8,8 @@ import { RACE_PHASES, game } from "../core/state.js";
 import { lockstep } from "../net/lockstep.js";
 import { inRoomRace, nameOfCar } from "../net/roomCars.js";
 import { isTalking } from "../net/voice.js";
-import { car } from "../race/racers.js";
+import { car, racers } from "../race/racers.js";
+import { carStats } from "../data/carStats.js";
 import { track } from "../race/track.js";
 import { camera } from "../render/camera.js";
 import { drawCamera, drawMatrix, placeModel } from "../render/interpolation.js";
@@ -23,15 +25,44 @@ const tags = [];
 // by car, the name its tag shows and how big it is, in pixels
 const sizes = [];
 
+// a bar's fill, a share of its width
+const bar = (kind) => {
+  const outer = document.createElement("span");
+  outer.className = `name-bar ${kind}`;
+  const fill = document.createElement("span");
+  outer.append(fill);
+  return outer;
+};
+
 const tagOf = (c) => {
   if (!tags[c]) {
     const tag = document.createElement("span");
     tag.className = "name-tag";
+    const name = document.createElement("span");
+    const bars = document.createElement("span");
+    bars.className = "name-bars";
+    bars.append(bar("damage"), bar("power"));
+    tag.append(name, bars);
     layer.append(tag);
     tags[c] = tag;
   }
   return tags[c];
 };
+
+// (whole percents, set only when they change: the bars move with every hit and stunt)
+const fillBar = (tag, i, share) => {
+  const fill = tag.lastChild.children[i].firstChild;
+  const width = `${Math.round(Math.max(0, Math.min(1, share)) * 100)}%`;
+  if (fill.style.width != width) {
+    fill.style.width = width;
+  }
+};
+
+// how damaged car c is, and how much power it has, each from 0 to 1
+export const barsOf = (c) => ({
+  damage: racers[c].damage / carStats.maxmag[car[c].typ],
+  power: racers[c].power / 98,
+});
 
 const hideFrom = (from) => {
   for (let c = from; c < tags.length; c++) {
@@ -85,9 +116,12 @@ export const placeNameTags = () => {
     const name = nameOfCar(c);
     const talking = lockstep.active && isTalking(lockstep.players[c]);
     const text = talking ? `${name} \u{1F50A}` : name;
-    if (tag.textContent != text) {
-      tag.textContent = text;
+    if (tag.firstChild.textContent != text) {
+      tag.firstChild.textContent = text;
     }
+    const { damage, power } = barsOf(c);
+    fillBar(tag, 0, damage);
+    fillBar(tag, 1, power);
     // (measured once a name, not every frame)
     if (sizes[c]?.text != text) {
       tag.hidden = false;

@@ -1074,6 +1074,31 @@ test("each game names the cars after their players and paints them as chosen, a 
   expect(await tags(guestPage)).not.toContain("Gasti");
   await expect.poll(() => tags(hostPage)).toContain("Gasti");
   expect(await tags(hostPage)).not.toContain("Hosti");
+  // under each name, its car's damage and power, as the race has them
+  const bars = (page) =>
+    page.evaluate(() => {
+      const s = window.gameState;
+      const tag = [...document.querySelectorAll("#nameTags .name-tag")].find(
+        (tag) => !tag.hidden && tag.textContent == "Hosti",
+      );
+      const [damage, power] = [...tag.querySelectorAll(".name-bar > span")].map(
+        (fill) => fill.style.width,
+      );
+      const share = s.barsOf(0);
+      return {
+        damage,
+        power,
+        expected: [share.damage, share.power].map(
+          (x) => `${Math.round(Math.max(0, Math.min(1, x)) * 100)}%`,
+        ),
+      };
+    });
+  await expect
+    .poll(async () => {
+      const { damage, power, expected } = await bars(guestPage);
+      return [damage, power].join() == expected.join() && damage != "";
+    })
+    .toBe(true);
 });
 
 test("the lobby shows each player's name and paint, and a name set in the options at once", async ({
