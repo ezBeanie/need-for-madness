@@ -140,8 +140,10 @@ export const installOptionsMenu = () => {
     toggleByVoice();
     showStates();
   });
-  // (the room hears of a new name at once)
+  // (kept with every letter typed: the options may close without the field losing its
+  // focus; the room hears of a new name once it is typed)
   const name = document.getElementById("playerName");
+  name.addEventListener("input", () => setOwnName(name.value));
   name.addEventListener("change", () => {
     setOwnName(name.value);
     name.value = own.name;
