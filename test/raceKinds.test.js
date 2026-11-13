@@ -107,3 +107,30 @@ test("a room race's names and paints are forgotten back in the menus", async () 
   expect(ctx.skinOf(1)).toBe(0);
   expect(ctx.nameOfCar(1)).toBe(ctx.carStats.names[ctx.game.carTypes[1]]);
 });
+
+test("a guest asking to watch the host's race may ask again once the host's race is over or the host does not answer", async () => {
+  const { ctx } = await openMainMenu();
+  ctx.link.role = ctx.ROLE.guest;
+  try {
+    const ask = () => {
+      ctx.guest.racing = true;
+      ctx.watchRoomRace();
+      expect(ctx.guest.watchAsked).toBe(true);
+    };
+    ask();
+    for (let i = 0; i < 100; i++) {
+      ctx.guestWaitingTick();
+    }
+    expect(ctx.guest.watchAsked).toBe(true);
+    ctx.guest.racing = false;
+    ctx.guestWaitingTick();
+    expect(ctx.guest.watchAsked).toBe(false);
+    ask();
+    for (let i = 0; i < 400; i++) {
+      ctx.guestWaitingTick();
+    }
+    expect(ctx.guest.watchAsked).toBe(false);
+  } finally {
+    ctx.link.role = ctx.ROLE.none;
+  }
+});

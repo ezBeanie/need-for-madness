@@ -66,6 +66,9 @@ const JOIN_EVERY_TICKS = 30;
 const WAITING_PHASES = [PHASE.mainMenu, PHASE.carSelect, PHASE.stageSelect];
 // a host not answering this long to joins is not in the room
 const HOST_GONE_TICKS = 100;
+// a host not answering this long to a guest asking to watch its race will not (its race
+// is over, or it has no room for one more car): the guest may ask again
+const WATCH_ANSWER_TICKS = 300;
 
 export const guest = {
   // the race the host started, until its stage loads
@@ -100,9 +103,11 @@ export const guest = {
   hostLeft: false,
   // whether the room ended so, until the multiplayer dialog says so
   roomEnded: false,
-  // whether the host races now (a guest may watch), and whether this guest asked to
+  // whether the host races now (a guest may watch), whether this guest asked to, and the
+  // ticks since
   racing: false,
   watchAsked: false,
+  watchAskedTicks: 0,
 };
 
 const isPlayers = (players) =>
@@ -267,6 +272,7 @@ export const tellHost = () => {
 export const watchRoomRace = () => {
   if (link.role == ROLE.guest && guest.racing && !lockstep.active) {
     guest.watchAsked = true;
+    guest.watchAskedTicks = 0;
     askToWatch();
   }
 };
@@ -358,6 +364,12 @@ export const guestWaitingTick = () => {
   }
   if (changed || guest.joinTicks++ % JOIN_EVERY_TICKS == 0) {
     sendJoin();
+  }
+  if (
+    guest.watchAsked &&
+    (!guest.racing || ++guest.watchAskedTicks > WATCH_ANSWER_TICKS)
+  ) {
+    guest.watchAsked = false;
   }
   // (a race left while its stage loaded, see game.js, is not loaded again)
   if (guest.start && !lockstep.active) {
