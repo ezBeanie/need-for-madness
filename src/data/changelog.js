@@ -14,6 +14,7 @@ export const CHANGELOG = [
       "Browsers no longer translate the page, which made texts flicker.",
       "The version and what changed, in the options.",
       "The game in German, chosen in the options.",
+      "Voice chat between players in different networks, through the server's TURN.",
     ],
   },
   {
