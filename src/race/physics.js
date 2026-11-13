@@ -29,6 +29,7 @@ import { carModels, carTextures, scene } from "../render/scene.js";
 import {
   deathmatchTick,
   isDeathmatch,
+  noteHit,
   noteWasted,
   startDeathmatch,
 } from "./deathmatch.js";
@@ -3211,7 +3212,7 @@ function pushCornerAlong(c, xc, i, j, at, xat, sc, xsc, hitSide) {
     xsc[j] += vctm;
     dentHitCar(c, xc, hitSide, j, vctm * carStats.moment[car[c].typ]);
     sc[i] -= tm;
-    regn(hitSide, i, -tm * carStats.moment[car[c].typ], c);
+    dentInCrash(xc, hitSide, i, -tm * carStats.moment[car[c].typ], c);
     racers[c].wheelSpeedY[i] += carStats.revlift[car[c].typ];
     dentHitCar(c, xc, HIT.fromBelow, j, carStats.revlift[car[c].typ] * 7);
     if (random.fx() > random.fx()) {
@@ -3229,12 +3230,22 @@ function pushCornerAlong(c, xc, i, j, at, xat, sc, xsc, hitSide) {
   }
 }
 
+// Dents car c at its corner k, in a crash with car by: most kills counts the damage each
+// car does the others, and who hit whom (see deathmatch.js).
+function dentInCrash(by, hitSide, k, mag, c) {
+  const before = racers[c].damage;
+  regn(hitSide, k, mag, c);
+  if (isDeathmatch()) {
+    noteHit(c, by, (racers[c].damage - before) / carStats.maxmag[car[c].typ]);
+  }
+}
+
 // Dents car xc, hit by car c; colidim lets regn sound the crash when the player hit it.
 function dentHitCar(c, xc, hitSide, j, mag) {
   if (c == game.player) {
     racers[xc].colidim = true;
   }
-  regn(hitSide, j, mag, xc);
+  dentInCrash(c, hitSide, j, mag, xc);
   if (racers[xc].colidim) {
     racers[xc].colidim = false;
   }

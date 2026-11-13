@@ -440,3 +440,54 @@ test("in most kills the highlight is a car the player wasted, caught before it c
   wreck(0, 1);
   expect(ctx.recording.highlight).toBe(HIGHLIGHT.wastedThemAll);
 });
+
+test("in most kills a car that hit another not long before someone else wasted it helped, and each car's damage dealt counts", async () => {
+  const { ctx } = await mostKills();
+  // car 3 crashes into car 1, car 2 wastes it a moment later
+  ctx.fixcar(3);
+  ctx.noteHit(1, 3, 0.25);
+  ctx.noteHit(1, 2, 0.5);
+  expect(ctx.deathmatch.dealt[3]).toBe(0.25);
+  expect(ctx.deathmatch.dealt[2]).toBe(0.5);
+  ctx.racers[1].lastcolido = 70;
+  ctx.racers[1].lastHitBy = 2;
+  ctx.noteWasted(1);
+  expect(ctx.deathmatch.kills[2]).toBe(1);
+  expect(ctx.deathmatch.assists[3]).toBe(1);
+  expect(ctx.deathmatch.assists[2]).toBe(0);
+  // a hit long before helps no more, and one before the last wasting not again
+  ctx.noteHit(1, 4, 0.1);
+  ctx.deathmatch.ticks += ctx.ASSIST_TICKS + 1;
+  ctx.noteWasted(1);
+  expect(ctx.deathmatch.assists[4]).toBe(0);
+  expect(ctx.deathmatch.assists[3]).toBe(1);
+  // and it goes with the race's state
+  expect(ctx.isDeathmatchState(ctx.saveRace().deathmatch)).toBe(true);
+  expect(ctx.saveRace().deathmatch.assists[3]).toBe(1);
+});
+
+test("in most kills the crashes count the damage each car does the others", async () => {
+  const { ctx } = await mostKills();
+  const before = reset;
+  reset = () => {
+    before();
+    ctx.raceSetup.rules = ctx.roomRules();
+  };
+  // (hard bots hunt each other)
+  ctx.raceSetup.rules = { ...ctx.roomRules(), strength: ctx.STRENGTH.hard };
+  for (let i = 0; i < 1500; i++) {
+    ctx.control();
+    ctx.drive();
+  }
+  const dealt = ctx.deathmatch.dealt.slice(0, ctx.game.carCount);
+  const taken = ctx.racers
+    .slice(0, ctx.game.carCount)
+    .map((racer, c) => racer.damage / ctx.carStats.maxmag[ctx.car[c].typ]);
+  expect(dealt.some((d) => d > 0)).toBe(true);
+  // (no more than the cars took, wrecks repaired as they came back)
+  const sum = (list) => list.reduce((a, b) => a + b, 0);
+  expect(sum(dealt)).toBeGreaterThan(0);
+  expect(sum(dealt)).toBeLessThanOrEqual(
+    sum(taken) + sum(ctx.deathmatch.deaths) * 2,
+  );
+});

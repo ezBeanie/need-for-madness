@@ -14,9 +14,22 @@ export const deathmatchTicks = () =>
 export const respawnTicks = () =>
   Math.round((raceSetup.rules.respawnSeconds * 1000) / TICK_MS);
 
+// a car that hit another this long before someone else wasted it helped (an assist)
+export const ASSIST_TICKS = Math.round(8000 / TICK_MS);
+
 // ticks: since the start; kills: by car, how many it wasted; deaths: how often it was;
-// backAt: the tick a wasted car comes back (0: none)
-export const deathmatch = { ticks: 0, kills: [], deaths: [], backAt: [] };
+// backAt: the tick a wasted car comes back (0: none); assists: by car, how often it helped
+// waste one; dealt: the damage it did others, in whole cars; hitAt: the tick after car x
+// last hit car c, at c * MAX_CARS + x (0: not since c was last wasted)
+export const deathmatch = {
+  ticks: 0,
+  kills: [],
+  deaths: [],
+  backAt: [],
+  assists: [],
+  dealt: [],
+  hitAt: [],
+};
 
 export const isDeathmatch = () =>
   raceSetup.mode == RACE_MODE.mostKills && game.humans.length > 0;
@@ -26,6 +39,9 @@ export const startDeathmatch = () => {
   deathmatch.kills = Array(MAX_CARS).fill(0);
   deathmatch.deaths = Array(MAX_CARS).fill(0);
   deathmatch.backAt = Array(MAX_CARS).fill(0);
+  deathmatch.assists = Array(MAX_CARS).fill(0);
+  deathmatch.dealt = Array(MAX_CARS).fill(0);
+  deathmatch.hitAt = Array(MAX_CARS * MAX_CARS).fill(0);
 };
 
 export const deathmatchState = () => ({
@@ -33,6 +49,9 @@ export const deathmatchState = () => ({
   kills: deathmatch.kills.slice(),
   deaths: deathmatch.deaths.slice(),
   backAt: deathmatch.backAt.slice(),
+  assists: deathmatch.assists.slice(),
+  dealt: deathmatch.dealt.slice(),
+  hitAt: deathmatch.hitAt.slice(),
 });
 
 export const restoreDeathmatch = (state) => {
@@ -40,25 +59,54 @@ export const restoreDeathmatch = (state) => {
   deathmatch.kills = state.kills.slice();
   deathmatch.deaths = state.deaths.slice();
   deathmatch.backAt = state.backAt.slice();
+  deathmatch.assists = state.assists.slice();
+  deathmatch.dealt = state.dealt.slice();
+  deathmatch.hitAt = state.hitAt.slice();
 };
 
-const isCounts = (counts) =>
-  Array.isArray(counts) &&
-  counts.length == MAX_CARS &&
-  counts.every(Number.isInteger);
+const isCounts = (counts, length = MAX_CARS, isCount = Number.isInteger) =>
+  Array.isArray(counts) && counts.length == length && counts.every(isCount);
 
 export const isDeathmatchState = (state) =>
   state != null &&
   Number.isInteger(state.ticks) &&
   isCounts(state.kills) &&
   isCounts(state.deaths) &&
-  isCounts(state.backAt);
+  isCounts(state.backAt) &&
+  isCounts(state.assists) &&
+  isCounts(state.dealt, MAX_CARS, Number.isFinite) &&
+  isCounts(state.hitAt, MAX_CARS * MAX_CARS);
+
+// Car c dented by car by, taking damage (a share of what wastes it).
+export const noteHit = (c, by, damage) => {
+  if (by == c) {
+    return;
+  }
+  deathmatch.dealt[by] += damage;
+  deathmatch.hitAt[c * MAX_CARS + by] = deathmatch.ticks + 1;
+};
 
 // As car c is wasted: a kill for the car that hit it, and its time out.
+// The others that hit it not long before helped.
 export const noteWasted = (c) => {
   const { lastcolido, lastHitBy } = racers[c];
-  if (lastcolido != 0 && Number.isInteger(lastHitBy) && lastHitBy != c) {
-    deathmatch.kills[lastHitBy]++;
+  const killer =
+    lastcolido != 0 && Number.isInteger(lastHitBy) && lastHitBy != c
+      ? lastHitBy
+      : -1;
+  if (killer != -1) {
+    deathmatch.kills[killer]++;
+  }
+  for (let x = 0; x < MAX_CARS; x++) {
+    const at = c * MAX_CARS + x;
+    if (
+      x != killer &&
+      deathmatch.hitAt[at] != 0 &&
+      deathmatch.ticks + 1 - deathmatch.hitAt[at] <= ASSIST_TICKS
+    ) {
+      deathmatch.assists[x]++;
+    }
+    deathmatch.hitAt[at] = 0;
   }
   deathmatch.deaths[c]++;
   deathmatch.backAt[c] = deathmatch.ticks + respawnTicks();
@@ -87,4 +135,6 @@ export const killTable = () =>
     c,
     kills: deathmatch.kills[c] ?? 0,
     deaths: deathmatch.deaths[c] ?? 0,
+    assists: deathmatch.assists[c] ?? 0,
+    dealt: deathmatch.dealt[c] ?? 0,
   })).sort((a, b) => b.kills - a.kills || a.deaths - b.deaths || a.c - b.c);
