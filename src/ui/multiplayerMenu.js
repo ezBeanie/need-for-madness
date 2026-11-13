@@ -434,11 +434,14 @@ const showChat = () => {
   log.scrollTop = log.scrollHeight;
 };
 
-// A team to choose of as many as the room races in, or Any: whichever the car's place
+// A team to choose of as many as the room races in, or any: whichever the car's place
 // gives. Its teams change with the host's rules.
 const showTeamChoice = (select, team) => {
   const { teams } = rulesShown();
-  const names = ["Any", ...TEAM_NAMES.slice(0, teams)];
+  const names = [
+    "Any team",
+    ...TEAM_NAMES.slice(0, teams).map((name) => `Team ${name}`),
+  ];
   if (select.options.length != names.length) {
     select.replaceChildren(
       ...names.map((name, k) => new Option(name, k == 0 ? "" : String(k - 1))),

@@ -1061,9 +1061,9 @@ test("in the lobby the host chooses teams and whether team mates crash, each pla
     .getByLabel("Team mates crash")
     .selectOption("No, pass through");
   await hostPage.getByRole("button", { name: "Add a bot" }).click();
-  await hostPage.getByLabel(/^Team of /).selectOption("Blue");
+  await hostPage.getByLabel(/^Team of /).selectOption("Team Blue");
   await deliver();
-  await guestPage.getByLabel("Your team").selectOption("Red");
+  await guestPage.getByLabel("Your team").selectOption("Team Red");
   await deliver();
   // the host's car red by its place, the guest's as chosen, the bot's as the host chose
   await expect(
