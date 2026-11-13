@@ -39,6 +39,7 @@ import { images } from "../ui/images.js";
 import { rd, view } from "../ui/view.js";
 import { drawSlantedBar } from "../ui/widgets.js";
 import { loading } from "./progress.js";
+import { t } from "../core/language.js";
 
 const CAR_TYPES = 19;
 const SOUNDS = 43;
@@ -361,7 +362,7 @@ const drawLoadingBar = () => {
     rd.letterSpacing = "1px";
     rd.textAlign = "center";
     rd.fillText(
-      "This Game Is Crazy !",
+      t("This Game Is Crazy !"),
       640 * view.scaleX,
       barY + 70 * view.scaleY,
     );
@@ -376,17 +377,17 @@ const drawNoWebGL = () => {
   rd.textBaseline = "middle";
   rd.fillStyle = "#FFFFFF";
   rd.fillText(
-    "Sorry, your device does not seem to have WEBGL",
+    t("Sorry, your device does not seem to have WEBGL"),
     30 * view.scaleX,
     100 * view.scaleY,
   );
   rd.fillText(
-    "The game will not be able to work without it",
+    t("The game will not be able to work without it"),
     30 * view.scaleX,
     160 * view.scaleY,
   );
   rd.fillText(
-    "Please try the game on another device",
+    t("Please try the game on another device"),
     30 * view.scaleX,
     220 * view.scaleY,
   );

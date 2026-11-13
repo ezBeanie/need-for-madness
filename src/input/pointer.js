@@ -1,3 +1,5 @@
+import { pageBox, pagePoint } from "../ui/view.js";
+
 // Mouse and touch on the 2D canvas: where the pointers are (several when touching with
 // several fingers) and whether one is down.
 export const pointer = { x: [], y: [], count: 0, down: false };
@@ -18,17 +20,21 @@ export const takeTaps = () => {
   return taps.splice(0).filter(({ at }) => now - at < STALE_MS);
 };
 
-const goDown = (canvas, id, { clientX, clientY }, time) => {
-  const rect = canvas.getBoundingClientRect();
-  downs.set(id, { x: clientX - rect.left, y: clientY - rect.top, time });
+// where a pointer is on the canvas, in its pixels
+const onCanvas = (canvas, { clientX, clientY }) => {
+  const rect = pageBox(canvas);
+  const { x, y } = pagePoint(clientX, clientY);
+  return { x: x - rect.left, y: y - rect.top };
 };
 
-const letGo = (canvas, id, { clientX, clientY }, time) => {
+const goDown = (canvas, id, event, time) => {
+  downs.set(id, { ...onCanvas(canvas, event), time });
+};
+
+const letGo = (canvas, id, event, time) => {
   const down = downs.get(id);
   downs.delete(id);
-  const rect = canvas.getBoundingClientRect();
-  const x = clientX - rect.left;
-  const y = clientY - rect.top;
+  const { x, y } = onCanvas(canvas, event);
   if (down && Math.hypot(x - down.x, y - down.y) < TAP_MOVE) {
     taps.push({ x, y, ms: time - down.time, at: time });
     taps.splice(0, taps.length - KEPT_TAPS);
@@ -36,11 +42,11 @@ const letGo = (canvas, id, { clientX, clientY }, time) => {
 };
 
 const positions = (canvas, touches) => {
-  const rect = canvas.getBoundingClientRect();
   pointer.count = 0;
   for (const touch of touches) {
-    pointer.x[pointer.count] = touch.clientX - rect.left;
-    pointer.y[pointer.count] = touch.clientY - rect.top;
+    const { x, y } = onCanvas(canvas, touch);
+    pointer.x[pointer.count] = x;
+    pointer.y[pointer.count] = y;
     pointer.count++;
   }
 };

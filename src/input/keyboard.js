@@ -37,6 +37,8 @@ export const actionFor = (keyCode) => ACTIONS[keyCode];
 // keyboard (event.code: "KeyW" is W on QWERTY and QWERTZ alike), for a screen with keys
 // of its own (the replay viewer). Only the last few presses are kept.
 export const keys = { held: new Set(), pressed: [] };
+// the key codes of the keys held, by their place
+const heldCodes = new Map();
 const KEPT_PRESSES = 10;
 
 // The keys pressed since last asked: { code, shift, ctrl } each.
@@ -45,9 +47,11 @@ export const takePressedKeys = () => keys.pressed.splice(0);
 const remember = (event, pressed) => {
   if (!pressed) {
     keys.held.delete(event.code);
+    heldCodes.delete(event.code);
     return;
   }
   keys.held.add(event.code);
+  heldCodes.set(event.code, event.keyCode);
   if (!event.repeat) {
     keys.pressed.push({
       code: event.code,
@@ -81,4 +85,10 @@ export const installKeyboard = (onKey) => {
   };
   window.addEventListener("keydown", listen(true), false);
   window.addEventListener("keyup", listen(false), false);
+  // (a window left gets no key let go: a car racing on in a hidden tab would hold them)
+  window.addEventListener("blur", () => {
+    for (const [code, keyCode] of [...heldCodes]) {
+      handleKey({ code, keyCode }, false, onKey);
+    }
+  });
 };

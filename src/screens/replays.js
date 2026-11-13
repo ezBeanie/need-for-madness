@@ -7,6 +7,7 @@ import {
   stopStageMusic,
 } from "../audio/audio.js";
 import { PHASE, game } from "../core/state.js";
+import { t } from "../core/language.js";
 import { raceStage, stageLabel, takeRaceStage } from "../data/stages.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
 import { field } from "../race/field.js";
@@ -56,7 +57,7 @@ export const openReplayFile = async (file) => {
   try {
     replay = await decodeReplay(file);
   } catch (error) {
-    alert(error.message);
+    alert(t(error.message));
     return;
   }
   const { race, tape } = replay;

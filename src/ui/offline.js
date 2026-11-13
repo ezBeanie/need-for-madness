@@ -6,6 +6,7 @@
 
 import { PHASE, game } from "../core/state.js";
 import { link } from "../net/link.js";
+import { onLanguage, t } from "../core/language.js";
 
 // what the service worker told last; version: the one this page plays
 export const offline = { status: null, version: null };
@@ -19,11 +20,15 @@ const megabytes = (bytes) => `${Math.round(bytes / 1e6)} MB`;
 const readyText = ({ ready, installing }) => {
   if (installing) {
     const percent = Math.floor((100 * installing.done) / installing.total);
-    return `Getting the game ready to play without the network: ${percent}%`;
+    return t("Getting the game ready to play without the network: {percent}%", {
+      percent,
+    });
   }
-  return ready
-    ? "Ready to play without the network."
-    : "Not ready yet: it gets ready while the game runs with the network.";
+  return t(
+    ready
+      ? "Ready to play without the network."
+      : "Not ready yet: it gets ready while the game runs with the network.",
+  );
 };
 
 const showOffline = () => {
@@ -36,7 +41,7 @@ const showOffline = () => {
   const { wanted, keeping, kept, total } = status.music;
   const music = document.getElementById("offlineMusic");
   music.setAttribute("aria-pressed", wanted ? "true" : "false");
-  music.querySelector(".state").textContent = wanted ? "On" : "Off";
+  music.querySelector(".state").textContent = t(wanted ? "On" : "Off");
   document.getElementById("offlineMusicSize").textContent =
     `(${megabytes(total)})`;
   // (how much is kept: while keeping it, or when not all could be)
@@ -45,8 +50,12 @@ const showOffline = () => {
   const bar = document.getElementById("offlineMusicKept");
   bar.max = Math.max(1, total);
   bar.value = kept;
-  document.getElementById("offlineMusicKeptShown").textContent =
-    `${megabytes(kept)} of ${megabytes(total)}${keeping ? "" : ", the rest with the network"}`;
+  document.getElementById("offlineMusicKeptShown").textContent = t(
+    keeping
+      ? "{kept} of {total}"
+      : "{kept} of {total}, the rest with the network",
+    { kept: megabytes(kept), total: megabytes(total) },
+  );
 };
 
 // Back in the foreground: in the main menu and in no room, a newer version starts at once.
@@ -79,6 +88,7 @@ export const installOffline = () => {
   if (!globalThis.navigator?.serviceWorker) {
     return;
   }
+  onLanguage(showOffline);
   navigator.serviceWorker.addEventListener("message", (event) => {
     const told = event.data?.offline;
     if (told) {

@@ -7,6 +7,7 @@ import {
   startClassicInstructions,
 } from "../classic/instructions.js";
 import { isPhone } from "../core/platform.js";
+import { language, t } from "../core/language.js";
 import { PHASE, game } from "../core/state.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { stunts } from "../input/controls.js";
@@ -127,7 +128,7 @@ const drawWelcome = (scale, top) => {
   rd.textAlign = "left";
   rd.fillStyle = BUBBLE_INK;
   rd.fillText(
-    "Welcome to  Need for Madness !",
+    t("Welcome to  Need for Madness !"),
     left + 20 * scale,
     top + 30 * scale,
   );
@@ -140,10 +141,15 @@ const drawWelcome = (scale, top) => {
   ]);
   rd.letterSpacing = "1px";
   rd.font = "" + 40 * scale + "px junk";
-  rd.fillText("Racing", left + 80 * scale, top + 220 * scale);
-  rd.fillText("Wasting", left + 130 * scale + 485 * scale, top + 220 * scale);
-  rd.font = "" + 35 * scale + "px junk";
-  rd.fillText("OR", left + 511 * scale, top + 340 * scale);
+  rd.fillText(t("Racing"), left + 80 * scale, top + 220 * scale);
+  rd.fillText(
+    t("Wasting"),
+    left + 130 * scale + 485 * scale,
+    top + 220 * scale,
+  );
+  // (between the pictures only the original's short word fits as big)
+  rd.font = "" + (language.current == "en" ? 35 : 20) * scale + "px junk";
+  rd.fillText(t("OR"), left + 511 * scale, top + 340 * scale);
   rd.drawImage(
     images.instructions[0],
     left + 20 * scale,
@@ -227,7 +233,7 @@ const drawControls = (scale, top) => {
     picture(images.instructions[5], 670, 170, 220, 155);
     picture(images.instructions[7], 50, 380, 95, 65);
     rd.fillText(
-      "(Gamepad & Joystick control is also possible.)",
+      t("(Gamepad & Joystick control is also possible.)"),
       left + 167 * scale,
       top + 420 * scale,
     );

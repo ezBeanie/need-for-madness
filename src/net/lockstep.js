@@ -12,6 +12,7 @@
 // every game alike.
 
 import { PHASE, game } from "../core/state.js";
+import { t } from "../core/language.js";
 import { TICK_MS, nextFraction, tick } from "../core/tick.js";
 import { raceEvents } from "../race/events.js";
 import { physics } from "../race/physics.js";
@@ -29,8 +30,9 @@ import { restoreRace, saveRace, sharedRace } from "./raceState.js";
 
 // 35 ms for the keys to reach the other game before they drive
 export const INPUT_DELAY = 1;
-// how many frames a game races on with the other's keys guessed (280 ms) before it waits
-export const MAX_GUESSED = 8;
+// how many frames a game races on with the other's keys guessed (420 ms) before it waits:
+// with many players, one of them is often late a moment, and all would wait
+export const MAX_GUESSED = 12;
 // (stuntKey: how the player stunts, see stunts in input/controls.js)
 export const KEYS = ["up", "down", "left", "right", "handb", "stuntKey"];
 const NONE = Object.fromEntries(KEYS.map((key) => [key, false]));
@@ -56,8 +58,10 @@ const LEFT_SHOWN_TICKS = 100;
 // the phases a game stays in the race in: a guest's begins it while its stage loads
 const IN_RACE = [...RACE_GOES_ON, PHASE.stageLoading];
 
-// (the host drives car 0, the guests the cars after it, see net/host.js)
-const playerName = (car) => (car == 0 ? "the host" : `player ${car + 1}`);
+// A notice about the player of car: the host drives car 0, the guests the cars after it
+// (see net/host.js).
+const aboutPlayer = (car, aboutHost, aboutGuest) =>
+  car == 0 ? t(aboutHost) : t(aboutGuest, { number: car + 1 });
 
 // players: the ids of the players' games by car (see link.js); raceId: what tells this
 // race's messages from those of a race before; own: the car of this game's player;
@@ -108,8 +112,18 @@ export const lockstep = {
 // the own car's keys as the player holds them, while the car drives with the frame's
 let held = NONE;
 
+// A frame's keys go as bits, KEYS' first the lowest: they are most of what a race sends.
+// (watching, those the host knew come as they were held)
+const bitsOf = (keys) =>
+  KEYS.reduce((bits, key, i) => (keys[key] ? bits | (1 << i) : bits), 0);
+
 const keysOf = (keys) =>
-  Object.fromEntries(KEYS.map((key) => [key, keys[key] === true]));
+  Object.fromEntries(
+    KEYS.map((key, i) => [
+      key,
+      typeof keys == "number" ? (keys & (1 << i)) != 0 : keys[key] === true,
+    ]),
+  );
 
 const sameKeys = (keys, others) =>
   KEYS.every((key) => keys[key] == others[key]);
@@ -193,7 +207,11 @@ export const stopLockstep = () => {
 // Another player's keys of a frame (checked: another game sent them).
 export const receiveKeys = ({ car, frame, keys, ahead }) => {
   const last = lockstep.lastOther.get(car);
-  if (!last || !Number.isInteger(frame) || !keys || typeof keys != "object") {
+  if (
+    !last ||
+    !Number.isInteger(frame) ||
+    !(Number.isInteger(keys) || (keys && typeof keys == "object"))
+  ) {
     return;
   }
   const theirs = Array.isArray(ahead) ? ahead[lockstep.own] : undefined;
@@ -224,9 +242,12 @@ export const receiveLeft = ({ car, frame }) => {
   lockstep.leftAt.set(car, frame);
   lockstep.quietTicks.delete(car);
   lockstep.goBackTo = Math.min(lockstep.goBackTo, frame);
-  const name = playerName(car);
   lockstep.notice = {
-    text: `${name[0].toUpperCase()}${name.slice(1)} left the race`,
+    text: aboutPlayer(
+      car,
+      "The host left the race",
+      "Player {number} left the race",
+    ),
     ticks: LEFT_SHOWN_TICKS,
   };
 };
@@ -299,6 +320,26 @@ const fingerprint = (text) => {
   return hash >>> 0;
 };
 
+// The dents' fingerprint, over their numbers' bits, found once for each array: a saved
+// race's dents are never changed (see savedDents in raceState.js), and they are the most of
+// a race.
+const dentPrints = new WeakMap();
+const dentPrint = (dents) => {
+  if (!Array.isArray(dents)) {
+    return fingerprint(String(dents));
+  }
+  let print = dentPrints.get(dents);
+  if (print === undefined) {
+    print = 2166136261;
+    for (const word of new Uint32Array(Float64Array.from(dents).buffer)) {
+      print = Math.imul(print ^ word, 16777619);
+    }
+    print >>>= 0;
+    dentPrints.set(dents, print);
+  }
+  return print;
+};
+
 // The own fingerprint of a frame and others' there: whether the races went apart.
 const compare = (frame) => {
   const own = lockstep.ownPrints.get(frame);
@@ -318,9 +359,9 @@ const compare = (frame) => {
     } else if (print != own.print && lockstep.apartAt < 0) {
       lockstep.apartAt = frame;
       lockstep.apartWith = car;
-      lockstep.apartRace = own.race;
+      lockstep.apartRace = encode(inOrder(own.race));
       // (a race of 20 dented cars is about 500 kB)
-      for (const part of inParts(own.race)) {
+      for (const part of inParts(lockstep.apartRace)) {
         send({ type: MESSAGE.apart, frame, ...part });
       }
       console.warn(`The races went apart at frame ${frame}`);
@@ -415,18 +456,28 @@ export const tickMs = () =>
     : TICK_MS;
 
 // what a game waiting for another one's keys says
-export const waitingNotice = () => `Waiting for ${playerName(waitedFor())}...`;
+export const waitingNotice = () =>
+  aboutPlayer(
+    waitedFor(),
+    "Waiting for the host...",
+    "Waiting for player {number}...",
+  );
 
 // what a game whose player left the race says, a while
 export const leftNotice = () =>
   lockstep.notice.ticks > 0 ? lockstep.notice.text : null;
 
-// (a deep copy: the race runs on from the one it was kept from)
-const keepRace = () => ({
-  race: structuredClone(saveRace()),
-  recording: keepRecording(),
-  tapeLength: raceTape.length,
-});
+// (a deep copy, the race runs on from the one it was kept from, but for the dents, which
+// the cars never change in place: see savedDents in raceState.js)
+const keepRace = () => {
+  const { cars, ...rest } = saveRace();
+  const race = structuredClone({
+    ...rest,
+    cars: cars.map(({ dents, ...car }) => car),
+  });
+  race.cars.forEach((car, c) => (car.dents = cars[c].dents));
+  return { race, recording: keepRecording(), tapeLength: raceTape.length };
+};
 
 const restoreKept = ({ race, recording, tapeLength }) => {
   restoreRace(race);
@@ -478,10 +529,17 @@ const inOrder = (value) => {
   return ordered;
 };
 
-// The race as written for its fingerprint, and the fingerprint.
+// The race's fingerprint, and the race (written out only if the races went apart).
 export const printOf = (race) => {
-  const text = encode(inOrder(race));
-  return { print: fingerprint(text), race: text };
+  let print = fingerprint(
+    encode(
+      inOrder({ ...race, cars: race.cars.map(({ dents, ...car }) => car) }),
+    ),
+  );
+  for (const { dents } of race.cars) {
+    print = Math.imul(print ^ dentPrint(dents), 16777619) >>> 0;
+  }
+  return { print, race };
 };
 
 const takePrint = (frame) => {
@@ -612,7 +670,7 @@ export const pressFrameKeys = (runFrameAgain) => {
   send({
     type: MESSAGE.keys,
     frame: frame + INPUT_DELAY,
-    keys: held,
+    keys: bitsOf(held),
     ahead: lockstep.players.map((_, car) =>
       lockstep.lastOther.has(car) ? aheadOf(car) : 0,
     ),

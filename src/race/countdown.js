@@ -14,7 +14,8 @@ import { setWorld } from "../render/renderer.js";
 import { scene } from "../render/scene.js";
 import { menu } from "../screens/menuState.js";
 import { animateTrack, castShadows, placeWheels } from "../render/raceScene.js";
-import { drawHud } from "../ui/hud.js";
+import { drawHud, said } from "../ui/hud.js";
+import { t } from "../core/language.js";
 import { images } from "../ui/images.js";
 import { drawStartHint } from "../ui/insano.js";
 import { rd, view } from "../ui/view.js";
@@ -109,8 +110,8 @@ export function countDown() {
     raceEvents.countdown < 180 &&
     raceEvents.countdown > 80
   ) {
-    drawCenteredText(132, "SWITCH MODE", 0, 0, 0, TEXT.title);
-    drawCenteredText(192, "1 Lap, No Fixing", 0, 64, 128, TEXT.label);
+    drawCenteredText(132, said("SWITCH MODE"), 0, 0, 0, TEXT.title);
+    drawCenteredText(192, said("1 Lap, No Fixing"), 0, 64, 128, TEXT.label);
   }
   const flying = raceEvents.countdown > COUNTDOWN.behindTheCar;
   if (
@@ -181,17 +182,17 @@ const drawKeyboardHints = () => {
   rd.textBaseline = "middle";
   rd.fillStyle = "#000000";
   rd.fillText(
-    "Handbrake / Stunts",
+    t("Handbrake / Stunts"),
     50 * view.scaleX + 172 * view.scale,
     view.height * 0.5 + 90 * view.scaleY,
   );
   rd.fillText(
-    "Drive / Stunts",
+    t("Drive / Stunts"),
     view.width - 80 * view.scaleX - 110 * view.scale,
     view.height * 0.5 + 10 * view.scaleY,
   );
   rd.fillText(
-    "Or [W] [A] [S] [D]",
+    t("Or [W] [A] [S] [D]"),
     view.width - 80 * view.scaleX - 110 * view.scale,
     view.height * 0.5 + 70 * view.scaleY + 155 * view.scale,
   );

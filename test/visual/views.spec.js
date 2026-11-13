@@ -146,8 +146,8 @@ test("the views' buttons show the keyboard's focus also hovered", async ({
   await page.locator("#menuOptions").click();
   const back = page.getByRole("button", { name: "Back" }).first();
   await back.hover();
-  // (by the keyboard, so the focus shows: back from the first switch)
-  await page.locator("#option-toggleLook").focus();
+  // (by the keyboard, so the focus shows: back from the first choice)
+  await page.locator("#languageChosen").focus();
   await page.keyboard.press("Shift+Tab");
   await expect(back).toBeFocused();
   const face = await back.evaluate((button) => {

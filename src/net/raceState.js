@@ -43,6 +43,20 @@ const isUndented = (body) => {
   );
 };
 
+// The body's dents as a saved race has them: the body's own array, shared (dentBody copies
+// it before it dents it again), as the races kept to go back to are many (see lockstep.js).
+// Whether they are undented is found once for each array.
+const savedDents = (body) => {
+  if (!body.dvert) {
+    return body.dvert;
+  }
+  if (body.sharedDents !== body.dvert) {
+    body.sharedDents = body.dvert;
+    body.sharedUndented = isUndented(body);
+  }
+  return body.sharedUndented ? null : body.dvert;
+};
+
 export const saveRace = () => {
   const cars = [];
   for (let c = 0; c < game.carCount; c++) {
@@ -53,7 +67,7 @@ export const saveRace = () => {
     cars.push({
       ...copyCarState(c),
       keys: { ...racers[c].u },
-      dents: body.dvert && (isUndented(body) ? null : body.dvert.slice()),
+      dents: savedDents(body),
       dented: body.iscar,
       driver: { ...ai[c] },
     });

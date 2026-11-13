@@ -170,7 +170,7 @@ zu spät, spult ein Spiel zum Tick zurück, an dem sie gedrückt wurden, und rec
   Rennzustands (`sync`, `sharedRace()` in `raceState.js`). Weichen sie ab, zeigen beide
   „Out of sync!“ und die Konsole den ersten abweichenden Frame (`lockstep.apartAt`).
 - Rollback: Die Tasten wirken nur noch 1 Frame (35 ms) später. Fehlen die Tasten des anderen,
-  rät das Spiel sie (die zuletzt gedrückten) und fährt weiter, bis zu 8 Frames (280 ms), erst dann
+  rät das Spiel sie (die zuletzt gedrückten) und fährt weiter, bis zu 12 Frames (420 ms), erst dann
   wartet es. Vor jedem geratenen Frame hält es Rennen, Aufnahme und Länge des Replay-Bands fest.
   Kommen die echten Tasten anders, spult es zum ersten falsch geratenen Frame zurück und rechnet
   bis jetzt still neu (`physics.quiet`: keine Sounds, keine Effekte; Regeln und Aufnahme laufen).
@@ -216,16 +216,13 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
 
 ### Offen
 
-- **Querformat auf iOS:** Web-Apps können die Drehung dort nicht sperren; bisher ein Hinweis im
-  Hochformat. Möglich: das Spiel im Hochformat selbst um 90° drehen, oder eine App-Hülle.
 - **Als App bauen (für später):** `dist/` in eine native Hülle packen statt der PWA: Capacitor
   für Android und iOS, Tauri (oder Electron) für Windows, macOS und Linux. Dafür: feste Adresse
   für Relay und `/net/ice` statt relativer Pfade, kein Service Worker in der App (siehe
   `docs/offline.md`; der Musik-Download sollte im Spielcode liegen, nicht im Service Worker),
   Mikrofon-Berechtigungstexte, Signieren (Apple-Developer-Account für iOS/macOS, Play-Konto).
-  Vor einer Store-Veröffentlichung die Rechte am Original klären. Löst auch die Drehsperre
-  auf iOS (oben).
-- Bandbreite (Tasten als Bits, nur bei Änderung), Ergebnisliste für alle.
+  Vor einer Store-Veröffentlichung die Rechte am Original klären.
+- Bandbreite: Tasten nur bei Änderung senden (als Bits gehen sie schon), Ergebnisliste für alle.
 - **Lokaler Multiplayer ganz ohne Internet:** Schritt 10 braucht das Relay einmal zum
   Vorstellen. Ohne Internet ginge das per QR-Code (Host zeigt einen je Gast, Gast zeigt seine
   Antwort zurück); der Host verteilt schon jetzt wie das Relay. Als App (Capacitor) könnte das
@@ -258,6 +255,10 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
   es nach 100 Ticks für ausgestiegen, während es danach weiterfuhr. Jetzt verlässt es das
   Rennen beim Verstecken sofort (`left`, wie „Leave Race“), auch während die Strecke noch lädt
   (der Start wird dann verworfen). Zurück ist es im Menü und im Raum.
+  Seit 1.1.0 läuft ein verstecktes Spiel in einem Raum nach dem Takt eines Web Workers weiter
+  (`goOnHidden` in `game.js`, ohne Zeichnen): es bleibt im Rennen und kommt auch in eines, das
+  der Host startet, während der Tab versteckt ist. Nur wenn es trotzdem stillstand (iOS hält
+  versteckte Seiten an), verlässt es das Rennen beim Zurückkommen wie früher.
 - `?determinism` schaltet die Landehilfe neuer Spieler ab wie der Host; die Hashes hängen nicht
   mehr vom gespeicherten Auto ab.
 - Lobby: Mit Gästen fahren im Raum nur die Spieler (`field.roomCarTypes`), keine KI zum
@@ -332,6 +333,31 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
   zusätzlich ein Portbereich für die Weiterleitung. STUN allein reicht in den meisten
   Heimnetzen; TURN braucht es für Mobilfunk und strenge Firewalls, und coturn muss dafür die
   öffentliche Adresse kennen, die bei beanie wechselt (DynDNS).
+
+#### TURN einrichten (auf beanie eingerichtet am 2026-11-13)
+
+Ohne `TURN_HOST` kommt Voice Chat nur im selben Netz zustande. So geht es auf beanie, und
+genauso auf jedem anderen Server, der Spiel und Relay ausliefert (eigener Hostname, eigenes
+Secret):
+
+1. Secret auf dem Server erzeugen, ohne es anzuzeigen, in einer eigenen Datei:
+   `umask 077; printf "TURN_SECRET=%s\n" "$(openssl rand -hex 32)" > /home/janu/nfm-turn.env`
+   (das Secret gehört in keinen Chat und kein Repo).
+2. Im Router weiterleiten: 3478 UDP und TCP, dazu 49160–49200 UDP (Weiterleitung der Stimmen,
+   `min-port`/`max-port` in `server/coturn/turnserver.conf`).
+3. `server/` wie beim Relay auf den Server bringen (`rsync … server beanie-ts:/home/janu/nfm-relay/`)
+   und coturn aus dem offiziellen Image starten:
+   `docker run -d --name nfm-turn --restart unless-stopped --network host --env-file /home/janu/nfm-turn.env -v /home/janu/nfm-relay/server/coturn:/etc/coturn:ro --entrypoint /etc/coturn/start.sh coturn/coturn`
+   (`start.sh` hängt Secret und aktuelle öffentliche Adresse an eine Kopie der Konfiguration;
+   ändert sich die Adresse, `docker restart nfm-turn`).
+4. Das Relay neu starten wie beim Relay-Deploy, mit zwei Zusätzen zum `docker run`:
+   `--env-file /home/janu/nfm-turn.env -e TURN_HOST=beanie.dynv6.net`; `/net/ice` liefert dann
+   STUN und TURN mit einem Tag lang gültigen Logins.
+5. Prüfen: zwei Geräte in verschiedenen Netzen (z. B. eins im Mobilfunk), Voice Chat an.
+
+Jeder, der das Spiel lädt, bekommt einen Login. Deshalb leitet coturn nur ins Internet weiter,
+nie in die eigenen Netze des Servers (Heimnetz, Docker, Tailscale), begrenzt Sitzungen und
+Bandbreite und schreibt kein Log mit Adressen.
 
 ### Schritt 10: Direkt im selben Netz
 

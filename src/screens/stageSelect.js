@@ -1,6 +1,7 @@
 // The stage select: the camera falls onto the stage and then follows its path, framed by a
 // jagged border with the stage's name and buttons. Also the screen while a stage loads.
 
+import { t } from "../core/language.js";
 import {
   collections,
   LAST_STAGE,
@@ -310,8 +311,8 @@ const drawLoadingScreen = () => {
   const text =
     stageLoad.after == AFTER_LOAD.stageSelect ||
     stageLoad.after == AFTER_LOAD.room
-      ? "Loading " + stageLabel(track.stage)
-      : "Loading Stage...";
+      ? t("Loading {stage}", { stage: stageLabel(track.stage) })
+      : t("Loading Stage...");
   rd.strokeText(text, 640 * view.scaleX, 330 * view.scaleY);
   rd.fillStyle = "#C1E3FF";
   rd.fillText(text, 640 * view.scaleX, 330 * view.scaleY);
@@ -464,7 +465,7 @@ const drawHiddenStage = () => {
   rd.textBaseline = "middle";
   rd.fillStyle = "#00284A";
   rd.fillText(
-    "Loading " + stageLabel(track.stage),
+    t("Loading {stage}", { stage: stageLabel(track.stage) }),
     640 * view.scaleX,
     330 * view.scaleY,
   );
@@ -538,7 +539,7 @@ const drawTitles = (hue) => {
     rd.textAlign = "center";
     rd.fillStyle = cssRgb(hslToRgb(hue, 1, 0.3));
     rd.fillText(
-      "( Guidance arrow is disabled in this stage... )",
+      t("( Guidance arrow is disabled in this stage... )"),
       640 * view.scaleX,
       260 * view.scaleY,
     );
@@ -622,7 +623,7 @@ const browseCollections = () => {
 };
 
 const stageTitle = () =>
-  track.stage == LAST_STAGE ? "Final Stage" : stageLabel(track.stage);
+  track.stage == LAST_STAGE ? t("Final Stage") : stageLabel(track.stage);
 
 // Won stages of this game's own can also be played in switch mode.
 const switchOffered = () =>
@@ -737,10 +738,11 @@ const drawQuickRaceButtons = (colors) => {
       imageOpacity: 0,
       pulsing: false,
     });
-  if (button(11, 105, `${game.raceCars} Cars  [C]`)) {
+  if (button(11, 105, t("{cars} Cars  [C]", { cars: game.raceCars }))) {
     nextRaceSize();
   }
-  if (button(16, 165, `AI: ${STRENGTH_NAMES[raceSetup.strength]}  [B]`)) {
+  const strength = t(STRENGTH_NAMES[raceSetup.strength]);
+  if (button(16, 165, t("AI: {strength}  [B]", { strength }))) {
     nextStrength();
   }
 };
@@ -751,8 +753,11 @@ const drawBestTimes = (hue) => {
   drawCenteredText(
     310,
     best
-      ? `Best lap ${formatTime(best.lap)}   Best race ${formatTime(best.race)}`
-      : "No best time yet",
+      ? t("Best lap {lap}   Best race {race}", {
+          lap: formatTime(best.lap),
+          race: formatTime(best.race),
+        })
+      : t("No best time yet"),
     ...hslToRgb(hue, 1, 0.25),
     TEXT.heading,
   );
@@ -784,7 +789,7 @@ const drawCollectionPicker = (colors, hue) => {
   if (arrow(13, 1, ">")) {
     stepCollection(1);
   }
-  drawCenteredText(272, label, ...hslToRgb(hue, 1, 0.25), TEXT.heading);
+  drawCenteredText(272, t(label), ...hslToRgb(hue, 1, 0.25), TEXT.heading);
   const width = 180 * view.scale;
   const height = 40 * view.scale;
   if (

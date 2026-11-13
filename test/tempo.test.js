@@ -44,3 +44,24 @@ test("every game says with its keys how far it is ahead of each other's", async 
   expect(keys.ahead).toEqual([2, 0, 5]);
   ctx.stopLockstep();
 });
+
+test("a frame's keys go as bits, and come as the keys held", async () => {
+  const { ctx } = await startRace({ stage: 1, car: 5 });
+  const sent = [];
+  ctx.link.send = (message) => sent.push(message);
+  ctx.startLockstep(0, ["host0000", "guest001"], 0, null);
+  ctx.raceEvents.countdown = 0;
+  Object.assign(ctx.racers[0].u, { ...NONE, up: true, handb: true });
+  ctx.pressFrameKeys(() => {});
+  const { keys } = sent.find((message) => message.type == "keys");
+  // up the first of KEYS, handb the fifth
+  expect(keys).toBe(0b10001);
+  ctx.receiveKeys({ car: 1, frame: 1, keys });
+  expect(ctx.lockstep.otherKeys.get(1).get(1)).toEqual({
+    ...NONE,
+    up: true,
+    handb: true,
+    stuntKey: false,
+  });
+  ctx.stopLockstep();
+});

@@ -15,6 +15,7 @@ import { track } from "../race/track.js";
 import { camera } from "../render/camera.js";
 import { drawCamera, drawMatrix, placeModel } from "../render/interpolation.js";
 import { canvas3D } from "../render/renderer.js";
+import { pageBox } from "./view.js";
 
 const layer = document.getElementById("nameTags");
 // farther than this (the depth of the projection) a car's name is gone
@@ -76,7 +77,7 @@ const hideFrom = (from) => {
 // Where car c is in the picture last drawn: its middle in the page's pixels and its depth
 // (1 or less: at or behind the camera).
 const clip = [0, 0, 0, 0];
-export const carOnScreen = (c, box = canvas3D.getBoundingClientRect()) => {
+export const carOnScreen = (c, box = pageBox(canvas3D)) => {
   const p = drawCamera.projection;
   placeModel(car[c]);
   const [x, y, z] = [drawMatrix[12], drawMatrix[13], drawMatrix[14]];
@@ -99,7 +100,7 @@ export const placeNameTags = () => {
     hideFrom(0);
     return;
   }
-  const box = canvas3D.getBoundingClientRect();
+  const box = pageBox(canvas3D);
   // the nearest cars' names first: a name that would lie over a nearer one's is left out
   // (in a bunch of cars, as at the start, they would cover each other)
   const cars = [];

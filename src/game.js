@@ -2,6 +2,7 @@
 // frame one drawing, and the start-up.
 
 import { random } from "./core/random.js";
+import { t } from "./core/language.js";
 import {
   audio,
   holdAudio,
@@ -17,7 +18,7 @@ import { interpolation } from "./render/interpolation.js";
 import { canvas3D, fitCanvas3D } from "./render/renderer.js";
 import { loadLook } from "./render/look.js";
 import { loadMinimap } from "./ui/minimap.js";
-import { canvas2D, view } from "./ui/view.js";
+import { canvas2D, turnIfUpright, turned, view } from "./ui/view.js";
 import { keepScreenOn } from "./ui/screenAwake.js";
 import { loadAiming, startProjection, turnView } from "./render/camera.js";
 import { moveCamera } from "./render/cameraMoves.js";
@@ -175,7 +176,7 @@ function raceTick() {
     }
     drawNetNotice(
       [
-        outOfSync() ? OUT_OF_SYNC : leftNotice(),
+        outOfSync() ? t(OUT_OF_SYNC) : leftNotice(),
         waitedTicks > WAIT_SHOWN_TICKS ? waitingNotice() : null,
       ],
       link.role == ROLE.guest ? guest.ping : null,
@@ -312,13 +313,23 @@ const roomPlayerIds = () => {
 // The game fills what is on screen: the visual viewport, which is smaller than the window
 // in a zoomed page (Samsung Internet may keep a page zoomed in, even an installed game,
 // whose zoom cannot be undone), and lies where the zoom has panned to.
+// Turned (see turnIfUpright), the game lies along the screen's height.
 const fitToWindow = () => {
-  const seen = window.visualViewport ?? {
+  turnIfUpright();
+  const visual = window.visualViewport ?? {
     width: window.innerWidth,
     height: window.innerHeight,
     pageLeft: 0,
     pageTop: 0,
   };
+  const seen = turned.on
+    ? {
+        width: window.innerHeight,
+        height: window.innerWidth,
+        pageLeft: 0,
+        pageTop: 0,
+      }
+    : visual;
   for (const canvas of [canvas3D, canvas2D]) {
     canvas.style.left = `${seen.pageLeft}px`;
     canvas.style.top = `${seen.pageTop}px`;
@@ -354,7 +365,8 @@ fitCanvas3D();
 let pendingMs = 0;
 let lastFrameTime = -1;
 
-export function runFrame(now) {
+// The ticks due by now (a time as requestAnimationFrame gives it).
+const runTicksUntil = (now) => {
   if (lastFrameTime == -1) {
     lastFrameTime = now - TICK_MS;
   }
@@ -367,10 +379,55 @@ export function runFrame(now) {
     pendingMs -= ms;
     ms = tickMs();
   }
+  return ms;
+};
+
+export function runFrame(now) {
+  const ms = runTicksUntil(now);
   interpolation.alpha = pendingMs / ms;
   render();
   requestAnimationFrame(runFrame);
 }
+
+// A hidden tab draws no frames, and its timers run seldom: in a room, the game goes on by a
+// worker's clock, unseen, so that its player stays in the race and joins the next one the
+// host starts. (A browser that stops the whole page, as iOS does, stops this too: see
+// hiddenTicks.)
+const HIDDEN_CLOCK = `setInterval(() => postMessage(0), ${TICK_MS});`;
+let hiddenClock = null;
+let hiddenSince = 0;
+let hiddenTicks = 0;
+
+// (each clock's time counted from its first tick)
+const goOnHidden = () => {
+  hiddenSince = performance.now();
+  hiddenTicks = 0;
+  lastFrameTime = -1;
+  if (link.role == ROLE.none || typeof Worker != "function") {
+    return;
+  }
+  hiddenClock = new Worker(
+    URL.createObjectURL(new Blob([HIDDEN_CLOCK], { type: "text/javascript" })),
+  );
+  hiddenClock.onmessage = () => {
+    if (document.visibilityState == "hidden") {
+      hiddenTicks++;
+      runTicksUntil(performance.now());
+    }
+  };
+};
+
+// Whether the game stood still for a while unseen: racing together, the others took it for
+// gone.
+const stoodStillHidden = () => {
+  hiddenClock?.terminate();
+  hiddenClock = null;
+  lastFrameTime = -1;
+  const missed = (performance.now() - hiddenSince) / TICK_MS - hiddenTicks;
+  return missed * TICK_MS > LEFT_UNSEEN_MS;
+};
+// (as a game silent for PLAYER_GONE_TICKS, see net/lockstep.js, with a margin)
+const LEFT_UNSEEN_MS = 2000;
 
 // its random draws belong here, between the others made while loading
 scatterMenuSmoke();
@@ -423,6 +480,11 @@ document.addEventListener("visibilitychange", () => {
     audio.muteSound = mutedBeforeHiding.sound;
     holdAudio(false);
     keepScreenOn();
+    // (its player raced on as it shows again, which the others' races did without)
+    if (stoodStillHidden() && lockstep.active) {
+      leaveLockstep();
+      quitRace();
+    }
   } else {
     mutedBeforeHiding = { music: audio.muteMusic, sound: audio.muteSound };
     audio.muteMusic = true;
@@ -434,12 +496,7 @@ document.addEventListener("visibilitychange", () => {
       musicPaused = true;
     }
     holdAudio(true);
-    // (a hidden game runs no ticks: racing together, the others would take it for gone
-    // while its player raced on once it shows again, so it leaves the race at once)
-    if (lockstep.active) {
-      leaveLockstep();
-      quitRace();
-    }
+    goOnHidden();
   }
 });
 
