@@ -6,7 +6,7 @@ import { showStage } from "../loading/stageLoad.js";
 import { moveFreeCamera } from "../race/replayViewer.js";
 import { camera, startProjection, turnView } from "../render/camera.js";
 import { menu } from "../screens/menuState.js";
-import { canvas2D, rd } from "../ui/view.js";
+import { canvas2D, pagePoint, rd } from "../ui/view.js";
 import { editorView } from "./editorView.js";
 
 // how far the camera moves and turns a tick (Shift: faster), and per pixel dragged
@@ -95,7 +95,7 @@ export const flightPointer = (event, down) => {
     flight.dragFrom = null;
     return;
   }
-  flight.dragFrom = { x: event.clientX, y: event.clientY };
+  flight.dragFrom = pagePoint(event.clientX, event.clientY);
 };
 
 // The pointer moved on the view: dragged, the camera looks round.
@@ -103,9 +103,10 @@ export const flightDrag = (event) => {
   if (!flight.dragFrom) {
     return;
   }
-  const yaw = (event.clientX - flight.dragFrom.x) * DRAG_TURN;
-  const pitch = (event.clientY - flight.dragFrom.y) * DRAG_TURN;
-  flight.dragFrom = { x: event.clientX, y: event.clientY };
+  const { x, y } = pagePoint(event.clientX, event.clientY);
+  const yaw = (x - flight.dragFrom.x) * DRAG_TURN;
+  const pitch = (y - flight.dragFrom.y) * DRAG_TURN;
+  flight.dragFrom = { x, y };
   moveFreeCamera(0, 0, 0, yaw, pitch);
 };
 

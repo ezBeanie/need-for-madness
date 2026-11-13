@@ -28,6 +28,7 @@ import {
 } from "./editorFlight.js";
 import { editorView } from "./editorView.js";
 import { piecePreview } from "../render/piecePreview.js";
+import { pageBox, pagePoint } from "../ui/view.js";
 import {
   HEIGHTS,
   PATH_KINDS,
@@ -320,10 +321,11 @@ const toStage = (sx, sy) => ({
 
 // the pointer on the map, in the canvas's pixels
 const pointerOnMap = (event) => {
-  const box = map.getBoundingClientRect();
+  const box = pageBox(map);
+  const { x, y } = pagePoint(event.clientX, event.clientY);
   return {
-    x: ((event.clientX - box.left) * map.width) / box.width,
-    y: ((event.clientY - box.top) * map.height) / box.height,
+    x: ((x - box.left) * map.width) / box.width,
+    y: ((y - box.top) * map.height) / box.height,
   };
 };
 

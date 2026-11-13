@@ -104,7 +104,7 @@ import {
 import { images } from "./images.js";
 import { drawMinimap } from "./minimap.js";
 import { TOUCH_CONTROLS, touchControlAt, touchScale } from "./touchLayout.js";
-import { canvas2D, rd, view } from "./view.js";
+import { canvas2D, pageBox, rd, view } from "./view.js";
 import {
   AREA,
   BUTTON,
@@ -995,8 +995,8 @@ const onControl = ({ x, y }) =>
 
 // The car a tap is on, or -1.
 const carTapped = (tap) => {
-  const box = canvas3D.getBoundingClientRect();
-  const page = canvas2D.getBoundingClientRect();
+  const box = pageBox(canvas3D);
+  const page = pageBox(canvas2D);
   let tapped = -1;
   let nearest = Infinity;
   for (let c = 0; c < game.carCount; c++) {

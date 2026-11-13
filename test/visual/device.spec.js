@@ -2,32 +2,65 @@ import { expect, test } from "@playwright/test";
 import { openGame } from "./driver.js";
 import { PHASE } from "../../src/core/state.js";
 
-// iOS keeps no page sideways, whatever the manifest says: held upright, a phone is asked
-// to be turned, a desktop window as tall is not, nor an unfolded foldable's almost square
-// screen.
-test("a phone held upright is asked to be turned sideways", async ({
+// iOS keeps no page sideways, whatever the manifest says: held upright, a phone shows the
+// game turned a quarter, a desktop window as tall does not, nor an unfolded foldable's
+// almost square screen.
+test("a phone held upright shows the game turned sideways, a tap where it shows", async ({
   browser,
   baseURL,
 }) => {
-  const hint = async (options) => {
+  // (touched, the game goes on to choosing a car)
+  const open = async (options) => {
     const context = await browser.newContext({ ...options, baseURL });
     const page = await context.newPage();
-    await page.goto("/");
-    const visible = await page.locator("#turnDevice").isVisible();
+    const game = await openGame(page);
+    await game.advanceUntil(PHASE.carSelect);
+    await game.advance(2);
+    return { context, page };
+  };
+  const turned = async (options) => {
+    const { context, page } = await open(options);
+    const seen = await page.evaluate(() => ({
+      turned: document.documentElement.classList.contains("turned"),
+      width: document.querySelector("#canvas2D").width,
+    }));
     await context.close();
-    return visible;
+    return seen;
   };
   const phone = { isMobile: true, hasTouch: true, deviceScaleFactor: 3 };
-  expect(await hint({ ...phone, viewport: { width: 390, height: 844 } })).toBe(
-    true,
-  );
-  expect(await hint({ ...phone, viewport: { width: 844, height: 390 } })).toBe(
-    false,
-  );
-  expect(await hint({ viewport: { width: 700, height: 900 } })).toBe(false);
-  expect(await hint({ ...phone, viewport: { width: 674, height: 748 } })).toBe(
-    false,
-  );
+  expect(
+    await turned({ ...phone, viewport: { width: 390, height: 844 } }),
+  ).toEqual({ turned: true, width: 844 });
+  expect(
+    await turned({ ...phone, viewport: { width: 844, height: 390 } }),
+  ).toEqual({ turned: false, width: 844 });
+  expect(await turned({ viewport: { width: 700, height: 900 } })).toEqual({
+    turned: false,
+    width: 700,
+  });
+  expect(
+    await turned({ ...phone, viewport: { width: 674, height: 748 } }),
+  ).toEqual({ turned: false, width: 674 });
+
+  // the Options button lies on the turned page's top right: the screen's bottom right
+  const { context, page } = await open({
+    ...phone,
+    viewport: { width: 390, height: 844 },
+  });
+  // a finger on the screen's left lies on the turned page's bottom
+  await page.touchscreen.tap(100, 600);
+  expect(
+    await page.evaluate(() => {
+      const { pointer } = window.gameState;
+      return [pointer.x[0], pointer.y[0]];
+    }),
+  ).toEqual([600, 290]);
+  const box = await page.locator("#optionsButton").boundingBox();
+  expect(box.y).toBeGreaterThan(844 / 2);
+  expect(box.height).toBeGreaterThan(box.width);
+  await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+  await expect(page.locator("#options")).toBeVisible();
+  await context.close();
 });
 
 test("lost graphics come back with the game started anew, the room's link kept", async ({

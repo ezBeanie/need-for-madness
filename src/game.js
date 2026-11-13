@@ -17,7 +17,7 @@ import { interpolation } from "./render/interpolation.js";
 import { canvas3D, fitCanvas3D } from "./render/renderer.js";
 import { loadLook } from "./render/look.js";
 import { loadMinimap } from "./ui/minimap.js";
-import { canvas2D, view } from "./ui/view.js";
+import { canvas2D, turnIfUpright, turned, view } from "./ui/view.js";
 import { keepScreenOn } from "./ui/screenAwake.js";
 import { loadAiming, startProjection, turnView } from "./render/camera.js";
 import { moveCamera } from "./render/cameraMoves.js";
@@ -312,13 +312,23 @@ const roomPlayerIds = () => {
 // The game fills what is on screen: the visual viewport, which is smaller than the window
 // in a zoomed page (Samsung Internet may keep a page zoomed in, even an installed game,
 // whose zoom cannot be undone), and lies where the zoom has panned to.
+// Turned (see turnIfUpright), the game lies along the screen's height.
 const fitToWindow = () => {
-  const seen = window.visualViewport ?? {
+  turnIfUpright();
+  const visual = window.visualViewport ?? {
     width: window.innerWidth,
     height: window.innerHeight,
     pageLeft: 0,
     pageTop: 0,
   };
+  const seen = turned.on
+    ? {
+        width: window.innerHeight,
+        height: window.innerWidth,
+        pageLeft: 0,
+        pageTop: 0,
+      }
+    : visual;
   for (const canvas of [canvas3D, canvas2D]) {
     canvas.style.left = `${seen.pageLeft}px`;
     canvas.style.top = `${seen.pageTop}px`;

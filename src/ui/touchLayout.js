@@ -6,7 +6,7 @@
 
 import { loadText, saveSetting } from "../core/storage.js";
 import { images } from "./images.js";
-import { view } from "./view.js";
+import { pagePoint, view } from "./view.js";
 
 // the controls, their pictures (see images.touchControls), their sizes at a scale of 1 and
 // their middles in the 1280x720 layout: x, then y from the top and the size's part above
@@ -138,16 +138,18 @@ const controlButton = (key) => {
   let grab = null;
   button.addEventListener("pointerdown", (event) => {
     const { x, y } = touchControlAt(key);
-    grab = { dx: event.clientX - x, dy: event.clientY - y };
+    const at = pagePoint(event.clientX, event.clientY);
+    grab = { dx: at.x - x, dy: at.y - y };
     button.setPointerCapture?.(event.pointerId);
   });
   button.addEventListener("pointermove", (event) => {
     if (grab) {
+      const at = pagePoint(event.clientX, event.clientY);
       moveTo(
         button,
         key,
-        (event.clientX - grab.dx) / view.width,
-        (event.clientY - grab.dy) / view.height,
+        (at.x - grab.dx) / view.width,
+        (at.y - grab.dy) / view.height,
       );
     }
   });
