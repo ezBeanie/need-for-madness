@@ -7,6 +7,7 @@
 import { MAX_CARS, RACE_MODE, game, raceSetup } from "../core/state.js";
 import { TICK_MS } from "../core/tick.js";
 import { racers } from "./racers.js";
+import { teamMates, teamOf } from "../net/roomCars.js";
 
 // how long the race goes on, and a wasted car stays out, as the host chose
 export const deathmatchTicks = () =>
@@ -79,7 +80,8 @@ export const isDeathmatchState = (state) =>
 
 // Car c dented by car by, taking damage (a share of what wastes it).
 export const noteHit = (c, by, damage) => {
-  if (by == c) {
+  // (a team mate's dents count for nothing)
+  if (by == c || teamMates(c, by)) {
     return;
   }
   deathmatch.dealt[by] += damage;
@@ -91,7 +93,10 @@ export const noteHit = (c, by, damage) => {
 export const noteWasted = (c) => {
   const { lastcolido, lastHitBy } = racers[c];
   const killer =
-    lastcolido != 0 && Number.isInteger(lastHitBy) && lastHitBy != c
+    lastcolido != 0 &&
+    Number.isInteger(lastHitBy) &&
+    lastHitBy != c &&
+    !teamMates(c, lastHitBy)
       ? lastHitBy
       : -1;
   if (killer != -1) {
@@ -128,6 +133,27 @@ export const deathmatchTick = (respawn) => {
 // the ticks left
 export const deathmatchLeft = () =>
   Math.max(0, deathmatchTicks() - deathmatch.ticks);
+
+// With teams, the teams by their cars' kills, most first: each with its kills, deaths and
+// cars; none without.
+export const teamTable = () => {
+  const table = [];
+  for (let c = 0; c < game.carCount; c++) {
+    const team = teamOf(c);
+    if (team == -1) {
+      return [];
+    }
+    table[team] ??= { team, kills: 0, deaths: 0, cars: [] };
+    table[team].kills += deathmatch.kills[c] ?? 0;
+    table[team].deaths += deathmatch.deaths[c] ?? 0;
+    table[team].cars.push(c);
+  }
+  return table
+    .filter(Boolean)
+    .sort(
+      (a, b) => b.kills - a.kills || a.deaths - b.deaths || a.team - b.team,
+    );
+};
 
 // The cars by kills, most first (fewer deaths first on a tie).
 export const killTable = () =>

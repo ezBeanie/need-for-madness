@@ -35,6 +35,7 @@ import {
   startDeathmatch,
 } from "./deathmatch.js";
 import * as allEffects from "./effects.js";
+import { teamMates } from "../net/roomCars.js";
 import { raceEvents } from "./events.js";
 import { MISSED, SKID, STUNT, car, racers, useUpStuntTurns } from "./racers.js";
 import {
@@ -187,7 +188,8 @@ export function drive() {
   if (game.carCount != 1 && raceSetup.mode != RACE_MODE.timeAttack) {
     for (let c = 0; c < game.carCount; c++) {
       for (let xc = 0; xc < game.carCount; xc++) {
-        if (xc != c) {
+        // (team mates pass through each other, unless the host let them crash)
+        if (xc != c && (raceSetup.rules.teamCrashes || !teamMates(c, xc))) {
           colide(c, xc);
         }
       }

@@ -114,6 +114,10 @@ export const STRENGTH_NAMES = ["Easy", "Normal", "Hard"];
 export const COLLISIONS = { original: 0, solid: 1, solidNoRamps: 2 };
 export const COLLISION_NAMES = ["Original", "Solid", "Solid, no ramps"];
 
+// how many teams a room's race has (none: every car for itself), and their names
+export const TEAM_COUNTS = [0, 2, 3, 4];
+export const TEAM_NAMES = ["Red", "Blue", "Green", "Yellow"];
+
 // What a room's host chooses beyond the stage and the mode: how strong its bots are (hard
 // ones hunt the others in the wasting modes), how cars crash and, in most kills, how long
 // the race lasts and how long a wasted car stays out.
@@ -124,6 +128,9 @@ export const roomRules = () => ({
   minutes: 3,
   respawnSeconds: 3,
   collisions: COLLISIONS.original,
+  teams: 0,
+  // whether team mates crash into each other
+  teamCrashes: true,
 });
 export const isRoomRules = (rules) =>
   rules != null &&
@@ -134,7 +141,9 @@ export const isRoomRules = (rules) =>
   RESPAWN_SECONDS.includes(rules.respawnSeconds) &&
   Number.isInteger(rules.collisions) &&
   rules.collisions >= 0 &&
-  rules.collisions < COLLISION_NAMES.length;
+  rules.collisions < COLLISION_NAMES.length &&
+  TEAM_COUNTS.includes(rules.teams) &&
+  typeof rules.teamCrashes == "boolean";
 
 // How the race is set up beyond its stage and its cars, by the menu it was started from
 // (see race/career.js): the race reads this, never the career's progress itself.

@@ -2,15 +2,16 @@
 // the options, and the skins chosen in the lobby. Every game of the race gets them with its
 // start (see host.js and guest.js); other races have none.
 
-import { RACE_KIND, game, raceSetup } from "../core/state.js";
+import { RACE_KIND, TEAM_COUNTS, game, raceSetup } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { loadSetting, loadText, saveSetting } from "../core/storage.js";
 import { isSkin } from "../render/skins.js";
 
 export const MOST_NAME_CHARACTERS = 16;
 
-// names: by car, the player's name, "" for one without and null for a bot; skins: by car
-export const roomCars = { names: [], skins: [] };
+// names: by car, the player's name, "" for one without and null for a bot; skins: by car;
+// teams: by car, its team (see teamOf)
+export const roomCars = { names: [], skins: [], teams: [] };
 
 // (control characters and runs of spaces could garble the lists and the name tags)
 export const cleanName = (text) =>
@@ -47,16 +48,32 @@ export const inRoomRace = () =>
   (game.humans.length > 0 || raceSetup.kind == RACE_KIND.together);
 
 // Back in the menus: the next race may be no room's.
-export const forgetRoomCars = () => setRoomCars([], []);
+export const forgetRoomCars = () => setRoomCars([], [], []);
 
-export const setRoomCars = (names, skins) => {
+export const setRoomCars = (names, skins, teams = []) => {
   roomCars.names = Array.isArray(names)
     ? names.map((name) => (name === null ? null : cleanName(name)))
     : [];
   roomCars.skins = Array.isArray(skins)
     ? skins.map((skin) => (isSkin(skin) ? skin : 0))
     : [];
+  roomCars.teams = Array.isArray(teams)
+    ? teams.map((team) => (isTeam(team) ? team : 0))
+    : [];
 };
+
+// a team of a room's race with teams: 0 up to below their count
+export const isTeam = (team) =>
+  Number.isInteger(team) && team >= 0 && team < Math.max(...TEAM_COUNTS);
+
+// The team car c races for in a room's race with teams, else -1: every car for itself.
+export const teamOf = (c) =>
+  inRoomRace() && raceSetup.rules.teams > 0
+    ? (roomCars.teams[c] ?? 0) % raceSetup.rules.teams
+    : -1;
+
+export const teamMates = (c, xc) =>
+  c != xc && teamOf(c) != -1 && teamOf(c) == teamOf(xc);
 
 // the skin car c races in
 export const skinOf = (c) => (inRoomRace() ? (roomCars.skins[c] ?? 0) : 0);

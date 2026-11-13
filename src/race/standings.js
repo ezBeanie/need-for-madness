@@ -10,6 +10,19 @@ import { raceEvents } from "./events.js";
 import { MISSED, car, countMissedCheckpoint, racers } from "./racers.js";
 import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
 import { track } from "./track.js";
+import { teamOf } from "../net/roomCars.js";
+
+// how many sides still have a car not wasted: the teams, or every car for itself
+const sidesLeft = (cars) => {
+  const sides = [];
+  cars.forEach((racer, c) => {
+    const side = teamOf(c) == -1 ? `car${c}` : `team${teamOf(c)}`;
+    if (!racer.wasted && !sides.includes(side)) {
+      sides.push(side);
+    }
+  });
+  return sides.length;
+};
 
 // the car finishing right behind or right ahead of the player
 let rival = 0;
@@ -50,7 +63,7 @@ export function updateStandings() {
         track.haltall = true;
       }
     } else if (
-      cars.filter((racer) => !racer.wasted).length <= 1 ||
+      sidesLeft(cars) <= 1 ||
       (finishingEnds() &&
         cars.some((_, c) => track.clear[c] == done && track.pos[c] == 0))
     ) {

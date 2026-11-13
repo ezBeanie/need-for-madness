@@ -18,6 +18,7 @@ import { CAR, carStats } from "../data/carStats.js";
 import { MISSED, car, racers } from "./racers.js";
 import { PIECE, pieceModels, pieces, track } from "./track.js";
 import { atan } from "../core/exactMath.js";
+import { teamMates } from "../net/roomCars.js";
 
 // path points marked "pr" in the stage file lie on ramps (see pathType)
 const RAMP_POINT = -2;
@@ -2409,7 +2410,7 @@ function huntNearest(c) {
   let nearest = -1;
   let closest = Infinity;
   for (let other = 0; other < game.carCount; other++) {
-    if (other != c && !racers[other].wasted) {
+    if (other != c && !racers[other].wasted && !teamMates(c, other)) {
       const away = distanceSquaredXZ(
         car[c].x / 10,
         car[other].x / 10,
