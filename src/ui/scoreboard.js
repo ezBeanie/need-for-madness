@@ -2,6 +2,7 @@
 // the modern look, the message in the middle in the classic one), most kills' clock and
 // leaders at the top, and at the end every car's result in a table.
 
+import { drawClassicMessage } from "../classic/hud.js";
 import { game } from "../core/state.js";
 import { TICK_MS, tick } from "../core/tick.js";
 import { nameOfCar } from "../net/roomCars.js";
@@ -171,12 +172,25 @@ export const drawDeathmatchBoard = () => {
 
 // The results at the end: a row per car (cells: place, name, then what it scored, under
 // heads; mine: the player's; line: all of it in words), under the race's title. The classic
-// look writes the lines, as its messages.
+// look writes the lines, as its messages. More rows than ten go into two tables side by
+// side (the lines into two columns), so that twenty cars end above the buttons under them.
+const ROWS_IN_ONE = 10;
+
 export const drawResults = (heads, rows) => {
+  const tables = rows.length > ROWS_IN_ONE ? 2 : 1;
+  const rowsEach = Math.ceil(rows.length / tables);
   if (classicMenus()) {
-    rows.forEach(({ line }, i) =>
-      drawCenteredText(200 + 32 * i, line, 0, 0, 0, TEXT.label),
-    );
+    rows.forEach(({ line }, i) => {
+      const table = Math.floor(i / rowsEach);
+      drawClassicMessage(
+        200 + 32 * (i % rowsEach),
+        line,
+        0,
+        0,
+        0,
+        view.width / 2 + (table - (tables - 1) / 2) * (view.width / 2.5),
+      );
+    });
     return;
   }
   const s = view.scale;
@@ -193,43 +207,52 @@ export const drawResults = (heads, rows) => {
   );
   const width =
     widths.reduce((sum, w) => sum + w, 0) + pad * (widths.length + 1);
-  const left = view.width / 2 - width / 2;
-  rd.save();
-  rd.globalAlpha = 0.6;
-  rd.fillStyle = "#000000";
-  rd.beginPath();
-  rd.roundRect(
-    left,
-    top,
-    width,
-    rowHeight * (rows.length + 1) + 12 * s,
-    14 * s,
-  );
-  rd.fill();
-  rd.globalAlpha = 1;
-  const drawRow = (cells, y, color) => {
-    let x = left + pad;
-    cells.forEach((cell, column) => {
-      // (the name left, the numbers right)
-      rd.textAlign = column == 1 ? "left" : "right";
-      rd.fillStyle = color;
-      rd.fillText(
-        cell,
-        column == 1 ? x : x + widths[column],
-        y + rowHeight / 2,
-      );
-      x += widths[column] + pad;
-    });
+  const gap = 16 * s;
+  const drawTable = (left, part) => {
+    rd.globalAlpha = 0.6;
+    rd.fillStyle = "#000000";
+    rd.beginPath();
+    rd.roundRect(
+      left,
+      top,
+      width,
+      rowHeight * (part.length + 1) + 12 * s,
+      14 * s,
+    );
+    rd.fill();
+    rd.globalAlpha = 1;
+    const drawRow = (cells, y, color) => {
+      let x = left + pad;
+      cells.forEach((cell, column) => {
+        // (the name left, the numbers right)
+        rd.textAlign = column == 1 ? "left" : "right";
+        rd.fillStyle = color;
+        rd.fillText(
+          cell,
+          column == 1 ? x : x + widths[column],
+          y + rowHeight / 2,
+        );
+        x += widths[column] + pad;
+      });
+    };
+    font(12);
+    drawRow(heads, top + 6 * s, "#01EAFF");
+    font(15);
+    part.forEach(({ cells, mine }, i) =>
+      drawRow(
+        cells,
+        top + 6 * s + rowHeight * (i + 1),
+        mine ? "#FFB401" : "#FFFFFF",
+      ),
+    );
   };
-  font(12);
-  drawRow(heads, top + 6 * s, "#01EAFF");
-  font(15);
-  rows.forEach(({ cells, mine }, i) =>
-    drawRow(
-      cells,
-      top + 6 * s + rowHeight * (i + 1),
-      mine ? "#FFB401" : "#FFFFFF",
-    ),
-  );
+  const left = view.width / 2 - (tables * width + (tables - 1) * gap) / 2;
+  rd.save();
+  for (let table = 0; table < tables; table++) {
+    drawTable(
+      left + table * (width + gap),
+      rows.slice(table * rowsEach, (table + 1) * rowsEach),
+    );
+  }
   rd.restore();
 };
