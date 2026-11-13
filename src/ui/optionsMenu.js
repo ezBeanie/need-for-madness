@@ -20,6 +20,13 @@ import { isPhone } from "../core/platform.js";
 import { askOfflineStatus, installOffline } from "./offline.js";
 import { CHANGELOG, VERSION } from "../data/changelog.js";
 import {
+  language,
+  onLanguage,
+  setLanguage,
+  t,
+  translatePage,
+} from "../core/language.js";
+import {
   arrangeTouchControls,
   setTouchSize,
   touchLayout,
@@ -77,7 +84,7 @@ const showSwitch = (id, on, yes, no) => {
   item.setAttribute?.("aria-pressed", on ? "true" : "false");
   const state = item.querySelector?.(".state");
   if (state) {
-    state.textContent = on ? yes : no;
+    state.textContent = t(on ? yes : no);
   }
 };
 
@@ -92,6 +99,15 @@ const showStates = () => {
   showSwitch("voiceByVoice", voice.byVoice, "By voice", "Push to talk");
 };
 
+// (named anew when shown, in the language chosen)
+const showCollisionNames = () => {
+  const collisionsChosen = document.getElementById("collisionsChosen");
+  collisionsChosen.replaceChildren(
+    ...COLLISION_NAMES.map((name, value) => new Option(t(name), String(value))),
+  );
+  collisionsChosen.value = String(collisionChoice.value);
+};
+
 export const openOptions = () => {
   showStates();
   showVolumes();
@@ -99,21 +115,21 @@ export const openOptions = () => {
   // (only where there are touch controls)
   document.getElementById("optionsTouch").hidden = !isPhone;
   document.getElementById("playerName").value = own.name;
-  // (filled when first shown)
-  const collisionsChosen = document.getElementById("collisionsChosen");
-  if (collisionsChosen.options.length == 0) {
-    collisionsChosen.append(
-      ...COLLISION_NAMES.map((name, value) => new Option(name, String(value))),
-    );
-  }
-  collisionsChosen.value = String(collisionChoice.value);
+  showCollisionNames();
+  document.getElementById("languageChosen").value = language.current;
   askOfflineStatus();
   dialog.showModal?.();
 };
 
-// The game's version, and what changed in each, out of the way at the options' end.
+// The game's version, and what changed in each, out of the way at the options' end (what
+// changed stays English, as it was written).
+const showVersion = () => {
+  document.getElementById("gameVersion").textContent = t("Version {version}", {
+    version: VERSION,
+  });
+};
+
 const showChangelog = () => {
-  document.getElementById("gameVersion").textContent = `Version ${VERSION}`;
   const changelog = document.getElementById("changelog");
   for (const { version, date, changes } of CHANGELOG) {
     const title = document.createElement("h4");
@@ -130,7 +146,22 @@ const showChangelog = () => {
 
 export const installOptionsMenu = () => {
   installOffline();
+  showVersion();
   showChangelog();
+  // (the page and what is shown of it at once in the language chosen; a language saved
+  // translates the page as the game starts)
+  const languageChosen = document.getElementById("languageChosen");
+  languageChosen.addEventListener("change", () =>
+    setLanguage(languageChosen.value),
+  );
+  onLanguage(() => {
+    showVersion();
+    showStates();
+    showCollisionNames();
+  });
+  if (language.current != "en") {
+    translatePage();
+  }
   for (const [action] of SWITCHES) {
     document
       .getElementById(`option-${action}`)
