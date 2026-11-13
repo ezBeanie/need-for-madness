@@ -774,6 +774,25 @@ const soundPlayerWreck = () => {
   }
 };
 
+// Most kills' results, a row per car: its kills, the wastings it helped, the damage it did
+// the others (in cars' worth, as a share) and how often it was wasted.
+export const KILL_HEADS = ["", "", "Kills", "Assists", "Damage", "Wasted"];
+export const killRow = ({ c, kills, assists, dealt, deaths }, place) => {
+  const damage = `${Math.round(dealt * 100)}%`;
+  return {
+    cells: [
+      placeName(place),
+      nameOfCar(c),
+      String(kills),
+      String(assists),
+      damage,
+      String(deaths),
+    ],
+    mine: c == game.player,
+    line: `${placeName(place)}  ${nameOfCar(c)}  ${kills} kills, ${assists} assists, ${damage} damage, wasted ${deaths}`,
+  };
+};
+
 // A room's race of most kills: the player's wreck and its way back, and once the time is
 // up every car's kills. Returns whether the race is over.
 const deathmatchOutcome = () => {
@@ -782,14 +801,7 @@ const deathmatchOutcome = () => {
     const won = table[0]?.c == game.player;
     drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
     raceEvents.winner = won;
-    drawResults(
-      ["", "", "Kills", "Wasted"],
-      table.map(({ c, kills, deaths }, place) => ({
-        cells: [placeName(place), nameOfCar(c), String(kills), String(deaths)],
-        mine: c == game.player,
-        line: `${placeName(place)}  ${nameOfCar(c)}  ${kills} kills, wasted ${deaths}`,
-      })),
-    );
+    drawResults(KILL_HEADS, table.map(killRow));
     return true;
   }
   if (racers[game.player].wasted) {
@@ -1445,6 +1457,7 @@ const drawKillStanding = () => {
   let x = 20 * view.scale;
   for (const [label, value] of [
     ["Kills", deathmatch.kills[p]],
+    ["Assists", deathmatch.assists[p]],
     ["Wasted", deathmatch.deaths[p]],
     ["Place", placeName(killTable().findIndex(({ c }) => c == p))],
   ]) {

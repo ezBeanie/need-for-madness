@@ -491,3 +491,21 @@ test("in most kills the crashes count the damage each car does the others", asyn
     sum(taken) + sum(ctx.deathmatch.deaths) * 2,
   );
 });
+
+test("most kills' results show each car's kills, assists, damage dealt and wastings", async () => {
+  const { ctx } = await mostKills();
+  expect(ctx.KILL_HEADS).toEqual([
+    "",
+    "",
+    "Kills",
+    "Assists",
+    "Damage",
+    "Wasted",
+  ]);
+  const row = ctx.killRow(
+    { c: 1, kills: 3, assists: 2, dealt: 1.456, deaths: 4 },
+    0,
+  );
+  expect(row.cells.slice(2)).toEqual(["3", "2", "146%", "4"]);
+  expect(row.line).toContain("2 assists, 146% damage");
+});

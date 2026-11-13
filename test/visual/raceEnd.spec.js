@@ -97,17 +97,25 @@ for (const [width, height] of [
     await game.advance();
     for (const classic of [false, true]) {
       const drawn = await page.evaluate((classic) => {
-        const { drawResults, look, LOOK, view } = window.gameState;
+        const { drawResults, look, LOOK, view, KILL_HEADS, killRow } =
+          window.gameState;
         look.current = classic ? LOOK.classic : LOOK.modern;
         look.menus = classic;
-        const names = Array.from({ length: 20 }, (_, c) => `Car ${c + 1}`);
+        // (most kills' table, as wide as it gets: long names, big numbers)
+        const names = Array.from(
+          { length: 20 },
+          (_, c) => `Radical One ${c + 1}`,
+        );
         window.drawnTexts = [];
         drawResults(
-          ["", "", "Kills", "Wasted"],
+          KILL_HEADS,
           names.map((name, place) => ({
-            cells: [`${place + 1}th`, name, "0", "0"],
-            mine: false,
-            line: `${place + 1}th  ${name}  0 kills, wasted 0`,
+            ...killRow(
+              { c: 0, kills: 12, assists: 10, dealt: 12.5, deaths: 11 },
+              place,
+            ),
+            cells: [`${place + 1}th`, name, "12", "10", "1250%", "11"],
+            line: `${place + 1}th  ${name}  12 kills, 10 assists, 1250% damage, wasted 11`,
           })),
         );
         // (the buttons' top: see afterRaceOver in ui/hud.js)
@@ -121,7 +129,9 @@ for (const [width, height] of [
             at.y > 0 &&
             at.y < buttonsTop &&
             at.x - (classic ? at.width / 2 : 0) >= 0 &&
-            at.x + at.width / (classic ? 2 : 1) <= view.width
+            at.x + at.width / (classic ? 2 : 1) <= view.width &&
+            // (the numbers, right aligned, in sight too)
+            window.drawnTexts.every(({ x }) => x >= 0 && x <= view.width)
           );
         });
       }, classic);
