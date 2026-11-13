@@ -1,14 +1,19 @@
 // What is drawn over the race: positions, laps, damage and power, the arrow, messages, the
 // buttons, and the overlays of replays, winding back time and switch mode.
 
-import { deathmatch, isDeathmatch, killTable } from "../race/deathmatch.js";
+import {
+  deathmatch,
+  isDeathmatch,
+  killTable,
+  teamTable,
+} from "../race/deathmatch.js";
 import {
   spectating,
   startWatching,
   watchNext,
   watchingOthers,
 } from "../race/spectate.js";
-import { arrowNameOf, inRoomRace, nameOfCar } from "../net/roomCars.js";
+import { inRoomRace, nameOfCar, teamOf } from "../net/roomCars.js";
 import {
   clearFeed,
   clockTime,
@@ -50,6 +55,7 @@ import {
   MODE,
   PHASE,
   RACE_MODE,
+  TEAM_NAMES,
   finishingEnds,
   game,
   raceSetup,
@@ -639,6 +645,16 @@ const shownControls = () =>
     (key) => key != "arrow" || arrowButtonShown(),
   );
 
+// Where touch control key begins at the top, with a little room, in pixels (the screen's
+// bottom when it is not drawn), for what is drawn above it.
+const aboveTouchControl = (key) => {
+  if (!touchControlsShown() || !shownControls().includes(key)) {
+    return view.height;
+  }
+  const { y, height } = touchControlAt(key);
+  return y - height / 2 - 6 * view.scale;
+};
+
 const drawTouchControls = () => {
   for (const key of shownControls()) {
     const { x, y, width, height } = touchControlAt(key);
@@ -764,22 +780,47 @@ const soundPlayerWreck = () => {
   }
 };
 
+// Most kills' results, a row per car: its kills, the wastings it helped, the damage it did
+// the others (in cars' worth, as a share) and how often it was wasted.
+export const KILL_HEADS = ["", "", "Kills", "Assists", "Damage", "Wasted"];
+export const killRow = ({ c, team, kills, assists, dealt, deaths }, place) => {
+  const damage = `${Math.round(dealt * 100)}%`;
+  // (in teams, the teams' rows first: their cars' all together)
+  const name = c === undefined ? `Team ${TEAM_NAMES[team]}` : nameOfCar(c);
+  return {
+    cells: [
+      placeName(place),
+      name,
+      String(kills),
+      String(assists),
+      damage,
+      String(deaths),
+    ],
+    mine: c === undefined ? team == teamOf(game.player) : c == game.player,
+    line: `${placeName(place)}  ${name}  ${kills} kills, ${assists} assists, ${damage} damage, wasted ${deaths}`,
+  };
+};
+
 // A room's race of most kills: the player's wreck and its way back, and once the time is
 // up every car's kills. Returns whether the race is over.
 const deathmatchOutcome = () => {
   if (track.haltall) {
     const table = killTable();
+    const teams = teamTable();
+    if (teams.length > 0) {
+      const won = teams[0].team == teamOf(game.player);
+      drawOutcome(
+        won ? "Your Team Won!" : "You Lost!",
+        won ? "youwon" : "youlost",
+      );
+      raceEvents.winner = won;
+      drawResults(KILL_HEADS, [...teams.map(killRow), ...table.map(killRow)]);
+      return true;
+    }
     const won = table[0]?.c == game.player;
     drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
     raceEvents.winner = won;
-    drawResults(
-      ["", "", "Kills", "Wasted"],
-      table.map(({ c, kills, deaths }, place) => ({
-        cells: [placeName(place), nameOfCar(c), String(kills), String(deaths)],
-        mine: c == game.player,
-        line: `${placeName(place)}  ${nameOfCar(c)}  ${kills} kills, wasted ${deaths}`,
-      })),
-    );
+    drawResults(KILL_HEADS, table.map(killRow));
     return true;
   }
   if (racers[game.player].wasted) {
@@ -793,6 +834,35 @@ const deathmatchOutcome = () => {
   return false;
 };
 
+// A room's race in teams, once over: the team of the first car through, where finishing
+// ends it, else of the last cars standing, wins.
+const teamsOutcome = () => {
+  const done = track.nlaps * track.nsp;
+  let first = -1;
+  for (let c = 0; c < game.carCount; c++) {
+    if (finishingEnds() && track.clear[c] == done && track.pos[c] == 0) {
+      first = c;
+    }
+  }
+  if (first == -1) {
+    first = racers.slice(0, game.carCount).findIndex((racer) => !racer.wasted);
+  }
+  const team = first == -1 ? -1 : teamOf(first);
+  const won = team != -1 && team == teamOf(game.player);
+  drawOutcome(won ? "Your Team Won!" : "You Lost!", won ? "youwon" : "youlost");
+  drawBlinking(
+    192,
+    team == -1
+      ? "Every car has been wasted!"
+      : `Team ${TEAM_NAMES[team]} wins!`,
+    0,
+    128,
+    255,
+  );
+  raceEvents.winner = won;
+  return true;
+};
+
 const raceOutcome = () => {
   let over = false;
   if (isDeathmatch()) {
@@ -802,6 +872,9 @@ const raceOutcome = () => {
     raceSetup.mode == RACE_MODE.timeAttack && game.humans.length > 0;
   if (againstTheClock && timeAttackOutcome()) {
     return true;
+  }
+  if (!againstTheClock && track.haltall && teamOf(game.player) != -1) {
+    return teamsOutcome();
   }
   if (
     track.wasted == game.carCount - 1 &&
@@ -956,12 +1029,13 @@ const pickByTap = (tap) => {
   announce(lockedText());
 };
 
+// The target camera's bar, at the top in the middle: under it come the original's messages,
+// at the bottom the clocks and the ping, and on phones the touch controls would take its
+// taps.
 const drawLockBar = (taps) => {
   const scale = view.scale;
   const height = Math.max(isPhone ? 44 : 26, 30 * scale);
-  const top = isPhone
-    ? 82 * view.scaleY
-    : view.height - height - 14 * view.scaleY;
+  const top = 8 * scale;
   const font = Math.round(height * 0.45);
   rd.save();
   rd.font = `${font}px sans-serif`;
@@ -1434,6 +1508,7 @@ const drawKillStanding = () => {
   let x = 20 * view.scale;
   for (const [label, value] of [
     ["Kills", deathmatch.kills[p]],
+    ["Assists", deathmatch.assists[p]],
     ["Wasted", deathmatch.deaths[p]],
     ["Place", placeName(killTable().findIndex(({ c }) => c == p))],
   ]) {
@@ -1568,10 +1643,13 @@ const drawToggle = (id, y, muted, toggle, onImage) => {
   rd.globalAlpha = 1;
 };
 
+// narrow screens leave the meters room above the buttons
+const cornerButtonsShift = () =>
+  view.width / view.height < 1.3 ? 76 * view.scale : 0;
+
 // Top right corner: pause, sound and music.
 const drawCornerButtons = (raceOver) => {
-  // narrow screens leave the meters room above the buttons
-  const shift = view.width / view.height < 1.3 ? 76 * view.scale : 0;
+  const shift = cornerButtonsShift();
   const pauseX = view.width - 87 * view.scale;
   const pauseArea = touchArea(
     2,
@@ -1997,11 +2075,17 @@ export function drawHud() {
     if (isTimeAttack() && raceEvents.countdown == 0) {
       drawClock();
     }
+    // the left under the standing (and the arrow button, not up there on phones), down to
+    // the touch controls' arrow
+    let left = (isPhone ? 70 : 165) * view.scale;
     if (isDeathmatch() && raceEvents.countdown == 0 && !track.haltall) {
-      drawDeathmatchBoard();
+      left = drawDeathmatchBoard(left);
     }
     if (inRoomRace() && !classicMenus()) {
-      drawFeed();
+      drawFeed(
+        190 * view.scale + cornerButtonsShift(),
+        aboveTouchControl("handbrake"),
+      );
     }
     if (
       game.carCount != 1 &&
@@ -2039,7 +2123,7 @@ export function drawHud() {
       drawLockBar(taps);
     }
     drawStanding();
-    drawMinimap();
+    drawMinimap(left, aboveTouchControl("arrow"));
     if (!isPhone && arrowButtonShown()) {
       drawArrowButton();
     }
@@ -2104,14 +2188,18 @@ export const drawWaitingHud = (first) => {
 };
 
 // Racing together: what the HUD tells about the other games, a line each, and how long a
-// message takes to the host and back (the first thing to know when the race waits).
+// message takes to the host and back (the first thing to know when the race waits). The
+// lines go under the race's own, e.g. "Back in 0:05" when wasted in most kills.
 export const drawNetNotice = (notices, ping) => {
   notices
     .filter(Boolean)
     .forEach((notice, i) =>
-      drawCenteredText(192 + 40 * i, notice, 0, 0, 0, TEXT.label),
+      drawCenteredText(232 + 40 * i, notice, 0, 0, 0, TEXT.label),
     );
   if (ping != null) {
+    // (a race waiting stands as drawn last, the ping of then with it: off with that one)
+    const top = 690 * view.scaleY;
+    rd.clearRect(view.width / 3, top, view.width / 3, view.height - top);
     drawCenteredText(706, `Ping ${ping} ms`, 0, 0, 0, TEXT.small);
   }
 };
@@ -2448,7 +2536,7 @@ const closestOpponent = () => {
 };
 
 const drawTargetName = (target) => {
-  const name = arrowNameOf(target);
+  const name = nameOfCar(target);
   drawCenteredText(
     16,
     "[" + "  ".repeat(name.length) + "]",

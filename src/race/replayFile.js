@@ -154,6 +154,8 @@ const countsOf = (tape) => ({
     dustCount: car.dustCount,
     soundCount: car.soundCount,
     wastedAt: Number.isFinite(car.wastedAt) ? car.wastedAt : null,
+    wastes: car.wastes,
+    backs: car.backs,
   })),
   sparks: tape.sparks.count,
 });
@@ -231,6 +233,9 @@ export const decodeReplay = async (file) => {
       // (none in files of the first version)
       soundCount: car.soundCount ?? 0,
       wastedAt: car.wastedAt ?? Infinity,
+      // (files before most kills: wasted once at most, never back)
+      wastes: car.wastes ?? (car.wastedAt == null ? [] : [car.wastedAt]),
+      backs: car.backs ?? [],
     })),
     sparks: { count: counts.sparks },
   };

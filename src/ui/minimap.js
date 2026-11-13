@@ -1,9 +1,10 @@
-// The minimap under the arrow button, shown or hidden with G: the stage's path seen from
+// The minimap at the left (see drawHud), shown or hidden with G: the stage's path seen from
 // above, its start, and the cars on it (the player's in white, the car the arrow points at
-// ringed, wasted cars grey).
+// ringed, wasted cars grey, in teams each in its team's colour).
 
 import { game } from "../core/state.js";
 import { loadSetting, saveSetting } from "../core/storage.js";
+import { TEAM_COLORS, teamOf } from "../net/roomCars.js";
 import { car } from "../race/racers.js";
 import { track } from "../race/track.js";
 import { camera } from "../render/camera.js";
@@ -20,9 +21,8 @@ export const toggleMinimap = () => {
   saveSetting("minimap", minimap.shown ? 1 : 0);
 };
 
-// where it stands and how big it is, in the 1280 x 720 layout
+// where it stands and how big it is at most, in the 1280 x 720 layout
 const LEFT = 20;
-const TOP = 165;
 const SIZE = 160;
 const MARGIN = 12;
 
@@ -69,14 +69,15 @@ const drawCar = (x, y, radius, fill) => {
   rd.fill();
 };
 
-export const drawMinimap = () => {
-  if (!minimap.shown || track.n < 2) {
+// From top (in pixels) down, as big as it fits above bottom; too small to tell anything
+// it is left out.
+export const drawMinimap = (top, bottom) => {
+  const scale = view.scale;
+  const size = Math.min(SIZE * scale, bottom - top);
+  if (!minimap.shown || track.n < 2 || size < (SIZE / 2) * scale) {
     return;
   }
-  const scale = view.scale;
-  const size = SIZE * scale;
   const left = LEFT * scale;
-  const top = TOP * scale;
   rd.fillStyle = "rgba(0, 20, 40, 0.45)";
   rd.beginPath();
   rd.roundRect(left, top, size, size, 12 * scale);
@@ -118,7 +119,9 @@ export const drawMinimap = () => {
       continue;
     }
     const [x, y] = toMap(car[c].x, car[c].z);
-    drawCar(x, y, radius, track.dested[c] ? WASTED : OPPONENT);
+    const team = teamOf(c);
+    const color = team == -1 ? OPPONENT : TEAM_COLORS[team];
+    drawCar(x, y, radius, track.dested[c] ? WASTED : color);
     if (c == (camera.lockedCar >= 0 ? camera.lockedCar : camera.aimedCar)) {
       rd.strokeStyle = "#ffe14a";
       rd.lineWidth = 2 * scale;

@@ -52,7 +52,12 @@ import {
   viewer,
 } from "./race/replayViewer.js";
 import { replaySoundsTick } from "./audio/replaySounds.js";
-import { drawReplayOverlay, heldArrow } from "./ui/replayControls.js";
+import {
+  drawReplayOverlay,
+  heldArrow,
+  installReplayExit,
+  placeReplayExit,
+} from "./ui/replayControls.js";
 import { installReplayDrop } from "./screens/replays.js";
 import {
   installMultiplayerMenu,
@@ -86,7 +91,7 @@ import { loadAssets } from "./loading/assets.js";
 import { updateStandings } from "./race/standings.js";
 import { animateTrack, castShadows, placeWheels } from "./render/raceScene.js";
 import { countDown, flashTick } from "./race/countdown.js";
-import { onKey } from "./input/controls.js";
+import { holdStuntKey, onKey } from "./input/controls.js";
 import { hostTick, roomGuests, startHosting } from "./net/host.js";
 import { guest, guestWaitingTick, startGuesting } from "./net/guest.js";
 import { spectateTick, watchingOthers } from "./race/spectate.js";
@@ -147,6 +152,9 @@ function raceTick() {
       waitedTicks = 0;
       raceRan = true;
       catchUpWatching(runRaceFrameAgain);
+      if (!lockstep.watching) {
+        holdStuntKey();
+      }
       pressFrameKeys(runRaceFrameAgain);
       if (raceEvents.countdown == 0) {
         drive();
@@ -282,6 +290,7 @@ export function runTick() {
   }
   placeMainMenu();
   placeOptionsButton();
+  placeReplayExit();
   placeMultiplayerButton();
   placeStageEditorButton();
   voiceTick(roomPlayerIds());
@@ -373,6 +382,7 @@ installReplayDrop(window);
 startHosting();
 startGuesting();
 installOptionsMenu();
+installReplayExit();
 installTouchLayout();
 installMainMenu();
 installMultiplayerMenu();

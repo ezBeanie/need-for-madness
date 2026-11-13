@@ -108,15 +108,30 @@ export const isRaceMode = (mode) =>
 export const STRENGTH = { easy: 0, normal: 1, hard: 2 };
 export const STRENGTH_NAMES = ["Easy", "Normal", "Hard"];
 
+// How cars crash into each other in a room's race: as the original; solid, so that slow
+// cars no longer pass through each other; and solid without ramps: a car lifts another
+// only in a crash, no longer by merely touching it, which let it climb onto the other as
+// up a ramp (to try out).
+export const COLLISIONS = { original: 0, solid: 1, solidNoRamps: 2 };
+export const COLLISION_NAMES = ["Original", "Solid", "Solid, no ramps"];
+
+// how many teams a room's race has (none: every car for itself), and their names
+export const TEAM_COUNTS = [0, 2, 3, 4];
+export const TEAM_NAMES = ["Red", "Blue", "Green", "Yellow"];
+
 // What a room's host chooses beyond the stage and the mode: how strong its bots are (hard
-// ones hunt the others in the wasting modes) and, in most kills, how long the race lasts
-// and how long a wasted car stays out.
+// ones hunt the others in the wasting modes), how cars crash and, in most kills, how long
+// the race lasts and how long a wasted car stays out.
 export const MATCH_MINUTES = [1, 2, 3, 5, 10];
 export const RESPAWN_SECONDS = [1, 3, 5, 10];
 export const roomRules = () => ({
   strength: STRENGTH.normal,
   minutes: 3,
   respawnSeconds: 3,
+  collisions: COLLISIONS.original,
+  teams: 0,
+  // whether team mates crash into each other
+  teamCrashes: true,
 });
 export const isRoomRules = (rules) =>
   rules != null &&
@@ -124,7 +139,12 @@ export const isRoomRules = (rules) =>
   rules.strength >= 0 &&
   rules.strength < STRENGTH_NAMES.length &&
   MATCH_MINUTES.includes(rules.minutes) &&
-  RESPAWN_SECONDS.includes(rules.respawnSeconds);
+  RESPAWN_SECONDS.includes(rules.respawnSeconds) &&
+  Number.isInteger(rules.collisions) &&
+  rules.collisions >= 0 &&
+  rules.collisions < COLLISION_NAMES.length &&
+  TEAM_COUNTS.includes(rules.teams) &&
+  typeof rules.teamCrashes == "boolean";
 
 // How the race is set up beyond its stage and its cars, by the menu it was started from
 // (see race/career.js): the race reads this, never the career's progress itself.

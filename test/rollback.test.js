@@ -50,8 +50,10 @@ const raceWithKeysLate = async (late, leaving = null, unlocked = null) => {
   // (the two white frames it flashes in with, which set it up)
   ctx.runTick();
   ctx.runTick();
-  // (racing together, the wreck's random numbers are apart from the effects', see host.js)
-  ctx.random.wreck = seededRandom(3);
+  // (racing together, the wreck's random numbers are apart from the effects', see host.js;
+  // the game's own source, whose state goes with the race's)
+  const { seededRandom: gameRandom } = await import("../src/core/random.js");
+  ctx.random.wreck = gameRandom(3);
   // (and the help for new players off, which the HUD counts down, see host.js)
   ctx.raceEvents.onautocorrect = 0;
   ctx.game.humans = [0, 1, 2];

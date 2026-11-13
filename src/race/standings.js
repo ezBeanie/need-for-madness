@@ -10,6 +10,19 @@ import { raceEvents } from "./events.js";
 import { MISSED, car, countMissedCheckpoint, racers } from "./racers.js";
 import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
 import { track } from "./track.js";
+import { teamOf } from "../net/roomCars.js";
+
+// how many sides still have a car not wasted: the teams, or every car for itself
+const sidesLeft = (cars) => {
+  const sides = [];
+  cars.forEach((racer, c) => {
+    const side = teamOf(c) == -1 ? `car${c}` : `team${teamOf(c)}`;
+    if (!racer.wasted && !sides.includes(side)) {
+      sides.push(side);
+    }
+  });
+  return sides.length;
+};
 
 // the car finishing right behind or right ahead of the player
 let rival = 0;
@@ -50,7 +63,7 @@ export function updateStandings() {
         track.haltall = true;
       }
     } else if (
-      cars.filter((racer) => !racer.wasted).length <= 1 ||
+      sidesLeft(cars) <= 1 ||
       (finishingEnds() &&
         cars.some((_, c) => track.clear[c] == done && track.pos[c] == 0))
     ) {
@@ -75,8 +88,8 @@ export function updateStandings() {
   if (recording.finishCatchTicks != 0) {
     recording.finishCatchTicks--;
     if (recording.finishCatchTicks == 0) {
-      catchHighlight(HIGHLIGHT.closeWin + track.pos[0]);
-      if (recording.highlight == HIGHLIGHT.closeWin + track.pos[0]) {
+      catchHighlight(HIGHLIGHT.closeWin + track.pos[game.player]);
+      if (recording.highlight == HIGHLIGHT.closeWin + track.pos[game.player]) {
         recording.otherCar = rival;
         if (recording.highlight > HIGHLIGHT.closeLoss) {
           recording.highlight = HIGHLIGHT.closeLoss;
@@ -145,7 +158,9 @@ const distanceTo = (body, x, z) =>
 // The leader has cleared every checkpoint: when it is the player with the second close
 // behind, one checkpoint less, or another car with the player (car 0) close behind like
 // that, the finish is recorded.
+// (racing together, a guest's own car is not car 0)
 const watchForCloseFinish = () => {
+  const p = game.player;
   for (let i = 0; i < game.carCount; i++) {
     if (track.clear[i] != track.nlaps * track.nsp || track.pos[i] != 0) {
       continue;
@@ -157,15 +172,15 @@ const watchForCloseFinish = () => {
         }
       }
       if (
-        distanceTo(car[0], car[rival].x, car[rival].z) < CLOSE &&
-        track.clear[0] - racers[rival].clear == 1
+        distanceTo(car[p], car[rival].x, car[rival].z) < CLOSE &&
+        track.clear[p] - racers[rival].clear == 1
       ) {
         recording.finishCatchTicks = CLOSE_FINISH_TICKS;
       }
     } else if (
-      track.pos[0] == 1 &&
-      distanceTo(car[0], car[i].x, car[i].z) < CLOSE &&
-      racers[i].clear - racers[0].clear == 1
+      track.pos[p] == 1 &&
+      distanceTo(car[p], car[i].x, car[i].z) < CLOSE &&
+      racers[i].clear - racers[p].clear == 1
     ) {
       recording.finishCatchTicks = CLOSE_FINISH_TICKS;
       rival = i;

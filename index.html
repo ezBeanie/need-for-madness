@@ -23,16 +23,18 @@ font-family: verd;
 src: url(data/verdana.ttf);
 }
 /* the options and multiplayer beside the classic menus and the screens after the main
-   menu, slanted as the main menu's buttons (see src/ui/) */
-.options-button, .multiplayer-button {
+   menu, slanted as the main menu's buttons (see src/ui/); the replay's way out beside
+   them, as the screens' Back */
+.options-button, .multiplayer-button, .replay-exit {
   position: fixed; top: 8px; right: 76px; min-height: 44px; padding: 0 22px; border: 0;
   clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
   background: linear-gradient(90deg, #019DFF, #01EAFF); color: #1B0F05;
   font-family: junk, Verdana, sans-serif; font-size: 17px; cursor: pointer;
 }
-.multiplayer-button { right: 196px; }
-.options-button:hover, .multiplayer-button:hover { filter: brightness(1.15); }
-.options-button:focus-visible, .multiplayer-button:focus-visible { outline: none; background: #ffffff; }
+.multiplayer-button, .replay-exit { right: 196px; }
+.replay-exit { background: linear-gradient(90deg, #FF3D01, #FFB401); }
+.options-button:hover, .multiplayer-button:hover, .replay-exit:hover { filter: brightness(1.15); }
+.options-button:focus-visible, .multiplayer-button:focus-visible, .replay-exit:focus-visible { outline: none; background: #ffffff; }
 .menu-dialog button:focus-visible, .menu-dialog input:focus-visible,
 .menu-dialog select:focus-visible {
   outline: 3px solid #ffffff; outline-offset: 2px;
@@ -107,7 +109,7 @@ src: url(data/verdana.ttf);
 .view .row input { flex: 1; min-width: 0; }
 .view .row button { width: auto; flex: none; }
 @media (forced-colors: active) {
-  .view button, .options-button, .multiplayer-button { clip-path: none; border: 1px solid ButtonText; }
+  .view button, .options-button, .multiplayer-button, .replay-exit { clip-path: none; border: 1px solid ButtonText; }
   .view button:focus-visible { outline: 3px solid Highlight; }
 }
 /* the options: their switches in groups side by side */
@@ -134,8 +136,14 @@ src: url(data/verdana.ttf);
 .touch-control img { display: block; width: 100%; height: 100%; pointer-events: none; }
 .view .touch-control:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; background: rgba(255, 255, 255, 0.35); }
 .name-tags { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
-.name-tag { position: fixed; left: 0; top: 0; padding: 2px 10px; white-space: nowrap; background: rgba(0, 10, 20, 0.6); border-bottom: 2px solid #01EAFF; color: #ffffff; font-family: junk, Verdana, sans-serif; font-size: 15px; text-shadow: 1px 1px 0 #000000; }
+.name-tag { position: fixed; left: 0; top: 0; padding: 2px 10px; text-align: center; white-space: nowrap; background: rgba(0, 10, 20, 0.6); border-bottom: 2px solid #01EAFF; color: #ffffff; font-family: junk, Verdana, sans-serif; font-size: 15px; text-shadow: 1px 1px 0 #000000; }
 .name-tag[hidden] { display: none; }
+.name-tag.in-team { background: color-mix(in srgb, var(--team) 40%, rgba(0, 10, 20, 0.75)); border-bottom-color: var(--team); }
+.name-bars { display: flex; gap: 3px; margin: 2px auto 1px; width: 64px; }
+.name-bar { flex: 1; height: 4px; background: rgba(255, 255, 255, 0.25); }
+.name-bar > span { display: block; height: 100%; width: 0; }
+.name-bar.damage > span { background: #FF4400; }
+.name-bar.power > span { background: #01EAFF; }
 .view .hint { margin: 6px 0 0; font-size: 13px; color: rgba(255, 255, 255, 0.75); }
 .lobby .cards .talking::after { content: " \1F50A"; content: " \1F50A" / ""; }
 #lobbyTalk[aria-pressed="true"] { background: #FFB401; color: #000000; }
@@ -185,11 +193,13 @@ src: url(data/verdana.ttf);
 .lobby .cards .ready { color: #9ff5b4; }
 .lobby .cards .ready::before { content: "\2713  "; }
 .lobby .cards .waiting { color: rgba(255, 255, 255, 0.7); }
+.lobby .cards .away { color: #ffd76a; }
 .lobby .cards .near { color: rgba(255, 255, 255, 0.85); }
 .lobby .cards .near::before { content: "\21C4  "; }
+.lobby .cards .team::before { content: "\25CF  "; color: var(--team); }
 .lobby .cards label { margin: 0; font-weight: bold; }
-.lobby .cards select { min-height: 36px; padding: 4px 10px; font-size: 14px; }
-.lobby .cards button { min-height: 36px; padding: 4px 18px; font-size: 14px; }
+.lobby .cards select { min-height: 44px; padding: 4px 10px; font-size: 14px; }
+.lobby .cards button { min-height: 44px; padding: 4px 18px; font-size: 14px; }
 #multiplayerAddBot { width: auto; margin-top: 10px; }
 .lobby .status { margin: 14px 0 6px; color: #01eaff; }
 .lobby .status:empty { display: none; }
@@ -414,6 +424,7 @@ src: url(data/verdana.ttf);
 <ul aria-labelledby="optionsRaceTitle">
 <li><button type="button" id="option-toggleAiming" aria-pressed="false" aria-describedby="aimingHint"><span>Camera turns to a car you choose <span class="key">T</span></span><span class="state"></span></button><p id="aimingHint" class="hint">In a race tap a car, or use the bar's arrows, F (nearer: Shift+F) or the right stick, nearest first; a click on the left stick lets go. Wasted cars can't be chosen. With none chosen the camera stays behind your car.</p></li>
 <li><button type="button" id="option-toggleMinimap" aria-pressed="false"><span>Minimap <span class="key">G</span></span><span class="state"></span></button></li>
+<li><button type="button" id="stuntsByKey" aria-pressed="false" aria-describedby="stuntsByKeyHint"><span>Stunts begin with the handbrake</span><span class="state"></span></button><p id="stuntsByKeyHint" class="hint">In the air press Space (the handbrake) first, then the arrows turn the car. Off: as in the original, an arrow pressed in the air begins a stunt.</p></li>
 <li><button type="button" id="ghostShown" aria-pressed="false" aria-describedby="ghostShownHint"><span>Ghost in time attack</span><span class="state"></span></button><p id="ghostShownHint" class="hint">Your fastest race on the stage, driven again beside you.</p></li>
 </ul>
 </section>
@@ -566,6 +577,7 @@ src: url(data/verdana.ttf);
 <div id="touchLayoutControls"></div>
 <div class="row"><button type="button" id="touchLayoutReset">Reset</button><button type="button" id="touchLayoutDone" class="go">Done</button></div>
 </dialog>
+<button type="button" id="replayExit" class="replay-exit" aria-label="Exit the replay" aria-keyshortcuts="Escape" title="Exit (Esc)" hidden>Exit</button>
 <button type="button" id="multiplayerButton" class="multiplayer-button" aria-haspopup="dialog" aria-controls="multiplayer" hidden>Multiplayer</button>
 <dialog id="multiplayer" class="menu-dialog view" aria-labelledby="multiplayerTitle">
 <header class="view-head">
@@ -604,8 +616,11 @@ src: url(data/verdana.ttf);
 <div class="setting wide"><label for="lobbyStage">Stage</label><select id="lobbyStage"></select></div>
 <div class="setting"><label for="lobbyMode">Mode</label><select id="lobbyMode"></select></div>
 <div class="setting"><label for="lobbyStrength">Bot strength</label><select id="lobbyStrength"></select></div>
+<div class="setting"><label for="lobbyCollisions">Collisions</label><select id="lobbyCollisions"></select></div>
 <div class="setting" id="lobbyMinutesChoice"><label for="lobbyMinutes">Time</label><select id="lobbyMinutes"></select></div>
 <div class="setting" id="lobbyRespawnChoice"><label for="lobbyRespawn">Back after</label><select id="lobbyRespawn"></select></div>
+<div class="setting"><label for="lobbyTeams">Teams</label><select id="lobbyTeams"></select></div>
+<div class="setting" id="lobbyTeamCrashesChoice"><label for="lobbyTeamCrashes">Team mates crash</label><select id="lobbyTeamCrashes"><option value="1">Yes</option><option value="0">No, pass through</option></select></div>
 </div>
 <dl id="lobbyRules" class="rules" hidden></dl>
 </section>
@@ -614,6 +629,7 @@ src: url(data/verdana.ttf);
 <div class="settings">
 <div class="setting"><label for="lobbyCar">Your car</label><select id="lobbyCar"></select></div>
 <div class="setting"><label for="lobbySkin">Your paint</label><select id="lobbySkin"></select></div>
+<div class="setting" id="lobbyTeamChoice"><label for="lobbyTeam">Your team</label><select id="lobbyTeam"></select></div>
 </div>
 <p id="multiplayerStatus" class="status" role="status"></p>
 <button type="button" id="lobbyReady" class="go" aria-pressed="false">Ready</button>

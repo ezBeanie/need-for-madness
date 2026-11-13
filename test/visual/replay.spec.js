@@ -46,11 +46,11 @@ test("a replay saved from the viewer opens again from the main menu", async ({
     s.openReplay(s.VIEWER_FROM.pauseMenu, 0);
   }, PHASE.paused);
   await game.advance(5);
-  // Save, the eighth of the nine buttons, once H shows the controls
+  // Save, the last of the eight buttons, once H shows the controls
   await game.tap("h");
   const download = page.waitForEvent("download");
-  // (a row of nine along the bottom, 16 pixels in from the edges, 6 apart)
-  const each = (1248 - 8 * 6) / 9;
+  // (a row of eight along the bottom, 16 pixels in from the edges, 6 apart)
+  const each = (1248 - 7 * 6) / 8;
   await page.mouse.move(16 + 7 * (each + 6) + each / 2, 686);
   await page.mouse.down();
   await game.advance(1);
@@ -76,4 +76,61 @@ test("a replay saved from the viewer opens again from the main menu", async ({
   expect(await game2.phase()).toBe(PHASE.mainMenu);
   // the player's own car again
   expect(await other.evaluate(() => window.gameState.game.carTypes[0])).toBe(3);
+});
+
+// The way out shows from the start, the controls hidden, on a desktop as on a phone;
+// beside Options, not on it, and big enough to touch.
+test("the replay's exit button is always in sight", async ({
+  browser,
+  baseURL,
+}) => {
+  const exits = async (options) => {
+    const context = await browser.newContext({ ...options, baseURL });
+    const page = await context.newPage();
+    const game = await openGame(page, {
+      storage: { carsel: "5", unlocked: "17" },
+    });
+    await game.advanceUntil(PHASE.mainMenu);
+    await game.settle();
+    await page.evaluate(() => {
+      const s = window.gameState;
+      s.track.stage = 5;
+      s.menu.redraw = true;
+      s.game.phase = 3;
+    });
+    await game.advanceUntil(PHASE.stageSelect);
+    await page.waitForLoadState("networkidle");
+    await page.evaluate(async () => {
+      window.gameState.game.mode = 0;
+      const { flashIntoRace } = await import("/src/race/countdown.js");
+      flashIntoRace();
+    });
+    await game.advanceUntil(PHASE.race);
+    await game.advance(200);
+    await page.evaluate((paused) => {
+      const s = window.gameState;
+      s.game.phase = paused;
+      s.openReplay(s.VIEWER_FROM.pauseMenu, 0);
+    }, PHASE.paused);
+    await game.advance(5);
+    const exit = page.getByRole("button", { name: "Exit the replay" });
+    await expect(exit).toBeVisible();
+    await expect(exit).toHaveAttribute("aria-keyshortcuts", "Escape");
+    const box = await exit.boundingBox();
+    const gear = await page.locator("#optionsButton").boundingBox();
+    expect(box.height).toBeGreaterThanOrEqual(44);
+    expect(box.x + box.width).toBeLessThan(gear.x);
+    expect(box.x).toBeGreaterThan(0);
+    await exit.click();
+    await game.advance(2);
+    expect(await game.phase()).toBe(PHASE.paused);
+    await expect(exit).toBeHidden();
+    await context.close();
+  };
+  await exits({ viewport: { width: 1280, height: 720 } });
+  await exits({
+    viewport: { width: 844, height: 390 },
+    isMobile: true,
+    hasTouch: true,
+  });
 });

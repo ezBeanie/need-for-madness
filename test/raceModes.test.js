@@ -344,13 +344,209 @@ test("in a room's race the HUD tells who wasted whom, bots too, by the players' 
   );
   ctx.track.dested[2] = 2;
   expect(ctx.wastedBy(2)).toBe(3);
-  expect(ctx.wreckText(3, 2)).toBe("Bot 2 wasted Bot 1");
+  expect(ctx.wreckText(3, 2)).toBe("Radical One wasted Kool Kat");
   expect(ctx.wreckText(0, 1)).toBe("You wasted Ben");
   expect(ctx.wreckText(1, 0)).toBe("Ben wasted you");
   // (on its own, or hit too long before)
   ctx.track.dested[2] = 1;
   expect(ctx.wastedBy(2)).toBe(-1);
-  expect(ctx.wreckText(-1, 2)).toBe("Bot 1 has been wasted");
+  expect(ctx.wreckText(-1, 2)).toBe("Kool Kat has been wasted");
   ctx.noteWreck(1, 0);
   expect(ctx.feed.at(-1)).toMatchObject({ text: "Ben wasted you", mine: true });
+});
+
+test("in a room's race a wreck burning on but not wasted is wasted", async () => {
+  const { ctx } = await mostKills();
+  // car 1 burnt out, yet driving
+  const burningOn = () => {
+    ctx.racers[1].damage = 100000;
+    ctx.racers[1].cntdest = 9;
+    ctx.racers[1].wasted = false;
+    ctx.drive();
+    return ctx.racers[1].wasted;
+  };
+  // (a race alone: as the original)
+  ctx.game.humans = [];
+  expect(burningOn()).toBe(false);
+  ctx.game.humans = [0, 1];
+  expect(burningOn()).toBe(true);
+  expect(ctx.deathmatch.deaths[1]).toBe(1);
+});
+
+test("in a room's race a car hit again and again at one corner keeps taking damage", async () => {
+  const { ctx } = await mostKills();
+  // the damage of a hit after a hundred at the same corner
+  const lastHit = () => {
+    ctx.fixcar(1);
+    for (let i = 0; i < 100; i++) {
+      ctx.regn(ctx.HIT.alongZ, 0, 60, 1);
+    }
+    const before = ctx.racers[1].damage;
+    ctx.regn(ctx.HIT.alongZ, 0, 60, 1);
+    return ctx.racers[1].damage - before;
+  };
+  // (a race alone: the corner's vertices are out of the hits' reach, as in the original)
+  ctx.game.humans = [];
+  expect(lastHit()).toBe(0);
+  ctx.game.humans = [0, 1];
+  expect(lastHit()).toBeGreaterThan(20);
+});
+
+test("in most kills the race tape has every wasting of a car and its coming back, as the replay shows it", async () => {
+  const { ctx, step } = await mostKills();
+  const tape = () => ctx.raceTape.cars[1];
+  const wreck = () => {
+    ctx.racers[1].lastcolido = 70;
+    ctx.racers[1].lastHitBy = 2;
+    ctx.racers[1].damage = 100000;
+  };
+  wreck();
+  for (let i = 0; i < 300 && tape().backs.length < 1; i++) {
+    step();
+  }
+  for (let i = 0; i < 20; i++) {
+    step();
+  }
+  wreck();
+  for (let i = 0; i < 300 && tape().wastes.length < 2; i++) {
+    step();
+  }
+  const [first, second] = tape().wastes;
+  const [back] = tape().backs;
+  expect(first < back && back < second).toBe(true);
+  expect(ctx.wastedSince(tape(), first + 1)).toBe(first);
+  expect(ctx.wastedSince(tape(), back)).toBe(Infinity);
+  expect(ctx.wastedSince(tape(), second)).toBe(second);
+  // the replay shows the wreck burning, then whole again, then burning
+  ctx.openReplay(ctx.VIEWER_FROM.pauseMenu, first + 20);
+  expect(ctx.racers[1].destnow).toBe(true);
+  ctx.seekReplay(back + 2);
+  expect(ctx.racers[1].destnow).toBe(false);
+  ctx.seekReplay(second + 1);
+  expect(ctx.racers[1].destnow).toBe(true);
+  // (and played on, as well)
+  ctx.seekReplay(back - 3);
+  for (let i = 0; i < 50 && ctx.viewer.frame < back + 2; i++) {
+    step();
+  }
+  expect(ctx.racers[1].destnow).toBe(false);
+  ctx.closeReplay();
+});
+
+test("in most kills the highlight is a car the player wasted, caught before it comes back, and kept over the player's own wreck", async () => {
+  const { ctx, step } = await mostKills();
+  const HIGHLIGHT = { wasted: 2, wastedThemAll: 3 };
+  for (let i = 0; i < 440; i++) {
+    step();
+  }
+  // wasted by car 2, then by the player, then the player's own car wasted
+  const wreck = (c, by) => {
+    ctx.fixcar(c);
+    ctx.racers[c].lastcolido = 70;
+    ctx.racers[c].lastHitBy = by;
+    ctx.racers[c].damage = 100000;
+    for (let i = 0; i < 20 + ctx.respawnTicks(); i++) {
+      ctx.racers[c].lastcolido = 70;
+      step();
+    }
+  };
+  wreck(1, 2);
+  expect(ctx.recording.highlight).toBe(0);
+  wreck(3, 0);
+  expect(ctx.recording.highlight).toBe(HIGHLIGHT.wastedThemAll);
+  expect(ctx.recording.otherCar).toBe(3);
+  wreck(0, 1);
+  expect(ctx.recording.highlight).toBe(HIGHLIGHT.wastedThemAll);
+});
+
+test("in most kills a car that hit another not long before someone else wasted it helped, and each car's damage dealt counts", async () => {
+  const { ctx } = await mostKills();
+  // car 3 crashes into car 1, car 2 wastes it a moment later
+  ctx.fixcar(3);
+  ctx.noteHit(1, 3, 0.25);
+  ctx.noteHit(1, 2, 0.5);
+  expect(ctx.deathmatch.dealt[3]).toBe(0.25);
+  expect(ctx.deathmatch.dealt[2]).toBe(0.5);
+  ctx.racers[1].lastcolido = 70;
+  ctx.racers[1].lastHitBy = 2;
+  ctx.noteWasted(1);
+  expect(ctx.deathmatch.kills[2]).toBe(1);
+  expect(ctx.deathmatch.assists[3]).toBe(1);
+  expect(ctx.deathmatch.assists[2]).toBe(0);
+  // a hit long before helps no more, and one before the last wasting not again
+  ctx.noteHit(1, 4, 0.1);
+  ctx.deathmatch.ticks += ctx.ASSIST_TICKS + 1;
+  ctx.noteWasted(1);
+  expect(ctx.deathmatch.assists[4]).toBe(0);
+  expect(ctx.deathmatch.assists[3]).toBe(1);
+  // and it goes with the race's state
+  expect(ctx.isDeathmatchState(ctx.saveRace().deathmatch)).toBe(true);
+  expect(ctx.saveRace().deathmatch.assists[3]).toBe(1);
+});
+
+test("in most kills the crashes count the damage each car does the others", async () => {
+  const { ctx } = await mostKills();
+  const before = reset;
+  reset = () => {
+    before();
+    ctx.raceSetup.rules = ctx.roomRules();
+  };
+  // (hard bots hunt each other)
+  ctx.raceSetup.rules = { ...ctx.roomRules(), strength: ctx.STRENGTH.hard };
+  for (let i = 0; i < 1500; i++) {
+    ctx.control();
+    ctx.drive();
+  }
+  const dealt = ctx.deathmatch.dealt.slice(0, ctx.game.carCount);
+  const taken = ctx.racers
+    .slice(0, ctx.game.carCount)
+    .map((racer, c) => racer.damage / ctx.carStats.maxmag[ctx.car[c].typ]);
+  expect(dealt.some((d) => d > 0)).toBe(true);
+  // (no more than the cars took, wrecks repaired as they came back)
+  const sum = (list) => list.reduce((a, b) => a + b, 0);
+  expect(sum(dealt)).toBeGreaterThan(0);
+  expect(sum(dealt)).toBeLessThanOrEqual(
+    sum(taken) + sum(ctx.deathmatch.deaths) * 2,
+  );
+});
+
+test("most kills' results show each car's kills, assists, damage dealt and wastings", async () => {
+  const { ctx } = await mostKills();
+  expect(ctx.KILL_HEADS).toEqual([
+    "",
+    "",
+    "Kills",
+    "Assists",
+    "Damage",
+    "Wasted",
+  ]);
+  const row = ctx.killRow(
+    { c: 1, kills: 3, assists: 2, dealt: 1.456, deaths: 4 },
+    0,
+  );
+  expect(row.cells.slice(2)).toEqual(["3", "2", "146%", "4"]);
+  expect(row.line).toContain("2 assists, 146% damage");
+});
+
+test("racing together, a guest finishing just ahead of another car catches the close finish", async () => {
+  const { ctx, step } = await startRace({ stage: 3, car: 5 });
+  reset = () => {
+    ctx.game.humans = [];
+    ctx.game.player = 0;
+    ctx.track.haltall = false;
+  };
+  for (let i = 0; i < 3; i++) {
+    step();
+  }
+  // the guest's car 1 through, the host's car 0 right behind it, a lap less
+  ctx.game.humans = [0, 1];
+  ctx.game.player = 1;
+  const done = ctx.track.nlaps * ctx.track.nsp;
+  ctx.racers[1].clear = done;
+  ctx.racers[0].clear = done - 1;
+  ctx.car[0].x = ctx.car[1].x + 30;
+  ctx.car[0].z = ctx.car[1].z;
+  ctx.recording.finishCatchTicks = 0;
+  ctx.updateStandings();
+  expect(ctx.recording.finishCatchTicks).toBeGreaterThan(0);
 });

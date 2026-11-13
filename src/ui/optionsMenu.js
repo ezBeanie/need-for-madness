@@ -5,7 +5,7 @@
 
 import { audio, setMusicVolume, setSoundVolume } from "../audio/audio.js";
 import { PHASE, game } from "../core/state.js";
-import { onKey } from "../input/controls.js";
+import { onKey, stunts, toggleStuntsByKey } from "../input/controls.js";
 import { camera } from "../render/camera.js";
 import { minimap } from "./minimap.js";
 import { LOOK, classicMenus, look } from "../render/look.js";
@@ -85,6 +85,7 @@ const showStates = () => {
   }
   // (these have no key: their switches are the options' alone)
   showSwitch("ghostShown", ghost.shown, "On", "Off");
+  showSwitch("stuntsByKey", stunts.byKey, "On", "Off");
   showSwitch("voiceChat", voice.on, "On", "Off");
   showSwitch("voiceByVoice", voice.byVoice, "By voice", "Push to talk");
 };
@@ -125,6 +126,10 @@ export const installOptionsMenu = () => {
     .addEventListener("click", arrangeTouchControls);
   document.getElementById("ghostShown").addEventListener("click", () => {
     toggleGhost();
+    showStates();
+  });
+  document.getElementById("stuntsByKey").addEventListener("click", () => {
+    toggleStuntsByKey();
     showStates();
   });
   document.getElementById("voiceChat").addEventListener("click", () => {

@@ -9,6 +9,7 @@ import {
 import { isPhone } from "../core/platform.js";
 import { PHASE, game } from "../core/state.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
+import { stunts } from "../input/controls.js";
 import { pointer } from "../input/pointer.js";
 import { interpolation } from "../render/interpolation.js";
 import { classicMenus } from "../render/look.js";
@@ -213,7 +214,12 @@ const drawControls = (scale, top) => {
   if (!isPhone) {
     writeBubbleLines(scale, top, [
       [36, "Drive your car using the keyboard arrows and also use the"],
-      [76, "keyboard arrows when your car is in the air to perform stunts."],
+      [
+        76,
+        stunts.byKey
+          ? "Spacebar, then the arrows, when your car is in the air for stunts."
+          : "keyboard arrows when your car is in the air to perform stunts.",
+      ],
       [116, "Press Spacebar for Handbrakes to drift while turning and make"],
       [156, "quick 180 turns."],
     ]);
@@ -228,7 +234,12 @@ const drawControls = (scale, top) => {
   } else {
     writeBubbleLines(scale, top, [
       [36, "Drive your car using the arrow buttons on the screen."],
-      [76, "Also use them when your car is in the air to perform stunts."],
+      [
+        76,
+        stunts.byKey
+          ? "In the air press Handbrake, then them, to perform stunts."
+          : "Also use them when your car is in the air to perform stunts.",
+      ],
     ]);
     picture(images.touchControls[0], 150, 110, 128, 128);
     picture(images.touchControls[1], 300, 110, 128, 128);
