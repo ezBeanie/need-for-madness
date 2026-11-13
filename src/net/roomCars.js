@@ -9,6 +9,9 @@ import { isSkin } from "../render/skins.js";
 
 export const MOST_NAME_CHARACTERS = 16;
 
+// by team (TEAM_NAMES): its colour, on the name tags, the minimap and in the lobby
+export const TEAM_COLORS = ["#FF4C4C", "#4C9BFF", "#4CD964", "#FFD23F"];
+
 // names: by car, the player's name, "" for one without and null for a bot; skins: by car;
 // teams: by car, its team (see teamOf)
 export const roomCars = { names: [], skins: [], teams: [] };
@@ -23,10 +26,12 @@ export const cleanName = (text) =>
         .slice(0, MOST_NAME_CHARACTERS)
     : "";
 
-// the name this game's player goes by in rooms, and the skin of its car there
+// the name this game's player goes by in rooms, the skin of its car there, and the team
+// it chose in the lobby (null: whichever its place gives, see teamsOf)
 export const own = {
   name: cleanName(loadText("playerName")),
   skin: isSkin(loadSetting("carSkin")) ? loadSetting("carSkin") : 0,
+  team: null,
 };
 
 export const setOwnName = (text) => {
@@ -65,6 +70,20 @@ export const setRoomCars = (names, skins, teams = []) => {
 // a team of a room's race with teams: 0 up to below their count
 export const isTeam = (team) =>
   Number.isInteger(team) && team >= 0 && team < Math.max(...TEAM_COUNTS);
+
+// a team a player or bot chose, or null for none
+export const isTeamChosen = (team) => team === null || isTeam(team);
+
+export const setOwnTeam = (team) => {
+  if (isTeamChosen(team)) {
+    own.team = team;
+  }
+};
+
+// The teams of the room's cars, in their order, of the teams they chose (null: none): those
+// that chose none in turn, by their places, so that the teams come out even.
+export const teamsOf = (chosen, teams) =>
+  chosen.map((team, c) => (teams > 0 ? (team ?? c) % teams : 0));
 
 // The team car c races for in a room's race with teams, else -1: every car for itself.
 export const teamOf = (c) =>

@@ -27,7 +27,14 @@ import { track } from "../race/track.js";
 import { inParts } from "./parts.js";
 import { saveRace } from "./raceState.js";
 import { receiveVoice } from "./voice.js";
-import { cleanName, own, roomCars, setRoomCars } from "./roomCars.js";
+import {
+  cleanName,
+  isTeamChosen,
+  own,
+  roomCars,
+  setRoomCars,
+  teamsOf,
+} from "./roomCars.js";
 import { isSkin } from "../render/skins.js";
 import { lockstep, receiveRaceMessage, startLockstep } from "./lockstep.js";
 import { answerWatch } from "./watch.js";
@@ -52,8 +59,8 @@ const GUEST_GONE_TICKS = 100;
 const GUEST_WAITING_TICKS = 60;
 
 // guests: the players in the room but the host, in the order they came, each with its id,
-// name, the car and skin it chose, whether it is ready to race, what it does (PLAYER_STATUS),
-// and the ticks since it was last heard and since it last joined; bots: the cars (carType, skin) the computer drives in
+// name, the car, skin and team it chose, whether it is ready to race, what it does (PLAYER_STATUS),
+// and the ticks since it was last heard and since it last joined; bots: the cars (carType, skin, team) the computer drives in
 // the room's races, as the host added them; stage: the stage the host chose in the lobby,
 // mode: how its race is won (RACE_MODE), rules: the rest the host chose (roomRules);
 // status and racing: what the host did and whether it raced together, as it last told
@@ -89,15 +96,17 @@ export const sendPlayers = () => {
         name: own.name,
         carType: game.carTypes[0],
         skin: own.skin,
+        team: own.team,
         ready: true,
         status: host.status,
       },
       ...host.guests,
-    ].map(({ id, name, carType, skin, ready, status }) => ({
+    ].map(({ id, name, carType, skin, team, ready, status }) => ({
       id,
       name,
       carType,
       skin,
+      team,
       ready,
       status,
     })),
@@ -155,7 +164,10 @@ export const addBot = () => {
     ...host.bots.map(({ carType }) => carType),
   ];
   const free = carStats.names.findIndex((_, type) => !taken.includes(type));
-  host.bots = [...host.bots, { carType: Math.max(free, 0), skin: 0 }];
+  host.bots = [
+    ...host.bots,
+    { carType: Math.max(free, 0), skin: 0, team: null },
+  ];
   sendPlayers();
 };
 
@@ -178,6 +190,13 @@ export const chooseBotSkin = (i, skin) => {
   }
 };
 
+export const chooseBotTeam = (i, team) => {
+  if (isTeamChosen(team)) {
+    host.bots = host.bots.map((bot, j) => (j == i ? { ...bot, team } : bot));
+    sendPlayers();
+  }
+};
+
 const receive = (message) => {
   receiveRaceMessage(message);
   receiveChat(message);
@@ -195,6 +214,7 @@ const receive = (message) => {
       guest.carType = message.carType;
       guest.name = cleanName(message.name);
       guest.skin = isSkin(message.skin) ? message.skin : 0;
+      guest.team = isTeamChosen(message.team) ? message.team : null;
       guest.ready = message.ready === true;
       guest.status = PLAYER_STATUS.lobby;
       guest.joinedTicks = 0;
@@ -287,12 +307,17 @@ export const startHosting = () => {
 // get, is off.
 export const startHostedRace = () => {
   const guests = waitingGuests();
-  // (who drives which car, and in which paint: the host, the guests, then the bots)
+  // (who drives which car, in which paint and for which team: the host, the guests, then
+  // the bots)
   const names = [own.name, ...guests.map(({ name }) => name)];
-  const skins = [own.skin, ...guests.map(({ skin }) => skin)];
+  const cars = [own, ...guests, ...host.bots];
   setRoomCars(
     [...names, ...host.bots.map(() => null)],
-    [...skins, ...host.bots.map(({ skin }) => skin)],
+    cars.map(({ skin }) => skin),
+    teamsOf(
+      cars.map(({ team }) => team),
+      raceSetup.rules.teams,
+    ),
   );
   // (the cars' textures were made as the stage loaded, before their paint was known)
   const paint = () => roomCars.skins.some(Boolean) && raceCarTextures();
@@ -340,6 +365,7 @@ export const startHostedRace = () => {
       players,
       names: roomCars.names,
       skins: roomCars.skins,
+      teams: roomCars.teams,
       raceId,
       state: saveRace(),
     });

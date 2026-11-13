@@ -303,6 +303,7 @@ export const createBrowserGlobals = ({
         return {
           ...createCanvasStub(create2dContextStub()),
           children,
+          dataset: {},
           textContent: "",
           offsetWidth: 0,
           offsetHeight: 0,

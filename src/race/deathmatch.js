@@ -134,8 +134,8 @@ export const deathmatchTick = (respawn) => {
 export const deathmatchLeft = () =>
   Math.max(0, deathmatchTicks() - deathmatch.ticks);
 
-// With teams, the teams by their cars' kills, most first: each with its kills, deaths and
-// cars; none without.
+// With teams, the teams by their cars' kills, most first: each with its kills, deaths,
+// assists, damage dealt and cars; none without.
 export const teamTable = () => {
   const table = [];
   for (let c = 0; c < game.carCount; c++) {
@@ -143,9 +143,18 @@ export const teamTable = () => {
     if (team == -1) {
       return [];
     }
-    table[team] ??= { team, kills: 0, deaths: 0, cars: [] };
+    table[team] ??= {
+      team,
+      kills: 0,
+      deaths: 0,
+      assists: 0,
+      dealt: 0,
+      cars: [],
+    };
     table[team].kills += deathmatch.kills[c] ?? 0;
     table[team].deaths += deathmatch.deaths[c] ?? 0;
+    table[team].assists += deathmatch.assists[c] ?? 0;
+    table[team].dealt += deathmatch.dealt[c] ?? 0;
     table[team].cars.push(c);
   }
   return table

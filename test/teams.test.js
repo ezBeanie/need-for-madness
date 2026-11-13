@@ -85,3 +85,70 @@ test("team mates pass through each other unless the host lets them crash", async
   expect(await mates(false)).toBeLessThan(8);
   expect(await mates(true)).toBeGreaterThan(12);
 });
+
+test("in teams the team of the last cars standing wins, though the player's car is wasted", async () => {
+  const { ctx } = await inTeams("lastSurvivor");
+  const winnerWhenLeft = (left) => {
+    for (let c = 0; c < ctx.game.carCount; c++) {
+      ctx.racers[c].wasted = c != left;
+    }
+    ctx.track.haltall = false;
+    ctx.updateStandings();
+    ctx.drawHud();
+    return ctx.raceEvents.winner;
+  };
+  // (the player's car 0 and car 2 red, car 1 blue)
+  expect(winnerWhenLeft(2)).toBe(true);
+  expect(winnerWhenLeft(1)).toBe(false);
+});
+
+test("in teams the team of the first car through wins a normal race", async () => {
+  const { ctx } = await inTeams("normal");
+  const winnerWhenFirst = (c) => {
+    ctx.track.haltall = false;
+    ctx.racers[c].clear = ctx.track.nlaps * ctx.track.nsp;
+    ctx.updateStandings();
+    ctx.drawHud();
+    ctx.racers[c].clear = 0;
+    return ctx.raceEvents.winner;
+  };
+  expect(winnerWhenFirst(2)).toBe(true);
+  expect(winnerWhenFirst(3)).toBe(false);
+});
+
+test("most kills in teams ends with the teams' results before the cars'", async () => {
+  const { ctx } = await inTeams("mostKills");
+  ctx.deathmatch.kills[1] = 3;
+  ctx.deathmatch.kills[0] = 1;
+  ctx.deathmatch.kills[2] = 1;
+  ctx.deathmatch.assists[3] = 1;
+  const rows = [
+    ...ctx.teamTable().map(ctx.killRow),
+    ...ctx.killTable().map(ctx.killRow),
+  ];
+  expect(rows.slice(0, 3).map(({ cells }) => cells.slice(0, 4))).toEqual([
+    ["1st", "Team Blue", "3", "1"],
+    ["2nd", "Team Red", "2", "0"],
+    ["1st", ctx.nameOfCar(1), "3", "0"],
+  ]);
+  // (the player's team's row and car's row stand out)
+  expect(rows.filter(({ mine }) => mine).map(({ cells }) => cells[1])).toEqual([
+    "Team Red",
+    ctx.nameOfCar(0),
+  ]);
+  // red ahead, though car 1 has the most kills
+  ctx.deathmatch.kills[0] = 2;
+  ctx.deathmatch.kills[2] = 2;
+  ctx.track.haltall = true;
+  ctx.drawHud();
+  expect(ctx.raceEvents.winner).toBe(true);
+});
+
+test("a room's cars race for the teams they chose, the others in turn, so that the teams come out even", async () => {
+  const { ctx } = await inTeams("normal");
+  expect(ctx.teamsOf([null, null, null, null, null], 2)).toEqual([
+    0, 1, 0, 1, 0,
+  ]);
+  expect(ctx.teamsOf([1, null, 3, null], 3)).toEqual([1, 1, 0, 0]);
+  expect(ctx.teamsOf([1, null], 0)).toEqual([0, 0]);
+});

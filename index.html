@@ -195,6 +195,7 @@ src: url(data/verdana.ttf);
 .lobby .cards .away { color: #ffd76a; }
 .lobby .cards .near { color: rgba(255, 255, 255, 0.85); }
 .lobby .cards .near::before { content: "\21C4  "; }
+.lobby .cards .team::before { content: "\25CF  "; color: var(--team); }
 .lobby .cards label { margin: 0; font-weight: bold; }
 .lobby .cards select { min-height: 36px; padding: 4px 10px; font-size: 14px; }
 .lobby .cards button { min-height: 36px; padding: 4px 18px; font-size: 14px; }
@@ -617,6 +618,8 @@ src: url(data/verdana.ttf);
 <div class="setting"><label for="lobbyCollisions">Collisions</label><select id="lobbyCollisions"></select></div>
 <div class="setting" id="lobbyMinutesChoice"><label for="lobbyMinutes">Time</label><select id="lobbyMinutes"></select></div>
 <div class="setting" id="lobbyRespawnChoice"><label for="lobbyRespawn">Back after</label><select id="lobbyRespawn"></select></div>
+<div class="setting"><label for="lobbyTeams">Teams</label><select id="lobbyTeams"></select></div>
+<div class="setting" id="lobbyTeamCrashesChoice"><label for="lobbyTeamCrashes">Team mates crash</label><select id="lobbyTeamCrashes"><option value="1">Yes</option><option value="0">No, pass through</option></select></div>
 </div>
 <dl id="lobbyRules" class="rules" hidden></dl>
 </section>
@@ -625,6 +628,7 @@ src: url(data/verdana.ttf);
 <div class="settings">
 <div class="setting"><label for="lobbyCar">Your car</label><select id="lobbyCar"></select></div>
 <div class="setting"><label for="lobbySkin">Your paint</label><select id="lobbySkin"></select></div>
+<div class="setting" id="lobbyTeamChoice"><label for="lobbyTeam">Your team</label><select id="lobbyTeam"></select></div>
 </div>
 <p id="multiplayerStatus" class="status" role="status"></p>
 <button type="button" id="lobbyReady" class="go" aria-pressed="false">Ready</button>

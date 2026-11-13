@@ -15,6 +15,8 @@ import {
   COLLISION_NAMES,
   RESPAWN_SECONDS,
   STRENGTH_NAMES,
+  TEAM_COUNTS,
+  TEAM_NAMES,
   game,
   raceSetup,
 } from "../core/state.js";
@@ -27,6 +29,7 @@ import {
   canAddBot,
   chooseBotCar,
   chooseBotSkin,
+  chooseBotTeam,
   chooseRoomMode,
   chooseRoomRule,
   chooseRoomStage,
@@ -61,7 +64,14 @@ import {
 import { linkedDirectly } from "../net/direct.js";
 import { classicMenus } from "../render/look.js";
 import { SKINS } from "../render/skins.js";
-import { botNames, own, setOwnSkin } from "../net/roomCars.js";
+import {
+  TEAM_COLORS,
+  botNames,
+  own,
+  setOwnSkin,
+  setOwnTeam,
+  teamsOf,
+} from "../net/roomCars.js";
 import { isTalking, talk, voice } from "../net/voice.js";
 import {
   PREVIEW_HEIGHT,
@@ -128,6 +138,7 @@ const players = () =>
           name: own.name,
           carType: game.carTypes[0],
           skin: own.skin,
+          team: own.team,
           ready: true,
           you: true,
         },
@@ -188,8 +199,33 @@ const stateText = (ready, status) => {
   return textOf(ready ? "ready" : "waiting", ready ? "Ready" : "Not ready");
 };
 
+// the rules the room races by, as the host chose them
+const rulesShown = () =>
+  link.role == ROLE.host ? roomRulesChosen() : guest.rules;
+
+// In a room racing in teams, the team of each of its players and then its bots, as the
+// race would give them (see teamsOf); else none.
+const lobbyTeams = () => {
+  const { teams } = rulesShown();
+  if (teams == 0) {
+    return [];
+  }
+  const bots = link.role == ROLE.host ? roomBots() : guest.bots;
+  return teamsOf(
+    [...players(), ...bots].map(({ team }) => team),
+    teams,
+  );
+};
+
+// (the team's name says it, its colour shows it)
+const teamText = (team) => {
+  const text = textOf("team", `Team ${TEAM_NAMES[team]}`);
+  text.style?.setProperty?.("--team", TEAM_COLORS[team]);
+  return text;
+};
+
 const playerItem = (
-  { id, name, carType, skin, ready, status, you, near },
+  { id, name, carType, skin, ready, status, you, near, team },
   i,
 ) => {
   const item = document.createElement("li");
@@ -201,8 +237,11 @@ const playerItem = (
     unseen(": "),
     textOf("car", carText(carType, skin)),
     unseen(", "),
-    stateText(ready, you ? statusOf(game.phase) : status),
   );
+  if (team !== undefined) {
+    item.append(teamText(team), unseen(", "));
+  }
+  item.append(stateText(ready, you ? statusOf(game.phase) : status));
   // (linked directly: the races with this one go without the relay)
   if (near) {
     item.append(unseen(", "), textOf("near", "Same network"));
@@ -211,12 +250,14 @@ const playerItem = (
 };
 
 const showPlayers = () => {
-  const all = players().map((player) => ({
+  const teams = lobbyTeams();
+  const all = players().map((player, i) => ({
     ...player,
     near: linkedDirectly(player.id),
+    team: teams[i],
   }));
   const shape = JSON.stringify(
-    all.map(({ name, carType, skin, ready, status, you, near }) => [
+    all.map(({ name, carType, skin, ready, status, you, near, team }) => [
       you ? own.name : name,
       carType,
       skin,
@@ -224,6 +265,7 @@ const showPlayers = () => {
       you ? statusOf(game.phase) : status,
       you,
       near,
+      team ?? null,
     ]),
   );
   const list = element("multiplayerPlayers");
@@ -265,8 +307,11 @@ const showRace = () => {
     setSelect("lobbyCollisions", rules.collisions);
     setSelect("lobbyMinutes", rules.minutes);
     setSelect("lobbyRespawn", rules.respawnSeconds);
+    setSelect("lobbyTeams", rules.teams);
+    setSelect("lobbyTeamCrashes", rules.teamCrashes ? 1 : 0);
     element("lobbyMinutesChoice").hidden = !mostKills;
     element("lobbyRespawnChoice").hidden = !mostKills;
+    element("lobbyTeamCrashesChoice").hidden = rules.teams == 0;
     return;
   }
   const shown = [
@@ -280,6 +325,13 @@ const showRace = () => {
       ["Time", minutesText(rules.minutes)],
       ["Back after", secondsText(rules.respawnSeconds)],
     );
+  }
+  shown.push(["Teams", teamsText(rules.teams)]);
+  if (rules.teams > 0) {
+    shown.push([
+      "Team mates crash",
+      rules.teamCrashes ? "Yes" : "No, pass through",
+    ]);
   }
   // (changed only when it changes, for screen readers)
   const list = element("lobbyRules");
@@ -299,6 +351,7 @@ const showRace = () => {
 };
 
 const minutesText = (minutes) => `${minutes} min`;
+const teamsText = (teams) => (teams == 0 ? "None" : `${teams} teams`);
 const secondsText = (seconds) => `${seconds} s`;
 
 const showChoices = () => {
@@ -311,6 +364,8 @@ const showChoices = () => {
   if (document.activeElement != skin && skin.value != String(own.skin)) {
     skin.value = String(own.skin);
   }
+  showTeamChoice(element("lobbyTeam"), own.team);
+  element("lobbyTeamChoice").hidden = rulesShown().teams == 0;
   const talkButton = element("lobbyTalk");
   talkButton.hidden = !voice.on || voice.byVoice;
   talkButton.setAttribute("aria-pressed", voice.talking ? "true" : "false");
@@ -379,6 +434,24 @@ const showChat = () => {
   log.scrollTop = log.scrollHeight;
 };
 
+// A team to choose of as many as the room races in, or Any: whichever the car's place
+// gives. Its teams change with the host's rules.
+const showTeamChoice = (select, team) => {
+  const { teams } = rulesShown();
+  const names = ["Any", ...TEAM_NAMES.slice(0, teams)];
+  if (select.options.length != names.length) {
+    select.replaceChildren(
+      ...names.map((name, k) => new Option(name, k == 0 ? "" : String(k - 1))),
+    );
+  }
+  const value = team === null || teams == 0 ? "" : String(team % teams);
+  if (document.activeElement != select && select.value != value) {
+    select.value = value;
+  }
+};
+const teamChosen = (select) =>
+  select.value == "" ? null : Number(select.value);
+
 // (each a car to choose, so a list rebuilt only when bots come or go: one chosen in keeps
 // its focus)
 const skinChoice = (id, label, skin, choose) => {
@@ -395,7 +468,7 @@ const skinChoice = (id, label, skin, choose) => {
 };
 
 // (its name, from its car, is told by nameHostBots)
-const hostBotItem = ({ carType, skin }, i) => {
+const hostBotItem = ({ carType, skin, team }, i) => {
   const item = document.createElement("li");
   const preview = carPreview(carType, skin);
   const label = document.createElement("label");
@@ -423,18 +496,30 @@ const hostBotItem = ({ carType, skin }, i) => {
     chooseBotSkin(i, chosen);
     preview.dataset.skin = String(chosen);
   });
-  item.append(preview, label, select, ...paint, remove);
+  const teamLabel = document.createElement("label");
+  teamLabel.htmlFor = `multiplayerBotTeam${i}`;
+  teamLabel.className = "visually-hidden";
+  const teamSelect = document.createElement("select");
+  teamSelect.id = `multiplayerBotTeam${i}`;
+  teamSelect.className = "team-choice";
+  showTeamChoice(teamSelect, team);
+  teamSelect.addEventListener("change", () =>
+    chooseBotTeam(i, teamChosen(teamSelect)),
+  );
+  item.append(preview, label, select, ...paint, teamLabel, teamSelect, remove);
   return item;
 };
 
-const guestBotItem = (name, { carType, skin }) => {
+// (named after its car, the card tells only a paint of its own)
+const guestBotItem = (name, { carType, skin }, team) => {
   const item = document.createElement("li");
-  item.append(
-    carPreview(carType, skin),
-    textOf("who", name),
-    unseen(": "),
-    textOf("car", carText(carType, skin)),
-  );
+  item.append(carPreview(carType, skin), textOf("who", name));
+  if (skin) {
+    item.append(unseen(": "), textOf("car", `In ${SKINS[skin].toLowerCase()}`));
+  }
+  if (team !== undefined) {
+    item.append(unseen(", "), teamText(team));
+  }
   return item;
 };
 
@@ -442,10 +527,11 @@ const guestBotItem = (name, { carType, skin }) => {
 // choice keeps its focus)
 const nameHostBots = (list, names) => {
   [...list.children].forEach((item, i) => {
-    const [label, skinLabel] = item.querySelectorAll("label");
+    const [label, skinLabel, teamLabel] = item.querySelectorAll("label");
     if (label.textContent != names[i]) {
       label.textContent = names[i];
       skinLabel.textContent = `Paint of ${names[i]}`;
+      teamLabel.textContent = `Team of ${names[i]}`;
       item
         .querySelector("button")
         .setAttribute("aria-label", `Remove ${names[i]}`);
@@ -460,20 +546,27 @@ const showBots = () => {
   element("multiplayerAddBot").hidden = !isHost;
   element("multiplayerAddBot").disabled = isHost && !canAddBot();
   const list = element("multiplayerBotList");
+  // (the bots' teams after the players')
+  const teams = lobbyTeams().slice(players().length);
   const shape = isHost
     ? `host ${bots.length}`
-    : `guest ${JSON.stringify(bots)}`;
+    : `guest ${JSON.stringify([bots, teams])}`;
   const names = botNames(bots.map(({ carType }) => carType));
   if (list.dataset.shape != shape) {
     list.dataset.shape = shape;
     list.replaceChildren(
       ...bots.map((bot, i) =>
-        isHost ? hostBotItem(bot, i) : guestBotItem(names[i], bot),
+        isHost ? hostBotItem(bot, i) : guestBotItem(names[i], bot, teams[i]),
       ),
     );
   }
   if (isHost) {
     nameHostBots(list, names);
+    // (as many teams to choose as the room races in, none without)
+    list.querySelectorAll(".team-choice").forEach((select, i) => {
+      showTeamChoice(select, bots[i].team);
+      select.hidden = teams.length == 0;
+    });
   }
 };
 
@@ -562,6 +655,9 @@ const fillChoices = () => {
     ...MATCH_MINUTES.map(
       (minutes) => new Option(minutesText(minutes), String(minutes)),
     ),
+  );
+  element("lobbyTeams").append(
+    ...TEAM_COUNTS.map((teams) => new Option(teamsText(teams), String(teams))),
   );
   element("lobbyRespawn").append(
     ...RESPAWN_SECONDS.map(
@@ -673,6 +769,22 @@ export const installMultiplayerMenu = () => {
   element("lobbyRespawn").addEventListener("change", (event) =>
     chooseRoomRule({ respawnSeconds: Number(event.target.value) }),
   );
+  // (the teams to choose show at once)
+  element("lobbyTeams").addEventListener("change", (event) => {
+    chooseRoomRule({ teams: Number(event.target.value) });
+    showRoom();
+  });
+  element("lobbyTeamCrashes").addEventListener("change", (event) =>
+    chooseRoomRule({ teamCrashes: event.target.value == "1" }),
+  );
+  element("lobbyTeam").addEventListener("change", (event) => {
+    setOwnTeam(teamChosen(event.target));
+    if (link.role == ROLE.host) {
+      sendPlayers();
+    }
+    tellHost();
+    showRoom();
+  });
   element("lobbyReady").addEventListener("click", () => {
     setReady(!guest.ready);
     showRoom();

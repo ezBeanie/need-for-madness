@@ -598,9 +598,8 @@ test("a room's race has only its players' cars, and the bots the host adds with 
   await guestPage.waitForTimeout(DELIVERY_MS);
   await guest.advance(2);
   await guestPage.getByRole("button", { name: "Room bots" }).click();
-  await expect(guestPage.locator("#multiplayerBotList")).toHaveText(
-    "Kool Kat: Kool Kat",
-  );
+  // (a bot named after its car, which the card does not tell twice)
+  await expect(guestPage.locator("#multiplayerBotList")).toHaveText("Kool Kat");
   await guestPage.getByRole("button", { name: "Back" }).click();
   await hostStartsRace(games);
   const koolKat = await hostPage.evaluate(() =>
@@ -922,6 +921,7 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
     "Collisions",
     "Time",
     "Back after",
+    "Teams",
   ]);
   await expect(guestPage.locator("#lobbyRules dd")).toHaveText([
     "Stage 3",
@@ -930,6 +930,7 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
     "Solid",
     "5 min",
     "3 s",
+    "None",
   ]);
   await expect(guestPage.locator("#lobbySettings")).toBeHidden();
   // (the time and the way back are most kills' alone)
@@ -943,6 +944,7 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
     "Only racing",
     "Hard",
     "Solid",
+    "None",
   ]);
   await expect(guestPage.locator("#lobbyChat li")).toHaveText([
     "Player 1 (host): on <b>three</b>?",
@@ -1035,6 +1037,81 @@ test("a race of the host's own while it waits for guests goes on to the car sele
 });
 
 // (skins: 1 red, 5 blue; see src/render/skins.js)
+test("in the lobby the host chooses teams and whether team mates crash, each player its team and the host its bots', and the race has them", async ({
+  context,
+}) => {
+  const games = await openTwoGames(context, "/?host=teams", "/?join=teams");
+  const { host, guest, hostPage, guestPage } = games;
+  const both = [
+    { game: host, page: hostPage },
+    { game: guest, page: guestPage },
+  ];
+  const deliver = async () => {
+    await guestPage.waitForTimeout(DELIVERY_MS);
+    await advanceBoth(...both, 35);
+  };
+  await deliver();
+  await hostPage.locator("#menuMultiplayer").click();
+  await guestPage.locator("#menuMultiplayer").click();
+  // (no teams: no team to choose)
+  await expect(guestPage.getByLabel("Your team")).toBeHidden();
+  await expect(hostPage.getByLabel("Team mates crash")).toBeHidden();
+  await hostPage.getByLabel("Teams", { exact: true }).selectOption("2 teams");
+  await hostPage
+    .getByLabel("Team mates crash")
+    .selectOption("No, pass through");
+  await hostPage.getByRole("button", { name: "Add a bot" }).click();
+  await hostPage.getByLabel(/^Team of /).selectOption("Blue");
+  await deliver();
+  await guestPage.getByLabel("Your team").selectOption("Red");
+  await deliver();
+  // the host's car red by its place, the guest's as chosen, the bot's as the host chose
+  await expect(
+    guestPage.getByRole("list", { name: "Players" }).getByRole("listitem"),
+  ).toContainText(["Team Red", "Team Red"]);
+  await expect(
+    hostPage.getByRole("list", { name: "Players" }).getByRole("listitem"),
+  ).toContainText(["Team Red", "Team Red"]);
+  await expect(
+    guestPage.getByRole("list", { name: "Bots" }).getByRole("listitem"),
+  ).toContainText(["Team Blue"]);
+  await expect(guestPage.locator("#lobbyRules")).toContainText("2 teams");
+  await expect(guestPage.locator("#lobbyRules")).toContainText(
+    "No, pass through",
+  );
+  await guestPage.getByRole("button", { name: "Ready" }).click();
+  await deliver();
+  await hostPage.getByRole("button", { name: "Start the race" }).click();
+  await host.advanceUntil(PHASE.race);
+  await host.advance();
+  await guestPage.waitForTimeout(DELIVERY_MS);
+  await guest.advanceUntil(PHASE.race);
+  const teams = (page) =>
+    page.evaluate(() => {
+      const s = window.gameState;
+      return {
+        teams: s.raceSetup.rules.teams,
+        teamCrashes: s.raceSetup.rules.teamCrashes,
+        of: [0, 1, 2].map((c) => s.teamOf(c)),
+      };
+    });
+  const expected = { teams: 2, teamCrashes: false, of: [0, 0, 1] };
+  expect(await teams(hostPage)).toEqual(expected);
+  expect(await teams(guestPage)).toEqual(expected);
+  // the name tags underlined in their team's colour
+  await advanceBoth(...both, 5);
+  await expect
+    .poll(() =>
+      guestPage.evaluate(() =>
+        [...document.querySelectorAll("#nameTags .name-tag")]
+          .filter((tag) => !tag.hidden)
+          .map((tag) => tag.dataset.team)
+          .sort(),
+      ),
+    )
+    .toEqual(["0", "1"]);
+});
+
 test("each game names the cars after their players and paints them as chosen, a name over each car the camera does not follow", async ({
   context,
 }) => {

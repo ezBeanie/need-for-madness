@@ -47,7 +47,13 @@ import { isRaceState, restoreRace } from "./raceState.js";
 import { clearChat, receiveChat } from "./chat.js";
 import { linkDirectly } from "./direct.js";
 import { receiveVoice } from "./voice.js";
-import { MOST_NAME_CHARACTERS, own, setRoomCars } from "./roomCars.js";
+import {
+  MOST_NAME_CHARACTERS,
+  isTeam,
+  isTeamChosen,
+  own,
+  setRoomCars,
+} from "./roomCars.js";
 import { isSkin } from "../render/skins.js";
 import { camera } from "../render/camera.js";
 import { spectate } from "../race/spectate.js";
@@ -66,8 +72,9 @@ export const guest = {
   start: null,
   // the time to the host and back, in ms (null until measured)
   ping: null,
-  // the room's players as the host last told, each with its id, name, car, skin, whether
-  // it is ready and what it does (PLAYER_STATUS), the host's first, its bots' cars and skins
+  // the room's players as the host last told, each with its id, name, car, skin, team,
+  // whether it is ready and what it does (PLAYER_STATUS), the host's first, its bots' cars,
+  // skins and teams
   // and the stage it chose
   players: [],
   bots: [],
@@ -107,6 +114,7 @@ const isPlayers = (players) =>
       isName(player.name) &&
       isIndex(player.carType, carStats.names.length) &&
       isSkin(player.skin) &&
+      isTeamChosen(player.team) &&
       typeof player.ready == "boolean" &&
       isPlayerStatus(player.status),
   );
@@ -119,7 +127,10 @@ const isBots = (bots) =>
   Array.isArray(bots) &&
   bots.length < MAX_CARS &&
   bots.every(
-    (bot) => isIndex(bot?.carType, carStats.names.length) && isSkin(bot.skin),
+    (bot) =>
+      isIndex(bot?.carType, carStats.names.length) &&
+      isSkin(bot.skin) &&
+      isTeamChosen(bot.team),
   );
 
 const isStart = ({
@@ -130,6 +141,7 @@ const isStart = ({
   players,
   names,
   skins,
+  teams,
   raceId,
   state,
 }) =>
@@ -149,6 +161,9 @@ const isStart = ({
   Array.isArray(skins) &&
   skins.length == carTypes.length &&
   skins.every(isSkin) &&
+  Array.isArray(teams) &&
+  teams.length == carTypes.length &&
+  teams.every(isTeam) &&
   isRaceState(state, carTypes.length);
 
 // the parts of the host's start of the race raceId that came
@@ -237,6 +252,7 @@ const sendJoin = () =>
     name: own.name,
     carType: game.carTypes[0],
     skin: own.skin,
+    team: own.team,
     ready: guest.ready,
   });
 
@@ -299,7 +315,7 @@ const loadHostedRace = (start) => {
   guest.ready = false;
   track.stage = start.stage;
   field.replayCars = start.carTypes;
-  setRoomCars(start.names, start.skins);
+  setRoomCars(start.names, start.skins, start.teams);
   // (as the host's: it starts no other)
   game.mode = MODE.championship;
   raceSetup.kind = RACE_KIND.together;

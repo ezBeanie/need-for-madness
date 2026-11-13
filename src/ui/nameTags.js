@@ -1,12 +1,13 @@
 // The names over the cars in a room's race: each car but the player's and the one the camera
 // follows shows who drives it (see net/roomCars.js), and a speaker while its player talks,
-// over two small bars: its damage and its power, as the HUD shows the player's own.
+// over two small bars: its damage and its power, as the HUD shows the player's own. In
+// teams it is underlined in its team's colour.
 // They move with every frame, where the frame draws the car, and only show while it is
 // near enough and the race goes on (its end has its own words over the cars).
 
 import { RACE_PHASES, game } from "../core/state.js";
 import { lockstep } from "../net/lockstep.js";
-import { inRoomRace, nameOfCar } from "../net/roomCars.js";
+import { TEAM_COLORS, inRoomRace, nameOfCar, teamOf } from "../net/roomCars.js";
 import { isTalking } from "../net/voice.js";
 import { car, racers } from "../race/racers.js";
 import { carStats } from "../data/carStats.js";
@@ -118,6 +119,11 @@ export const placeNameTags = () => {
     const text = talking ? `${name} \u{1F50A}` : name;
     if (tag.firstChild.textContent != text) {
       tag.firstChild.textContent = text;
+    }
+    const team = String(teamOf(c));
+    if (tag.dataset.team != team) {
+      tag.dataset.team = team;
+      tag.style.borderColor = TEAM_COLORS[team] ?? "";
     }
     const { damage, power } = barsOf(c);
     fillBar(tag, 0, damage);

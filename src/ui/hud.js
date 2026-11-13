@@ -1,14 +1,19 @@
 // What is drawn over the race: positions, laps, damage and power, the arrow, messages, the
 // buttons, and the overlays of replays, winding back time and switch mode.
 
-import { deathmatch, isDeathmatch, killTable } from "../race/deathmatch.js";
+import {
+  deathmatch,
+  isDeathmatch,
+  killTable,
+  teamTable,
+} from "../race/deathmatch.js";
 import {
   spectating,
   startWatching,
   watchNext,
   watchingOthers,
 } from "../race/spectate.js";
-import { inRoomRace, nameOfCar } from "../net/roomCars.js";
+import { inRoomRace, nameOfCar, teamOf } from "../net/roomCars.js";
 import {
   clearFeed,
   clockTime,
@@ -50,6 +55,7 @@ import {
   MODE,
   PHASE,
   RACE_MODE,
+  TEAM_NAMES,
   finishingEnds,
   game,
   raceSetup,
@@ -777,19 +783,21 @@ const soundPlayerWreck = () => {
 // Most kills' results, a row per car: its kills, the wastings it helped, the damage it did
 // the others (in cars' worth, as a share) and how often it was wasted.
 export const KILL_HEADS = ["", "", "Kills", "Assists", "Damage", "Wasted"];
-export const killRow = ({ c, kills, assists, dealt, deaths }, place) => {
+export const killRow = ({ c, team, kills, assists, dealt, deaths }, place) => {
   const damage = `${Math.round(dealt * 100)}%`;
+  // (in teams, the teams' rows first: their cars' all together)
+  const name = c === undefined ? `Team ${TEAM_NAMES[team]}` : nameOfCar(c);
   return {
     cells: [
       placeName(place),
-      nameOfCar(c),
+      name,
       String(kills),
       String(assists),
       damage,
       String(deaths),
     ],
-    mine: c == game.player,
-    line: `${placeName(place)}  ${nameOfCar(c)}  ${kills} kills, ${assists} assists, ${damage} damage, wasted ${deaths}`,
+    mine: c === undefined ? team == teamOf(game.player) : c == game.player,
+    line: `${placeName(place)}  ${name}  ${kills} kills, ${assists} assists, ${damage} damage, wasted ${deaths}`,
   };
 };
 
@@ -798,6 +806,17 @@ export const killRow = ({ c, kills, assists, dealt, deaths }, place) => {
 const deathmatchOutcome = () => {
   if (track.haltall) {
     const table = killTable();
+    const teams = teamTable();
+    if (teams.length > 0) {
+      const won = teams[0].team == teamOf(game.player);
+      drawOutcome(
+        won ? "Your Team Won!" : "You Lost!",
+        won ? "youwon" : "youlost",
+      );
+      raceEvents.winner = won;
+      drawResults(KILL_HEADS, [...teams.map(killRow), ...table.map(killRow)]);
+      return true;
+    }
     const won = table[0]?.c == game.player;
     drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
     raceEvents.winner = won;
@@ -815,6 +834,35 @@ const deathmatchOutcome = () => {
   return false;
 };
 
+// A room's race in teams, once over: the team of the first car through, where finishing
+// ends it, else of the last cars standing, wins.
+const teamsOutcome = () => {
+  const done = track.nlaps * track.nsp;
+  let first = -1;
+  for (let c = 0; c < game.carCount; c++) {
+    if (finishingEnds() && track.clear[c] == done && track.pos[c] == 0) {
+      first = c;
+    }
+  }
+  if (first == -1) {
+    first = racers.slice(0, game.carCount).findIndex((racer) => !racer.wasted);
+  }
+  const team = first == -1 ? -1 : teamOf(first);
+  const won = team != -1 && team == teamOf(game.player);
+  drawOutcome(won ? "Your Team Won!" : "You Lost!", won ? "youwon" : "youlost");
+  drawBlinking(
+    192,
+    team == -1
+      ? "Every car has been wasted!"
+      : `Team ${TEAM_NAMES[team]} wins!`,
+    0,
+    128,
+    255,
+  );
+  raceEvents.winner = won;
+  return true;
+};
+
 const raceOutcome = () => {
   let over = false;
   if (isDeathmatch()) {
@@ -824,6 +872,9 @@ const raceOutcome = () => {
     raceSetup.mode == RACE_MODE.timeAttack && game.humans.length > 0;
   if (againstTheClock && timeAttackOutcome()) {
     return true;
+  }
+  if (!againstTheClock && track.haltall && teamOf(game.player) != -1) {
+    return teamsOutcome();
   }
   if (
     track.wasted == game.carCount - 1 &&
