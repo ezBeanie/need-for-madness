@@ -23,16 +23,18 @@ font-family: verd;
 src: url(data/verdana.ttf);
 }
 /* the options and multiplayer beside the classic menus and the screens after the main
-   menu, slanted as the main menu's buttons (see src/ui/) */
-.options-button, .multiplayer-button {
+   menu, slanted as the main menu's buttons (see src/ui/); the replay's way out beside
+   them, as the screens' Back */
+.options-button, .multiplayer-button, .replay-exit {
   position: fixed; top: 8px; right: 76px; min-height: 44px; padding: 0 22px; border: 0;
   clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
   background: linear-gradient(90deg, #019DFF, #01EAFF); color: #1B0F05;
   font-family: junk, Verdana, sans-serif; font-size: 17px; cursor: pointer;
 }
-.multiplayer-button { right: 196px; }
-.options-button:hover, .multiplayer-button:hover { filter: brightness(1.15); }
-.options-button:focus-visible, .multiplayer-button:focus-visible { outline: none; background: #ffffff; }
+.multiplayer-button, .replay-exit { right: 196px; }
+.replay-exit { background: linear-gradient(90deg, #FF3D01, #FFB401); }
+.options-button:hover, .multiplayer-button:hover, .replay-exit:hover { filter: brightness(1.15); }
+.options-button:focus-visible, .multiplayer-button:focus-visible, .replay-exit:focus-visible { outline: none; background: #ffffff; }
 .menu-dialog button:focus-visible, .menu-dialog input:focus-visible,
 .menu-dialog select:focus-visible {
   outline: 3px solid #ffffff; outline-offset: 2px;
@@ -107,7 +109,7 @@ src: url(data/verdana.ttf);
 .view .row input { flex: 1; min-width: 0; }
 .view .row button { width: auto; flex: none; }
 @media (forced-colors: active) {
-  .view button, .options-button, .multiplayer-button { clip-path: none; border: 1px solid ButtonText; }
+  .view button, .options-button, .multiplayer-button, .replay-exit { clip-path: none; border: 1px solid ButtonText; }
   .view button:focus-visible { outline: 3px solid Highlight; }
 }
 /* the options: their switches in groups side by side */
@@ -567,6 +569,7 @@ src: url(data/verdana.ttf);
 <div id="touchLayoutControls"></div>
 <div class="row"><button type="button" id="touchLayoutReset">Reset</button><button type="button" id="touchLayoutDone" class="go">Done</button></div>
 </dialog>
+<button type="button" id="replayExit" class="replay-exit" aria-label="Exit the replay" aria-keyshortcuts="Escape" title="Exit (Esc)" hidden>Exit</button>
 <button type="button" id="multiplayerButton" class="multiplayer-button" aria-haspopup="dialog" aria-controls="multiplayer" hidden>Multiplayer</button>
 <dialog id="multiplayer" class="menu-dialog view" aria-labelledby="multiplayerTitle">
 <header class="view-head">
