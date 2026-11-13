@@ -1849,7 +1849,7 @@ function hitPieceWall(c, o, alongZ) {
 
 // With the fixes a wall hit hard dents more than one grazed: the faster, the more (the
 // original's walls hardly hurt a car flying into them).
-const HARD_WALL = 25;
+const HARD_WALL = 100;
 const wallHit = (mag) =>
   game.phase == PHASE.race && fixed()
     ? mag * (1 + Math.abs(mag) / HARD_WALL)

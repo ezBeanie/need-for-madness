@@ -26,7 +26,9 @@ test("a car flying hard into a wall takes more damage than in the original, in a
   const room = await intoTheLimit([0, 1], 18);
   const alone = await intoTheLimit([], 18, false);
   expect(original.damage).toBeGreaterThan(0);
-  expect(room.damage).toBeGreaterThan(original.damage * 1.5);
+  // (about three times the original's at this speed: more, but not too much)
+  expect(room.damage).toBeGreaterThan(original.damage * 2);
+  expect(room.damage).toBeLessThan(original.damage * 4);
   expect(alone.damage).toBe(room.damage);
 });
 
