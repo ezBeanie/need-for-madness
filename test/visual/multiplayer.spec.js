@@ -1098,13 +1098,13 @@ test("in the lobby the host chooses teams and whether team mates crash, each pla
   const expected = { teams: 2, teamCrashes: false, of: [0, 0, 1] };
   expect(await teams(hostPage)).toEqual(expected);
   expect(await teams(guestPage)).toEqual(expected);
-  // the name tags underlined in their team's colour
+  // the name tags tinted and underlined in their team's colour
   await advanceBoth(...both, 5);
   await expect
     .poll(() =>
       guestPage.evaluate(() =>
         [...document.querySelectorAll("#nameTags .name-tag")]
-          .filter((tag) => !tag.hidden)
+          .filter((tag) => !tag.hidden && tag.classList.contains("in-team"))
           .map((tag) => tag.dataset.team)
           .sort(),
       ),

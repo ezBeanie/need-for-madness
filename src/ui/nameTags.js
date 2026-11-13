@@ -1,7 +1,7 @@
 // The names over the cars in a room's race: each car but the player's and the one the camera
 // follows shows who drives it (see net/roomCars.js), and a speaker while its player talks,
 // over two small bars: its damage and its power, as the HUD shows the player's own. In
-// teams it is underlined in its team's colour.
+// teams its background is tinted and it is underlined in its team's colour.
 // They move with every frame, where the frame draws the car, and only show while it is
 // near enough and the race goes on (its end has its own words over the cars).
 
@@ -123,7 +123,8 @@ export const placeNameTags = () => {
     const team = String(teamOf(c));
     if (tag.dataset.team != team) {
       tag.dataset.team = team;
-      tag.style.borderColor = TEAM_COLORS[team] ?? "";
+      tag.classList.toggle("in-team", team != "-1");
+      tag.style.setProperty("--team", TEAM_COLORS[team] ?? "");
     }
     const { damage, power } = barsOf(c);
     fillBar(tag, 0, damage);

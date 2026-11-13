@@ -152,3 +152,20 @@ test("a room's cars race for the teams they chose, the others in turn, so that t
   expect(ctx.teamsOf([1, null, 3, null], 3)).toEqual([1, 1, 0, 0]);
   expect(ctx.teamsOf([1, null], 0)).toEqual([0, 0]);
 });
+
+test("team mates passing through each other are seen through, the more the nearer, as in time attack", async () => {
+  const { ctx } = await inTeams("normal", { teamCrashes: false });
+  ctx.camera.target = 0;
+  const showsAt = (c, away) => {
+    ctx.car[c].x = ctx.car[0].x + away;
+    ctx.car[c].z = ctx.car[0].z;
+    return ctx.showsOf(c);
+  };
+  // (car 2 red as the followed car 0, car 1 blue)
+  expect(showsAt(2, 10)).toBe(0.25);
+  expect(showsAt(2, 1000)).toBe(1);
+  expect(showsAt(1, 10)).toBe(1);
+  // team mates that crash are solid
+  ctx.raceSetup.rules = { ...ctx.raceSetup.rules, teamCrashes: true };
+  expect(showsAt(2, 10)).toBe(1);
+});

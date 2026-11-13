@@ -8,6 +8,7 @@ import { MAX_CARS, PHASE, RACE_MODE, game, raceSetup } from "../core/state.js";
 import { camera } from "../render/camera.js";
 import { loadSetting, loadText, saveSetting } from "../core/storage.js";
 import { isCustom } from "../data/stages.js";
+import { teamMates } from "../net/roomCars.js";
 import { car } from "./racers.js";
 import { poseFromTape, turnCarAfterItsAngles } from "./recording.js";
 import { track } from "./track.js";
@@ -116,18 +117,17 @@ export const forgetGhost = () => {
 
 // In a room's time attack the other cars are ghosts too, the more seen through the nearer
 // they come to the car the camera follows: within NEAR as little shows as SHOWS_NEAR, from
-// FAR all of it.
+// FAR all of it. So too its team mates where they pass through each other.
 const NEAR = 40;
 const FAR = 240;
 const SHOWS_NEAR = 0.25;
 
 // How much of car c shows (1: all of it).
 export const showsOf = (c) => {
-  if (
-    raceSetup.mode != RACE_MODE.timeAttack ||
-    game.humans.length == 0 ||
-    c == camera.target
-  ) {
+  const ghostly =
+    raceSetup.mode == RACE_MODE.timeAttack ||
+    (!raceSetup.rules.teamCrashes && teamMates(c, camera.target));
+  if (!ghostly || game.humans.length == 0 || c == camera.target) {
     return 1;
   }
   const followed = car[camera.target];

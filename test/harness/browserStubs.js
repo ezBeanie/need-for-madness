@@ -304,6 +304,8 @@ export const createBrowserGlobals = ({
           ...createCanvasStub(create2dContextStub()),
           children,
           dataset: {},
+          style: { setProperty: noop },
+          classList: { toggle: noop, add: noop, remove: noop },
           textContent: "",
           offsetWidth: 0,
           offsetHeight: 0,

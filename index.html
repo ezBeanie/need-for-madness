@@ -138,6 +138,7 @@ src: url(data/verdana.ttf);
 .name-tags { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
 .name-tag { position: fixed; left: 0; top: 0; padding: 2px 10px; text-align: center; white-space: nowrap; background: rgba(0, 10, 20, 0.6); border-bottom: 2px solid #01EAFF; color: #ffffff; font-family: junk, Verdana, sans-serif; font-size: 15px; text-shadow: 1px 1px 0 #000000; }
 .name-tag[hidden] { display: none; }
+.name-tag.in-team { background: color-mix(in srgb, var(--team) 40%, rgba(0, 10, 20, 0.75)); border-bottom-color: var(--team); }
 .name-bars { display: flex; gap: 3px; margin: 2px auto 1px; width: 64px; }
 .name-bar { flex: 1; height: 4px; background: rgba(255, 255, 255, 0.25); }
 .name-bar > span { display: block; height: 100%; width: 0; }
