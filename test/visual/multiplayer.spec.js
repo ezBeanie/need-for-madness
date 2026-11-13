@@ -1112,6 +1112,74 @@ test("in the lobby the host chooses teams and whether team mates crash, each pla
     .toEqual(["0", "1"]);
 });
 
+test("a room its host makes public is listed for everyone, joined from the list, and gone from it once private again", async ({
+  context,
+}) => {
+  const hostPage = await context.newPage();
+  const guestPage = await context.newPage();
+  const host = await openGame(hostPage, {
+    storage: {
+      ...UNNAMED,
+      playerName: "Hosti",
+      carsel: HOST_TYPE,
+      unlocked: "3",
+    },
+    url: "/?host=listed",
+  });
+  const guest = await openGame(guestPage, {
+    storage: { ...UNNAMED, carsel: GUEST_TYPE, unlocked: "3" },
+  });
+  await host.advanceUntil(PHASE.mainMenu);
+  await guest.advanceUntil(PHASE.mainMenu);
+  await guestPage.locator("#menuMultiplayer").click();
+  const rooms = guestPage.getByRole("list", { name: "Public rooms" });
+  // (the list is asked for every few seconds, and shown as the game ticks)
+  const shown = (locator, read) =>
+    expect.poll(
+      async () => {
+        await host.advance();
+        await guest.advance();
+        return read(locator);
+      },
+      { timeout: 10000 },
+    );
+  // (a room is private unless its host chooses otherwise)
+  await shown(guestPage.locator("#multiplayerBrowserStatus"), (line) =>
+    line.textContent(),
+  ).toBe("No public rooms right now: host one, or join with a code.");
+  await hostPage.locator("#menuMultiplayer").click();
+  await hostPage.getByLabel("Who can join").selectOption("1");
+  await shown(rooms.getByRole("listitem"), (items) =>
+    items.allTextContents(),
+  ).toEqual([
+    expect.stringMatching(
+      /^Hosti's room: Normal race on Stage \d+, 1 playerJoin$/,
+    ),
+  ]);
+  await rooms.getByRole("button", { name: "Join Hosti's room" }).click();
+  for (let i = 0; i < 5; i++) {
+    await guest.advance(30);
+    await hostPage.waitForTimeout(DELIVERY_MS);
+    await host.advance(2);
+    await guestPage.waitForTimeout(DELIVERY_MS);
+  }
+  await expect(guestPage.locator("#multiplayerPlayers")).toContainText(
+    "Hosti (host)",
+  );
+  // private again: no longer listed
+  await hostPage.getByLabel("Who can join").selectOption("0");
+  await host.advance(2);
+  await expect
+    .poll(
+      () =>
+        guestPage.evaluate(() =>
+          fetch("/net/public").then((response) => response.json()),
+        ),
+      { timeout: 10000 },
+    )
+    .toEqual({ rooms: [] });
+});
+
 test("each game names the cars after their players and paints them as chosen, a name over each car the camera does not follow", async ({
   context,
 }) => {

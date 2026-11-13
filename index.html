@@ -151,6 +151,14 @@ src: url(data/verdana.ttf);
 /* the multiplayer: hosting or joining, then the lobby's cars, race and chat side by side */
 .view .choose { max-width: 480px; }
 .view .choose form { margin-top: 20px; }
+.browser { margin: 16px 0 20px; }
+.browser .hint:empty { display: none; }
+.rooms { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.rooms li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 12px; padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.07); font-size: 14px; }
+.rooms .who { font-weight: bold; }
+.rooms .race { color: #01eaff; }
+.rooms .count { color: rgba(255, 255, 255, 0.8); }
+.rooms button { grid-row: 1 / span 3; grid-column: 2; min-height: 44px; padding: 4px 18px; font-size: 14px; }
 .view .room-line { margin: 0; font-size: 16px; }
 .view .room { font-size: 26px; letter-spacing: 3px; color: #01eaff; }
 /* wide: the players, the race, you over the chat (Start in sight); narrower: the race and
@@ -587,8 +595,13 @@ src: url(data/verdana.ttf);
 <button type="button" id="multiplayerClose" class="back">Back</button>
 </header>
 <div id="multiplayerChoose" class="choose">
-<p>Race friends: one of you hosts, up to seven others join with the host's code.</p>
+<p>Race friends: one of you hosts, up to seven others join a public room below or with the host's code.</p>
 <p id="multiplayerNotice" role="status" hidden></p>
+<section class="browser" aria-labelledby="multiplayerBrowserTitle">
+<h3 id="multiplayerBrowserTitle">Public rooms</h3>
+<p id="multiplayerBrowserStatus" class="hint" role="status"></p>
+<ul id="multiplayerRoomList" class="rooms" aria-labelledby="multiplayerBrowserTitle"></ul>
+</section>
 <button type="button" id="multiplayerHost" class="go">Host a race</button>
 <form id="multiplayerJoinForm" novalidate>
 <label for="multiplayerCode">Code of the host's room</label>
@@ -614,10 +627,11 @@ src: url(data/verdana.ttf);
 <div class="row"><input id="multiplayerLink" readonly><button type="button" id="multiplayerCopy">Copy</button></div>
 </div>
 <div id="lobbySettings" class="settings">
+<div class="setting wide"><label for="lobbyPublic">Who can join</label><select id="lobbyPublic" aria-describedby="lobbyPublicHint"><option value="0">With the code or link</option><option value="1">Everyone: a public room</option></select><p id="lobbyPublicHint" class="hint">A public room is listed for everyone, with your name and the race.</p></div>
 <div class="setting wide"><label for="lobbyStage">Stage</label><select id="lobbyStage"></select></div>
 <div class="setting"><label for="lobbyMode">Mode</label><select id="lobbyMode"></select></div>
 <div class="setting"><label for="lobbyStrength">Bot strength</label><select id="lobbyStrength"></select></div>
-<div class="setting"><label for="lobbyCollisions">Collisions</label><select id="lobbyCollisions"></select></div>
+<div class="setting wide"><label for="lobbyCollisions">Collisions</label><select id="lobbyCollisions"></select></div>
 <div class="setting" id="lobbyMinutesChoice"><label for="lobbyMinutes">Time</label><select id="lobbyMinutes"></select></div>
 <div class="setting" id="lobbyRespawnChoice"><label for="lobbyRespawn">Back after</label><select id="lobbyRespawn"></select></div>
 <div class="setting"><label for="lobbyTeams">Teams</label><select id="lobbyTeams"></select></div>

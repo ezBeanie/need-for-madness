@@ -231,6 +231,16 @@ const hear = (text, by = null) => {
   receiver(message);
 };
 
+// A host lists its room for everyone to join, or (null) no longer (see server/relay.js):
+// a message to the relay alone. Returns whether it went.
+export const sendListing = (listing) => {
+  if (!relayOpen) {
+    return false;
+  }
+  socket.send(JSON.stringify({ relay: "listing", listing }));
+  return true;
+};
+
 // Opens the room as host or guest; receive gets every message the other games send.
 export const openLink = (role, room, receive) => {
   closeLink();

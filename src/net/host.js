@@ -10,6 +10,7 @@ import {
   PHASE,
   RACE_KIND,
   RACE_MODE,
+  RACE_MODE_NAMES,
   game,
   isRaceMode,
   isRoomRules,
@@ -17,7 +18,7 @@ import {
   roomRules,
 } from "../core/state.js";
 import { collisionChoice } from "../race/physics.js";
-import { STAGE_COUNT } from "../data/stages.js";
+import { STAGE_COUNT, stageLabel } from "../data/stages.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
 import { receiveChat, clearChat } from "./chat.js";
 import { raceEvents } from "../race/events.js";
@@ -49,6 +50,7 @@ import {
   isPlayerStatus,
   link,
   openLink,
+  sendListing,
   statusOf,
   urlRoom,
 } from "./link.js";
@@ -65,6 +67,7 @@ const GUEST_WAITING_TICKS = 60;
 // the room's races, as the host added them; stage: the stage the host chose in the lobby,
 // mode: how its race is won (RACE_MODE), rules: the rest the host chose (roomRules);
 // status and racing: what the host did and whether it raced together, as it last told
+// public: whether the room is listed for everyone to join (see listRoom)
 const host = {
   guests: [],
   bots: [],
@@ -73,6 +76,41 @@ const host = {
   rules: roomRules(),
   status: PLAYER_STATUS.lobby,
   racing: false,
+  public: false,
+};
+
+// the listing the relay has of the room (null: none), and the ticks since it was sent: it
+// goes again now and then, as the relay may have started anew
+const listed = { text: null, ticks: 0 };
+const LIST_AGAIN_TICKS = 140;
+
+// What the room is listed with: the host's name, the race and how many race it.
+const listing = () => ({
+  name: own.name,
+  mode: RACE_MODE_NAMES[host.mode],
+  stage: stageLabel(host.stage),
+  players: 1 + host.guests.length,
+  bots: host.bots.length,
+  racing: lockstep.active,
+});
+
+// Every tick: a public room's listing, at once when it changed; a room no longer public
+// unlisted.
+const listRoom = () => {
+  const text = host.public ? JSON.stringify(listing()) : null;
+  listed.ticks++;
+  if (
+    (text != listed.text || (text && listed.ticks >= LIST_AGAIN_TICKS)) &&
+    sendListing(text && listing())
+  ) {
+    listed.text = text;
+    listed.ticks = 0;
+  }
+};
+
+export const roomPublic = () => host.public;
+export const chooseRoomPublic = (shown) => {
+  host.public = shown === true;
 };
 
 export const roomGuests = () => host.guests;
@@ -256,6 +294,9 @@ export const hostTick = () => {
   host.guests = host.guests.filter(
     ({ quietTicks }) => quietTicks < GUEST_GONE_TICKS,
   );
+  if (link.role == ROLE.host) {
+    listRoom();
+  }
   // (the guests list what the host does, and may watch its race while it goes on)
   if (
     link.role == ROLE.host &&
@@ -278,6 +319,9 @@ export const hostTick = () => {
 export const hostRoom = (room) => {
   host.guests = [];
   host.bots = [];
+  // (listed only once the host chooses so)
+  host.public = false;
+  listed.text = null;
   host.stage = isRoomStage(track.stage) ? track.stage : 1;
   // (the room's crashes as the host's own races', to begin with)
   host.rules = { ...host.rules, collisions: collisionChoice.value };
