@@ -149,16 +149,31 @@ src: url(data/verdana.ttf);
 #lobbyTalk[aria-pressed="true"] { background: #FFB401; color: #000000; }
 #options .key { margin-left: 6px; padding: 0 6px; border: 1px solid rgba(27, 15, 5, 0.5); border-radius: 4px; font-family: verd, Verdana, sans-serif; font-size: 12px; }
 /* the multiplayer: hosting or joining, then the lobby's cars, race and chat side by side */
-.view .choose { max-width: 480px; }
-.view .choose form { margin-top: 20px; }
-.browser { margin: 16px 0 20px; }
-.browser .hint:empty { display: none; }
+/* the choice: the public rooms beside hosting and joining with a code; on a phone one
+   below the other, the rooms first */
+.view .choose:not([hidden]) {
+  display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start; max-width: 1000px;
+}
+.choose > .notice { grid-column: 1 / -1; margin: 0; }
+.choose .side { display: grid; gap: 16px; }
+.choose h3 { margin-top: 0; }
+.choose .hint { margin: 0 0 12px; }
+.choose .panel > button { width: 100%; justify-content: center; }
+.choose form label { margin-top: 0; }
+.choose .status { margin: 0; color: rgba(255, 255, 255, 0.8); }
+.choose .status:empty { display: none; }
+@media (max-width: 640px) {
+  .view .choose:not([hidden]) { grid-template-columns: minmax(0, 1fr); gap: 12px; }
+  .choose .side { gap: 12px; }
+}
 .rooms { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.rooms li { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 4px 12px; padding: 8px 12px; border-radius: 12px; background: rgba(255, 255, 255, 0.07); font-size: 14px; }
-.rooms .who { font-weight: bold; }
+.rooms:empty { display: none; }
+.rooms li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 12px; padding: 10px 12px; border: 1px solid rgba(1, 234, 255, 0.25); border-radius: 12px; background: rgba(255, 255, 255, 0.06); font-size: 14px; }
+.rooms .who { font-size: 16px; font-weight: bold; overflow-wrap: anywhere; }
 .rooms .race { color: #01eaff; }
 .rooms .count { color: rgba(255, 255, 255, 0.8); }
-.rooms button { grid-row: 1 / span 3; grid-column: 2; min-height: 44px; padding: 4px 18px; font-size: 14px; }
+.rooms .racing { justify-self: start; margin-top: 4px; padding: 1px 8px; border-radius: 8px; background: #FFB401; color: #000000; font-size: 12px; font-weight: bold; }
+.rooms button { grid-row: 1 / span 4; grid-column: 2; min-height: 44px; padding: 4px 22px; font-size: 15px; }
 .view .room-line { margin: 0; font-size: 16px; }
 .view .room { font-size: 26px; letter-spacing: 3px; color: #01eaff; }
 /* wide: the players, the race, you over the chat (Start in sight); narrower: the race and
@@ -595,20 +610,28 @@ src: url(data/verdana.ttf);
 <button type="button" id="multiplayerClose" class="back">Back</button>
 </header>
 <div id="multiplayerChoose" class="choose">
-<p>Race friends: one of you hosts, up to seven others join a public room below or with the host's code.</p>
-<p id="multiplayerNotice" role="status" hidden></p>
-<section class="browser" aria-labelledby="multiplayerBrowserTitle">
+<p id="multiplayerNotice" class="notice" role="status" hidden></p>
+<section class="panel browser" aria-labelledby="multiplayerBrowserTitle">
 <h3 id="multiplayerBrowserTitle">Public rooms</h3>
-<p id="multiplayerBrowserStatus" class="hint" role="status"></p>
+<p class="hint">Rooms their hosts made public. Up to eight race in one.</p>
+<p id="multiplayerBrowserStatus" class="status" role="status"></p>
 <ul id="multiplayerRoomList" class="rooms" aria-labelledby="multiplayerBrowserTitle"></ul>
 </section>
+<div class="side">
+<section class="panel host" aria-labelledby="multiplayerHostTitle">
+<h3 id="multiplayerHostTitle">Host</h3>
+<p class="hint">Open a room of your own, choose the race and invite friends with its code or link, or make it public.</p>
 <button type="button" id="multiplayerHost" class="go">Host a race</button>
+</section>
+<section class="panel code" aria-labelledby="multiplayerCodeTitle">
+<h3 id="multiplayerCodeTitle">Join with a code</h3>
 <form id="multiplayerJoinForm" novalidate>
 <label for="multiplayerCode">Code of the host's room</label>
-<input id="multiplayerCode" name="room" maxlength="32" required aria-required="true" aria-describedby="multiplayerCodeError" autocomplete="off" autocapitalize="none" spellcheck="false">
+<div class="row"><input id="multiplayerCode" name="room" maxlength="32" required aria-required="true" aria-describedby="multiplayerCodeError" autocomplete="off" autocapitalize="none" spellcheck="false"><button type="submit" class="join">Join the race</button></div>
 <p id="multiplayerCodeError" class="error" role="alert" hidden></p>
-<button type="submit" class="join">Join the race</button>
 </form>
+</section>
+</div>
 </div>
 <div id="multiplayerRoom" class="lobby" hidden>
 <section class="panel field" aria-labelledby="multiplayerPlayersTitle">
