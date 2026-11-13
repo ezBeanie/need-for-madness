@@ -16,6 +16,7 @@ import {
   raceSetup,
   roomRules,
 } from "../core/state.js";
+import { collisionChoice } from "../race/physics.js";
 import { STAGE_COUNT } from "../data/stages.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
 import { receiveChat, clearChat } from "./chat.js";
@@ -278,6 +279,8 @@ export const hostRoom = (room) => {
   host.guests = [];
   host.bots = [];
   host.stage = isRoomStage(track.stage) ? track.stage : 1;
+  // (the room's crashes as the host's own races', to begin with)
+  host.rules = { ...host.rules, collisions: collisionChoice.value };
   clearChat();
   openLink(ROLE.host, room, receive);
 };

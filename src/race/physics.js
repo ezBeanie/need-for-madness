@@ -14,6 +14,7 @@ import {
 import { random } from "../core/random.js";
 import {
   COLLISIONS,
+  COLLISION_NAMES,
   MAX_CARS,
   MODE,
   PHASE,
@@ -35,7 +36,8 @@ import {
   startDeathmatch,
 } from "./deathmatch.js";
 import * as allEffects from "./effects.js";
-import { teamMates } from "../net/roomCars.js";
+import { inRoomRace, teamMates } from "../net/roomCars.js";
+import { loadSetting, saveSetting } from "../core/storage.js";
 import { raceEvents } from "./events.js";
 import { MISSED, SKID, STUNT, car, racers, useUpStuntTurns } from "./racers.js";
 import {
@@ -2986,8 +2988,27 @@ function rotateAfterStunt(c, type, pitchedOver) {
 }
 
 // how the cars crash: as the original, but in a room's race as its host chose
+// How cars crash in the player's own races, as chosen in the options (COLLISIONS; solid
+// without ramps unless chosen otherwise); a room's host's choice goes to the lobby.
+export const collisionChoice = {
+  value: COLLISIONS.solidNoRamps,
+};
+const chosen = loadSetting("collisions");
+if (chosen >= 0 && chosen < COLLISION_NAMES.length) {
+  collisionChoice.value = chosen;
+}
+export const chooseCollisions = (value) => {
+  if (Number.isInteger(value) && value >= 0 && value < COLLISION_NAMES.length) {
+    collisionChoice.value = value;
+    saveSetting("collisions", value);
+  }
+};
+
+// (a room's race, with guests or with bots alone, by the host's rules)
 const collisions = () =>
-  game.humans.length > 0 ? raceSetup.rules.collisions : COLLISIONS.original;
+  game.humans.length > 0 || inRoomRace()
+    ? raceSetup.rules.collisions
+    : collisionChoice.value;
 // how far solid cars sunk into each other are pushed apart a tick
 const PUSH_APART = 1.5;
 

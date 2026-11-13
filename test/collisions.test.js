@@ -109,3 +109,27 @@ test("solid cars without ramps lift no car they did not push", async () => {
   expect(await liftedUnpushed(COLLISIONS.solid)).toBeLessThan(-0.2);
   expect(await liftedUnpushed(COLLISIONS.solidNoRamps)).toBeGreaterThan(-0.01);
 });
+
+test("a race alone crashes as the options chose", async () => {
+  const { COLLISIONS } = await import("../src/core/state.js");
+  const apartAlone = async (chosen) => {
+    const { ctx } = await startRace({ stage: 1, car: 5 });
+    reset = () => {
+      ctx.collisionChoice.value = COLLISIONS.original;
+    };
+    ctx.collisionChoice.value = chosen;
+    ctx.raceEvents.countdown = 0;
+    for (let i = 0; i < 20; i++) {
+      ctx.drive();
+    }
+    ctx.car[2].x = ctx.car[1].x + 6;
+    ctx.car[2].z = ctx.car[1].z;
+    ctx.car[2].y = ctx.car[1].y;
+    for (let i = 0; i < 30; i++) {
+      ctx.drive();
+    }
+    return Math.abs(ctx.car[2].x - ctx.car[1].x);
+  };
+  expect(await apartAlone(COLLISIONS.original)).toBeLessThan(8);
+  expect(await apartAlone(COLLISIONS.solidNoRamps)).toBeGreaterThan(12);
+});

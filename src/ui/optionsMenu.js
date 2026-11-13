@@ -4,7 +4,8 @@
 // does what its key does.
 
 import { audio, setMusicVolume, setSoundVolume } from "../audio/audio.js";
-import { PHASE, game } from "../core/state.js";
+import { COLLISION_NAMES, PHASE, game } from "../core/state.js";
+import { chooseCollisions, collisionChoice } from "../race/physics.js";
 import { onKey, stunts, toggleStuntsByKey } from "../input/controls.js";
 import { camera } from "../render/camera.js";
 import { minimap } from "./minimap.js";
@@ -97,6 +98,14 @@ export const openOptions = () => {
   // (only where there are touch controls)
   document.getElementById("optionsTouch").hidden = !isPhone;
   document.getElementById("playerName").value = own.name;
+  // (filled when first shown)
+  const collisionsChosen = document.getElementById("collisionsChosen");
+  if (collisionsChosen.options.length == 0) {
+    collisionsChosen.append(
+      ...COLLISION_NAMES.map((name, value) => new Option(name, String(value))),
+    );
+  }
+  collisionsChosen.value = String(collisionChoice.value);
   askOfflineStatus();
   dialog.showModal?.();
 };
@@ -128,6 +137,10 @@ export const installOptionsMenu = () => {
     toggleGhost();
     showStates();
   });
+  const collisionsChosen = document.getElementById("collisionsChosen");
+  collisionsChosen.addEventListener("change", () =>
+    chooseCollisions(Number(collisionsChosen.value)),
+  );
   document.getElementById("stuntsByKey").addEventListener("click", () => {
     toggleStuntsByKey();
     showStates();

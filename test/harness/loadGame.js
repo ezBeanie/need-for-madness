@@ -106,6 +106,10 @@ export const loadGame = async ({
   // (the races stunt as the original's: the golden masters were recorded so)
   const { stunts } = await import("../../src/input/controls.js");
   stunts.byKey = false;
+  // (and crash as the original's)
+  const { collisionChoice } = await import("../../src/race/physics.js");
+  const { COLLISIONS } = await import("../../src/core/state.js");
+  collisionChoice.value = COLLISIONS.original;
   ctx.random.sim = seededRandom(seed);
   ctx.random.fx = fxrandom;
   // (one source, as the game's two are: the golden masters recorded them as one)
