@@ -205,8 +205,8 @@ test("a game waits for the other's keys, and says so", async ({ context }) => {
   // (past the countdown, which cannot pause)
   await advanceBoth(...both, 200);
   const frame = await inStep(...both);
-  // the guest's keys stop: the host runs on as far as it may guess them
-  await host.advance(30);
+  // the guest's keys stop: the host runs on as far as it may guess them, then waits
+  await host.advance(40);
   const ahead = await hostPage.evaluate(
     () => window.gameState.INPUT_DELAY + window.gameState.MAX_GUESSED,
   );

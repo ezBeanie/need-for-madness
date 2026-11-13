@@ -29,8 +29,9 @@ import { restoreRace, saveRace, sharedRace } from "./raceState.js";
 
 // 35 ms for the keys to reach the other game before they drive
 export const INPUT_DELAY = 1;
-// how many frames a game races on with the other's keys guessed (280 ms) before it waits
-export const MAX_GUESSED = 8;
+// how many frames a game races on with the other's keys guessed (420 ms) before it waits:
+// with many players, one of them is often late a moment, and all would wait
+export const MAX_GUESSED = 12;
 // (stuntKey: how the player stunts, see stunts in input/controls.js)
 export const KEYS = ["up", "down", "left", "right", "handb", "stuntKey"];
 const NONE = Object.fromEntries(KEYS.map((key) => [key, false]));
@@ -108,8 +109,18 @@ export const lockstep = {
 // the own car's keys as the player holds them, while the car drives with the frame's
 let held = NONE;
 
+// A frame's keys go as bits, KEYS' first the lowest: they are most of what a race sends.
+// (watching, those the host knew come as they were held)
+const bitsOf = (keys) =>
+  KEYS.reduce((bits, key, i) => (keys[key] ? bits | (1 << i) : bits), 0);
+
 const keysOf = (keys) =>
-  Object.fromEntries(KEYS.map((key) => [key, keys[key] === true]));
+  Object.fromEntries(
+    KEYS.map((key, i) => [
+      key,
+      typeof keys == "number" ? (keys & (1 << i)) != 0 : keys[key] === true,
+    ]),
+  );
 
 const sameKeys = (keys, others) =>
   KEYS.every((key) => keys[key] == others[key]);
@@ -193,7 +204,11 @@ export const stopLockstep = () => {
 // Another player's keys of a frame (checked: another game sent them).
 export const receiveKeys = ({ car, frame, keys, ahead }) => {
   const last = lockstep.lastOther.get(car);
-  if (!last || !Number.isInteger(frame) || !keys || typeof keys != "object") {
+  if (
+    !last ||
+    !Number.isInteger(frame) ||
+    !(Number.isInteger(keys) || (keys && typeof keys == "object"))
+  ) {
     return;
   }
   const theirs = Array.isArray(ahead) ? ahead[lockstep.own] : undefined;
@@ -644,7 +659,7 @@ export const pressFrameKeys = (runFrameAgain) => {
   send({
     type: MESSAGE.keys,
     frame: frame + INPUT_DELAY,
-    keys: held,
+    keys: bitsOf(held),
     ahead: lockstep.players.map((_, car) =>
       lockstep.lastOther.has(car) ? aheadOf(car) : 0,
     ),
