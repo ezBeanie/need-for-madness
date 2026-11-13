@@ -2,6 +2,7 @@
 // last stage), and back to the menus.
 
 import { stageLabel } from "../data/stages.js";
+import { t } from "../core/language.js";
 import { CAR_TEXTURE } from "../render/generated.js";
 import { stopStageMusic } from "../audio/audio.js";
 import { CAR_FILES } from "../classic/cars.js";
@@ -123,9 +124,9 @@ const drawInsanoAndSlogan = () => {
   rd.lineWidth = 10 * view.scale;
   const sloganX = 110 * tilt - 60 + 274 * view.scale;
   const sloganY = 200 * view.scaleY + 170 * view.scale;
-  rd.strokeText("THIS. IS. MADNESS !", sloganX, sloganY);
+  rd.strokeText(t("THIS. IS. MADNESS !"), sloganX, sloganY);
   rd.fillStyle = "#FEA700";
-  rd.fillText("THIS. IS. MADNESS !", sloganX, sloganY);
+  rd.fillText(t("THIS. IS. MADNESS !"), sloganX, sloganY);
   rd.restore();
 };
 
@@ -138,7 +139,7 @@ const darkenBackground = () => {
 };
 
 const drawResult = () => {
-  const headline = raceEvents.winner ? "Congradulations!" : "Game Over";
+  const headline = t(raceEvents.winner ? "Congradulations!" : "Game Over");
   rd.letterSpacing = "1px";
   rd.font = "" + 30 * (view.scaleY + view.scaleX) + "px junk";
   rd.textAlign = "center";
@@ -161,8 +162,9 @@ const drawResult = () => {
   rd.font = "" + 18 * (view.scaleY + view.scaleX) + "px junk";
   rd.fillStyle = "#FFA627";
   rd.fillText(
-    (raceEvents.winner ? "You won at " : "You lost at ") +
-      stageLabel(track.stage).replace("Stage", "stage"),
+    t(raceEvents.winner ? "You won at {stage}" : "You lost at {stage}", {
+      stage: stageLabel(track.stage).replace("Stage", t("stage")),
+    }),
     640 * view.scaleX,
     190 * view.scaleY,
   );
@@ -207,21 +209,25 @@ const drawUnlocked = () => {
     blink.on = true;
   }
   if (track.stage != 17) {
-    const andCar =
-      unlockedCar != -1 ? " and " + carStats.names[unlockedCar] + "" : "";
+    const stage = track.stage + 1;
     rd.fillText(
-      "Stage " + (track.stage + 1) + "" + andCar + " is now unlocked!",
+      unlockedCar != -1
+        ? t("Stage {stage} and {car} is now unlocked!", {
+            stage,
+            car: carStats.names[unlockedCar],
+          })
+        : t("Stage {stage} is now unlocked!", { stage }),
       640 * view.scaleX,
       340 * view.scaleY,
     );
   } else {
     rd.fillText(
-      "Wooohooo you finished the game!",
+      t("Wooohooo you finished the game!"),
       640 * view.scaleX,
       340 * view.scaleY,
     );
     rd.fillText(
-      "You're Awesome! You're truly a MAD DRIVER!",
+      t("You're Awesome! You're truly a MAD DRIVER!"),
       640 * view.scaleX,
       410 * view.scaleY,
     );
@@ -233,7 +239,11 @@ const drawPracticeFinished = () => {
   rd.letterSpacing = "1px";
   rd.font = "" + 20 * (view.scaleY + view.scaleX) + "px junk";
   rd.fillStyle = "#94CA00";
-  rd.fillText("Practice game finished", 640 * view.scaleX, 340 * view.scaleY);
+  rd.fillText(
+    t("Practice game finished"),
+    640 * view.scaleX,
+    340 * view.scaleY,
+  );
 };
 
 // Unlocking waits for the player to continue; otherwise the menus follow by themselves.

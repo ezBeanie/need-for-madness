@@ -10,12 +10,14 @@ import { deathmatch, deathmatchLeft, killTable } from "../race/deathmatch.js";
 import { racers } from "../race/racers.js";
 import { track } from "../race/track.js";
 import { classicMenus } from "../render/look.js";
+import { t } from "../core/language.js";
 import { rd, view } from "./view.js";
 import { TEXT, drawCenteredText } from "./widgets.js";
 
+// (say: how the words are told, the classic look's in English)
 const PLACE_SUFFIX = ["st", "nd", "rd"];
-export const placeName = (place) =>
-  `${place + 1}${PLACE_SUFFIX[place] ?? "th"}`;
+export const placeName = (place, say = t) =>
+  `${place + 1}${say(PLACE_SUFFIX[place] ?? "th")}`;
 
 // m:ss
 export const clockTime = (ticks) => {
@@ -33,14 +35,18 @@ export const wastedBy = (c) => {
 
 // "Kool Kat wasted Anna", "You wasted Kool Kat", "Anna wasted you", "Kool Kat has been
 // wasted"
-export const wreckText = (by, c) => {
-  const victim = c == game.player ? "you" : nameOfCar(c);
+export const wreckText = (by, c, say = t) => {
   if (by == -1) {
     return c == game.player
-      ? "You have been wasted"
-      : `${nameOfCar(c)} has been wasted`;
+      ? say("You have been wasted")
+      : say("{car} has been wasted", { car: nameOfCar(c) });
   }
-  return `${by == game.player ? "You" : nameOfCar(by)} wasted ${victim}`;
+  if (by == game.player) {
+    return say("You wasted {car}", { car: nameOfCar(c) });
+  }
+  return c == game.player
+    ? say("{car} wasted you", { car: nameOfCar(by) })
+    : say("{by} wasted {car}", { by: nameOfCar(by), car: nameOfCar(c) });
 };
 
 // the feed's lines, newest last, each with the ticks it has left
@@ -162,7 +168,7 @@ export const drawDeathmatchBoard = (top) => {
     rd.fillStyle = c == game.player ? "#FFB401" : "#FFFFFF";
     rd.textAlign = "left";
     rd.fillText(
-      `${place + 1}  ${c == game.player ? "You" : nameOfCar(c)}`,
+      `${place + 1}  ${c == game.player ? t("You") : nameOfCar(c)}`,
       left + 12 * s,
       rowTop + rowHeight / 2,
     );

@@ -89,6 +89,7 @@ import { track } from "../race/track.js";
 import { CAMERA, camera, faceCamera } from "../render/camera.js";
 import { lockCar, lockNext } from "../render/cameraMoves.js";
 import { LOOK, classicMenus, look } from "../render/look.js";
+import { language, t } from "../core/language.js";
 import { newParticleModel } from "../render/models.js";
 import { canvas3D, gl } from "../render/renderer.js";
 import { carOnScreen } from "./nameTags.js";
@@ -456,16 +457,23 @@ export function drawSwitchScreen() {
   }
   if (ticks >= 10 && ticks < 90) {
     if (messageBlink) {
-      drawCenteredText(132, "SWITCHING CARS", 0, 0, 0, TEXT.title);
+      drawCenteredText(132, said("SWITCHING CARS"), 0, 0, 0, TEXT.title);
       messageBlink = false;
     } else {
-      drawCenteredText(132, "SWITCHING CARS", 0, 64, 128, TEXT.title);
+      drawCenteredText(132, said("SWITCHING CARS"), 0, 64, 128, TEXT.title);
       messageBlink = true;
     }
     if (messageBlink) {
-      drawCenteredText(192, "Laps Reset, Time +10", 0, 0, 0, TEXT.label);
+      drawCenteredText(192, said("Laps Reset, Time +10"), 0, 0, 0, TEXT.label);
     } else {
-      drawCenteredText(192, "Laps Reset, Time +10", 0, 128, 255, TEXT.label);
+      drawCenteredText(
+        192,
+        said("Laps Reset, Time +10"),
+        0,
+        128,
+        255,
+        TEXT.label,
+      );
     }
     drawInsanoAside(insanoFace(ticks));
   }
@@ -485,10 +493,10 @@ export function drawRewindOverlay() {
   }
   if (ticks >= 10 && ticks < 90) {
     if (messageBlink) {
-      drawCenteredText(132, "Reversing Time", 0, 0, 0, TEXT.title);
+      drawCenteredText(132, said("Reversing Time"), 0, 0, 0, TEXT.title);
       messageBlink = false;
     } else {
-      drawCenteredText(132, "Reversing Time", 0, 64, 128, TEXT.title);
+      drawCenteredText(132, said("Reversing Time"), 0, 64, 128, TEXT.title);
       messageBlink = true;
     }
     drawInsanoAside(insanoFace(ticks));
@@ -603,6 +611,10 @@ export function resetHud() {
 }
 
 const once = () => tick.fraction >= tick.scale;
+
+// The HUD's words in the language; the classic look's are the original's English.
+export const said = (english, values) =>
+  classicMenus() ? t(english, values, "en") : t(english, values);
 
 // Text in the middle that blinks between black and a colour.
 const drawBlinking = (y, text, r, g, b) => {
@@ -727,7 +739,7 @@ const drawOutcome = (text, picture) => {
   if (classicMenus()) {
     drawClassicOutcome(picture);
   } else {
-    drawCenteredText(132, text, 0, 0, 0, TEXT.title);
+    drawCenteredText(132, t(text), 0, 0, 0, TEXT.title);
   }
 };
 
@@ -744,11 +756,11 @@ const timeAttackOutcome = () => {
     drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
     raceEvents.winner = won;
     drawResults(
-      ["", "", "Time"],
+      ["", "", t("Time")],
       through.slice(0, MAX_CARS).map(({ time, c }, place) => ({
         cells: [placeName(place), nameOfCar(c), formatTime(time)],
         mine: c == game.player,
-        line: `${placeName(place)}  ${nameOfCar(c)}  ${formatTime(time)}`,
+        line: `${placeName(place, said)}  ${nameOfCar(c)}  ${formatTime(time)}`,
       })),
     );
     return true;
@@ -758,7 +770,10 @@ const timeAttackOutcome = () => {
     drawOutcome("Finished!", "youwon");
     drawBlinking(
       192,
-      `${placeName(place)} in ${formatTime(through[place].time)}, the others still racing`,
+      said("{place} in {time}, the others still racing", {
+        place: placeName(place, said),
+        time: formatTime(through[place].time),
+      }),
       0,
       128,
       255,
@@ -783,10 +798,14 @@ const soundPlayerWreck = () => {
 // Most kills' results, a row per car: its kills, the wastings it helped, the damage it did
 // the others (in cars' worth, as a share) and how often it was wasted.
 export const KILL_HEADS = ["", "", "Kills", "Assists", "Damage", "Wasted"];
+const killHeads = () => KILL_HEADS.map((head) => t(head));
 export const killRow = ({ c, team, kills, assists, dealt, deaths }, place) => {
   const damage = `${Math.round(dealt * 100)}%`;
   // (in teams, the teams' rows first: their cars' all together)
-  const name = c === undefined ? `Team ${TEAM_NAMES[team]}` : nameOfCar(c);
+  const name =
+    c === undefined
+      ? said("Team {team}", { team: said(TEAM_NAMES[team]) })
+      : nameOfCar(c);
   return {
     cells: [
       placeName(place),
@@ -797,7 +816,8 @@ export const killRow = ({ c, team, kills, assists, dealt, deaths }, place) => {
       String(deaths),
     ],
     mine: c === undefined ? team == teamOf(game.player) : c == game.player,
-    line: `${placeName(place)}  ${name}  ${kills} kills, ${assists} assists, ${damage} damage, wasted ${deaths}`,
+    // (the line only the classic look's, in its English)
+    line: `${placeName(place, said)}  ${name}  ${kills} kills, ${assists} assists, ${damage} damage, wasted ${deaths}`,
   };
 };
 
@@ -814,20 +834,26 @@ const deathmatchOutcome = () => {
         won ? "youwon" : "youlost",
       );
       raceEvents.winner = won;
-      drawResults(KILL_HEADS, [...teams.map(killRow), ...table.map(killRow)]);
+      drawResults(killHeads(), [...teams.map(killRow), ...table.map(killRow)]);
       return true;
     }
     const won = table[0]?.c == game.player;
     drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
     raceEvents.winner = won;
-    drawResults(KILL_HEADS, table.map(killRow));
+    drawResults(killHeads(), table.map(killRow));
     return true;
   }
   if (racers[game.player].wasted) {
     const back = deathmatch.backAt[game.player] - deathmatch.ticks;
     drawOutcome("You're Wasted!", "yourwasted");
     if (back > 0) {
-      drawBlinking(192, `Back in ${clockTime(back)}`, 0, 128, 255);
+      drawBlinking(
+        192,
+        said("Back in {time}", { time: clockTime(back) }),
+        0,
+        128,
+        255,
+      );
     }
   }
   soundPlayerWreck();
@@ -853,8 +879,8 @@ const teamsOutcome = () => {
   drawBlinking(
     192,
     team == -1
-      ? "Every car has been wasted!"
-      : `Team ${TEAM_NAMES[team]} wins!`,
+      ? said("Every car has been wasted!")
+      : said("Team {team} wins!", { team: said(TEAM_NAMES[team]) }),
     0,
     128,
     255,
@@ -882,7 +908,7 @@ const raceOutcome = () => {
     !againstTheClock
   ) {
     drawOutcome("You Wasted'em!", "youwastedem");
-    drawBlinking(192, "You Won, all cars have been wasted!", 0, 128, 255);
+    drawBlinking(192, said("You Won, all cars have been wasted!"), 0, 128, 255);
     if (!track.haltall) {
       playSound(33, 1);
     }
@@ -899,7 +925,7 @@ const raceOutcome = () => {
       drawOutcome("You Lost!", "youlost");
       drawBlinking(
         192,
-        `${nameOfCar(last)} is the last survivor!`,
+        said("{car} is the last survivor!", { car: nameOfCar(last) }),
         0,
         128,
         255,
@@ -931,7 +957,7 @@ const raceOutcome = () => {
           }
         } else if (i == game.player) {
           drawOutcome("You Won!", "youwon");
-          drawBlinking(192, "You finished first, nice job!", 0, 128, 255);
+          drawBlinking(192, said("You finished first, nice job!"), 0, 128, 255);
           raceEvents.winner = true;
           if (!track.haltall) {
             playSound(32, 1);
@@ -940,7 +966,7 @@ const raceOutcome = () => {
           drawOutcome("You Lost!", "youlost");
           drawBlinking(
             192,
-            `${nameOfCar(i)} finished first, race over!`,
+            said("{car} finished first, race over!", { car: nameOfCar(i) }),
             0,
             128,
             255,
@@ -970,10 +996,10 @@ const WATCH_CAMERAS = {
 // farthest none, and the camera stays behind the car. On a phone the bar is at the top, out
 // of the fingers' way, and a car tapped in the picture is chosen (tapped again, or the
 // picture away from the cars and controls, none).
-export const lockedText = () =>
+export const announceTarget = () =>
   camera.lockedCar < 0
-    ? "Target: none"
-    : `Target: ${nameOfCar(camera.lockedCar)}`;
+    ? announce("Target: none")
+    : announce("Target: {car}", { car: nameOfCar(camera.lockedCar) });
 
 // a tap longer than this held a control rather than picked a car
 const PICK_MS = 300;
@@ -1026,7 +1052,7 @@ const pickByTap = (tap) => {
   }
   const c = carTapped(tap);
   lockCar(c == camera.lockedCar ? -1 : c);
-  announce(lockedText());
+  announceTarget();
 };
 
 // whether the target camera's bar shows: the camera behind the player's car turning to cars
@@ -1049,7 +1075,7 @@ const drawLockBar = (taps) => {
   rd.font = `${font}px sans-serif`;
   rd.textBaseline = "middle";
   rd.textAlign = "center";
-  const name = `🎯 ${lockedText().slice("Target: ".length)}`;
+  const name = `🎯 ${camera.lockedCar < 0 ? t("none") : nameOfCar(camera.lockedCar)}`;
   const parts = [
     { id: 43, text: "‹", step: -1 },
     { id: 0, text: name },
@@ -1086,7 +1112,7 @@ const drawLockBar = (taps) => {
       taps.some((tap) => within(tap, left, top, width, height))
     ) {
       lockNext(part.step);
-      announce(lockedText());
+      announceTarget();
     }
     left += width + gap;
   });
@@ -1105,15 +1131,15 @@ const drawWatchBar = () => {
   rd.textAlign = "center";
   const name =
     camera.mode == CAMERA.free
-      ? "Free camera"
-      : `Watching ${nameOfCar(camera.target)}`;
+      ? t("Free camera")
+      : t("Watching {car}", { car: nameOfCar(camera.target) });
   const parts = [
     { id: 40, text: "‹", act: () => watchNext(-1) },
     { id: 0, text: name },
     { id: 41, text: "›", act: () => watchNext(1) },
     {
       id: 42,
-      text: `📷 ${WATCH_CAMERAS[camera.mode] ?? "Camera"}`,
+      text: `📷 ${t(WATCH_CAMERAS[camera.mode] ?? "Camera")}`,
       act: nextCamera,
     },
   ];
@@ -1148,9 +1174,11 @@ const drawWatchBar = () => {
     rd.globalAlpha = 0.6;
     rd.font = `${Math.round(font * 0.8)}px sans-serif`;
     rd.fillText(
-      camera.mode == CAMERA.free
-        ? "W A S D Q E to fly, drag to look · V camera · Esc menu"
-        : "Steer for another car · V camera · Esc menu",
+      t(
+        camera.mode == CAMERA.free
+          ? "W A S D Q E to fly, drag to look · V camera · Esc menu"
+          : "Steer for another car · V camera · Esc menu",
+      ),
       view.width / 2,
       top + height * 1.6,
     );
@@ -1178,7 +1206,7 @@ const drawWatcherHud = () => {
     }
     drawWatchBar();
   } else if (track.haltall) {
-    drawCenteredText(120, "Race over", 255, 255, 255, TEXT.heading);
+    drawCenteredText(120, t("Race over"), 255, 255, 255, TEXT.heading);
     if (
       drawButton({
         id: 7,
@@ -1324,8 +1352,14 @@ const drawClock = () => {
   const bestLap = Math.min(best?.lap ?? Infinity, ...laps);
   drawCenteredText(
     636,
-    `Lap ${lap}/${track.nlaps}   ${formatTime(currentLapTicks())}` +
-      (Number.isFinite(bestLap) ? `   Best lap ${formatTime(bestLap)}` : ""),
+    said("Lap {lap}/{laps}   {time}", {
+      lap,
+      laps: track.nlaps,
+      time: formatTime(currentLapTicks()),
+    }) +
+      (Number.isFinite(bestLap)
+        ? said("   Best lap {time}", { time: formatTime(bestLap) })
+        : ""),
     0,
     0,
     0,
@@ -1336,17 +1370,17 @@ const drawClock = () => {
 
 const finishedIn = () => {
   const { best, newBest } = timeAttack;
-  const time = `Your time: ${formatTime(raceTime())}`;
+  const time = said("Your time: {time}", { time: formatTime(raceTime()) });
   if (newBest.race) {
-    return `${time}, a new best!`;
+    return said("{time}, a new best!", { time });
   }
   // (stages made in the editor keep no best times)
   if (!best) {
     return time;
   }
   return (
-    `${time}, best ${formatTime(best.race)}` +
-    (newBest.lap ? ", but a new best lap!" : "")
+    said("{time}, best {best}", { time, best: formatTime(best.race) }) +
+    (newBest.lap ? said(", but a new best lap!") : "")
   );
 };
 
@@ -1379,9 +1413,9 @@ const drawSwitchTimer = () => {
 };
 
 // A message in the middle of the race, for a moment.
-export const announce = (text) => {
+export const announce = (english, values) => {
   messageImportant = false;
-  message = text;
+  message = said(english, values);
   raceEvents.messageTicks = -5;
 };
 
@@ -1389,12 +1423,12 @@ const announceArrowTarget = () => {
   arrowAtCars = racers[game.player].u.arrace;
   if (arrowAtCars) {
     messageImportant = true;
-    message = " Arrow now pointing at >  CARS";
+    message = said(" Arrow now pointing at >  CARS");
     raceEvents.messageTicks = -5;
   }
   if (!arrowAtCars) {
     messageImportant = false;
-    message = " Arrow now pointing at >  TRACK";
+    message = said(" Arrow now pointing at >  TRACK");
     raceEvents.messageTicks = -5;
     wrongWayTicks = 20;
   }
@@ -1413,11 +1447,18 @@ const drawTrackWarnings = () => {
       player.missedCheckpoint < MISSED_MESSAGE_UNTIL
     ) {
       if (warningBlink) {
-        drawCenteredText(112, "Check Point Missed!", 255, 0, 0, TEXT.label);
+        drawCenteredText(
+          112,
+          said("Check Point Missed!"),
+          255,
+          0,
+          0,
+          TEXT.label,
+        );
       } else {
         drawCenteredText(
           112,
-          "Check Point Missed!",
+          said("Check Point Missed!"),
           255,
           128,
           0,
@@ -1443,15 +1484,23 @@ const drawTrackWarnings = () => {
       }
       wrongWayTicks = 40;
       if (warningBlink) {
-        drawCenteredText(112, "Wrong Way!", 255, 128, 0, TEXT.label);
+        drawCenteredText(112, said("Wrong Way!"), 255, 128, 0, TEXT.label);
         warningBlink = false;
       } else {
-        drawCenteredText(112, "Wrong Way!", 255, 0, 0, TEXT.faintLabel);
+        drawCenteredText(112, said("Wrong Way!"), 255, 0, 0, TEXT.faintLabel);
         warningBlink = true;
       }
     }
   }
 };
+
+// Where what follows text drawn at x goes, in design units: at the original's place after
+// its English words, further where a longer one needs it (measured only then: the English
+// HUD is drawn as the original's).
+const afterLabel = (text, x, place) =>
+  language.current == "en"
+    ? place
+    : Math.max(place, x + rd.measureText(text).width / view.scale + 10);
 
 // Top left: lap, wasted opponents and the position.
 const drawStanding = () => {
@@ -1474,26 +1523,28 @@ const drawStanding = () => {
     return;
   }
   rd.fillStyle = "#000000";
-  rd.fillText("Lap", 20 * view.scale, 19 * view.scale);
-  rd.fillText("Wasted", 130 * view.scale, 19 * view.scale);
+  const lap = t("Lap");
+  const wasted = t("Wasted");
+  const laps = "" + (racers[game.player].nlaps + 1) + "/" + track.nlaps + "";
+  const lapsX = afterLabel(lap, 20, 68);
+  const wastedX = afterLabel(laps, lapsX, 130);
+  rd.fillText(lap, 20 * view.scale, 19 * view.scale);
+  rd.fillText(wasted, wastedX * view.scale, 19 * view.scale);
   // on phones the arrow button is not up here
   const phoneShift = isPhone ? 70 : 0;
-  rd.fillText("Position", (60 + phoneShift) * view.scale, 55 * view.scale);
+  rd.fillText(t("Position"), (60 + phoneShift) * view.scale, 55 * view.scale);
   rd.letterSpacing = "2px";
   rd.fillStyle = "#000078";
-  rd.fillText(
-    "" + (racers[game.player].nlaps + 1) + "/" + track.nlaps + "",
-    68 * view.scale,
-    19 * view.scale,
-  );
+  rd.fillText(laps, lapsX * view.scale, 19 * view.scale);
   rd.fillText(
     "" + track.wasted + "/" + (game.carCount - 1) + "",
-    217 * view.scale,
+    afterLabel(wasted, wastedX, 217) * view.scale,
     19 * view.scale,
   );
   const position = track.pos[game.player];
-  const suffix =
-    position == 0 ? "st" : position == 1 ? "nd" : position == 2 ? "rd" : "th";
+  const suffix = t(
+    position == 0 ? "st" : position == 1 ? "nd" : position == 2 ? "rd" : "th",
+  );
   rd.letterSpacing = "1px";
   rd.font = "" + 15 * (view.scaleY + view.scaleX) + "px junk";
   const place = "" + (position + 1);
@@ -1521,8 +1572,8 @@ const drawKillStanding = () => {
     ["Place", placeName(killTable().findIndex(({ c }) => c == p))],
   ]) {
     rd.fillStyle = "#000000";
-    rd.fillText(label, x, 19 * view.scale);
-    x += rd.measureText(label).width + 8 * view.scale;
+    rd.fillText(t(label), x, 19 * view.scale);
+    x += rd.measureText(t(label)).width + 8 * view.scale;
     rd.fillStyle = "#000078";
     rd.fillText(String(value), x, 19 * view.scale);
     x += rd.measureText(String(value)).width + 24 * view.scale;
@@ -1543,8 +1594,8 @@ const drawTeamKills = () => {
     rd.strokeRect(x, y - size / 2, size, size);
     x += size + 6 * view.scale;
     rd.fillStyle = "#000000";
-    rd.fillText(TEAM_NAMES[team], x, y);
-    x += rd.measureText(TEAM_NAMES[team]).width + 8 * view.scale;
+    rd.fillText(t(TEAM_NAMES[team]), x, y);
+    x += rd.measureText(t(TEAM_NAMES[team])).width + 8 * view.scale;
     rd.fillStyle = "#000078";
     rd.fillText(String(kills), x, y);
     x += rd.measureText(String(kills)).width + 24 * view.scale;
@@ -1599,8 +1650,8 @@ const drawMeters = () => {
   rd.font = "" + 11 * (view.scaleY + view.scaleX) + "px junk";
   rd.textAlign = "right";
   rd.fillStyle = "#000000";
-  rd.fillText("Damage", metersX - 15 * view.scale, 19 * view.scale);
-  rd.fillText("Power", metersX - 15 * view.scale, 55 * view.scale);
+  rd.fillText(t("Damage"), metersX - 15 * view.scale, 19 * view.scale);
+  rd.fillText(t("Power"), metersX - 15 * view.scale, 55 * view.scale);
   let damage =
     98 * (racers[game.player].damage / carStats.maxmag[car[game.player].typ]);
   if (damage > 98) {
@@ -1778,7 +1829,7 @@ const drawCountdown = () => {
   } else if (countdownNumberTicks != 0) {
     drawCenteredText(
       100,
-      countdownNumber != 0 ? "" + countdownNumber : "Go!",
+      countdownNumber != 0 ? "" + countdownNumber : t("Go!"),
       0,
       0,
       0,
@@ -1830,10 +1881,12 @@ const drawPowerHint = () => {
   ) {
     if (stuntHint != 3) {
       if (powerHintTicks < 70 || (powerHintTicks < 100 && stuntHint != 0)) {
-        drawBlinkingHint("Power low, perform stunt!");
+        drawBlinkingHint(said("Power low, perform stunt!"));
       }
     } else if (powerHintTicks < 100) {
-      drawBlinkingHint("Try to flip your car in the air to preform stunts!");
+      drawBlinkingHint(
+        said("Try to flip your car in the air to preform stunts!"),
+      );
     }
     if (once()) {
       powerHintTicks++;
@@ -1854,10 +1907,10 @@ const drawPowerHint = () => {
 const drawMessages = () => {
   if (racers[game.player].capcnt != 0) {
     if (messageBlink) {
-      drawCenteredText(176, "Bad Landing!", 0, 0, 200, TEXT.label);
+      drawCenteredText(176, said("Bad Landing!"), 0, 0, 200, TEXT.label);
       messageBlink = false;
     } else {
-      drawCenteredText(176, "Bad Landing!", 255, 100, 0, TEXT.label);
+      drawCenteredText(176, said("Bad Landing!"), 255, 100, 0, TEXT.label);
       messageBlink = true;
     }
     return;
@@ -1912,50 +1965,50 @@ const nameStunt = (player) => {
   let spinName = "";
   let text = "";
   const { loops, rolls, degrees, beyond } = useUpStuntTurns(player);
-  loopName = LOOPS[loops] ?? "";
+  loopName = said(LOOPS[loops] ?? "");
   if (loops >= 4) {
-    loopName = "massive Forward looping";
+    loopName = said("massive Forward looping");
   }
   if (loops <= -4) {
-    loopName = "massive Back looping";
+    loopName = said("massive Back looping");
   }
   if (loops == 0) {
     if (player.flippedFarForward && player.flippedFarBack) {
-      loopName = "Tabletop and reversed Tabletop";
+      loopName = said("Tabletop and reversed Tabletop");
     } else if (player.flippedFarForward || player.flippedFarBack) {
-      loopName = "Tabletop";
+      loopName = said("Tabletop");
     }
   }
   if (
     (loops > 0 && player.flippedFarBack) ||
     (loops < 0 && player.flippedFarForward)
   ) {
-    loopName = "Hanged " + loopName;
+    loopName = said("Hanged ") + loopName;
   }
   if (loopName != "") {
     text += " " + loopName;
   }
   if (rolls == 0 && player.rolledFar) {
-    spinName = loopName == "" ? "Tabletop" : "Flipside";
+    spinName = said(loopName == "" ? "Tabletop" : "Flipside");
   }
-  spinName = SPINS[rolls] ?? spinName;
+  spinName = said(SPINS[rolls] ?? spinName);
   if (rolls >= 4) {
-    spinName = "massive Roll spinning";
+    spinName = said("massive Roll spinning");
   }
   if (degrees != 0) {
     if (loopName == "" && spinName == "") {
       text += " " + degrees;
     } else {
       if (spinName != "") {
-        text += (loopName == "" ? " " : " with ") + spinName;
+        text += (loopName == "" ? " " : said(" with ")) + spinName;
       }
-      text += " by " + degrees;
+      text += said(" by ") + degrees;
     }
     if (beyond) {
-      text += " and beyond";
+      text += said(" and beyond");
     }
   } else if (spinName != "") {
-    text += (loopName == "" ? " " : " by ") + spinName;
+    text += (loopName == "" ? " " : said(" by ")) + spinName;
   }
   if (text != "") {
     raceEvents.stuntTicks -= 15;
@@ -1998,22 +2051,25 @@ const praiseStunt = () => {
     level = 3;
   }
   if (player.surfed) {
-    stuntText = " " + PRAISE[4][Math.floor(random.fx() * 2.99)] + stuntText;
+    stuntText =
+      " " + said(PRAISE[4][Math.floor(random.fx() * 2.99)]) + stuntText;
   }
   if (level != 3) {
     stuntText =
-      PRAISE[level][Math.floor(random.fx() * 2.99)] +
+      said(PRAISE[level][Math.floor(random.fx() * 2.99)]) +
       stuntText +
       EXCLAMATIONS[level];
   } else {
-    stuntText = PRAISE[level][Math.floor(random.fx() * 2.99)];
+    stuntText = said(PRAISE[level][Math.floor(random.fx() * 2.99)]);
   }
   if (!messageImportant) {
     raceEvents.messageTicks = raceEvents.stuntTicks;
     message =
       player.power != 98
-        ? "POWER UP " + Math.floor((100 * player.stuntPower) / 98) + "%"
-        : "POWER TO THE MAX";
+        ? said("POWER UP {percent}%", {
+            percent: Math.floor((100 * player.stuntPower) / 98),
+          })
+        : said("POWER TO THE MAX");
   }
 };
 
@@ -2022,7 +2078,7 @@ const announceEvents = () => {
   const player = racers[game.player];
   if (car[game.player].fcnt == 2) {
     if (!messageImportant) {
-      message = "Car Fixed";
+      message = said("Car Fixed");
       raceEvents.messageTicks = 0;
     }
   }
@@ -2049,14 +2105,14 @@ const announceEvents = () => {
       messageImportant = true;
       message =
         room || by == game.player
-          ? `${wreckText(by, i)}!`
-          : `${nameOfCar(i)} has been wasted!`;
+          ? `${wreckText(by, i, said)}!`
+          : said("{car} has been wasted!", { car: nameOfCar(i) });
       raceEvents.messageTicks = -15;
     }
   }
   if (raceEvents.checkpointsAnnounced != player.clear && player.clear != 0) {
     if (!messageImportant) {
-      message = classicMenus() ? "Checkpoint!" : "Check Point";
+      message = classicMenus() ? "Checkpoint!" : t("Check Point");
       raceEvents.messageTicks = 15;
     }
     raceEvents.checkpointsAnnounced = player.clear;
@@ -2224,7 +2280,7 @@ export const drawNetNotice = (notices, ping) => {
     // (a race waiting stands as drawn last, the ping of then with it: off with that one)
     const top = 690 * view.scaleY;
     rd.clearRect(view.width / 3, top, view.width / 3, view.height - top);
-    drawCenteredText(706, `Ping ${ping} ms`, 0, 0, 0, TEXT.small);
+    drawCenteredText(706, t("Ping {ping} ms", { ping }), 0, 0, 0, TEXT.small);
   }
 };
 
@@ -2353,7 +2409,7 @@ const caption = (text) => {
   if (classicMenus()) {
     drawClassicHighlight(text, recording.frame < 50);
   } else {
-    drawCenteredText(90, text, 0, 32, 64, TEXT.label);
+    drawCenteredText(90, t(text), 0, 32, 64, TEXT.label);
   }
 };
 
@@ -2447,10 +2503,10 @@ export function drawHighlightOverlay() {
   gradient.addColorStop(0, "#006ED4");
   gradient.addColorStop(1, "#A3E6FF");
   rd.fillStyle = gradient;
-  rd.fillText("Game Highlight", 640 * view.scaleX, 40 * view.scaleY);
+  rd.fillText(t("Game Highlight"), 640 * view.scaleX, 40 * view.scaleY);
   rd.strokeStyle = "#003E78";
   rd.lineWidth = 1.5 * view.scale;
-  rd.strokeText("Game Highlight", 640 * view.scaleX, 40 * view.scaleY);
+  rd.strokeText(t("Game Highlight"), 640 * view.scaleX, 40 * view.scaleY);
   showHighlight();
   if (highlightPlays == 2 && recording.frame == 427) {
     toRaceEnd();

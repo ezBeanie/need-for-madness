@@ -7,7 +7,7 @@ import {
   switchMusicLook,
   toggleOtherCarSounds,
 } from "../audio/audio.js";
-import { announce, lockedText } from "../ui/hud.js";
+import { announce, announceTarget } from "../ui/hud.js";
 import { PHASE, RACE_KIND, game, raceSetup } from "../core/state.js";
 import { raceEvents } from "../race/events.js";
 import { nextRaceSize } from "../race/field.js";
@@ -174,7 +174,7 @@ export function onKey(action, pressed) {
     lockNext(
       keys.held.has("ShiftLeft") || keys.held.has("ShiftRight") ? -1 : 1,
     );
-    announce(lockedText());
+    announceTarget();
   }
   if (!pressed && action == "toggleClassicMenus") {
     toggleClassicMenus();
