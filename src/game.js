@@ -2,6 +2,7 @@
 // frame one drawing, and the start-up.
 
 import { random } from "./core/random.js";
+import { t } from "./core/language.js";
 import {
   audio,
   holdAudio,
@@ -175,7 +176,7 @@ function raceTick() {
     }
     drawNetNotice(
       [
-        outOfSync() ? OUT_OF_SYNC : leftNotice(),
+        outOfSync() ? t(OUT_OF_SYNC) : leftNotice(),
         waitedTicks > WAIT_SHOWN_TICKS ? waitingNotice() : null,
       ],
       link.role == ROLE.guest ? guest.ping : null,

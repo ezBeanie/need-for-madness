@@ -35,6 +35,7 @@ import {
   stopSteeringFreeCamera,
 } from "./freeCamera.js";
 import { rd, view } from "./view.js";
+import { t } from "../core/language.js";
 
 const TICK_SECONDS = 0.035;
 // a jump back and forth
@@ -330,13 +331,13 @@ const save = () => {
 // way out has a button of its own.
 const controls = () => [
   ["<< 5 s", "\u21e7\u2190", () => jump(-JUMP_FRAMES)],
-  [viewer.playing ? "Pause" : "Play", "Space", togglePlaying],
+  [t(viewer.playing ? "Pause" : "Play"), t("Space"), togglePlaying],
   ["5 s >>", "\u21e7\u2192", () => jump(JUMP_FRAMES)],
-  ["Slower", "\u2193", () => changeSpeed(-1)],
-  ["Faster", "\u2191", () => changeSpeed(1)],
-  [CAMERA_NAMES[camera.mode] ?? "Camera", "V", nextCamera],
-  ["Cars", "Tab", togglePicker],
-  ...(canSave() ? [["Save", "Ctrl+S", save]] : []),
+  [t("Slower"), "\u2193", () => changeSpeed(-1)],
+  [t("Faster"), "\u2191", () => changeSpeed(1)],
+  [t(CAMERA_NAMES[camera.mode] ?? "Camera"), "V", nextCamera],
+  [t("Cars"), "Tab", togglePicker],
+  ...(canSave() ? [[t("Save"), t("Ctrl+S"), save]] : []),
 ];
 
 // what the keys do that have no button of their own, or more than one key
@@ -392,7 +393,7 @@ const moveFree = () => {
 // --- the list of cars to follow: a picture of each, its name ---
 
 // the player's own car is marked
-const carName = (c) => nameOfCar(c) + (c == game.player ? " (You)" : "");
+const carName = (c) => nameOfCar(c) + (c == game.player ? t(" (You)") : "");
 
 const picker = { open: false, choice: 0 };
 // the pictures, by look and car type (see tools/replay/carPictures.mjs)
@@ -547,20 +548,22 @@ const drawPicker = (classic, colors) => {
 
 // the keys with no button, and the free camera's while it is on
 const keysLine = () =>
-  "\u2190 \u2192: a step (hold: wind)     Home / End: start / end     " +
-  (camera.mode == CAMERA.free
-    ? "Free camera: W A S D, Q / E, Shift, drag to look"
-    : camera.mode == CAMERA.behind
-      ? "Z / X: look back"
-      : "C / \u21e7C: next / previous car") +
-  "     H: hide";
+  t("\u2190 \u2192: a step (hold: wind)     Home / End: start / end     ") +
+  t(
+    camera.mode == CAMERA.free
+      ? "Free camera: W A S D, Q / E, Shift, drag to look"
+      : camera.mode == CAMERA.behind
+        ? "Z / X: look back"
+        : "C / \u21e7C: next / previous car",
+  ) +
+  t("     H: hide");
 
 const stateOf = () =>
   viewer.playing
     ? `${SPEEDS[viewer.speed]}x`
     : viewer.frame == lastFrame()
-      ? "End"
-      : "Paused";
+      ? t("End")
+      : t("Paused");
 
 // top left: the title, the time and how fast it plays
 const drawTitle = (classic, colors) => {
@@ -633,13 +636,15 @@ const drawPill = (colors, text, x, y, height, id) => {
 const drawHint = (colors) => {
   const { touch } = layout();
   const height = Math.max(touch ? 44 : 30, 34 * view.scale);
-  const text = picker.open
-    ? touch
-      ? "Tap a car to follow it.   Tap here for the controls"
-      : "Click a car to follow it   Tab: hide the cars   H: the controls"
-    : touch
-      ? "Tap here for the replay controls"
-      : "Press H for the replay controls";
+  const text = t(
+    picker.open
+      ? touch
+        ? "Tap a car to follow it.   Tap here for the controls"
+        : "Click a car to follow it   Tab: hide the cars   H: the controls"
+      : touch
+        ? "Tap here for the replay controls"
+        : "Press H for the replay controls",
+  );
   if (
     drawPill(colors, text, view.width / 2, view.height - height, height, "hint")
   ) {
@@ -650,7 +655,7 @@ const drawHint = (colors) => {
 const drawControls = (colors) => {
   const place = layout();
   // the other keys; on a phone, where to hide the controls again
-  const line = place.touch ? "Tap here to hide the controls" : keysLine();
+  const line = place.touch ? t("Tap here to hide the controls") : keysLine();
   if (
     drawPill(
       colors,

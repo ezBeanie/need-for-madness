@@ -5,6 +5,7 @@
 // fractions of the screen so they keep their place when it turns or folds.
 
 import { loadText, saveSetting } from "../core/storage.js";
+import { t } from "../core/language.js";
 import { images } from "./images.js";
 import { pagePoint, view } from "./view.js";
 
@@ -129,7 +130,10 @@ const controlButton = (key) => {
   const button = document.createElement("button");
   button.type = "button";
   button.className = "touch-control";
-  button.setAttribute("aria-label", `${NAMES[key]}: move with the arrow keys`);
+  button.setAttribute(
+    "aria-label",
+    t("{control}: move with the arrow keys", { control: t(NAMES[key]) }),
+  );
   const picture = document.createElement("img");
   picture.alt = "";
   picture.src = images.touchControls[TOUCH_CONTROLS[key].image]?.src ?? "";

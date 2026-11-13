@@ -8,6 +8,7 @@ import { cssRgb } from "./color.js";
 import { hud } from "./hud.js";
 import { images } from "./images.js";
 import { rd, view } from "./view.js";
+import { t } from "../core/language.js";
 import { BUTTON, blink, drawButton, drawMeter } from "./widgets.js";
 
 export const insano = {
@@ -111,7 +112,7 @@ export const startBubbleText = (scale) => {
 // Lines of text in the bubble, each at its height below the bubble's top.
 export const writeBubbleLines = (scale, top, lines) => {
   lines.forEach(([y, text]) => {
-    rd.fillText(text, 200 * scale + 20 * scale, top + y * scale);
+    rd.fillText(t(text), 200 * scale + 20 * scale, top + y * scale);
   });
 };
 
@@ -133,7 +134,7 @@ export const drawStuntMeansPower = (scale, top, meterOffset, pictureOffset) => {
   rd.textAlign = "right";
   rd.fillStyle = "#000000";
   rd.fillText(
-    "Power",
+    t("Power"),
     945 * scale - 15 * view.scale,
     meterTop + 55 * view.scale,
   );

@@ -88,3 +88,80 @@ test("the options say the game's version, and what changed in each one when aske
     new RegExp(`^${version.replaceAll(".", "\\.")} `),
   );
 });
+
+test("the game is English until German is chosen in the options, then all of it at once, and English again", async ({
+  page,
+}) => {
+  const game = await openGame(page, {
+    storage: { carsel: "5", unlocked: "17" },
+  });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance(2);
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#menuMultiplayer")).toHaveText("Multiplayer");
+  await page.locator("#menuOptions").click();
+  const chosen = page.locator("#options").getByLabel("Game language");
+  await expect(chosen).toHaveValue("en");
+  await chosen.selectOption("de");
+  await expect(page.locator("html")).toHaveAttribute("lang", "de");
+  await expect(page.locator("#optionsTitle")).toHaveText("Optionen");
+  await expect(page.locator("#optionsClose")).toHaveText("Zurück");
+  // (what the game writes itself)
+  await expect(page.locator("#option-toggleAiming .state")).toHaveText("Aus");
+  await expect(page.locator("#gameVersion")).toHaveText(/^Version /);
+  expect(await page.evaluate(() => localStorage.getItem("language"))).toBe(
+    "de",
+  );
+  await page.locator("#optionsClose").click();
+  await game.advance(2);
+  await expect(page.locator("#menuMultiplayer")).toHaveText("Mehrspieler");
+  await expect(page.locator("#menuOptions")).toHaveText("Optionen");
+  await page.locator("#menuOptions").click();
+  await page.locator("#options").getByLabel("Spielsprache").selectOption("en");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(page.locator("#optionsTitle")).toHaveText("Options");
+  await expect(page.locator("#option-toggleAiming .state")).toHaveText("Off");
+  await page.locator("#optionsClose").click();
+  await game.advance(2);
+  await expect(page.locator("#menuMultiplayer")).toHaveText("Multiplayer");
+});
+
+// Every text a page draws on its canvas, to see what its HUD says.
+const recordDrawnTexts = (page) =>
+  page.addInitScript(() => {
+    window.drawnTexts = new Set();
+    const fillText = CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText = function (text, ...rest) {
+      window.drawnTexts.add(String(text));
+      return fillText.call(this, text, ...rest);
+    };
+  });
+
+test("a game started in German races with its HUD in German", async ({
+  page,
+}) => {
+  await recordDrawnTexts(page);
+  const game = await openGame(page, {
+    storage: { carsel: "5", unlocked: "17", language: "de" },
+  });
+  await game.advanceUntil(PHASE.mainMenu);
+  await expect(page.locator("html")).toHaveAttribute("lang", "de");
+  await expect(page.locator("#menuCampaign")).toHaveText("Kampagne");
+  await page.evaluate(() => {
+    const s = window.gameState;
+    s.track.stage = 3;
+    s.menu.redraw = true;
+    s.game.phase = 3;
+  });
+  await game.advanceUntil(PHASE.stageSelect);
+  await page.evaluate(async () => {
+    window.gameState.game.mode = 0;
+    const { flashIntoRace } = await import("/src/race/countdown.js");
+    flashIntoRace();
+  });
+  await game.advanceUntil(PHASE.race);
+  await game.advance(200);
+  const texts = await page.evaluate(() => [...window.drawnTexts]);
+  expect(texts).toEqual(expect.arrayContaining(["Runde", "Schaden"]));
+  expect(texts).not.toContain("Lap");
+});

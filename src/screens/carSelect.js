@@ -2,6 +2,7 @@
 // around them. Cars of later stages stay locked until those stages are won.
 
 import { LAST_STAGE, ownStage } from "../data/stages.js";
+import { t } from "../core/language.js";
 import { CAR_TEXTURE } from "../render/generated.js";
 import { pauseMenuMusic } from "../audio/audio.js";
 import {
@@ -340,9 +341,9 @@ function drawCarSelect() {
   rd.textBaseline = "middle";
   rd.strokeStyle = "#0C0959";
   rd.lineWidth = 10 * view.scale;
-  rd.strokeText("Select your Car", left + 20 * view.scale, 25 * view.scaleY);
+  rd.strokeText(t("Select your Car"), left + 20 * view.scale, 25 * view.scaleY);
   rd.fillStyle = "#8665FF";
-  rd.fillText("Select your Car", left + 20 * view.scale, 25 * view.scaleY);
+  rd.fillText(t("Select your Car"), left + 20 * view.scale, 25 * view.scaleY);
   // (the buttons stay while the cars change, PLAY only once the car chosen has landed)
   const type = game.carTypes[0];
   drawName(type);
@@ -526,9 +527,9 @@ const drawStrengths = (type, left, right) => {
         : 200 * view.scaleY - 7 * view.scale + row * 40 * view.scale;
     rd.strokeStyle = "#00284A";
     rd.lineWidth = 6 * view.scale;
-    rd.strokeText(label, labelX, labelY);
+    rd.strokeText(t(label), labelX, labelY);
     rd.fillStyle = "#A3D5FF";
-    rd.fillText(label, labelX, labelY);
+    rd.fillText(t(label), labelX, labelY);
     drawSlantedBar({
       x: barX,
       y: barY,
@@ -549,7 +550,9 @@ const drawUnlockHint = (stage) => {
   rd.textBaseline = "middle";
   rd.strokeStyle = "#00284A";
   rd.lineWidth = 10 * view.scale;
-  const text = "This car unlocks when  stage " + stage + "  is completed!";
+  const text = t("This car unlocks when  stage {stage}  is completed!", {
+    stage,
+  });
   rd.strokeText(text, 640 * view.scaleX, 200 * view.scaleY);
   rd.fillStyle = "#A3D5FF";
   rd.fillText(text, 640 * view.scaleX, 200 * view.scaleY);

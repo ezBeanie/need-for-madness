@@ -7,6 +7,7 @@ import { interfaceResolution, isFirefox } from "../core/platform.js";
 import { RACE_PHASES, game } from "../core/state.js";
 import { pointer } from "../input/pointer.js";
 import { classicMenus } from "../render/look.js";
+import { t } from "../core/language.js";
 import { images } from "./images.js";
 import { rd, view } from "./view.js";
 
@@ -72,7 +73,8 @@ export const pressOn = (id, left, top, width, height) => {
 // Draws a button centered on x with its top at y (width and height in design units) and
 // returns whether it was clicked: pressed and released on it. The face has a gradient of
 // faceTop to faceBottom over a shadow (shadowTop to shadowBottom) that it covers while
-// pressed. A pulsing button's gradient follows buttons.pulseWidth/pulseHeight.
+// pressed. A pulsing button's gradient follows buttons.pulseWidth/pulseHeight. Its text
+// is told in English and shown in the language.
 export const drawButton = ({
   id,
   x,
@@ -84,13 +86,14 @@ export const drawButton = ({
   shadowTop,
   shadowBottom,
   layout,
-  text,
+  text: english,
   fontSize,
   textOpacity,
   image,
   imageOpacity,
   pulsing,
 }) => {
+  const text = t(english);
   width = width * view.scale;
   height = height * view.scale;
   let faceX = x - width * 0.5 + 5 * view.scale;
@@ -184,7 +187,8 @@ export const drawButton = ({
   if (layout == BUTTON.imageThenText) {
     rd.globalAlpha = imageOpacity;
     // the clock of the time buttons sits a little higher
-    const raise = text == "Time" || text == "Rewind Time" ? 7 * view.scale : 0;
+    const raise =
+      english == "Time" || english == "Rewind Time" ? 7 * view.scale : 0;
     rd.drawImage(
       image,
       faceX + width * 0.5 - contentWidth * 0.5,

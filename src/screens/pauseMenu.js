@@ -16,6 +16,7 @@ import { TAPE_TICKS } from "../race/recording.js";
 import { VIEWER_FROM, openReplay } from "../race/replayViewer.js";
 import { interpolation } from "../render/interpolation.js";
 import { classicMenus } from "../render/look.js";
+import { t } from "../core/language.js";
 import { backdropHue, cssRgb, hslToRgb } from "../ui/color.js";
 import { hud } from "../ui/hud.js";
 import { images } from "../ui/images.js";
@@ -318,7 +319,7 @@ const drawTooShortMessage = (hue) => {
   const rgb = hslToRgb(hue, 1, blink.on ? 0.6 : 0.7);
   drawCenteredText(
     600,
-    "Not enough gameplay was recorded yet!",
+    t("Not enough gameplay was recorded yet!"),
     rgb[0],
     rgb[1],
     rgb[2],

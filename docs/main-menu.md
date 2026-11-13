@@ -144,3 +144,17 @@ Zweite Runde (3.11.2026, nach dem ersten Spieltest):
   Auf iOS bleiben die Musikstücke des modernen Looks (Audio-Elemente) so laut, wie sie sind.
 - Der Replay-Player zeichnet im modernen Look schräge Knöpfe und Leisten wie das Menü; Exit ist
   orange wie Back.
+
+Sprache (13.11.2026):
+
+- Die Optionen haben als erste Gruppe „Language“ mit Englisch und Deutsch. Englisch ist
+  Standard, auch beim ersten Start (nicht die Sprache des Browsers); die Wahl liegt in `language`
+  und gilt sofort, ohne Neuladen.
+- `core/language.js`: `t(englisch, werte)` sucht den deutschen Text in `data/german.js` (Schlüssel
+  ist der englische Text, `{name}` für Werte, `Turn|piece` für ein Wort mit zweiter Bedeutung);
+  ohne Eintrag bleibt es Englisch. Die Texte von `index.html` übersetzt ein Gang durch die Seite
+  (Textknoten, `aria-label`, `title`, `placeholder`), der sich das Englische merkt; was das Spiel
+  selbst schreibt, geht durch `t()`, mit `onLanguage` neu, wo es nicht ohnehin jeden Tick kommt.
+- Übersetzt sind die modernen Menüs, das HUD und die gezeichneten Bildschirme. Englisch bleiben
+  der klassische Look (Menüs, HUD-Meldungen), Auto-, Strecken- und Spielernamen, Insanos Tipps
+  aus den Streckendateien und der Changelog. Wörter wie Stage, Bots, Replay, Kills bleiben.

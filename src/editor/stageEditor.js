@@ -4,6 +4,7 @@
 // stage being edited is kept in the browser as it changes.
 
 import { PHASE, game } from "../core/state.js";
+import { onLanguage, t } from "../core/language.js";
 import {
   FIRST_OWN_STAGE,
   LAST_STAGE,
@@ -206,7 +207,7 @@ const toggle3D = () => {
   dialog.classList.toggle("three-d", shown);
   map.setAttribute(
     "aria-label",
-    shown ? "The stage in 3D, flown over" : "The stage from above",
+    t(shown ? "The stage in 3D, flown over" : "The stage from above"),
   );
   showState();
   drawMap();
@@ -801,6 +802,9 @@ const drawIcon = (canvas, piece) => {
 
 const icons = new Map();
 
+// (a piece's name may be a word the editor uses otherwise: "Turn")
+const pieceText = (name) => t(`${name}|piece`);
+
 const buildPalette = () => {
   const palette = element("editorPalette");
   if (palette.childElementCount > 0) {
@@ -808,7 +812,7 @@ const buildPalette = () => {
   }
   for (const group of PIECE_GROUPS) {
     const heading = document.createElement("h3");
-    heading.textContent = group.name;
+    heading.textContent = t(`${group.name}|piece`);
     const list = document.createElement("ul");
     for (const [piece, name] of group.pieces) {
       const item = document.createElement("li");
@@ -821,7 +825,7 @@ const buildPalette = () => {
       icon.setAttribute("aria-hidden", "true");
       icons.set(piece, icon);
       const label = document.createElement("span");
-      label.textContent = name;
+      label.textContent = pieceText(name);
       pick.append(icon, label);
       pick.addEventListener("click", () => startPlacing(piece));
       item.append(pick);
@@ -852,14 +856,28 @@ const showState = () => {
   element("editorRedo").disabled = editor.redo.length == 0;
   const pieces = editor.stage.objects.length;
   const text = editorView.shown
-    ? "3D view: W A S D to fly, Q and E down and up, Shift faster, drag to look round, scroll forward and back. V for the map."
+    ? t(
+        "3D view: W A S D to fly, Q and E down and up, Shift faster, drag to look round, scroll forward and back. V for the map.",
+      )
     : editor.ordering
-      ? "Ordering the path: click the pieces in the order the cars drive them, the start first. Escape to stop."
+      ? t(
+          "Ordering the path: click the pieces in the order the cars drive them, the start first. Escape to stop.",
+        )
       : editor.placing
-        ? `Placing ${pieceName(editor.placing.piece)}: click to place, R to turn, Escape to stop.`
+        ? t("Placing {piece}: click to place, R to turn, Escape to stop.", {
+            piece: pieceText(pieceName(editor.placing.piece)),
+          })
         : selected()
-          ? `${pieceName(selected().piece ?? 0)} selected: drag or arrow keys to move, R to turn, D for another, Del to take away, , and . along the path.`
-          : `${pieces} piece${pieces == 1 ? "" : "s"}. Pick a piece on the left, drag the map to look around, scroll to zoom. ? for the keys and how the path works.`;
+          ? t(
+              "{piece} selected: drag or arrow keys to move, R to turn, D for another, Del to take away, , and . along the path.",
+              { piece: pieceText(pieceName(selected().piece ?? 0)) },
+            )
+          : t(
+              pieces == 1
+                ? "1 piece. Pick a piece on the left, drag the map to look around, scroll to zoom. ? for the keys and how the path works."
+                : "{pieces} pieces. Pick a piece on the left, drag the map to look around, scroll to zoom. ? for the keys and how the path works.",
+              { pieces },
+            );
   const status = element("editorStatus");
   if (status.textContent != text) {
     status.textContent = text;
@@ -946,12 +964,13 @@ const showPath = () => {
     ...points.map(({ object, index }, k) => {
       const item = field("li");
       const kind = PATH_KINDS.find(([suffix]) => suffix == object.suffix)?.[1];
-      const name = `${k + 1}. ${pieceName(object.piece ?? 0)}`;
+      const name = `${k + 1}. ${pieceText(pieceName(object.piece ?? 0))}`;
       const pick = field("button", {
         type: "button",
         // (the first is the start, whatever piece it is)
-        textContent: k == 0 && !/start/i.test(name) ? `${name} (start)` : name,
-        title: kind ?? "",
+        textContent:
+          k == 0 && !/start/i.test(name) ? t("{name} (start)", { name }) : name,
+        title: kind ? t(kind) : "",
       });
       pick.dataset.focus = `pick ${index}`;
       pick.setAttribute("aria-current", String(index == editor.selected));
@@ -963,7 +982,7 @@ const showPath = () => {
           textContent: text,
           disabled: k + steps < 0 || k + steps >= points.length,
         });
-        button.setAttribute("aria-label", `${label} ${name}`);
+        button.setAttribute("aria-label", `${t(label)} ${name}`);
         button.dataset.focus = `${label} ${index}`;
         button.addEventListener("click", () => {
           pathFocus = `${label} ${points[k + steps].index}`;
@@ -1026,19 +1045,19 @@ const showSelected = () => {
   panel.replaceChildren();
   const object = selected();
   if (!object) {
-    panel.append(field("p", { textContent: "Nothing selected." }));
+    panel.append(field("p", { textContent: t("Nothing selected.") }));
     return;
   }
   panel.append(
     field("p", {
       className: "piece",
-      textContent: pieceName(object.piece ?? 0),
+      textContent: pieceText(pieceName(object.piece ?? 0)),
     }),
   );
   if (object.command == "set") {
     const kind = field("select", { id: "editorPathKind" });
     for (const [suffix, text] of PATH_KINDS) {
-      kind.append(field("option", { value: suffix, textContent: text }));
+      kind.append(field("option", { value: suffix, textContent: t(text) }));
     }
     kind.value = PATH_KINDS.some(([suffix]) => suffix == (object.suffix ?? ""))
       ? (object.suffix ?? "")
@@ -1051,7 +1070,7 @@ const showSelected = () => {
       }
       changed();
     });
-    panel.append(...labelled("Path", kind));
+    panel.append(...labelled(t("Path"), kind));
   }
   if (object.piece == 64 || object.command == "fix") {
     // (the slider for a feel of it, the number for an exact height)
@@ -1069,7 +1088,7 @@ const showSelected = () => {
       step: 100,
       value: heightOf(object),
     });
-    slider.setAttribute("aria-label", "Height");
+    slider.setAttribute("aria-label", t("Height"));
     // (a drag is one change to undo; the panel stays as it is while it lasts)
     let dragging = false;
     slider.addEventListener("input", () => {
@@ -1095,7 +1114,7 @@ const showSelected = () => {
         changed();
       }
     });
-    panel.append(...labelled("Height", height), slider);
+    panel.append(...labelled(t("Height"), height), slider);
   }
   if (object.command == "fix") {
     const off = field("input", {
@@ -1115,7 +1134,7 @@ const showSelected = () => {
     const label = field("label", {
       className: "check",
       htmlFor: "editorFixOff",
-      textContent: "Off the path (the AI leaves the path for it)",
+      textContent: t("Off the path (the AI leaves the path for it)"),
     });
     panel.append(field("div", { className: "row" }));
     panel.lastChild.append(off, label);
@@ -1127,25 +1146,30 @@ const showSelected = () => {
       field("p", {
         textContent:
           place == 0
-            ? `The start of the path, of ${onPath.length} points.`
-            : `Point ${place + 1} of ${onPath.length} on the path.`,
+            ? t("The start of the path, of {points} points.", {
+                points: onPath.length,
+              })
+            : t("Point {point} of {points} on the path.", {
+                point: place + 1,
+                points: onPath.length,
+              }),
       }),
     );
     const buttons = field("div", { className: "row" });
     const earlier = field("button", {
       type: "button",
       id: "editorEarlier",
-      textContent: "Earlier",
+      textContent: t("Earlier"),
     });
     const later = field("button", {
       type: "button",
       id: "editorLater",
-      textContent: "Later",
+      textContent: t("Later"),
     });
     const start = field("button", {
       type: "button",
       id: "editorMakeStart",
-      textContent: "Make start",
+      textContent: t("Make start"),
     });
     earlier.disabled = place == 0;
     later.disabled = place == onPath.length - 1;
@@ -1159,7 +1183,7 @@ const showSelected = () => {
   const see = field("button", {
     type: "button",
     id: "editorSeeIn3D",
-    textContent: "See in 3D",
+    textContent: t("See in 3D"),
   });
   see.addEventListener("click", seeIn3D);
   panel.append(field("div", { className: "row" }));
@@ -1175,18 +1199,21 @@ const showProblems = () => {
   const problems = problemsOf(editor.stage);
   if (problems.length == 0) {
     list.append(
-      field("li", { className: "ready", textContent: "Ready to race." }),
+      field("li", { className: "ready", textContent: t("Ready to race.") }),
     );
     return;
   }
   for (const problem of problems) {
     const item = field("li");
     if (problem.index >= 0) {
-      const go = field("button", { type: "button", textContent: problem.text });
+      const go = field("button", {
+        type: "button",
+        textContent: t(problem.text),
+      });
       go.addEventListener("click", () => select(problem.index));
       item.append(go);
     } else {
-      item.textContent = problem.text;
+      item.textContent = t(problem.text);
     }
     list.append(item);
   }
@@ -1358,7 +1385,8 @@ const showStages = () => {
     const item = field("li");
     const name = field("span", {
       className: "name",
-      textContent: nameOf(text) + (index == editor.current ? " (editing)" : ""),
+      textContent:
+        nameOf(text) + (index == editor.current ? t(" (editing)") : ""),
     });
     const row = field("div", { className: "row" });
     const actions = [
@@ -1367,8 +1395,8 @@ const showStages = () => {
       ["Delete", () => deleteStage(index)],
     ];
     for (const [label, act, disabled] of actions) {
-      const go = field("button", { type: "button", textContent: label });
-      go.setAttribute("aria-label", `${label} ${nameOf(text)}`);
+      const go = field("button", { type: "button", textContent: t(label) });
+      go.setAttribute("aria-label", `${t(label)} ${nameOf(text)}`);
       go.disabled = !!disabled;
       go.addEventListener("click", act);
       row.append(go);
@@ -1379,7 +1407,11 @@ const showStages = () => {
 };
 
 const deleteStage = (index) => {
-  if (!window.confirm(`Delete "${nameOf(customStage.texts[index])}"?`)) {
+  if (
+    !window.confirm(
+      t('Delete "{stage}"?', { stage: nameOf(customStage.texts[index]) }),
+    )
+  ) {
     return;
   }
   customStage.texts.splice(index, 1);
@@ -1498,6 +1530,11 @@ const onKey = (event) => {
 
 export const installStageEditor = () => {
   button.addEventListener("click", openStageEditor);
+  // (the pieces named anew when the editor opens next)
+  onLanguage(() => {
+    element("editorPalette").replaceChildren();
+    icons.clear();
+  });
   element("editorClose").addEventListener("click", close);
   loadStages();
   element("editorStagesButton").addEventListener("click", openStages);
