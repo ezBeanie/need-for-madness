@@ -39,6 +39,7 @@ import {
   HIGHLIGHT,
   NOT_WASTED,
   catchHighlight,
+  catchWastingNow,
   recording,
 } from "./recording.js";
 import { PIECE, pieceModels, pieces, track } from "./track.js";
@@ -1117,7 +1118,12 @@ function burnWhenWasted(c, type, avgSpeedX, avgSpeedZ) {
     if (racers[c].damage >= carStats.maxmag[type]) {
       if (recording.tape.cars[c].wastedAt == 700) {
         recording.tape.cars[c].wastedAt = 430;
-        if (racers[c].lastcolido != 0) {
+        // (in a room's race any car's last hit counts, see dentHitCar: the player's own
+        // highlight is of a car the player wasted)
+        if (
+          racers[c].lastcolido != 0 &&
+          (game.humans.length == 0 || racers[c].lastHitBy == game.player)
+        ) {
           recording.tape.cars[c].playerHitTicks = racers[c].lastcolido;
         }
       }
@@ -3672,6 +3678,7 @@ function respawn(c) {
     raceEvents.playerWreckTicks = 0;
   }
   // (and on the tape fixed: the replays mend its body as the race did)
+  catchWastingNow(c);
   const tape = recording.tape.cars[c];
   tape.wastedAt = NOT_WASTED;
   tape.fixAt[tape.fixCount] = 430;

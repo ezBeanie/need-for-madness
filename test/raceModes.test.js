@@ -414,3 +414,29 @@ test("in most kills the race tape has every wasting of a car and its coming back
   expect(ctx.racers[1].destnow).toBe(false);
   ctx.closeReplay();
 });
+
+test("in most kills the highlight is a car the player wasted, caught before it comes back, and kept over the player's own wreck", async () => {
+  const { ctx, step } = await mostKills();
+  const HIGHLIGHT = { wasted: 2, wastedThemAll: 3 };
+  for (let i = 0; i < 440; i++) {
+    step();
+  }
+  // wasted by car 2, then by the player, then the player's own car wasted
+  const wreck = (c, by) => {
+    ctx.fixcar(c);
+    ctx.racers[c].lastcolido = 70;
+    ctx.racers[c].lastHitBy = by;
+    ctx.racers[c].damage = 100000;
+    for (let i = 0; i < 20 + ctx.respawnTicks(); i++) {
+      ctx.racers[c].lastcolido = 70;
+      step();
+    }
+  };
+  wreck(1, 2);
+  expect(ctx.recording.highlight).toBe(0);
+  wreck(3, 0);
+  expect(ctx.recording.highlight).toBe(HIGHLIGHT.wastedThemAll);
+  expect(ctx.recording.otherCar).toBe(3);
+  wreck(0, 1);
+  expect(ctx.recording.highlight).toBe(HIGHLIGHT.wastedThemAll);
+});

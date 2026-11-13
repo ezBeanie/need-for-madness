@@ -152,6 +152,11 @@ export function catchHighlight(kind) {
     recording.bestPowerUp = 0;
     return;
   }
+  // (a room's race goes on after the player is wasted, again and again in most kills: a
+  // wreck of the player's own takes no car the player wasted from the highlight)
+  if (game.humans.length > 0 && kind < recording.highlight) {
+    return;
+  }
   const live = recording.tape;
   const kept = recording.highlightTape;
   for (let c = 0; c < game.carCount; c++) {
@@ -353,18 +358,29 @@ export function recordTick() {
 }
 
 // The player wasted, or the player's hit wasting another car.
-const catchWasting = (c, tape) => {
+// (later: a wreck coming back in most kills is caught before, its wasting later on the tape)
+const catchWasting = (c, tape, later = 0) => {
   if (c == game.player) {
     catchHighlight(HIGHLIGHT.wasted);
     if (recording.highlight == HIGHLIGHT.wasted) {
-      recording.highlightAt = WASTING_CAUGHT_AT - 1;
+      recording.highlightAt = WASTING_CAUGHT_AT - 1 + later;
     }
   } else if (tape.playerHitTicks) {
     catchHighlight(HIGHLIGHT.wastedThemAll);
     if (recording.highlight == HIGHLIGHT.wastedThemAll) {
-      recording.highlightAt = Math.floor((160 + tape.playerHitTicks) * 1.42);
+      recording.highlightAt =
+        Math.floor((160 + tape.playerHitTicks) * 1.42) + later;
       recording.otherCar = c;
     }
+  }
+};
+
+// As a wreck comes back (most kills), before its wasting is off the tape: one not yet
+// caught as the highlight is now.
+export const catchWastingNow = (c) => {
+  const tape = recording.tape.cars[c];
+  if (tape.wastedAt != NOT_WASTED && tape.wastedAt > WASTING_CAUGHT_AT) {
+    catchWasting(c, tape, tape.wastedAt - WASTING_CAUGHT_AT);
   }
 };
 
