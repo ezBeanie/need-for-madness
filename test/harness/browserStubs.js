@@ -297,7 +297,24 @@ export const createBrowserGlobals = ({
       visibilityState: "visible",
       querySelector: (selector) => canvases[selector] ?? element(selector),
       getElementById: element,
-      createElement: () => createCanvasStub(create2dContextStub()),
+      // (a canvas, or an element with children: the name tags' parts)
+      createElement: () => {
+        const children = [];
+        return {
+          ...createCanvasStub(create2dContextStub()),
+          children,
+          textContent: "",
+          offsetWidth: 0,
+          offsetHeight: 0,
+          append: (...added) => children.push(...added),
+          get firstChild() {
+            return children[0] ?? null;
+          },
+          get lastChild() {
+            return children.at(-1) ?? null;
+          },
+        };
+      },
       addEventListener: noop,
     },
     addEventListener: noop,
