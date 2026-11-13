@@ -69,3 +69,22 @@ test("cars crash solid without ramps unless chosen otherwise in the options, and
   await page.locator("#menuMultiplayer").click();
   await expect(page.locator("#lobbyCollisions")).toHaveValue("1");
 });
+
+test("the options say the game's version, and what changed in each one when asked", async ({
+  page,
+}) => {
+  const game = await openGame(page, {
+    storage: { carsel: "5", unlocked: "17" },
+  });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance(2);
+  await page.locator("#menuOptions").click();
+  const version = await page.evaluate(() => window.gameState.VERSION);
+  await expect(page.locator("#gameVersion")).toHaveText(`Version ${version}`);
+  const changes = page.locator("#changelog h4").first();
+  await expect(changes).toBeHidden();
+  await page.getByText("What's new").click();
+  await expect(changes).toHaveText(
+    new RegExp(`^${version.replaceAll(".", "\\.")} `),
+  );
+});

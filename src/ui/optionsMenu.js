@@ -18,6 +18,7 @@ import { toggleByVoice, toggleVoice, voice } from "../net/voice.js";
 import { ghost, toggleGhost } from "../race/ghost.js";
 import { isPhone } from "../core/platform.js";
 import { askOfflineStatus, installOffline } from "./offline.js";
+import { CHANGELOG, VERSION } from "../data/changelog.js";
 import {
   arrangeTouchControls,
   setTouchSize,
@@ -110,8 +111,26 @@ export const openOptions = () => {
   dialog.showModal?.();
 };
 
+// The game's version, and what changed in each, out of the way at the options' end.
+const showChangelog = () => {
+  document.getElementById("gameVersion").textContent = `Version ${VERSION}`;
+  const changelog = document.getElementById("changelog");
+  for (const { version, date, changes } of CHANGELOG) {
+    const title = document.createElement("h4");
+    title.textContent = `${version} (${date})`;
+    const list = document.createElement("ul");
+    for (const change of changes) {
+      const item = document.createElement("li");
+      item.textContent = change;
+      list.append(item);
+    }
+    changelog.append(title, list);
+  }
+};
+
 export const installOptionsMenu = () => {
   installOffline();
+  showChangelog();
   for (const [action] of SWITCHES) {
     document
       .getElementById(`option-${action}`)
