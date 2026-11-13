@@ -1156,7 +1156,7 @@ test("a room its host makes public is listed for everyone, joined from the list,
     items.allTextContents(),
   ).toEqual([
     expect.stringMatching(
-      /^Hosti's room: Normal race on Stage \d+, 1 playerJoin$/,
+      /^Hosti's room: Normal race on Stage \d+, 1 of 8 playersJoin$/,
     ),
   ]);
   await rooms.getByRole("button", { name: "Join Hosti's room" }).click();

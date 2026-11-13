@@ -56,6 +56,7 @@ import {
 } from "../net/guest.js";
 import { menu } from "../screens/menuState.js";
 import {
+  MOST_PLAYERS,
   PLAYER_STATUS,
   ROLE,
   ROOM_NAME,
@@ -618,7 +619,8 @@ const askForRooms = () => {
 
 const countText = (count, one) => `${count} ${one}${count == 1 ? "" : "s"}`;
 
-// (its lines read as one: "Hosti's room: Most kills on Stage 3, 2 players and 1 bot")
+// (its lines read as one: "Hosti's room: Most kills on Stage 3, 2 of 8 players and 1 bot,
+// Racing now")
 const listedRoomItem = ({
   room,
   name,
@@ -632,7 +634,7 @@ const listedRoomItem = ({
   const item = document.createElement("li");
   const title = name ? `${name}'s room` : "A room";
   const counts = [
-    countText(players, "player"),
+    `${players} of ${MOST_PLAYERS} players`,
     ...(bots > 0 ? [countText(bots, "bot")] : []),
   ].join(" and ");
   const join = document.createElement("button");
@@ -650,9 +652,12 @@ const listedRoomItem = ({
     unseen(": "),
     textOf("race", `${mode} on ${stage}`),
     unseen(", "),
-    textOf("count", racing ? `${counts}, racing now` : counts),
+    textOf("count", counts),
     join,
   );
+  if (racing) {
+    item.append(unseen(", "), textOf("racing", "Racing now"));
+  }
   return item;
 };
 
