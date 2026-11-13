@@ -318,7 +318,7 @@ test.describe("on a phone", () => {
       return {
         x:
           box.left + view.width / 2 + name / 2 + 4 * view.scale + height * 0.65,
-        y: box.top + 82 * view.scaleY + height / 2,
+        y: box.top + 8 * view.scale + height / 2,
         height,
       };
     });
@@ -343,4 +343,211 @@ test.describe("on a phone", () => {
     expect(await state()).toEqual({ locked: nearest, gas: true });
     await fingers(page, []);
   });
+});
+
+// What the HUD draws in a frame, each text, bar, picture and filled box with where it lies.
+const recordHudBoxes = (page) =>
+  page.addInitScript(() => {
+    window.hudBoxes = [];
+    const proto = CanvasRenderingContext2D.prototype;
+    const record = (context, kind, what, left, top, right, bottom) => {
+      if (context.canvas.id == "canvas2D" && context.globalAlpha > 0) {
+        window.hudBoxes.push({ kind, what, left, top, right, bottom });
+      }
+    };
+    const { fillText, roundRect, drawImage, fillRect } = proto;
+    proto.fillText = function (text, x, y, ...rest) {
+      const m = this.measureText(text);
+      record(
+        this,
+        "text",
+        String(text),
+        x - m.actualBoundingBoxLeft,
+        y - m.actualBoundingBoxAscent,
+        x + m.actualBoundingBoxRight,
+        y + m.actualBoundingBoxDescent,
+      );
+      return fillText.call(this, text, x, y, ...rest);
+    };
+    proto.roundRect = function (x, y, width, height, ...rest) {
+      record(this, "bar", "", x, y, x + width, y + height);
+      return roundRect.call(this, x, y, width, height, ...rest);
+    };
+    proto.fillRect = function (x, y, width, height) {
+      record(this, "box", "", x, y, x + width, y + height);
+      return fillRect.call(this, x, y, width, height);
+    };
+    proto.drawImage = function (image, ...args) {
+      // (where it goes: the last four numbers, or two with the picture's own size)
+      const [x, y, width = image.width, height = image.height] =
+        args.length > 4 ? args.slice(4) : args;
+      record(this, "picture", "", x, y, x + width, y + height);
+      return drawImage.call(this, image, ...args);
+    };
+  });
+
+// The pairs of things drawn over each other, but for one inside the other (a text in its
+// bar) and a text drawn over itself (as a shadow).
+const overlapsOf = (boxes) => {
+  const inside = (a, b) =>
+    a.left >= b.left - 1 &&
+    a.right <= b.right + 1 &&
+    a.top >= b.top - 1 &&
+    a.bottom <= b.bottom + 1;
+  const over = (a, b) =>
+    Math.min(a.right, b.right) - Math.max(a.left, b.left) > 1 &&
+    Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top) > 1;
+  const name = ({ kind, what, left, top }) =>
+    `${kind} ${what} at ${Math.round(left)},${Math.round(top)}`;
+  const found = [];
+  boxes.forEach((a, i) =>
+    boxes.slice(i + 1).forEach((b) => {
+      const sameText = a.kind == "text" && b.kind == "text" && a.what == b.what;
+      if (over(a, b) && !inside(a, b) && !inside(b, a) && !sameText) {
+        found.push(`${name(a)} / ${name(b)}`);
+      }
+    }),
+  );
+  return found;
+};
+
+// A room's race of most kills with its HUD as full as it gets: the board, the feed, the
+// minimap, the target camera's bar, the player wasted and waiting to come back, and a game
+// waited for. Returns what the HUD drew in that frame.
+const fullMostKillsHud = async (page) => {
+  await recordHudBoxes(page);
+  const game = await racing(page, 200, { minimap: "1" });
+  await set(page, () => {
+    const s = window.gameState;
+    s.game.humans = [0];
+    s.raceSetup.mode = s.RACE_MODE.mostKills;
+    s.startDeathmatch();
+    s.setRoomCars(
+      Array.from({ length: s.game.carCount }, (_, c) => `Player ${c + 1}`),
+      [],
+    );
+    s.camera.aims = true;
+    for (let c = 1; c < 6; c++) {
+      s.deathmatch.kills[c] = c;
+      s.noteWreck(c, c + 1);
+    }
+  });
+  await game.advance(2);
+  await set(page, () => {
+    const s = window.gameState;
+    s.racers[s.game.player].wasted = true;
+    s.deathmatch.backAt[s.game.player] = s.deathmatch.ticks + 200;
+    window.hudBoxes = [];
+  });
+  await game.advance();
+  return page.evaluate(() => {
+    window.gameState.drawNetNotice(["Waiting for Player 2..."], 120);
+    return window.hudBoxes;
+  });
+};
+
+const FULL_HUD = ["You're Wasted!", "Waiting for Player 2...", "Ping 120 ms"];
+
+test("hud: nothing of a full HUD of most kills lies over anything else", async ({
+  page,
+}) => {
+  const boxes = await fullMostKillsHud(page);
+  for (const text of FULL_HUD) {
+    expect(boxes.some(({ what }) => what == text)).toBe(true);
+  }
+  expect(overlapsOf(boxes)).toEqual([]);
+});
+
+test.describe("on a phone, most kills", () => {
+  test.use({ hasTouch: true, viewport: { width: 844, height: 390 } });
+
+  test("hud: nothing of a full HUD of most kills lies over anything else on a phone", async ({
+    page,
+  }) => {
+    const boxes = await fullMostKillsHud(page);
+    for (const text of FULL_HUD) {
+      expect(boxes.some(({ what }) => what == text)).toBe(true);
+    }
+    expect(overlapsOf(boxes)).toEqual([]);
+  });
+});
+
+test("hud: the ping drawn over a race waiting, as it was drawn last, shows only the new one", async ({
+  page,
+}) => {
+  const game = await openGame(page);
+  await game.advanceUntil(PHASE.mainMenu);
+  const bottom = () =>
+    page.evaluate(() => {
+      const { rd, view } = window.gameState;
+      const top = Math.floor(680 * view.scaleY);
+      return Array.from(
+        rd.getImageData(0, top, view.width, view.height - top).data,
+      );
+    });
+  const drawn = (pings) =>
+    page.evaluate((pings) => {
+      const { drawNetNotice, rd, view } = window.gameState;
+      rd.clearRect(0, 0, view.width, view.height);
+      for (const ping of pings) {
+        drawNetNotice([], ping);
+      }
+    }, pings);
+  await drawn([250, 1234]);
+  const over = await bottom();
+  await drawn([1234]);
+  expect(over).toEqual(await bottom());
+});
+
+test("hud: in a bunch of cars, a name lies over no other", async ({ page }) => {
+  const game = await racing(page);
+  const put = () =>
+    set(page, () => {
+      const { car, camera, game } = window.gameState;
+      const own = car[game.player];
+      const yaw = (camera.yaw * Math.PI) / 180;
+      // the others in a bunch ahead, each a little behind the one before, to its side
+      for (let c = 0, n = 0; c < game.carCount; c++) {
+        if (c != game.player) {
+          const ahead = 900 + 20 * n;
+          const aside = n % 2 ? 30 : -30;
+          car[c].x = own.x + ahead * Math.sin(yaw) + aside * Math.cos(yaw);
+          car[c].z = own.z - ahead * Math.cos(yaw) + aside * Math.sin(yaw);
+          car[c].y = own.y;
+          n++;
+        }
+      }
+    });
+  await set(page, () => {
+    const s = window.gameState;
+    s.game.humans = [0];
+    s.setRoomCars(
+      Array.from({ length: s.game.carCount }, (_, c) => `Player ${c + 1}`),
+      [],
+    );
+  });
+  await put();
+  await game.advance(1);
+  await put();
+  await game.advance(1);
+  const tags = await page.evaluate(() =>
+    [...document.querySelectorAll(".name-tag")]
+      .filter((tag) => !tag.hidden)
+      .map((tag) => {
+        const { left, right, top, bottom } = tag.getBoundingClientRect();
+        return { left, right, top, bottom };
+      }),
+  );
+  expect(tags.length).toBeGreaterThan(0);
+  const over = tags.filter((a, i) =>
+    tags.some(
+      (b, j) =>
+        i != j &&
+        a.left < b.right &&
+        b.left < a.right &&
+        a.top < b.bottom &&
+        b.top < a.bottom,
+    ),
+  );
+  expect(over).toEqual([]);
 });
