@@ -109,8 +109,9 @@ export const STRENGTH = { easy: 0, normal: 1, hard: 2 };
 export const STRENGTH_NAMES = ["Easy", "Normal", "Hard"];
 
 // How cars crash into each other in a room's race: as the original; solid, so that slow
-// cars no longer pass through each other; and solid without the crash's lift, which made
-// a car hit a ramp for the other (to try out).
+// cars no longer pass through each other; and solid without ramps: a car lifts another
+// only in a crash, no longer by merely touching it, which let it climb onto the other as
+// up a ramp (to try out).
 export const COLLISIONS = { original: 0, solid: 1, solidNoRamps: 2 };
 export const COLLISION_NAMES = ["Original", "Solid", "Solid, no ramps"];
 

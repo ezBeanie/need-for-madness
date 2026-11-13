@@ -83,9 +83,12 @@ export function inishmad() {
     racers[c].cameraHeading = 0;
     racers[c].dominate = [];
     racers[c].caught = [];
+    // (by car: whether this one pushed it since they came near, see crashCorners)
+    racers[c].pushed = [];
     for (let i = 0; i < MAX_CARS; i++) {
       racers[c].dominate[i] = false;
       racers[c].caught[i] = false;
+      racers[c].pushed[i] = false;
     }
     racers[c].pitch = 0;
     racers[c].roll = 0;
@@ -3033,6 +3036,7 @@ function colide(c, xc) {
     if (racers[c].caught[xc]) {
       racers[c].caught[xc] = false;
       racers[c].dominate[xc] = false;
+      racers[c].pushed[xc] = false;
     }
   }
   if (racers[c].dominate[xc]) {
@@ -3218,9 +3222,11 @@ function nearestCorner(at, i, xat) {
   return j;
 }
 
-// Corner i of car c, the one dominating, crashes into corner j of car xc.
+// Corner i of car c, the one dominating, crashes into corner j of car xc, which it lifts
+// (solid without ramps: only once it pushed it since they came near, so a crash lifts as
+// ever, but cars touching without one no longer lift each other as up a ramp).
 function crashCorners(c, xc, i, j, at, xat) {
-  pushCornerAlong(
+  const pushedX = pushCornerAlong(
     c,
     xc,
     i,
@@ -3231,7 +3237,7 @@ function crashCorners(c, xc, i, j, at, xat) {
     racers[xc].wheelSpeedX,
     HIT.alongX,
   );
-  pushCornerAlong(
+  const pushedZ = pushCornerAlong(
     c,
     xc,
     i,
@@ -3253,13 +3259,16 @@ function crashCorners(c, xc, i, j, at, xat) {
     racers[c].lastcolido = 70;
     racers[c].lastHitBy = xc;
   }
-  if (collisions() != COLLISIONS.solidNoRamps) {
+  if (pushedX || pushedZ) {
+    racers[c].pushed[xc] = true;
+  }
+  if (collisions() != COLLISIONS.solidNoRamps || racers[c].pushed[xc]) {
     racers[xc].wheelSpeedY[j] += carStats.lift[car[c].typ];
   }
 }
 
 // Along one axis (with the corner speeds sc and xsc), the corner moving harder pushes the
-// other away and is slowed and lifted itself; both cars dent.
+// other away and is slowed and lifted itself; both cars dent. Returns whether it pushed.
 function pushCornerAlong(c, xc, i, j, at, xat, sc, xsc, hitSide) {
   if (
     Math.abs(sc[i] * carStats.moment[car[c].typ]) >
@@ -3283,9 +3292,7 @@ function pushCornerAlong(c, xc, i, j, at, xat, sc, xsc, hitSide) {
     dentHitCar(c, xc, hitSide, j, vctm * carStats.moment[car[c].typ]);
     sc[i] -= tm;
     dentInCrash(xc, hitSide, i, -tm * carStats.moment[car[c].typ], c);
-    if (collisions() != COLLISIONS.solidNoRamps) {
-      racers[c].wheelSpeedY[i] += carStats.revlift[car[c].typ];
-    }
+    racers[c].wheelSpeedY[i] += carStats.revlift[car[c].typ];
     dentHitCar(c, xc, HIT.fromBelow, j, carStats.revlift[car[c].typ] * 7);
     if (random.fx() > random.fx()) {
       sprks(
@@ -3299,7 +3306,9 @@ function pushCornerAlong(c, xc, i, j, at, xat, sc, xsc, hitSide) {
         2,
       );
     }
+    return true;
   }
+  return false;
 }
 
 // Dents car c at its corner k, in a crash with car by: most kills counts the damage each
