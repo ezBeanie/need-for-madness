@@ -13,6 +13,7 @@ import {
 } from "../core/math.js";
 import { random } from "../core/random.js";
 import {
+  COLLISIONS,
   MAX_CARS,
   MODE,
   PHASE,
@@ -2973,7 +2974,14 @@ function rotateAfterStunt(c, type, pitchedOver) {
   }
 }
 
+// how the cars crash: as the original, but in a room's race as its host chose
+const collisions = () =>
+  game.humans.length > 0 ? raceSetup.rules.collisions : COLLISIONS.original;
+// how far solid cars sunk into each other are pushed apart a tick
+const PUSH_APART = 1.5;
+
 function colide(c, xc) {
+  const solid = collisions() != COLLISIONS.original;
   if (
     distanceSquared(
       car[c].x,
@@ -2987,9 +2995,11 @@ function colide(c, xc) {
       racers[xc].body.colrad * racers[xc].body.colrad) *
       1.5
   ) {
+    // (solid: whichever has more momentum now pushes, both standing still too; the
+    // original chose once, as the cars came near, and none if both stood)
     if (
-      !racers[c].caught[xc] &&
-      (racers[c].speed != 0 || racers[xc].speed != 0)
+      solid ||
+      (!racers[c].caught[xc] && (racers[c].speed != 0 || racers[xc].speed != 0))
     ) {
       // the car with more momentum pushes the other, the heavier one on a tie
       const momentum = Math.abs(
@@ -3000,6 +3010,11 @@ function colide(c, xc) {
       );
       if (momentum != xMomentum) {
         racers[c].dominate[xc] = momentum > xMomentum;
+      } else if (
+        solid &&
+        carStats.moment[car[c].typ] == carStats.moment[car[xc].typ]
+      ) {
+        racers[c].dominate[xc] = c < xc;
       } else {
         racers[c].dominate[xc] =
           carStats.moment[car[c].typ] > carStats.moment[car[xc].typ];
@@ -3070,10 +3085,11 @@ function colide(c, xc) {
         }
       }
       // a corner that already sank into the other car, wherever its corners are
+      // (solid: in the air too, at about the same height)
       if (
         !gotcol &&
-        racers[c].grounded &&
-        racers[xc].grounded &&
+        ((racers[c].grounded && racers[xc].grounded) ||
+          (solid && atSameHeight(c, xc))) &&
         (overTriangleXZ(at, i, xat, 0, 1, 2) ||
           overTriangleXZ(at, i, xat, 3, 1, 2))
       ) {
@@ -3081,6 +3097,50 @@ function colide(c, xc) {
       }
     }
   }
+  if (solid && c < xc && racers[c].caught[xc]) {
+    pushApart(c, xc);
+  }
+}
+
+const atSameHeight = (c, xc) =>
+  Math.abs(car[c].y - car[xc].y) < racers[xc].body.colrad;
+
+// Solid cars sunk into each other, a corner of one over the other seen from above, are
+// pushed apart, the lighter one further: slow cars no longer pass through each other.
+function pushApart(c, xc) {
+  if (!atSameHeight(c, xc)) {
+    return;
+  }
+  const at = cornersOf(c);
+  const xat = cornersOf(xc);
+  let sunk = false;
+  for (let i = 0; i < 4; i++) {
+    sunk ||=
+      overTriangleXZ(at, i, xat, 0, 1, 2) ||
+      overTriangleXZ(at, i, xat, 3, 1, 2) ||
+      overTriangleXZ(xat, i, at, 0, 1, 2) ||
+      overTriangleXZ(xat, i, at, 3, 1, 2);
+  }
+  if (!sunk) {
+    return;
+  }
+  let dx = car[xc].x - car[c].x;
+  let dz = car[xc].z - car[c].z;
+  const length = Math.sqrt(dx * dx + dz * dz);
+  if (length == 0) {
+    dx = 1;
+    dz = 0;
+  } else {
+    dx /= length;
+    dz /= length;
+  }
+  const moment = carStats.moment[car[c].typ];
+  const xMoment = carStats.moment[car[xc].typ];
+  const share = xMoment / (moment + xMoment);
+  car[c].x -= dx * PUSH_APART * share;
+  car[c].z -= dz * PUSH_APART * share;
+  car[xc].x += dx * PUSH_APART * (1 - share);
+  car[xc].z += dz * PUSH_APART * (1 - share);
 }
 
 // The corners of a car, where it touches others.
@@ -3185,7 +3245,9 @@ function crashCorners(c, xc, i, j, at, xat) {
     racers[c].lastcolido = 70;
     racers[c].lastHitBy = xc;
   }
-  racers[xc].wheelSpeedY[j] += carStats.lift[car[c].typ];
+  if (collisions() != COLLISIONS.solidNoRamps) {
+    racers[xc].wheelSpeedY[j] += carStats.lift[car[c].typ];
+  }
 }
 
 // Along one axis (with the corner speeds sc and xsc), the corner moving harder pushes the
@@ -3213,7 +3275,9 @@ function pushCornerAlong(c, xc, i, j, at, xat, sc, xsc, hitSide) {
     dentHitCar(c, xc, hitSide, j, vctm * carStats.moment[car[c].typ]);
     sc[i] -= tm;
     dentInCrash(xc, hitSide, i, -tm * carStats.moment[car[c].typ], c);
-    racers[c].wheelSpeedY[i] += carStats.revlift[car[c].typ];
+    if (collisions() != COLLISIONS.solidNoRamps) {
+      racers[c].wheelSpeedY[i] += carStats.revlift[car[c].typ];
+    }
     dentHitCar(c, xc, HIT.fromBelow, j, carStats.revlift[car[c].typ] * 7);
     if (random.fx() > random.fx()) {
       sprks(
