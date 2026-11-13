@@ -355,6 +355,24 @@ test("in a room's race the HUD tells who wasted whom, bots too, by the players' 
   expect(ctx.feed.at(-1)).toMatchObject({ text: "Ben wasted you", mine: true });
 });
 
+test("in a room's race a wreck burning on but not wasted is wasted", async () => {
+  const { ctx } = await mostKills();
+  // car 1 burnt out, yet driving
+  const burningOn = () => {
+    ctx.racers[1].damage = 100000;
+    ctx.racers[1].cntdest = 9;
+    ctx.racers[1].wasted = false;
+    ctx.drive();
+    return ctx.racers[1].wasted;
+  };
+  // (a race alone: as the original)
+  ctx.game.humans = [];
+  expect(burningOn()).toBe(false);
+  ctx.game.humans = [0, 1];
+  expect(burningOn()).toBe(true);
+  expect(ctx.deathmatch.deaths[1]).toBe(1);
+});
+
 test("in a room's race a car hit again and again at one corner keeps taking damage", async () => {
   const { ctx } = await mostKills();
   // the damage of a hit after a hundred at the same corner

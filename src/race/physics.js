@@ -1175,7 +1175,13 @@ function burnWhenWasted(c, type, avgSpeedX, avgSpeedZ) {
           }
         }
       }
-      if (racers[c].cntdest == 4 && !racers[c].wasted) {
+      // (in a room's race also a wreck burning on, not wasted: seen in a playtest, its cause
+      // not found, it drove on and could not be wasted again)
+      if (
+        !racers[c].wasted &&
+        (racers[c].cntdest == 4 ||
+          (game.humans.length > 0 && racers[c].cntdest > 4))
+      ) {
         racers[c].wasted = true;
         if (isDeathmatch()) {
           noteWasted(c);
