@@ -333,6 +333,31 @@ im gemeinsamen Rennen gibt es sie nicht mehr (`onNewestStage`). Danach vier Spie
   Heimnetzen; TURN braucht es für Mobilfunk und strenge Firewalls, und coturn muss dafür die
   öffentliche Adresse kennen, die bei beanie wechselt (DynDNS).
 
+#### TURN einrichten (vorbereitet, noch nicht installiert)
+
+Ohne `TURN_HOST` kommt Voice Chat nur im selben Netz zustande. So geht es auf beanie, und
+genauso auf jedem anderen Server, der Spiel und Relay ausliefert (eigener Hostname, eigenes
+Secret):
+
+1. Secret erzeugen (`openssl rand -hex 32`) und mit `TURN_HOST=<Hostname des Servers>` und
+   `TURN_SECRET=<Secret>` in die Env-Datei des Relays eintragen (auf beanie
+   `/home/janu/nfm-relay.env`; das macht der Besitzer selbst, das Secret gehört in keinen
+   Chat und kein Repo).
+2. Im Router weiterleiten: 3478 UDP und TCP, dazu 49160–49200 UDP (Weiterleitung der Stimmen,
+   `min-port`/`max-port` in `server/coturn/turnserver.conf`).
+3. `server/` wie beim Relay auf den Server bringen (`rsync … server beanie-ts:/home/janu/nfm-relay/`)
+   und coturn aus dem offiziellen Image starten:
+   `docker run -d --name nfm-turn --restart unless-stopped --network host --env-file /home/janu/nfm-relay.env -v /home/janu/nfm-relay/server/coturn:/etc/coturn:ro --entrypoint /etc/coturn/start.sh coturn/coturn`
+   (`start.sh` hängt Secret und aktuelle öffentliche Adresse an eine Kopie der Konfiguration;
+   ändert sich die Adresse, `docker restart nfm-turn`).
+4. Das Relay neu starten (wie beim Relay-Deploy), damit es `TURN_HOST`/`TURN_SECRET` liest;
+   `/net/ice` liefert dann STUN und TURN mit einem Tag lang gültigen Logins.
+5. Prüfen: zwei Geräte in verschiedenen Netzen (z. B. eins im Mobilfunk), Voice Chat an.
+
+Jeder, der das Spiel lädt, bekommt einen Login. Deshalb leitet coturn nur ins Internet weiter,
+nie in die eigenen Netze des Servers (Heimnetz, Docker, Tailscale), begrenzt Sitzungen und
+Bandbreite und schreibt kein Log mit Adressen.
+
 ### Schritt 10: Direkt im selben Netz
 
 - Spiele im selben WLAN oder am Hotspot eines Handys verbinden sich direkt (`net/direct.js`):
