@@ -13,6 +13,7 @@ export const CHANGELOG = [
       "Most kills in teams shows each team's kills in the HUD.",
       "Browsers no longer translate the page, which made texts flicker.",
       "The version and what changed, in the options.",
+      "The game in German, chosen in the options.",
     ],
   },
   {
