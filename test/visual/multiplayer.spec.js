@@ -1241,3 +1241,126 @@ test("a start too big for one message goes in parts, and the guest races along",
     ),
   ).toEqual(dents);
 });
+
+// Ends the race in both games at the same frame: the host's car crosses the line.
+const hostFinishes = async (both) => {
+  await inStep(...both);
+  for (const { page } of both) {
+    await page.evaluate(() => {
+      const { racers, track } = window.gameState;
+      racers[0].clear = track.nlaps * track.nsp;
+    });
+  }
+  await advanceBoth(...both, 60);
+};
+
+test("a player watching the replay after the race keeps no one waiting, and the lobby offers no race that is over", async ({
+  context,
+}) => {
+  test.setTimeout(240_000);
+  const { guest, hostPage, guestPage, both } = await raceTogether(
+    context,
+    "replay",
+    1,
+  );
+  await advanceBoth(...both, 200);
+  await hostFinishes(both);
+  // (as the race over's Watch Replay does)
+  await hostPage.evaluate(() => {
+    const { VIEWER_FROM, openReplay } = window.gameState;
+    openReplay(VIEWER_FROM.raceOver, 0);
+  });
+  await advanceBoth(...both, 30);
+  // the guest goes on past the race over, its race not waiting for the host's keys
+  expect(await guestPage.evaluate(() => window.gameState.lockstepWaits())).toBe(
+    false,
+  );
+  await pressInRace(guest, guestPage, "Enter");
+  await advanceBoth(...both, 5);
+  expect(await guest.phase()).toBe(PHASE.raceEnd);
+  // (the race end takes Continue once it faded in)
+  while ((await guest.phase()) != PHASE.mainMenu) {
+    await pressInRace(guest, guestPage, "Enter");
+    await advanceBoth(...both, 10);
+  }
+  await advanceBoth(...both, 35);
+  await expect(guestPage.locator("#multiplayer")).toBeVisible();
+  await expect(guestPage.locator("#lobbyWatch")).toBeHidden();
+  await expect(guestPage.getByRole("status")).toHaveText(
+    "Choose your car, then say you are ready.",
+  );
+  expect(await hostPage.evaluate(() => window.gameState.game.phase)).toBe(
+    PHASE.replay,
+  );
+});
+
+test("the lobby lists who is still watching the highlight or at the results, and the host starts without them", async ({
+  context,
+}) => {
+  test.setTimeout(240_000);
+  const { host, guest, hostPage, guestPage, both } = await raceTogether(
+    context,
+    "status",
+    1,
+  );
+  await advanceBoth(...both, 200);
+  await hostFinishes(both);
+  // the guest watches its highlight, the host none
+  await guestPage.evaluate(() => {
+    const { HIGHLIGHT, catchHighlight, recording } = window.gameState;
+    recording.recordedTicks = 1000;
+    catchHighlight(HIGHLIGHT.stunt);
+  });
+  await hostPage.evaluate(() => (window.gameState.recording.highlight = 0));
+  await pressInRace(guest, guestPage, "Enter");
+  await advanceBoth(...both, 5);
+  expect(await guest.phase()).toBe(PHASE.highlights);
+  while ((await host.phase()) != PHASE.mainMenu) {
+    await pressInRace(host, hostPage, "Enter");
+    await advanceBoth(...both, 10);
+  }
+  // (long after the guest left the race: it is not taken for gone)
+  await advanceBoth(...both, 120);
+  expect(await guest.phase()).toBe(PHASE.highlights);
+  const hostCards = hostPage
+    .getByRole("list", { name: "Players" })
+    .getByRole("listitem");
+  await expect(hostCards).toHaveText([
+    /Ready$/,
+    /Watching the highlight(, Same network)?$/,
+  ]);
+  await expect(hostPage.getByRole("status")).toHaveText(
+    "Everyone in the lobby is ready: start a race when you like. The others can join the next one.",
+  );
+  await expect(
+    hostPage.getByRole("button", { name: "Start the race" }),
+  ).toBeEnabled();
+  // (the guest heard the host is back in the lobby)
+  expect(
+    await guestPage.evaluate(() =>
+      window.gameState.guest.players.map(({ status }) => status),
+    ),
+  ).toEqual([0, 2]);
+
+  // the guest skips the highlight, and is at the results
+  await pressInRace(guest, guestPage, "Enter");
+  await advanceBoth(...both, 10);
+  expect(await guest.phase()).toBe(PHASE.raceEnd);
+  await expect(hostCards).toHaveText([
+    /Ready$/,
+    /At the results(, Same network)?$/,
+  ]);
+  // back in the lobby, it is not ready yet
+  while ((await guest.phase()) != PHASE.mainMenu) {
+    await pressInRace(guest, guestPage, "Enter");
+    await advanceBoth(...both, 10);
+  }
+  await advanceBoth(...both, 35);
+  await expect(hostCards).toHaveText([/Ready$/, /Not ready(, Same network)?$/]);
+  await expect(hostPage.getByRole("status")).toHaveText(
+    "Waiting for everyone to be ready...",
+  );
+  await expect(
+    guestPage.getByRole("list", { name: "Players" }).getByRole("listitem"),
+  ).toHaveText([/Ready(, Same network)?$/, /Not ready$/]);
+});

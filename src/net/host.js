@@ -34,11 +34,14 @@ import { answerWatch } from "./watch.js";
 import {
   MESSAGE,
   MOST_PLAYERS,
+  PLAYER_STATUS,
   ROLE,
   encode,
   isIndex,
+  isPlayerStatus,
   link,
   openLink,
+  statusOf,
   urlRoom,
 } from "./link.js";
 
@@ -49,16 +52,19 @@ const GUEST_GONE_TICKS = 100;
 const GUEST_WAITING_TICKS = 60;
 
 // guests: the players in the room but the host, in the order they came, each with its id,
-// name, the car and skin it chose, whether it is ready to race, and the ticks since it was
-// last heard and since it last joined; bots: the cars (carType, skin) the computer drives in
+// name, the car and skin it chose, whether it is ready to race, what it does (PLAYER_STATUS),
+// and the ticks since it was last heard and since it last joined; bots: the cars (carType, skin) the computer drives in
 // the room's races, as the host added them; stage: the stage the host chose in the lobby,
-// mode: how its race is won (RACE_MODE), rules: the rest the host chose (roomRules)
+// mode: how its race is won (RACE_MODE), rules: the rest the host chose (roomRules);
+// status and racing: what the host did and whether it raced together, as it last told
 const host = {
   guests: [],
   bots: [],
   stage: 1,
   mode: RACE_MODE.normal,
   rules: roomRules(),
+  status: PLAYER_STATUS.lobby,
+  racing: false,
 };
 
 export const roomGuests = () => host.guests;
@@ -72,7 +78,9 @@ const waitingGuests = () =>
   host.guests.filter(({ joinedTicks }) => joinedTicks < GUEST_WAITING_TICKS);
 
 // (the host's own car first: the room's players as every game lists them)
-export const sendPlayers = () =>
+export const sendPlayers = () => {
+  host.status = statusOf(game.phase);
+  host.racing = lockstep.active;
   link.send({
     type: MESSAGE.players,
     players: [
@@ -82,22 +90,25 @@ export const sendPlayers = () =>
         carType: game.carTypes[0],
         skin: own.skin,
         ready: true,
+        status: host.status,
       },
       ...host.guests,
-    ].map(({ id, name, carType, skin, ready }) => ({
+    ].map(({ id, name, carType, skin, ready, status }) => ({
       id,
       name,
       carType,
       skin,
       ready,
+      status,
     })),
     bots: host.bots,
     stage: host.stage,
     mode: host.mode,
     rules: host.rules,
     // (a guest may watch the race going on, see watch.js)
-    racing: lockstep.active,
+    racing: host.racing,
   });
+};
 
 // the stages a room races: the game's and the original's, which every game has
 export const isRoomStage = (stage) =>
@@ -185,6 +196,7 @@ const receive = (message) => {
       guest.name = cleanName(message.name);
       guest.skin = isSkin(message.skin) ? message.skin : 0;
       guest.ready = message.ready === true;
+      guest.status = PLAYER_STATUS.lobby;
       guest.joinedTicks = 0;
       // (the answer that tells the guest the host is there)
       sendPlayers();
@@ -196,6 +208,14 @@ const receive = (message) => {
   guest.quietTicks = 0;
   if (message.type == MESSAGE.bye) {
     host.guests = host.guests.filter((other) => other != guest);
+  }
+  if (
+    message.type == MESSAGE.status &&
+    isPlayerStatus(message.status) &&
+    message.status != guest.status
+  ) {
+    guest.status = message.status;
+    sendPlayers();
   }
   if (message.type == MESSAGE.watch) {
     answerWatch(guest.id);
@@ -215,6 +235,13 @@ export const hostTick = () => {
   host.guests = host.guests.filter(
     ({ quietTicks }) => quietTicks < GUEST_GONE_TICKS,
   );
+  // (the guests list what the host does, and may watch its race while it goes on)
+  if (
+    link.role == ROLE.host &&
+    (host.status != statusOf(game.phase) || host.racing != lockstep.active)
+  ) {
+    sendPlayers();
+  }
   // (without guests, the host races as alone, with the opponents of the stage, unless it
   // starts the room's race from the lobby with bots)
   const guests = link.role == ROLE.host ? waitingGuests() : [];
