@@ -251,7 +251,8 @@ test("racing together, the menu shows over the race, which goes on for the other
       .map((message) => message.keys),
   );
   expect(sent.length).toBeGreaterThan(45);
-  expect(sent).not.toContainEqual(expect.objectContaining({ up: true }));
+  // (as bits, up the first of the keys)
+  expect(sent.some((keys) => (keys & 1) != 0)).toBe(false);
   expect(await frameOf(guestPage)).toBeGreaterThan(frame + 45);
   expect(await drawnTexts(guestPage)).not.toContain("Waiting for the host...");
   expect(await drawnTexts(hostPage)).toContain("x Leave Race");
@@ -703,7 +704,8 @@ test.describe("on a phone", () => {
         .filter((message) => message.type == "keys")
         .map((message) => message.keys),
     );
-    expect(sent).toContainEqual(expect.objectContaining({ up: true }));
+    // (as bits, up the first of the keys: see bitsOf in src/net/lockstep.js)
+    expect(sent.some((keys) => (keys & 1) != 0)).toBe(true);
     await guestPage.mouse.up();
   });
 });
