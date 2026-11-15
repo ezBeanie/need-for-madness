@@ -292,7 +292,7 @@ export const createBrowserGlobals = ({
     innerWidth: 1280,
     innerHeight: 720,
     document: {
-      documentElement: {},
+      documentElement: { style: { setProperty: noop } },
       body: {},
       visibilityState: "visible",
       querySelector: (selector) => canvases[selector] ?? element(selector),

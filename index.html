@@ -389,21 +389,22 @@ src: url(data/verdana.ttf);
   .main-menu button:focus-visible { outline: 3px solid Highlight; }
 }
 /* phones held upright: the game turned a quarter, as iOS lets no page keep itself sideways
-   (see turnIfUpright in ui/view.js); the views' viewport units turn with it */
+   (see turnIfUpright in ui/view.js); the views' viewport units turn with it (set in pixels
+   there, these until it runs) */
 :root { --vh: 1vh; --vw: 1vw; }
 html.turned { --vh: 1vw; --vw: 1vh; }
 html.turned body {
-  position: fixed; left: 0; top: 0; width: 100vh; height: 100vw;
-  transform-origin: 0 0; transform: translateX(100vw) rotate(90deg);
+  position: fixed; left: 0; top: 0; width: calc(100 * var(--vw)); height: calc(100 * var(--vh));
+  transform-origin: 0 0; transform: translateX(calc(100 * var(--vh))) rotate(90deg);
 }
 /* (a modal dialog lies over the page, not in it: turned about its middle, moved to the
    screen's) */
 html.turned dialog:modal { rotate: 90deg; }
 html.turned dialog:modal:not(.view, .touch-layout, .stage-editor) {
-  max-width: calc(100vh - 2em - 6px); max-height: calc(100vw - 2em - 6px);
+  max-width: calc(100 * var(--vw) - 2em - 6px); max-height: calc(100 * var(--vh) - 2em - 6px);
 }
 html.turned dialog:modal:is(.view, .touch-layout, .stage-editor) {
-  translate: calc(50vw - 50vh) calc(50vh - 50vw);
+  translate: calc(50 * var(--vh) - 50 * var(--vw)) calc(50 * var(--vw) - 50 * var(--vh));
 }
 </style>
 <script src="gl-matrix-min.js"></script>

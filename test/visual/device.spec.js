@@ -16,7 +16,7 @@ test("a phone held upright shows the game turned sideways, a tap where it shows"
     const game = await openGame(page);
     await game.advanceUntil(PHASE.carSelect);
     await game.advance(2);
-    return { context, page };
+    return { context, page, game };
   };
   const turned = async (options) => {
     const { context, page } = await open(options);
@@ -43,7 +43,7 @@ test("a phone held upright shows the game turned sideways, a tap where it shows"
   ).toEqual({ turned: false, width: 674 });
 
   // the Options button lies on the turned page's top right: the screen's bottom right
-  const { context, page } = await open({
+  const { context, page, game } = await open({
     ...phone,
     viewport: { width: 390, height: 844 },
   });
@@ -60,6 +60,33 @@ test("a phone held upright shows the game turned sideways, a tap where it shows"
   expect(box.height).toBeGreaterThan(box.width);
   await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
   await expect(page.locator("#options")).toBeVisible();
+
+  // a dialog open while the screen turns or a foldable opens fills the screen as it is then
+  // (the page's units in pixels: Samsung Internet keeps a dialog's viewport units of before)
+  const fills = async (width, height) => {
+    await page.setViewportSize({ width, height });
+    await game.advance();
+    const units = await page.evaluate(() => {
+      const style = getComputedStyle(document.documentElement);
+      return ["--vw", "--vh"].map((name) =>
+        style.getPropertyValue(name).trim(),
+      );
+    });
+    const shown = await page.locator("#options").boundingBox();
+    return { units, shown: [shown.width, shown.height] };
+  };
+  expect(await fills(844, 390)).toEqual({
+    units: ["8.44px", "3.9px"],
+    shown: [844, 390],
+  });
+  expect(await fills(390, 844)).toEqual({
+    units: ["8.44px", "3.9px"],
+    shown: [390, 844],
+  });
+  expect(await fills(884, 820)).toEqual({
+    units: ["8.84px", "8.2px"],
+    shown: [884, 820],
+  });
   await context.close();
 });
 
