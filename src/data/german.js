@@ -38,6 +38,9 @@ export const GERMAN = {
   Solid: "Fest",
   "Solid, no ramps": "Fest, ohne Rampen",
   "Ghost in time attack": "Geist im Zeitfahren",
+  Fullscreen: "Vollbild",
+  "On a phone a touch makes the game fullscreen while this is on.":
+    "Auf dem Handy schaltet eine Berührung das Spiel ins Vollbild, solange das an ist.",
   "Your fastest race on the stage, driven again beside you.":
     "Dein schnellstes Rennen auf der Stage, noch einmal neben dir gefahren.",
   "Touch controls": "Touch-Steuerung",

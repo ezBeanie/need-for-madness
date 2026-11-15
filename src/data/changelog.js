@@ -4,6 +4,14 @@
 
 export const CHANGELOG = [
   {
+    version: "1.1.3",
+    date: "2026-11-15",
+    changes: [
+      "Solid cars no longer pass through each other when one drives slowly into another: it shoves the other along.",
+      "A touch makes the game fullscreen on a phone, and the options switch fullscreen on and off.",
+    ],
+  },
+  {
     version: "1.1.2",
     date: "2026-11-15",
     changes: [
