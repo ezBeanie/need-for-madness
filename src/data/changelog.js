@@ -4,6 +4,13 @@
 
 export const CHANGELOG = [
   {
+    version: "1.1.4",
+    date: "2026-11-15",
+    changes: [
+      "Solid cars crashing head-on at full speed no longer pass through each other.",
+    ],
+  },
+  {
     version: "1.1.3",
     date: "2026-11-15",
     changes: [
