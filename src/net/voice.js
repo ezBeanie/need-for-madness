@@ -337,6 +337,11 @@ const talkByVoice = (inRoom) => {
   track.enabled = voice.talking;
 };
 
+// How loud a voice is from a car so far away: full up to NEAR, then falling fast at first and
+// slowly towards FAR, as the ear hears loudness (falling evenly, it seemed alike far and near).
+export const voiceLoudness = (distance) =>
+  Math.max(0, Math.min(1, (FAR - distance) / (FAR - NEAR))) ** 2;
+
 // Each voice from its car in a race, quieter the farther; in the lobby all alike.
 const placeVoices = () => {
   const racing = RACE_PHASES.includes(game.phase) && lockstep.active;
@@ -349,7 +354,7 @@ const placeVoices = () => {
     let place = { side: 0, front: 1 };
     if (c >= 0) {
       place = heardFrom(car[c].x, car[c].z);
-      volume *= Math.max(0, Math.min(1, (FAR - place.distance) / (FAR - NEAR)));
+      volume *= voiceLoudness(place.distance);
     }
     peer.gain.gain.value = volume;
     placeSound(peer.panner, place.side, place.front);
