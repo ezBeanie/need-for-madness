@@ -3,6 +3,7 @@
 // button the other menus (outside races: in a race, the pause menu leads there); each switch
 // does what its key does.
 
+import { canFullscreen, isFullscreen, toggleFullscreen } from "./fullscreen.js";
 import { audio, setMusicVolume, setSoundVolume } from "../audio/audio.js";
 import { COLLISION_NAMES, PHASE, game } from "../core/state.js";
 import { chooseCollisions, collisionChoice } from "../race/physics.js";
@@ -95,6 +96,7 @@ const showStates = () => {
   // (these have no key: their switches are the options' alone)
   showSwitch("ghostShown", ghost.shown, "On", "Off");
   showSwitch("stuntsByKey", stunts.byKey, "On", "Off");
+  showSwitch("fullscreenShown", isFullscreen(), "On", "Off");
   showSwitch("voiceChat", voice.on, "On", "Off");
   showSwitch("voiceByVoice", voice.byVoice, "By voice", "Push to talk");
 };
@@ -195,6 +197,14 @@ export const installOptionsMenu = () => {
     toggleStuntsByKey();
     showStates();
   });
+  document.getElementById("fullscreenItem").hidden = !canFullscreen();
+  document
+    .getElementById("fullscreenShown")
+    .addEventListener("click", toggleFullscreen);
+  // (also left by the browser itself: a phone's back gesture, Escape)
+  for (const name of ["fullscreenchange", "webkitfullscreenchange"]) {
+    document.addEventListener(name, showStates);
+  }
   document.getElementById("voiceChat").addEventListener("click", () => {
     toggleVoice();
     showStates();

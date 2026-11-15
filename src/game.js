@@ -20,6 +20,7 @@ import { loadLook } from "./render/look.js";
 import { loadMinimap } from "./ui/minimap.js";
 import { canvas2D, turnIfUpright, turned, view } from "./ui/view.js";
 import { keepScreenOn } from "./ui/screenAwake.js";
+import { fullscreenOnTouch } from "./ui/fullscreen.js";
 import { loadAiming, startProjection, turnView } from "./render/camera.js";
 import { moveCamera } from "./render/cameraMoves.js";
 import { render } from "./render/drawFrame.js";
@@ -446,10 +447,11 @@ installMultiplayerMenu();
 installStageEditor();
 
 installPointer(canvas2D, {
-  // a click or touch allows audio (see unlockAudio)
+  // a click or touch allows audio (see unlockAudio), and a touch fullscreen
   onRelease: () => {
     unlockAudio(game.phase == PHASE.race);
     keepScreenOn();
+    fullscreenOnTouch();
   },
   keepPressedWhileTouching: () => game.phase == PHASE.race,
 });
@@ -461,6 +463,7 @@ document.addEventListener("click", (event) => {
   if (event.target != canvas2D) {
     unlockAudio(false);
     keepScreenOn();
+    fullscreenOnTouch();
   }
 });
 

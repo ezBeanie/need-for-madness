@@ -9,11 +9,14 @@ test("a phone held upright shows the game turned sideways, a tap where it shows"
   browser,
   baseURL,
 }) => {
-  // (touched, the game goes on to choosing a car)
+  // (touched, the game goes on to choosing a car; not fullscreen, which keeps the window as
+  // large as it is)
   const open = async (options) => {
     const context = await browser.newContext({ ...options, baseURL });
     const page = await context.newPage();
-    const game = await openGame(page);
+    const game = await openGame(page, {
+      storage: { fullscreenOnTouch: "0" },
+    });
     await game.advanceUntil(PHASE.carSelect);
     await game.advance(2);
     return { context, page, game };
@@ -157,4 +160,59 @@ test("a touch keeps the screen on, and a click in a dialog allows the music", as
   // (held already: not asked again)
   await page.mouse.click(640, 700);
   expect(await page.evaluate(() => window.wakeLocks)).toBe(1);
+});
+
+// as games on the web do: a phone's browser goes fullscreen at a touch, a mouse's click
+// does not; turned off in the options, a touch no more
+test("a touch makes a phone's game fullscreen, until the options turn it off", async ({
+  browser,
+  baseURL,
+}) => {
+  const fullscreen = (page) =>
+    page.evaluate(() => document.fullscreenElement != null);
+  const phone = await browser.newContext({
+    baseURL,
+    isMobile: true,
+    hasTouch: true,
+    viewport: { width: 844, height: 390 },
+  });
+  const page = await phone.newPage();
+  const game = await openGame(page, {
+    storage: { carsel: "5", unlocked: "17" },
+  });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance(2);
+  expect(await fullscreen(page)).toBe(false);
+  await page.touchscreen.tap(200, 200);
+  await expect.poll(() => fullscreen(page)).toBe(true);
+
+  await page.locator("#menuOptions").tap();
+  const option = page.locator("#fullscreenShown");
+  await expect(option).toHaveAttribute("aria-pressed", "true");
+  await option.tap();
+  await expect.poll(() => fullscreen(page)).toBe(false);
+  await expect(option).toHaveAttribute("aria-pressed", "false");
+  await page.locator("#optionsClose").tap();
+  await page.touchscreen.tap(200, 200);
+  await game.advance(2);
+  expect(await fullscreen(page)).toBe(false);
+  expect(
+    await page.evaluate(() => localStorage.getItem("fullscreenOnTouch")),
+  ).toBe("0");
+  await phone.close();
+
+  // a mouse's click does not, the options' switch does
+  const desktop = await browser.newContext({ baseURL });
+  const other = await desktop.newPage();
+  const otherGame = await openGame(other, {
+    storage: { carsel: "5", unlocked: "17" },
+  });
+  await otherGame.advanceUntil(PHASE.mainMenu);
+  await otherGame.advance(2);
+  await other.mouse.click(640, 700);
+  expect(await fullscreen(other)).toBe(false);
+  await other.locator("#menuOptions").click();
+  await other.locator("#fullscreenShown").click();
+  await expect.poll(() => fullscreen(other)).toBe(true);
+  await desktop.close();
 });
