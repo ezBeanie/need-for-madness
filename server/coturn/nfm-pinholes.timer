@@ -1,0 +1,9 @@
+[Unit]
+Description=Renew coturn's pinholes before the router drops them after a day
+
+[Timer]
+OnStartupSec=1min
+OnUnitActiveSec=12h
+
+[Install]
+WantedBy=timers.target

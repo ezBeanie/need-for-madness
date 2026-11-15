@@ -1,0 +1,6 @@
+[Unit]
+Description=Open coturn's ports in the router's IPv6 firewall (UPnP)
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 -I %h/nfm-relay/server/coturn/pinholes.py

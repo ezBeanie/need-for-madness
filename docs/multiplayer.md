@@ -344,7 +344,14 @@ Secret):
    `umask 077; printf "TURN_SECRET=%s\n" "$(openssl rand -hex 32)" > /home/janu/nfm-turn.env`
    (das Secret gehört in keinen Chat und kein Repo).
 2. Im Router weiterleiten: 3478 UDP und TCP, dazu 49160–49200 UDP (Weiterleitung der Stimmen,
-   `min-port`/`max-port` in `server/coturn/turnserver.conf`).
+   `min-port`/`max-port` in `server/coturn/turnserver.conf`). Die Adresse ist IPv6-only, also
+   sind das Freigaben in der IPv6-Firewall des Routers. Erlaubt der Router selbstständige
+   Portfreigaben (FRITZ!Box: beim Gerät „Selbstständige Portfreigaben erlauben“), setzt
+   `server/coturn/pinholes.py` sie über UPnP selbst (`python3 -I pinholes.py status` prüft nur).
+   Die Box hält sie höchstens einen Tag, deshalb erneuert ein systemd-Timer des Benutzers sie
+   alle 12 Stunden und nach jedem Start (auf beanie seit 2026-11-15; Linger muss an sein,
+   `loginctl show-user janu -p Linger`):
+   `mkdir -p ~/.config/systemd/user && cp ~/nfm-relay/server/coturn/nfm-pinholes.* ~/.config/systemd/user/ && systemctl --user daemon-reload && systemctl --user enable --now nfm-pinholes.timer`.
 3. `server/` wie beim Relay auf den Server bringen (`rsync … server beanie-ts:/home/janu/nfm-relay/`)
    und coturn aus dem offiziellen Image starten:
    `docker run -d --name nfm-turn --restart unless-stopped --network host --env-file /home/janu/nfm-turn.env -v /home/janu/nfm-relay/server/coturn:/etc/coturn:ro --entrypoint /etc/coturn/start.sh coturn/coturn`
