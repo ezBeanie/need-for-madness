@@ -179,3 +179,74 @@ test("a solid car driven slowly on into another shoves it along instead of passi
     }
   }
 });
+
+// Cars 1 and 2 driving head-on into each other at this speed from this far apart, in a room's
+// race with these collisions: whether they passed through each other, side by side less
+// than a car's width as the one came out ahead of the other.
+const passedThroughHeadOn = async (collisions, speed, apart) => {
+  const { ctx } = await startRace({ stage: 1, car: 5 });
+  reset = () => {
+    ctx.game.humans = [];
+    ctx.raceSetup.rules = ctx.roomRules();
+  };
+  ctx.game.humans = [0, 1, 2];
+  ctx.raceSetup.rules = { ...ctx.roomRules(), collisions };
+  ctx.raceEvents.countdown = 0;
+  for (let i = 0; i < 20; i++) {
+    ctx.drive();
+  }
+  for (let c = 0; c < ctx.game.carCount; c++) {
+    if (c != 1 && c != 2) {
+      ctx.car[c].x += 3000;
+    }
+  }
+  const [one, other] = [ctx.car[1], ctx.car[2]];
+  one.xz = 0;
+  other.xz = 180;
+  other.x = one.x;
+  other.y = one.y;
+  other.z = one.z + apart;
+  for (const [c, heading] of [
+    [1, 1],
+    [2, -1],
+  ]) {
+    ctx.racers[c].speed = speed;
+    for (let k = 0; k < 4; k++) {
+      ctx.racers[c].wheelSpeedX[k] = 0;
+      ctx.racers[c].wheelSpeedZ[k] = speed * heading;
+    }
+  }
+  let ahead = other.z > one.z;
+  for (let i = 0; i < 40; i++) {
+    ctx.racers[1].u.up = ctx.racers[2].u.up = true;
+    ctx.drive();
+    if (other.z > one.z != ahead) {
+      if (Math.abs(other.x - one.x) < 15) {
+        return true;
+      }
+      ahead = !ahead;
+    }
+  }
+  return false;
+};
+
+test("solid cars crashing head-on however fast come apart instead of passing through each other", async () => {
+  const { COLLISIONS } = await import("../src/core/state.js");
+  // (how far apart they start sets where the ticks find them: some find them crossed)
+  const passed = async (collisions, speed) => {
+    let count = 0;
+    for (let apart = 300; apart < 360; apart += 6) {
+      if (await passedThroughHeadOn(collisions, speed, apart)) {
+        count++;
+      }
+    }
+    return count;
+  };
+  // (the original's pass through each other now and then, as in the original)
+  expect(await passed(COLLISIONS.original, 45)).toBeGreaterThan(2);
+  for (const speed of [30, 45, 60]) {
+    for (const solid of [COLLISIONS.solid, COLLISIONS.solidNoRamps]) {
+      expect(await passed(solid, speed)).toBe(0);
+    }
+  }
+}, 60000);

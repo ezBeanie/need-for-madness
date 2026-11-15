@@ -228,14 +228,19 @@ export function drive() {
     }
   }
   for (let c = 0; c < game.carCount; c++) {
+    before.x[c] = car[c].x;
+    before.z[c] = car[c].z;
+  }
+  for (let c = 0; c < game.carCount; c++) {
     driveCar(c);
   }
   // (solid cars come apart where the tick drove them, not where it found them: else every
-  // tick drove cars pushing against each other back in as deep)
+  // tick drove cars pushing against each other back in as deep; and cars so fast that a
+  // tick drove them through each other, never caught, come apart too)
   if (collisions() != COLLISIONS.original) {
     for (let c = 0; c < game.carCount; c++) {
       for (let xc = c + 1; xc < game.carCount; xc++) {
-        if (racers[c].caught[xc] && crashing(c, xc)) {
+        if (crashing(c, xc) && (racers[c].caught[xc] || drivenThrough(c, xc))) {
           pushApart(c, xc);
         }
       }
@@ -3037,6 +3042,10 @@ const collisions = () =>
 // other are pushed apart a tick at most
 const BODY_BEYOND_WHEELS = 5;
 const MOST_PUSHED_APART = 30;
+// where the cars were before the tick drove them, and how far a tick drives a car at most
+// (further, it was put back on the track)
+const before = { x: [], z: [] };
+const MOST_DRIVEN = 100;
 
 function colide(c, xc) {
   const solid = collisions() != COLLISIONS.original;
@@ -3164,14 +3173,20 @@ const atSameHeight = (c, xc) =>
 // Solid cars sunk into each other are pushed apart as far as they sank, the lighter one
 // further: a car driving on into another shoves it along instead of passing through, however
 // slow (a crash moves the car hit only as long as its wheels let it, a standing one hardly).
-// How far they sank: along the line between them, how far each one's wheels reach, and its
-// body beyond them.
+// How far they sank: along the line between them before the tick, how far each one's wheels
+// reach, and its body beyond them. Cars the tick drove past each other's middle come back to
+// the sides they came from, however far.
 function pushApart(c, xc) {
   if (!atSameHeight(c, xc)) {
     return;
   }
-  let dx = car[xc].x - car[c].x;
-  let dz = car[xc].z - car[c].z;
+  const driven = drove(c) && drove(xc);
+  let dx = before.x[xc] - before.x[c];
+  let dz = before.z[xc] - before.z[c];
+  if (!driven || (dx == 0 && dz == 0)) {
+    dx = car[xc].x - car[c].x;
+    dz = car[xc].z - car[c].z;
+  }
   const length = Math.sqrt(dx * dx + dz * dz);
   if (length == 0) {
     dx = 1;
@@ -3194,10 +3209,11 @@ function pushApart(c, xc) {
       -((xat.x[i] - car[xc].x) * dx + (xat.z[i] - car[xc].z) * dz),
     );
   }
-  const sunk = Math.min(
-    reach + xReach + 2 * BODY_BEYOND_WHEELS - length,
-    MOST_PUSHED_APART,
-  );
+  const along = (car[xc].x - car[c].x) * dx + (car[xc].z - car[c].z) * dz;
+  let sunk = reach + xReach + 2 * BODY_BEYOND_WHEELS - along;
+  if (along > 0 || !driven) {
+    sunk = Math.min(sunk, MOST_PUSHED_APART);
+  }
   if (sunk <= 0) {
     return;
   }
@@ -3208,6 +3224,40 @@ function pushApart(c, xc) {
   car[c].z -= dz * sunk * share;
   car[xc].x += dx * sunk * (1 - share);
   car[xc].z += dz * sunk * (1 - share);
+}
+
+// Whether car c came where it is by driving, not put back on the track.
+const drove = (c) => {
+  const x = car[c].x - before.x[c];
+  const z = car[c].z - before.z[c];
+  return x * x + z * z < MOST_DRIVEN * MOST_DRIVEN;
+};
+
+// Whether the tick drove cars c and xc past each other's middle, so near on their way that
+// they would have been caught.
+function drivenThrough(c, xc) {
+  if (!drove(c) || !drove(xc)) {
+    return false;
+  }
+  const x0 = before.x[xc] - before.x[c];
+  const z0 = before.z[xc] - before.z[c];
+  const x1 = car[xc].x - car[c].x;
+  const z1 = car[xc].z - car[c].z;
+  if (x0 * x1 + z0 * z1 >= 0) {
+    return false;
+  }
+  const mx = x1 - x0;
+  const mz = z1 - z0;
+  // (where on the way they came nearest)
+  const t = -(x0 * mx + z0 * mz) / (mx * mx + mz * mz);
+  const nx = x0 + t * mx;
+  const nz = z0 + t * mz;
+  return (
+    nx * nx + nz * nz <
+    (racers[c].body.colrad * racers[c].body.colrad +
+      racers[xc].body.colrad * racers[xc].body.colrad) *
+      1.5
+  );
 }
 
 // The corners of a car, where it touches others.
