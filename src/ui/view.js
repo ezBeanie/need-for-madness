@@ -21,11 +21,24 @@ export const view = {
 const UPRIGHT_PHONE = "(max-aspect-ratio: 4/5) and (pointer: coarse)";
 export const turned = { on: false };
 
+// A hundredth of the page across (--vw) and along (--vh), in pixels: Samsung Internet keeps
+// a modal dialog's viewport units of before the screen turned or a foldable opened.
+const units = { across: 0, along: 0 };
+
 export const turnIfUpright = () => {
   const on = window.matchMedia?.(UPRIGHT_PHONE).matches ?? false;
   if (on != turned.on) {
     turned.on = on;
     document.documentElement.classList.toggle("turned", on);
+  }
+  const across = on ? window.innerHeight : window.innerWidth;
+  const along = on ? window.innerWidth : window.innerHeight;
+  if (across != units.across || along != units.along) {
+    units.across = across;
+    units.along = along;
+    const { style } = document.documentElement;
+    style.setProperty("--vw", `${across / 100}px`);
+    style.setProperty("--vh", `${along / 100}px`);
   }
 };
 

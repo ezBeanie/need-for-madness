@@ -4,6 +4,13 @@
 
 export const CHANGELOG = [
   {
+    version: "1.1.2",
+    date: "2026-11-15",
+    changes: [
+      "Dialogs fill the screen again after turning a phone or opening a foldable in Samsung Internet.",
+    ],
+  },
+  {
     version: "1.1.1",
     date: "2026-11-15",
     changes: [
