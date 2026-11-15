@@ -366,6 +366,24 @@ Jeder, der das Spiel lädt, bekommt einen Login. Deshalb leitet coturn nur ins I
 nie in die eigenen Netze des Servers (Heimnetz, Docker, Tailscale), begrenzt Sitzungen und
 Bandbreite und schreibt kein Log mit Adressen.
 
+#### Die Adresse aktuell halten (dynv6)
+
+Der Name zeigt nur auf IPv6, und zwar auf die volle Adresse des Servers. Eine FRITZ!Box, die
+dynv6 selbst aktualisiert, schickt nur ihren Präfix (der Name zeigt dann auf die Box, Chrome:
+„Your internet access is blocked“), und das regelmäßig, nicht nur bei einem Wechsel. Deshalb
+ist DynDNS in der Box aus, und der Server meldet sich selbst: `server/dynv6/update.py` prüft
+alle 5 Minuten (`nfm-address.timer`), ob der Name auf seine Adresse zeigt, und meldet sie sonst
+an dynv6. Hat der Provider einen neuen Präfix vergeben, setzt es auch die Pinholes neu und
+startet coturn neu (coturn liest die Adressen und das zu sperrende Heimnetz nur beim Start).
+
+1. Den HTTP-Token der Zone (dynv6: Zone → Instructions) auf dem Server ablegen, ohne dass er
+   in Verlauf oder Anzeige landet:
+   `umask 077; read -rs -p "dynv6 token: " t; printf "DYNV6_TOKEN=%s\n" "$t" > ~/nfm-dynv6.env; unset t`
+2. `server/` auf den Server bringen und den Timer einrichten (Name in `nfm-address.service`):
+   `cp ~/nfm-relay/server/dynv6/nfm-address.* ~/.config/systemd/user/ && systemctl --user daemon-reload && systemctl --user enable --now nfm-address.timer`
+3. In der FRITZ!Box DynDNS abschalten (Internet → Freigaben → DynDNS), sonst überschreibt sie
+   die Adresse wieder.
+
 ### Schritt 10: Direkt im selben Netz
 
 - Spiele im selben WLAN oder am Hotspot eines Handys verbinden sich direkt (`net/direct.js`):

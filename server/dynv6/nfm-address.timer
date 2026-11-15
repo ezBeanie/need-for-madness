@@ -1,0 +1,9 @@
+[Unit]
+Description=Check the game's DNS name every five minutes
+
+[Timer]
+OnStartupSec=30s
+OnUnitActiveSec=5min
+
+[Install]
+WantedBy=timers.target

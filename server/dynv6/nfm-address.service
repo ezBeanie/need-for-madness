@@ -1,0 +1,8 @@
+[Unit]
+Description=Keep the game's DNS name at the server's full IPv6 address (dynv6)
+
+[Service]
+Type=oneshot
+Environment=DYNV6_HOST=beanie.dynv6.net
+EnvironmentFile=%h/nfm-dynv6.env
+ExecStart=/usr/bin/python3 -I %h/nfm-relay/server/dynv6/update.py
