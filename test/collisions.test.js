@@ -133,3 +133,49 @@ test("a race alone crashes as the options chose", async () => {
   expect(await apartAlone(COLLISIONS.original)).toBeLessThan(8);
   expect(await apartAlone(COLLISIONS.solidNoRamps)).toBeGreaterThan(12);
 });
+
+// Car 1 driving on into car 2 standing ahead of it, kept at the given speed as a player
+// feathering the throttle would, in a room's race with these collisions: how near behind
+// car 2 car 1 came at most (below nothing: ahead, through it).
+const drivenInto = async (collisions, speed) => {
+  const { ctx } = await startRace({ stage: 1, car: 5 });
+  reset = () => {
+    ctx.game.humans = [];
+    ctx.raceSetup.rules = ctx.roomRules();
+  };
+  ctx.game.humans = [0, 1, 2];
+  ctx.raceSetup.rules = { ...ctx.roomRules(), collisions };
+  ctx.raceEvents.countdown = 0;
+  for (let i = 0; i < 20; i++) {
+    ctx.drive();
+  }
+  // (the other cars of the grid out of the way, these two heading along z, car 2 ahead)
+  for (let c = 0; c < ctx.game.carCount; c++) {
+    if (c != 1 && c != 2) {
+      ctx.car[c].x += 3000;
+    }
+  }
+  const [behind, ahead] = [ctx.car[1], ctx.car[2]];
+  behind.xz = ahead.xz = 0;
+  ahead.x = behind.x;
+  ahead.z = behind.z + 120;
+  ahead.y = behind.y;
+  let nearest = Infinity;
+  for (let i = 0; i < 120; i++) {
+    ctx.racers[1].u.up = Math.abs(ctx.racers[1].speed) < speed;
+    ctx.drive();
+    nearest = Math.min(nearest, ahead.z - behind.z);
+  }
+  return nearest;
+};
+
+test("a solid car driven slowly on into another shoves it along instead of passing through", async () => {
+  const { COLLISIONS } = await import("../src/core/state.js");
+  for (const speed of [3, 6, 10]) {
+    // (the original's car sinks deep into the other, if not through it)
+    expect(await drivenInto(COLLISIONS.original, speed)).toBeLessThan(10);
+    for (const solid of [COLLISIONS.solid, COLLISIONS.solidNoRamps]) {
+      expect(await drivenInto(solid, speed)).toBeGreaterThan(20);
+    }
+  }
+});
