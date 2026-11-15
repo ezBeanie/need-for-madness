@@ -513,6 +513,60 @@ const cuttableRelay = async (context) => {
   return relay;
 };
 
+// Host and guest in a room of the given name, through a relay that makes the version of the
+// messages of the given type an old one; as long as a guest takes to join and hear back.
+const roomOfVersions = async (context, room, oldType) => {
+  // (only through the relay: linked directly, the messages would pass it by)
+  await context.addInitScript(() => (window.RTCPeerConnection = undefined));
+  await context.routeWebSocket(/\/net\?room=/, (page) => {
+    const server = page.connectToServer();
+    page.onMessage((message) =>
+      server.send(
+        message.includes(`"type":"${oldType}"`)
+          ? message.replace(/"version":"[^"]*"/, '"version":"0.9.0"')
+          : message,
+      ),
+    );
+    server.onMessage((message) => page.send(message));
+  });
+  const games = await openTwoGames(context, `/?host=${room}`, `/?join=${room}`);
+  const { host, guest, hostPage, guestPage } = games;
+  for (let i = 0; i < 10; i++) {
+    await advanceBoth(
+      { game: host, page: hostPage },
+      { game: guest, page: guestPage },
+      5,
+    );
+    await guestPage.waitForTimeout(DELIVERY_MS);
+  }
+  return games;
+};
+
+test("a host takes no guest of another version into its room", async ({
+  context,
+}) => {
+  const { hostPage, guestPage } = await roomOfVersions(
+    context,
+    "vguest",
+    "join",
+  );
+  expect(await hostPage.evaluate(() => window.gameState.roomGuests())).toEqual(
+    [],
+  );
+  // (the guest hears the host's own version, and waits on in vain)
+  expect(await guestPage.evaluate(() => window.gameState.link.role)).toBe(2);
+});
+
+test("a guest of another version than the host's leaves its room, telling why", async ({
+  context,
+}) => {
+  const { guestPage } = await roomOfVersions(context, "vhost", "players");
+  expect(await guestPage.evaluate(() => window.gameState.link.role)).toBe(0);
+  await expect(guestPage.locator("#multiplayerNotice")).toHaveText(
+    /^The host plays version 0\.9\.0, this game \d+\.\d+\.\d+: the older one/,
+  );
+});
+
 const linkedWithHost = (page) =>
   page.evaluate(() => {
     const { guest, linkedDirectly } = window.gameState;

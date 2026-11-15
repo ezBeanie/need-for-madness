@@ -21,6 +21,7 @@ import {
   raceSetup,
 } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
+import { VERSION } from "../data/changelog.js";
 import { STAGE_COUNT } from "../data/stages.js";
 import { AFTER_LOAD, STAGE_LOAD, stageLoad } from "../loading/stageLoad.js";
 import { circleTheField } from "../race/countdown.js";
@@ -34,6 +35,7 @@ import {
   ROLE,
   closeLink,
   decode,
+  leaveRoom,
   isIndex,
   isPlayerStatus,
   link,
@@ -103,6 +105,9 @@ export const guest = {
   hostLeft: false,
   // whether the room ended so, until the multiplayer dialog says so
   roomEnded: false,
+  // the version of a host that plays another one ("" if older than versions, null if alike),
+  // until the multiplayer dialog says so
+  otherVersion: null,
   // whether the host races now (a guest may watch), whether this guest asked to, and the
   // ticks since
   racing: false,
@@ -192,6 +197,11 @@ const receive = (message) => {
   overhear(message);
   receiveChat(message);
   receiveVoice(message);
+  if (message.type == MESSAGE.players && message.version !== VERSION) {
+    guest.otherVersion =
+      typeof message.version == "string" ? message.version.slice(0, 20) : "";
+    return;
+  }
   if (
     message.type == MESSAGE.players &&
     isPlayers(message.players) &&
@@ -259,6 +269,7 @@ const sendJoin = () =>
     skin: own.skin,
     team: own.team,
     ready: guest.ready,
+    version: VERSION,
   });
 
 // The lobby's car or readiness changed: the host hears of it at once.
@@ -297,6 +308,7 @@ export const joinRoom = (room) => {
     hostAnsweredTicks: HOST_GONE_TICKS,
     hostLeft: false,
     roomEnded: false,
+    otherVersion: null,
     racing: false,
     watchAsked: false,
   });
@@ -357,6 +369,10 @@ export const guestWaitingTick = () => {
     guest.ownBack = true;
   }
   guest.hostAnsweredTicks++;
+  if (guest.otherVersion != null) {
+    leaveRoom();
+    return;
+  }
   if (guest.hostLeft || (guest.hostId != null && !hostThere())) {
     closeLink();
     guest.roomEnded = true;

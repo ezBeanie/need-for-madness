@@ -360,6 +360,10 @@ export const GERMAN = {
   "The host left the room.": "Der Host hat den Raum verlassen.",
   "The room is full: eight race in it already.":
     "Der Raum ist voll: Es fahren schon acht darin.",
+  "The host plays version {theirs}, this game {ours}: the older one has to reload the game.":
+    "Der Host spielt Version {theirs}, dieses Spiel {ours}: Wer die ältere hat, muss das Spiel neu laden.",
+  "The host plays an older version than this game's {ours}: the host has to reload the game.":
+    "Der Host spielt eine ältere Version als dieses Spiel ({ours}): Der Host muss das Spiel neu laden.",
   "Connecting...": "Verbinde...",
   "Waiting for others to join. You can also start a race with bots now.":
     "Warte auf weitere Spieler. Du kannst auch gleich ein Rennen mit Bots starten.",

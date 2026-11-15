@@ -23,6 +23,7 @@ import {
 import { carStats } from "../data/carStats.js";
 import { saveSetting } from "../core/storage.js";
 import { language, onLanguage, t } from "../core/language.js";
+import { VERSION } from "../data/changelog.js";
 import { sharedStageGroups, stageLabel } from "../data/stages.js";
 import { chat, sendChat } from "../net/chat.js";
 import {
@@ -96,6 +97,20 @@ const CODE_LENGTH = 5;
 
 export const ROOM_ENDED = "The host left the room.";
 export const ROOM_FULL = "The room is full: eight race in it already.";
+export const OTHER_VERSION =
+  "The host plays version {theirs}, this game {ours}: the older one has to reload the game.";
+export const OLDER_HOST =
+  "The host plays an older version than this game's {ours}: the host has to reload the game.";
+
+// what the dialog tells of a room left without a race
+const roomNotice = () => {
+  if (guest.otherVersion != null) {
+    return guest.otherVersion
+      ? t(OTHER_VERSION, { theirs: guest.otherVersion, ours: VERSION })
+      : t(OLDER_HOST, { ours: VERSION });
+  }
+  return t(guest.roomEnded ? ROOM_ENDED : ROOM_FULL);
+};
 
 const newRoomCode = () =>
   Array.from(
@@ -1031,8 +1046,9 @@ export const placeMultiplayerButton = () => {
   showRoom();
   previews.root = dialog.open && link.role != ROLE.none ? dialog : null;
   turnCarPreviews();
-  if (guest.roomEnded || link.full) {
-    showNotice(t(guest.roomEnded ? ROOM_ENDED : ROOM_FULL));
+  if (guest.otherVersion != null || guest.roomEnded || link.full) {
+    showNotice(roomNotice());
+    guest.otherVersion = null;
     guest.roomEnded = false;
     link.full = false;
     if (!dialog.open) {

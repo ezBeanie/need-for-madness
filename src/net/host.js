@@ -3,6 +3,7 @@
 // game computes it, each sending only its keys (see lockstep.js).
 
 import { carStats } from "../data/carStats.js";
+import { VERSION } from "../data/changelog.js";
 import { random, seededRandom } from "../core/random.js";
 import {
   MAX_CARS,
@@ -155,6 +156,9 @@ export const sendPlayers = () => {
     rules: host.rules,
     // (a guest may watch the race going on, see watch.js)
     racing: host.racing,
+    // (a game of another version computes the race apart from the first frame: a guest of
+    // one leaves, see guest.js)
+    version: VERSION,
   });
 };
 
@@ -240,6 +244,11 @@ const receive = (message) => {
   receiveRaceMessage(message);
   receiveChat(message);
   receiveVoice(message);
+  if (message.type == MESSAGE.join && message.version !== VERSION) {
+    // (the answer tells it the host's version)
+    sendPlayers();
+    return;
+  }
   let guest = host.guests.find(({ id }) => id == message.from);
   if (
     message.type == MESSAGE.join &&
