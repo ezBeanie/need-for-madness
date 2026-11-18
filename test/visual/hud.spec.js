@@ -6,7 +6,7 @@ import { PHASE } from "../../src/core/state.js";
 const racing = async (page, frames = 200, storage = {}) => {
   const game = await openGame(page, {
     // (crashing as the original's: the pictures were taken so)
-    storage: { carsel: "5", unlocked: "17", collisions: "0", ...storage },
+    storage: { carsel: "5", unlocked: "17", ...storage },
   });
   await game.advanceUntil(PHASE.mainMenu);
   await game.settle();

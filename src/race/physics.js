@@ -13,8 +13,6 @@ import {
 } from "../core/math.js";
 import { random } from "../core/random.js";
 import {
-  COLLISIONS,
-  COLLISION_NAMES,
   MAX_CARS,
   MODE,
   PHASE,
@@ -36,8 +34,7 @@ import {
   startDeathmatch,
 } from "./deathmatch.js";
 import * as allEffects from "./effects.js";
-import { carsCrash, inRoomRace } from "../net/roomCars.js";
-import { loadSetting, saveSetting } from "../core/storage.js";
+import { carsCrash } from "../net/roomCars.js";
 import { raceEvents } from "./events.js";
 import { MISSED, SKID, STUNT, car, racers, useUpStuntTurns } from "./racers.js";
 import {
@@ -95,12 +92,9 @@ export function inishmad() {
     racers[c].cameraHeading = 0;
     racers[c].dominate = [];
     racers[c].caught = [];
-    // (by car: whether this one pushed it since they came near, see crashCorners)
-    racers[c].pushed = [];
     for (let i = 0; i < MAX_CARS; i++) {
       racers[c].dominate[i] = false;
       racers[c].caught[i] = false;
-      racers[c].pushed[i] = false;
     }
     racers[c].pitch = 0;
     racers[c].roll = 0;
@@ -221,26 +215,7 @@ export function drive() {
     }
   }
   for (let c = 0; c < game.carCount; c++) {
-    before.x[c] = car[c].x;
-    before.z[c] = car[c].z;
-  }
-  for (let c = 0; c < game.carCount; c++) {
     driveCar(c);
-  }
-  // (solid cars come apart where the tick drove them, not where it found them: else every
-  // tick drove cars pushing against each other back in as deep; and cars so fast that a
-  // tick drove them through each other, never caught, come apart too)
-  if (collisions() != COLLISIONS.original) {
-    for (let c = 0; c < game.carCount; c++) {
-      for (let xc = c + 1; xc < game.carCount; xc++) {
-        if (
-          carsCrash(c, xc) &&
-          (racers[c].caught[xc] || drivenThrough(c, xc))
-        ) {
-          pushApart(c, xc);
-        }
-      }
-    }
   }
   if (isDeathmatch()) {
     deathmatchTick(respawn);
@@ -3013,40 +2988,7 @@ function rotateAfterStunt(c, type, pitchedOver) {
   }
 }
 
-// How cars crash in the player's own races, as chosen in the options (COLLISIONS; solid
-// without ramps unless chosen otherwise); a room's host's choice goes to the lobby.
-export const collisionChoice = {
-  value: COLLISIONS.solidNoRamps,
-};
-const chosen = loadSetting("collisions");
-if (chosen >= 0 && chosen < COLLISION_NAMES.length) {
-  collisionChoice.value = chosen;
-}
-export const chooseCollisions = (value) => {
-  if (Number.isInteger(value) && value >= 0 && value < COLLISION_NAMES.length) {
-    collisionChoice.value = value;
-    saveSetting("collisions", value);
-  }
-};
-
-// (a room's race, with guests or with bots alone, by the host's rules)
-const collisions = () =>
-  game.humans.length > 0 || inRoomRace()
-    ? raceSetup.rules.collisions
-    : collisionChoice.value;
-// how far a solid car's body reaches beyond its wheels, and how far cars sunk into each
-// other are pushed apart a tick at most
-const BODY_BEYOND_WHEELS = 5;
-const MOST_PUSHED_APART = 30;
-// how near solid cars' bodies come to crash: pushed apart, they only just touch
-const TOUCHING = 2;
-// where the cars were before the tick drove them, and how far a tick drives a car at most
-// (further, it was put back on the track)
-const before = { x: [], z: [] };
-const MOST_DRIVEN = 100;
-
 function colide(c, xc) {
-  const solid = collisions() != COLLISIONS.original;
   if (
     distanceSquared(
       car[c].x,
@@ -3060,11 +3002,9 @@ function colide(c, xc) {
       racers[xc].body.colrad * racers[xc].body.colrad) *
       1.5
   ) {
-    // (solid: whichever has more momentum now pushes, both standing still too; the
-    // original chose once, as the cars came near, and none if both stood)
     if (
-      solid ||
-      (!racers[c].caught[xc] && (racers[c].speed != 0 || racers[xc].speed != 0))
+      !racers[c].caught[xc] &&
+      (racers[c].speed != 0 || racers[xc].speed != 0)
     ) {
       // the car with more momentum pushes the other, the heavier one on a tie
       const momentum = Math.abs(
@@ -3075,11 +3015,6 @@ function colide(c, xc) {
       );
       if (momentum != xMomentum) {
         racers[c].dominate[xc] = momentum > xMomentum;
-      } else if (
-        solid &&
-        carStats.moment[car[c].typ] == carStats.moment[car[xc].typ]
-      ) {
-        racers[c].dominate[xc] = c < xc;
       } else {
         racers[c].dominate[xc] =
           carStats.moment[car[c].typ] > carStats.moment[car[xc].typ];
@@ -3090,7 +3025,6 @@ function colide(c, xc) {
     if (racers[c].caught[xc]) {
       racers[c].caught[xc] = false;
       racers[c].dominate[xc] = false;
-      racers[c].pushed[xc] = false;
     }
   }
   if (racers[c].dominate[xc]) {
@@ -3131,7 +3065,6 @@ function colide(c, xc) {
             racers[xc].wheelSpeedX[3])) /
       16;
     let arad = 70;
-    const touching = solid && closingIn(c, xc);
     for (let i = 0; i < 4; i++) {
       let gotcol = false;
       for (let j = 0; j < 4; j++) {
@@ -3151,116 +3084,18 @@ function colide(c, xc) {
           gotcol = true;
         }
       }
-      // a corner that already sank into the other car, wherever its corners are (solid: in
-      // the air too, at about the same height; and one only touching its body as the cars
-      // come nearer, solid cars never sinking in: a bump, lifting neither, else a car
-      // pushing on climbed the other)
-      const sunk =
-        overTriangleXZ(at, i, xat, 0, 1, 2) ||
-        overTriangleXZ(at, i, xat, 3, 1, 2);
+      // a corner that already sank into the other car, wherever its corners are
       if (
         !gotcol &&
-        ((racers[c].grounded && racers[xc].grounded) ||
-          (solid && atSameHeight(c, xc))) &&
-        (sunk || (touching && touchesBody(at, i, xat)))
+        racers[c].grounded &&
+        racers[xc].grounded &&
+        (overTriangleXZ(at, i, xat, 0, 1, 2) ||
+          overTriangleXZ(at, i, xat, 3, 1, 2))
       ) {
-        crashCorners(c, xc, i, nearestCorner(at, i, xat), at, xat, sunk);
+        crashCorners(c, xc, i, nearestCorner(at, i, xat), at, xat);
       }
     }
   }
-}
-
-const atSameHeight = (c, xc) =>
-  Math.abs(car[c].y - car[xc].y) < racers[xc].body.colrad;
-
-// Solid cars sunk into each other are pushed apart as far as they sank, the lighter one
-// further: a car driving on into another shoves it along instead of passing through, however
-// slow (a crash moves the car hit only as long as its wheels let it, a standing one hardly).
-// How far they sank: along the line between them before the tick, how far each one's wheels
-// reach, and its body beyond them. Cars the tick drove past each other's middle come back to
-// the sides they came from, however far.
-function pushApart(c, xc) {
-  if (!atSameHeight(c, xc)) {
-    return;
-  }
-  const driven = drove(c) && drove(xc);
-  let dx = before.x[xc] - before.x[c];
-  let dz = before.z[xc] - before.z[c];
-  if (!driven || (dx == 0 && dz == 0)) {
-    dx = car[xc].x - car[c].x;
-    dz = car[xc].z - car[c].z;
-  }
-  const length = Math.sqrt(dx * dx + dz * dz);
-  if (length == 0) {
-    dx = 1;
-    dz = 0;
-  } else {
-    dx /= length;
-    dz /= length;
-  }
-  const at = cornersOf(c);
-  const xat = cornersOf(xc);
-  let reach = 0;
-  let xReach = 0;
-  for (let i = 0; i < 4; i++) {
-    reach = Math.max(
-      reach,
-      (at.x[i] - car[c].x) * dx + (at.z[i] - car[c].z) * dz,
-    );
-    xReach = Math.max(
-      xReach,
-      -((xat.x[i] - car[xc].x) * dx + (xat.z[i] - car[xc].z) * dz),
-    );
-  }
-  const along = (car[xc].x - car[c].x) * dx + (car[xc].z - car[c].z) * dz;
-  let sunk = reach + xReach + 2 * BODY_BEYOND_WHEELS - along;
-  if (along > 0 || !driven) {
-    sunk = Math.min(sunk, MOST_PUSHED_APART);
-  }
-  if (sunk <= 0) {
-    return;
-  }
-  const moment = carStats.moment[car[c].typ];
-  const xMoment = carStats.moment[car[xc].typ];
-  const share = xMoment / (moment + xMoment);
-  car[c].x -= dx * sunk * share;
-  car[c].z -= dz * sunk * share;
-  car[xc].x += dx * sunk * (1 - share);
-  car[xc].z += dz * sunk * (1 - share);
-}
-
-// Whether car c came where it is by driving, not put back on the track.
-const drove = (c) => {
-  const x = car[c].x - before.x[c];
-  const z = car[c].z - before.z[c];
-  return x * x + z * z < MOST_DRIVEN * MOST_DRIVEN;
-};
-
-// Whether the tick drove cars c and xc past each other's middle, so near on their way that
-// they would have been caught.
-function drivenThrough(c, xc) {
-  if (!drove(c) || !drove(xc)) {
-    return false;
-  }
-  const x0 = before.x[xc] - before.x[c];
-  const z0 = before.z[xc] - before.z[c];
-  const x1 = car[xc].x - car[c].x;
-  const z1 = car[xc].z - car[c].z;
-  if (x0 * x1 + z0 * z1 >= 0) {
-    return false;
-  }
-  const mx = x1 - x0;
-  const mz = z1 - z0;
-  // (where on the way they came nearest)
-  const t = -(x0 * mx + z0 * mz) / (mx * mx + mz * mz);
-  const nx = x0 + t * mx;
-  const nz = z0 + t * mz;
-  return (
-    nx * nx + nz * nz <
-    (racers[c].body.colrad * racers[c].body.colrad +
-      racers[xc].body.colrad * racers[xc].body.colrad) *
-      1.5
-  );
 }
 
 // The corners of a car, where it touches others.
@@ -3303,38 +3138,6 @@ function overTriangleXZ(at, i, xat, a, b, d) {
   return ar1 + ar2 + ar3 < aro + 10;
 }
 
-// Whether cars c and xc, their wheels' speeds, come nearer each other.
-function closingIn(c, xc) {
-  let x = 0;
-  let z = 0;
-  for (let k = 0; k < 4; k++) {
-    x += racers[xc].wheelSpeedX[k] - racers[c].wheelSpeedX[k];
-    z += racers[xc].wheelSpeedZ[k] - racers[c].wheelSpeedZ[k];
-  }
-  return x * (car[xc].x - car[c].x) + z * (car[xc].z - car[c].z) < 0;
-}
-
-// Whether corner i of one car touches the other's body, seen from above: lies in the
-// rectangle of its wheels widened by both bodies beyond their wheels, and a little.
-function touchesBody(at, i, xat) {
-  const x = at.x[i] - (xat.x[0] + xat.x[1] + xat.x[2] + xat.x[3]) / 4;
-  const z = at.z[i] - (xat.z[0] + xat.z[1] + xat.z[2] + xat.z[3]) / 4;
-  const reach = 2 * BODY_BEYOND_WHEELS + TOUCHING;
-  // (across the car from corner 0 to 1, along it from 2 to 0)
-  for (const [a, b] of [
-    [0, 1],
-    [2, 0],
-  ]) {
-    const dx = xat.x[b] - xat.x[a];
-    const dz = xat.z[b] - xat.z[a];
-    const length = Math.sqrt(dx * dx + dz * dz);
-    if (Math.abs(x * dx + z * dz) / length > length / 2 + reach) {
-      return false;
-    }
-  }
-  return true;
-}
-
 function nearestCorner(at, i, xat) {
   let j = 0;
   let closj = distanceSquared(
@@ -3362,11 +3165,9 @@ function nearestCorner(at, i, xat) {
   return j;
 }
 
-// Corner i of car c, the one dominating, crashes into corner j of car xc, which it lifts
-// (solid without ramps: only once it pushed it since they came near, so a crash lifts as
-// ever, but cars touching without one no longer lift each other as up a ramp).
-function crashCorners(c, xc, i, j, at, xat, lifts = true) {
-  const pushedX = pushCornerAlong(
+// Corner i of car c, the one dominating, crashes into corner j of car xc.
+function crashCorners(c, xc, i, j, at, xat) {
+  pushCornerAlong(
     c,
     xc,
     i,
@@ -3376,9 +3177,8 @@ function crashCorners(c, xc, i, j, at, xat, lifts = true) {
     racers[c].wheelSpeedX,
     racers[xc].wheelSpeedX,
     HIT.alongX,
-    lifts,
   );
-  const pushedZ = pushCornerAlong(
+  pushCornerAlong(
     c,
     xc,
     i,
@@ -3388,7 +3188,6 @@ function crashCorners(c, xc, i, j, at, xat, lifts = true) {
     racers[c].wheelSpeedZ,
     racers[xc].wheelSpeedZ,
     HIT.alongZ,
-    lifts,
   );
   // (and which human it was, so each one is told whom they wasted; in a room's race any
   // car, so everyone sees who wasted whom, and in most kills any car scores)
@@ -3401,21 +3200,12 @@ function crashCorners(c, xc, i, j, at, xat, lifts = true) {
     racers[c].lastcolido = 70;
     racers[c].lastHitBy = xc;
   }
-  if (pushedX || pushedZ) {
-    racers[c].pushed[xc] = true;
-  }
-  if (
-    lifts &&
-    (collisions() != COLLISIONS.solidNoRamps || racers[c].pushed[xc])
-  ) {
-    racers[xc].wheelSpeedY[j] += carStats.lift[car[c].typ];
-  }
+  racers[xc].wheelSpeedY[j] += carStats.lift[car[c].typ];
 }
 
 // Along one axis (with the corner speeds sc and xsc), the corner moving harder pushes the
-// other away and is slowed and lifted itself (unless it lifts nothing); both cars dent.
-// Returns whether it pushed.
-function pushCornerAlong(c, xc, i, j, at, xat, sc, xsc, hitSide, lifts) {
+// other away and is slowed and lifted itself; both cars dent.
+function pushCornerAlong(c, xc, i, j, at, xat, sc, xsc, hitSide) {
   if (
     Math.abs(sc[i] * carStats.moment[car[c].typ]) >
     Math.abs(xsc[j] * carStats.moment[car[xc].typ])
@@ -3438,10 +3228,8 @@ function pushCornerAlong(c, xc, i, j, at, xat, sc, xsc, hitSide, lifts) {
     dentHitCar(c, xc, hitSide, j, vctm * carStats.moment[car[c].typ]);
     sc[i] -= tm;
     dentInCrash(xc, hitSide, i, -tm * carStats.moment[car[c].typ], c);
-    if (lifts) {
-      racers[c].wheelSpeedY[i] += carStats.revlift[car[c].typ];
-      dentHitCar(c, xc, HIT.fromBelow, j, carStats.revlift[car[c].typ] * 7);
-    }
+    racers[c].wheelSpeedY[i] += carStats.revlift[car[c].typ];
+    dentHitCar(c, xc, HIT.fromBelow, j, carStats.revlift[car[c].typ] * 7);
     if (random.fx() > random.fx()) {
       sprks(
         car[c].typ,
@@ -3454,9 +3242,7 @@ function pushCornerAlong(c, xc, i, j, at, xat, sc, xsc, hitSide, lifts) {
         2,
       );
     }
-    return true;
   }
-  return false;
 }
 
 // Dents car c at its corner k, in a crash with car by: most kills counts the damage each

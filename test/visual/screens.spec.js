@@ -10,7 +10,7 @@ test("screens from the main menu into a race", async ({ page }) => {
   // a returning player (no intro skip) who has unlocked the first stages
   const game = await openGame(page, {
     // (crashing as the original's: the pictures were taken so)
-    storage: { carsel: "5", unlocked: "3", career: "1", collisions: "0" },
+    storage: { carsel: "5", unlocked: "3", career: "1" },
   });
   await game.advanceUntil(PHASE.mainMenu);
   await game.settle();

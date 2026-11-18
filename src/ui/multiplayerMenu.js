@@ -12,7 +12,6 @@ import {
   RACE_KIND,
   RACE_MODE,
   RACE_MODE_NAMES,
-  COLLISION_NAMES,
   RESPAWN_SECONDS,
   STRENGTH_NAMES,
   TEAM_COUNTS,
@@ -335,7 +334,6 @@ const showRace = () => {
     setSelect("lobbyStage", stage);
     setSelect("lobbyMode", mode);
     setSelect("lobbyStrength", rules.strength);
-    setSelect("lobbyCollisions", rules.collisions);
     setSelect("lobbyMinutes", rules.minutes);
     setSelect("lobbyRespawn", rules.respawnSeconds);
     setSelect("lobbyTeams", rules.teams);
@@ -349,7 +347,6 @@ const showRace = () => {
     [t("Stage"), stage ? stageLabel(stage) : t("not chosen yet")],
     [t("Mode"), t(RACE_MODE_NAMES[mode])],
     [t("Bot strength"), t(STRENGTH_NAMES[rules.strength])],
-    [t("Collisions"), t(COLLISION_NAMES[rules.collisions])],
   ];
   if (mostKills) {
     shown.push(
@@ -821,11 +818,6 @@ const fillChoices = () => {
       (name, strength) => new Option(t(name), String(strength)),
     ),
   );
-  element("lobbyCollisions").replaceChildren(
-    ...COLLISION_NAMES.map(
-      (name, collisions) => new Option(t(name), String(collisions)),
-    ),
-  );
   element("lobbyMinutes").replaceChildren(
     ...MATCH_MINUTES.map(
       (minutes) => new Option(minutesText(minutes), String(minutes)),
@@ -963,9 +955,6 @@ export const installMultiplayerMenu = () => {
   });
   element("lobbyStrength").addEventListener("change", (event) =>
     chooseRoomRule({ strength: Number(event.target.value) }),
-  );
-  element("lobbyCollisions").addEventListener("change", (event) =>
-    chooseRoomRule({ collisions: Number(event.target.value) }),
   );
   element("lobbyMinutes").addEventListener("change", (event) =>
     chooseRoomRule({ minutes: Number(event.target.value) }),

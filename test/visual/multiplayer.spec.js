@@ -994,10 +994,6 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
   await hostPage.getByLabel("Stage", { exact: true }).selectOption("3");
   await hostPage.getByLabel("Mode", { exact: true }).selectOption("Most kills");
   await hostPage.getByLabel("Bot strength").selectOption("Hard");
-  await hostPage
-    .getByRole("region", { name: "The race" })
-    .getByLabel("Collisions")
-    .selectOption("Solid");
   await hostPage.getByLabel("Time", { exact: true }).selectOption("5 min");
   await guestPage.getByLabel("Your car").selectOption("12");
   // (a chat line is text, whatever it says)
@@ -1008,7 +1004,6 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
     "Stage",
     "Mode",
     "Bot strength",
-    "Collisions",
     "Time",
     "Back after",
     "Teams",
@@ -1017,7 +1012,6 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
     "Stage 3",
     "Most kills",
     "Hard",
-    "Solid",
     "5 min",
     "3 s",
     "None",
@@ -1033,7 +1027,6 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
     "Stage 3",
     "Only racing",
     "Hard",
-    "Solid",
     "None",
   ]);
   await expect(guestPage.locator("#lobbyChat li")).toHaveText([
@@ -1068,7 +1061,6 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
       stage: window.gameState.track.stage,
       mode: window.gameState.raceSetup.mode,
       strength: window.gameState.raceSetup.rules.strength,
-      collisions: window.gameState.raceSetup.rules.collisions,
       field: window.gameState.game.carTypes.slice(0, 2),
     }));
   // (the tabs share their storage, and with it the host's car: the games are compared)
@@ -1076,7 +1068,6 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
     stage: 3,
     mode: 1,
     strength: 2,
-    collisions: 1,
   });
   expect((await raced(guestPage)).field[1]).toBe(12);
   expect(await raced(hostPage)).toEqual(await raced(guestPage));
