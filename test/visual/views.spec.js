@@ -45,6 +45,37 @@ test("the options' sliders set the music's and the effects' volume, and keep it"
   await expect(again.getByLabel("Effects volume")).toHaveValue("25");
 });
 
+test("the other cars' sounds are half the effects' volume until a slider sets them, the voices all of it", async ({
+  page,
+}) => {
+  await toMainMenu(page);
+  await page.locator("#menuOptions").click();
+  const others = page.getByLabel("Other cars' volume");
+  const voices = page.getByLabel("Voices volume");
+  await expect(others).toHaveValue("50");
+  await expect(voices).toHaveValue("100");
+  await others.fill("30");
+  await voices.fill("70");
+  await expect(page.locator("#otherCarsVolumeShown")).toHaveText("30%");
+  await expect(page.locator("#voiceVolumeShown")).toHaveText("70%");
+  expect(
+    await page.evaluate(() => {
+      const { audio } = window.gameState;
+      return {
+        others: audio.otherCarsVolume,
+        voices: audio.voiceVolume,
+        otherCarsVolume: localStorage.getItem("otherCarsVolume"),
+        voiceVolume: localStorage.getItem("voiceVolume"),
+      };
+    }),
+  ).toEqual({
+    others: 0.3,
+    voices: 0.7,
+    otherCarsVolume: "30",
+    voiceVolume: "70",
+  });
+});
+
 test("the car select's Back leads to the main menu, which alone has Multiplayer", async ({
   page,
 }) => {

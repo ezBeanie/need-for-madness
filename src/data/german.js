@@ -53,6 +53,9 @@ export const GERMAN = {
   "Other cars' sounds": "Geräusche der anderen",
   "Music volume": "Musiklautstärke",
   "Effects volume": "Effektlautstärke",
+  "Other cars' volume": "Lautstärke der anderen Autos",
+  "Of the effects volume.": "Anteil an der Effektlautstärke.",
+  "Voices volume": "Lautstärke der Stimmen",
   "Your name": "Dein Name",
   "The others in a room see it on your car.":
     "Die anderen im Raum sehen ihn an deinem Auto.",

@@ -8,20 +8,24 @@ import { isIos } from "../core/platform.js";
 import { LOOK, look } from "../render/look.js";
 import { fetchText } from "../render/models.js";
 
-// A volume kept in percent, 100 if none is.
-const storedVolume = (name) => {
-  const percent = loadSetting(name);
-  return percent < 0 ? 1 : Math.min(percent, 100) / 100;
+// A volume kept in percent, the given one if none is.
+const storedVolume = (name, percent = 100) => {
+  const stored = loadSetting(name);
+  return Math.min(stored < 0 ? percent : stored, 100) / 100;
 };
 
 // otherCars: the other cars' crashes, scrapes and skids are heard too (see carSounds.js);
-// musicVolume and soundVolume: 0..1, as the options' sliders set them
+// musicVolume, soundVolume, otherCarsVolume (the other cars' sounds and engines, of the
+// effects' volume: half by default, as loud as the player's own they drowned it) and
+// voiceVolume (the other players' voices): 0..1, as the options' sliders set them
 export const audio = {
   muteMusic: false,
   muteSound: false,
   otherCars: loadSetting("otherCarSounds") != 0,
   musicVolume: storedVolume("musicVolume"),
   soundVolume: storedVolume("soundVolume"),
+  otherCarsVolume: storedVolume("otherCarsVolume", 50),
+  voiceVolume: storedVolume("voiceVolume"),
 };
 
 export const toggleOtherCarSounds = () => {
@@ -271,6 +275,16 @@ export const setSoundVolume = (volume) => {
     contexts.soundsOut.gain.value = volume;
     contexts.enginesOut.gain.value = volume;
   }
+};
+
+export const setOtherCarsVolume = (volume) => {
+  audio.otherCarsVolume = volume;
+  saveSetting("otherCarsVolume", Math.round(volume * 100));
+};
+
+export const setVoiceVolume = (volume) => {
+  audio.voiceVolume = volume;
+  saveSetting("voiceVolume", Math.round(volume * 100));
 };
 
 export const resumeMusic = () => {
