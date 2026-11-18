@@ -4,6 +4,18 @@
 
 export const CHANGELOG = [
   {
+    version: "1.2.0",
+    date: "2026-11-18",
+    changes: [
+      "Sliders for the other cars' sounds, at half by default, and for the other players' voices.",
+      "The lobby sets your name and the voice chat.",
+      "Solid cars touching as they come nearer crash, instead of only pushing each other.",
+      "A crash racing together that turned up late is heard late, instead of not at all.",
+      "Only racing: the cars pass through each other, seen through as they come near.",
+      "Cars seen through only once the race started, and only those your car passes through.",
+    ],
+  },
+  {
     version: "1.1.4",
     date: "2026-11-15",
     changes: [
