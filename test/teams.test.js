@@ -65,26 +65,23 @@ test("in teams the last survivor is the last team with a car not wasted", async 
   expect(ctx.track.haltall).toBe(false);
 });
 
-// how far apart cars 1 and 3, team mates sunk into each other, are after a while
+// whether cars 1 and 3, team mates sunk into each other, car 1 driving, caught each other
+// in a crash
 const mates = async (teamCrashes) => {
-  const { COLLISIONS } = await import("../src/core/state.js");
-  const { ctx } = await inTeams("normal", {
-    teamCrashes,
-    collisions: COLLISIONS.solid,
-  });
+  const { ctx } = await inTeams("normal", { teamCrashes });
   ctx.game.humans = [0, 1, 3];
   ctx.car[3].x = ctx.car[1].x + 6;
   ctx.car[3].z = ctx.car[1].z;
   ctx.car[3].y = ctx.car[1].y;
-  for (let i = 0; i < 30; i++) {
-    ctx.drive();
-  }
-  return Math.abs(ctx.car[3].x - ctx.car[1].x);
+  // (the original's cars catch each other only moving)
+  ctx.racers[1].speed = 10;
+  ctx.drive();
+  return ctx.racers[1].caught[3] || ctx.racers[3].caught[1];
 };
 
 test("team mates pass through each other unless the host lets them crash", async () => {
-  expect(await mates(false)).toBeLessThan(8);
-  expect(await mates(true)).toBeGreaterThan(12);
+  expect(await mates(false)).toBe(false);
+  expect(await mates(true)).toBe(true);
 });
 
 test("in teams the team of the last cars standing wins, though the player's car is wasted", async () => {

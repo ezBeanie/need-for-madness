@@ -32,11 +32,6 @@ export const GERMAN = {
   "Stunts begin with the handbrake": "Stunts beginnen mit der Handbremse",
   "In the air press Space (the handbrake) first, then the arrows turn the car. Off: as in the original, an arrow pressed in the air begins a stunt.":
     "Drück in der Luft zuerst die Leertaste (die Handbremse), dann drehen die Pfeile das Auto. Aus: Wie im Original beginnt ein in der Luft gedrückter Pfeil einen Stunt.",
-  Collisions: "Kollisionen",
-  "Solid, no ramps: cars never pass through each other, and a car lifts another only in a crash. Solid: a touch lifts too. Original: as the original game. Hosting a room, the lobby begins with yours.":
-    "Fest, ohne Rampen: Autos fahren nie durcheinander hindurch, und ein Auto hebt ein anderes nur bei einem Crash an. Fest: Auch eine Berührung hebt an. Original: wie im Originalspiel. Hostest du einen Raum, beginnt die Lobby mit deiner Wahl.",
-  Solid: "Fest",
-  "Solid, no ramps": "Fest, ohne Rampen",
   "Ghost in time attack": "Geist im Zeitfahren",
   Fullscreen: "Vollbild",
   "On a phone a touch makes the game fullscreen while this is on.":

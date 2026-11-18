@@ -11,8 +11,7 @@ import {
   setSoundVolume,
   setVoiceVolume,
 } from "../audio/audio.js";
-import { COLLISION_NAMES, PHASE, game } from "../core/state.js";
-import { chooseCollisions, collisionChoice } from "../race/physics.js";
+import { PHASE, game } from "../core/state.js";
 import { onKey, stunts, toggleStuntsByKey } from "../input/controls.js";
 import { camera } from "../render/camera.js";
 import { minimap } from "./minimap.js";
@@ -109,15 +108,6 @@ const showStates = () => {
   showSwitch("voiceByVoice", voice.byVoice, "By voice", "Push to talk");
 };
 
-// (named anew when shown, in the language chosen)
-const showCollisionNames = () => {
-  const collisionsChosen = document.getElementById("collisionsChosen");
-  collisionsChosen.replaceChildren(
-    ...COLLISION_NAMES.map((name, value) => new Option(t(name), String(value))),
-  );
-  collisionsChosen.value = String(collisionChoice.value);
-};
-
 export const openOptions = () => {
   showStates();
   showVolumes();
@@ -125,7 +115,6 @@ export const openOptions = () => {
   // (only where there are touch controls)
   document.getElementById("optionsTouch").hidden = !isPhone;
   document.getElementById("playerName").value = own.name;
-  showCollisionNames();
   document.getElementById("languageChosen").value = language.current;
   askOfflineStatus();
   dialog.showModal?.();
@@ -167,7 +156,6 @@ export const installOptionsMenu = () => {
   onLanguage(() => {
     showVersion();
     showStates();
-    showCollisionNames();
   });
   if (language.current != "en") {
     translatePage();
@@ -197,10 +185,6 @@ export const installOptionsMenu = () => {
     toggleGhost();
     showStates();
   });
-  const collisionsChosen = document.getElementById("collisionsChosen");
-  collisionsChosen.addEventListener("change", () =>
-    chooseCollisions(Number(collisionsChosen.value)),
-  );
   document.getElementById("stuntsByKey").addEventListener("click", () => {
     toggleStuntsByKey();
     showStates();
