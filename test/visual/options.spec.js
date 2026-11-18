@@ -38,7 +38,7 @@ test("the name typed in the options is kept at once, though the game is left bef
   await game.advanceUntil(PHASE.mainMenu);
   await game.advance(2);
   await page.locator("#menuOptions").click();
-  await page.getByLabel("Your name").pressSequentially("Hosti");
+  await page.locator("#playerName").pressSequentially("Hosti");
   // (gone at once, as a phone's app swiped away: the field never loses its focus)
   await page.reload();
   await page.waitForFunction(() => window.advanceFrames !== undefined);

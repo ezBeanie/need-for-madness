@@ -73,11 +73,18 @@ import {
   TEAM_COLORS,
   botNames,
   own,
+  setOwnName,
   setOwnSkin,
   setOwnTeam,
   teamsOf,
 } from "../net/roomCars.js";
-import { isTalking, talk, voice } from "../net/voice.js";
+import {
+  isTalking,
+  talk,
+  toggleByVoice,
+  toggleVoice,
+  voice,
+} from "../net/voice.js";
 import {
   PREVIEW_HEIGHT,
   PREVIEW_WIDTH,
@@ -389,13 +396,24 @@ const showChoices = () => {
   if (document.activeElement != skin && skin.value != String(own.skin)) {
     skin.value = String(own.skin);
   }
+  const name = element("lobbyName");
+  if (document.activeElement != name && name.value != own.name) {
+    name.value = own.name;
+  }
+  const voiceChoice = element("lobbyVoice");
+  const voiceChosen = !voice.on ? "off" : voice.byVoice ? "byVoice" : "push";
+  if (
+    document.activeElement != voiceChoice &&
+    voiceChoice.value != voiceChosen
+  ) {
+    voiceChoice.value = voiceChosen;
+  }
   showTeamChoice(element("lobbyTeam"), own.team);
   element("lobbyTeamChoice").hidden = rulesShown().teams == 0;
   const talkButton = element("lobbyTalk");
   talkButton.hidden = !voice.on || voice.byVoice;
   talkButton.setAttribute("aria-pressed", voice.talking ? "true" : "false");
-  let hint =
-    "Voice chat is off. Switch it on in the options to talk with the others.";
+  let hint = "Voice chat is off: choose how to talk with the others.";
   if (voice.on) {
     hint = voice.byVoice
       ? "The others hear you whenever you speak."
@@ -848,6 +866,26 @@ export const installMultiplayerMenu = () => {
       sendPlayers();
     }
     tellHost();
+  });
+  // (as the options' name: kept with every letter typed, the room told once it is typed)
+  const name = element("lobbyName");
+  name.addEventListener("input", () => setOwnName(name.value));
+  name.addEventListener("change", () => {
+    setOwnName(name.value);
+    name.value = own.name;
+    if (link.role == ROLE.host) {
+      sendPlayers();
+    }
+    tellHost();
+  });
+  element("lobbyVoice").addEventListener("change", (event) => {
+    const on = event.target.value != "off";
+    if (voice.on != on) {
+      toggleVoice();
+    }
+    if (on && voice.byVoice != (event.target.value == "byVoice")) {
+      toggleByVoice();
+    }
   });
   element("lobbySkin").addEventListener("change", (event) => {
     setOwnSkin(Number(event.target.value));

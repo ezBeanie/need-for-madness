@@ -1354,18 +1354,30 @@ test("the lobby shows each player's name and paint, and a name set in the option
   const players = guestPage.locator("#multiplayerPlayers");
   await expect(players).toContainText("Hosti (host)");
   await expect(players).toContainText("Player 2 (you)");
-  await guestPage.getByLabel("Your paint").selectOption("Green");
+  // (a name typed in the lobby goes to the room, and to the options)
+  const lobbyName = guestPage.locator("#lobbyName");
+  await expect(lobbyName).toHaveValue("");
+  await lobbyName.fill("Lobbi");
+  await lobbyName.press("Enter");
+  await lobbyName.blur();
+  await hostPage.waitForTimeout(DELIVERY_MS);
   await host.advance(2);
   await hostPage.locator("#menuMultiplayer").click();
+  await expect(hostPage.locator("#multiplayerPlayers")).toContainText("Lobbi");
+  expect(
+    await guestPage.evaluate(() => localStorage.getItem("playerName")),
+  ).toBe("Lobbi");
+  await guestPage.getByLabel("Your paint").selectOption("Green");
+  await host.advance(2);
   await expect(hostPage.locator("#multiplayerPlayers")).toContainText(
     "in green",
   );
   // (a name from the options goes to the room)
   await guestPage.getByRole("button", { name: "Back" }).click();
   await guestPage.locator("#menuOptions").click();
-  await guestPage.getByLabel("Your name").fill("Gasti");
-  await guestPage.getByLabel("Your name").press("Enter");
-  await guestPage.getByLabel("Your name").blur();
+  await guestPage.locator("#playerName").fill("Gasti");
+  await guestPage.locator("#playerName").press("Enter");
+  await guestPage.locator("#playerName").blur();
   await hostPage.waitForTimeout(DELIVERY_MS);
   await host.advance(2);
   await expect(hostPage.locator("#multiplayerPlayers")).toContainText("Gasti");

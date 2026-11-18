@@ -15,7 +15,7 @@ import { PHASE, game } from "../core/state.js";
 import { t } from "../core/language.js";
 import { TICK_MS, nextFraction, tick } from "../core/tick.js";
 import { raceEvents } from "../race/events.js";
-import { physics } from "../race/physics.js";
+import { hearLateCrashes, lateCrashes, physics } from "../race/physics.js";
 import { cutRaceTapeTo, raceTape } from "../race/raceTape.js";
 import { racers } from "../race/racers.js";
 import {
@@ -643,6 +643,7 @@ const checkGuesses = (runFrameAgain) => {
     tick.fraction = nextFraction(tick.fraction);
   }
   physics.quiet = false;
+  hearLateCrashes();
   noteAfterRollback();
 };
 
@@ -732,6 +733,8 @@ export const catchUpWatching = (runFrameAgain) => {
     settle();
   }
   physics.quiet = false;
+  // (frames never shown: their crashes neither)
+  lateCrashes.clear();
 };
 
 // The race as a game starting to watch it runs it on from (see net/watch.js): the first

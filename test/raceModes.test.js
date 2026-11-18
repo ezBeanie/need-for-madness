@@ -57,7 +57,7 @@ test("as last survivor, finishing the laps ends nothing: the last car not wasted
   expect(ctx.track.haltall).toBe(true);
 });
 
-test("in a room's time attack the cars pass through each other", async () => {
+test("in a room's time attack and racing only the cars pass through each other", async () => {
   const { ctx, step } = await startRace({ stage: 1, car: 5 });
   reset = () => (ctx.raceSetup.mode = ctx.RACE_MODE.normal);
   for (let i = 0; i < 3; i++) {
@@ -78,9 +78,9 @@ test("in a room's time attack the cars pass through each other", async () => {
   expect(car0After(ctx.RACE_MODE.normal, true)).not.toEqual(
     car0After(ctx.RACE_MODE.normal, false),
   );
-  expect(car0After(ctx.RACE_MODE.timeAttack, true)).toEqual(
-    car0After(ctx.RACE_MODE.timeAttack, false),
-  );
+  for (const mode of [ctx.RACE_MODE.timeAttack, ctx.RACE_MODE.onlyRacing]) {
+    expect(car0After(mode, true)).toEqual(car0After(mode, false));
+  }
 });
 
 test("a room's time attack goes on until every car is through or wasted, timed from the race's tape", async () => {
@@ -132,13 +132,14 @@ test("a room's time attack goes on until every car is through or wasted, timed f
   expect(times[1]).toBe(3.5);
 });
 
-test("in a room's time attack the other cars are seen through, the more the nearer they come", async () => {
+test("in a room's time attack and racing only the other cars are seen through once racing, the more the nearer they come", async () => {
   const { ctx } = await startRace({ stage: 1, car: 5 });
   reset = () => {
     ctx.raceSetup.mode = ctx.RACE_MODE.normal;
     ctx.game.humans = [];
   };
   ctx.game.humans = [0, 1];
+  ctx.raceEvents.countdown = 0;
   ctx.camera.target = 0;
   const showsAt = (away) => {
     ctx.car[1].x = ctx.car[0].x + away;
@@ -153,6 +154,12 @@ test("in a room's time attack the other cars are seen through, the more the near
   expect(showsAt(1000)).toBe(1);
   // the car followed itself is solid
   expect(ctx.showsOf(0)).toBe(1);
+  ctx.raceSetup.mode = ctx.RACE_MODE.onlyRacing;
+  expect(showsAt(10)).toBe(0.25);
+  // (all of every car while the countdown runs)
+  ctx.raceEvents.countdown = 30;
+  expect(showsAt(10)).toBe(1);
+  ctx.raceEvents.countdown = 0;
 });
 
 // A race of most kills, past the countdown, the computer driving every car.

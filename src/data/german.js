@@ -53,6 +53,9 @@ export const GERMAN = {
   "Other cars' sounds": "Geräusche der anderen",
   "Music volume": "Musiklautstärke",
   "Effects volume": "Effektlautstärke",
+  "Other cars' volume": "Lautstärke der anderen Autos",
+  "Of the effects volume.": "Anteil an der Effektlautstärke.",
+  "Voices volume": "Lautstärke der Stimmen",
   "Your name": "Dein Name",
   "The others in a room see it on your car.":
     "Die anderen im Raum sehen ihn an deinem Auto.",
@@ -395,8 +398,8 @@ export const GERMAN = {
   "not chosen yet": "noch nicht gewählt",
   None: "Keine",
   "{teams} teams": "{teams} Teams",
-  "Voice chat is off. Switch it on in the options to talk with the others.":
-    "Der Sprachchat ist aus. Schalte ihn in den Optionen ein, um mit den anderen zu reden.",
+  "Voice chat is off: choose how to talk with the others.":
+    "Der Sprachchat ist aus: wähle, wie du mit den anderen redest.",
   "The others hear you whenever you speak.":
     "Die anderen hören dich, sobald du sprichst.",
   "Hold to talk, or tap to talk until you tap again. In a race hold P.":

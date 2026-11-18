@@ -65,7 +65,9 @@ export const otherEnginesTick = () => {
       1,
       Math.abs(racers[c].speed) / carStats.swits[type][2],
     );
-    const near = Math.min(1, (FAR - place.distance) / (FAR - NEAR));
+    const near =
+      Math.min(1, (FAR - place.distance) / (FAR - NEAR)) *
+      audio.otherCarsVolume;
     if (classic) {
       engine.volume.gain.value = LOUDEST * near;
     } else {

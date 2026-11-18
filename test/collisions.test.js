@@ -1,4 +1,5 @@
-import { afterEach, expect, test } from "vitest";
+import { afterEach, expect, test, vi } from "vitest";
+import { audioCalls } from "./harness/browserStubs.js";
 import { startRace } from "./harness/race.js";
 
 let reset = null;
@@ -169,7 +170,7 @@ const drivenInto = async (collisions, speed) => {
   return nearest;
 };
 
-test("a solid car driven slowly on into another shoves it along instead of passing through", async () => {
+test("a solid car driven slowly on into another neither passes through it nor climbs onto it", async () => {
   const { COLLISIONS } = await import("../src/core/state.js");
   for (const speed of [3, 6, 10]) {
     // (the original's car sinks deep into the other, if not through it)
@@ -250,3 +251,143 @@ test("solid cars crashing head-on however fast come apart instead of passing thr
     }
   }
 }, 60000);
+
+// Car 1 driving on into car 2 standing ahead of it, kept at the given speed, in a room's race
+// with these collisions: in how many ticks it crashed into it.
+const crashedInto = async (collisions, speed) => {
+  const { ctx } = await startRace({ stage: 1, car: 5 });
+  reset = () => {
+    ctx.game.humans = [];
+    ctx.raceSetup.rules = ctx.roomRules();
+  };
+  ctx.game.humans = [0, 1, 2];
+  ctx.raceSetup.rules = { ...ctx.roomRules(), collisions };
+  ctx.raceEvents.countdown = 0;
+  for (let i = 0; i < 20; i++) {
+    ctx.drive();
+  }
+  for (let c = 0; c < ctx.game.carCount; c++) {
+    if (c != 1 && c != 2) {
+      ctx.car[c].x += 3000;
+    }
+  }
+  const [behind, ahead] = [ctx.car[1], ctx.car[2]];
+  behind.xz = ahead.xz = 0;
+  ahead.x = behind.x;
+  ahead.z = behind.z + 120;
+  ahead.y = behind.y;
+  let crashes = 0;
+  for (let i = 0; i < 120; i++) {
+    ctx.racers[1].u.up = Math.abs(ctx.racers[1].speed) < speed;
+    ctx.racers[1].lastcolido = ctx.racers[2].lastcolido = 0;
+    ctx.drive();
+    if (ctx.racers[1].lastcolido > 0) {
+      crashes++;
+    }
+  }
+  return crashes;
+};
+
+test("a solid car driving slowly into another bumps it again and again instead of only shoving it, as the original's crashes", async () => {
+  const { COLLISIONS } = await import("../src/core/state.js");
+  // (solid cars pushed apart only just touch: their corners never came as near as the
+  // original's sunk into each other, and crashed once)
+  expect(await crashedInto(COLLISIONS.original, 10)).toBeGreaterThan(10);
+  for (const solid of [COLLISIONS.solid, COLLISIONS.solidNoRamps]) {
+    for (const speed of [3, 10]) {
+      expect(await crashedInto(solid, speed)).toBeGreaterThan(5);
+    }
+  }
+});
+
+test("a crash only the race run again quietly had is heard once it caught up, unless heard just before", async () => {
+  const { ctx, step } = await startRace({ stage: 1, car: 5 });
+  // (the sounds loaded)
+  for (let i = 0; i < 3; i++) {
+    step();
+  }
+  // (long after any crash heard in the tests before)
+  const now = vi.spyOn(performance, "now").mockReturnValue(1e12);
+  reset = () => {
+    now.mockRestore();
+    ctx.physics.quiet = false;
+    ctx.lateCrashes.clear();
+  };
+  ctx.raceEvents.countdown = 0;
+  const heardAfter = (crash) => {
+    // (the crash sounds' waits over)
+    for (let i = 0; i < 10; i++) {
+      ctx.coolDownCarSounds();
+    }
+    const before = audioCalls.started;
+    crash();
+    return audioCalls.started - before;
+  };
+  // (a hard hit on the player's own car, heard as it is)
+  const hit = () => ctx.regn(ctx.HIT.alongZ, 1, 300, ctx.game.player);
+  const quietly = () => {
+    ctx.physics.quiet = true;
+    hit();
+    ctx.physics.quiet = false;
+  };
+  expect(heardAfter(quietly)).toBe(0);
+  expect(ctx.lateCrashes.size).toBe(1);
+  expect(heardAfter(ctx.hearLateCrashes)).toBeGreaterThan(0);
+  expect(ctx.lateCrashes.size).toBe(0);
+  // heard in its first run a moment before: not again
+  quietly();
+  expect(heardAfter(ctx.hearLateCrashes)).toBe(0);
+});
+
+// Cars 1 and 2 standing side by side, their bodies touching, car 2's wheels moving it
+// sideways at this speed (towards car 1: negative), in a room's race with solid cars: whether
+// car 1 crashed into it in the tick after.
+const crashedSideBySide = async (sideways) => {
+  const { COLLISIONS } = await import("../src/core/state.js");
+  const { ctx } = await startRace({ stage: 1, car: 5 });
+  reset = () => {
+    ctx.game.humans = [];
+    ctx.raceSetup.rules = ctx.roomRules();
+  };
+  ctx.game.humans = [0, 1, 2];
+  ctx.raceSetup.rules = {
+    ...ctx.roomRules(),
+    collisions: COLLISIONS.solidNoRamps,
+  };
+  ctx.raceEvents.countdown = 0;
+  for (let i = 0; i < 20; i++) {
+    ctx.drive();
+  }
+  for (let c = 0; c < ctx.game.carCount; c++) {
+    if (c != 1 && c != 2) {
+      ctx.car[c].x += 3000;
+    }
+  }
+  const [one, other] = [ctx.car[1], ctx.car[2]];
+  one.xz = other.xz = 0;
+  one.xy = other.xy = one.zy = other.zy = 0;
+  other.z = one.z;
+  other.y = one.y;
+  // (a hair nearer than their wheels and bodies reach)
+  let reach = 0;
+  for (let k = 0; k < 4; k++) {
+    reach = Math.max(reach, Math.abs(one.keyx[k]) + Math.abs(other.keyx[k]));
+  }
+  other.x = one.x + reach + 9;
+  for (let k = 0; k < 4; k++) {
+    for (const c of [1, 2]) {
+      ctx.racers[c].wheelSpeedZ[k] = 0;
+      ctx.racers[c].wheelSpeedX[k] = 0;
+    }
+    ctx.racers[2].wheelSpeedX[k] = sideways;
+  }
+  ctx.racers[1].speed = 1;
+  ctx.racers[1].lastcolido = 0;
+  ctx.drive();
+  return ctx.racers[1].lastcolido > 0;
+};
+
+test("solid cars only touching crash as they come nearer each other, not drifting apart", async () => {
+  expect(await crashedSideBySide(-2)).toBe(true);
+  expect(await crashedSideBySide(2)).toBe(false);
+});

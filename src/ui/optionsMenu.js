@@ -4,7 +4,13 @@
 // does what its key does.
 
 import { canFullscreen, isFullscreen, toggleFullscreen } from "./fullscreen.js";
-import { audio, setMusicVolume, setSoundVolume } from "../audio/audio.js";
+import {
+  audio,
+  setMusicVolume,
+  setOtherCarsVolume,
+  setSoundVolume,
+  setVoiceVolume,
+} from "../audio/audio.js";
 import { COLLISION_NAMES, PHASE, game } from "../core/state.js";
 import { chooseCollisions, collisionChoice } from "../race/physics.js";
 import { onKey, stunts, toggleStuntsByKey } from "../input/controls.js";
@@ -64,6 +70,8 @@ const SHOWN_IN = [
 const VOLUMES = [
   ["musicVolume", setMusicVolume, () => audio.musicVolume],
   ["soundVolume", setSoundVolume, () => audio.soundVolume],
+  ["otherCarsVolume", setOtherCarsVolume, () => audio.otherCarsVolume],
+  ["voiceVolume", setVoiceVolume, () => audio.voiceVolume],
 ];
 
 const showTouchSize = () => {

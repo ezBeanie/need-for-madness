@@ -350,7 +350,7 @@ const placeVoices = () => {
       continue;
     }
     const c = racing ? lockstep.players.indexOf(id) : -1;
-    let volume = audio.muteSound ? 0 : audio.soundVolume;
+    let volume = audio.muteSound ? 0 : audio.voiceVolume;
     let place = { side: 0, front: 1 };
     if (c >= 0) {
       place = heardFrom(car[c].x, car[c].z);

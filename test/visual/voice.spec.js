@@ -108,6 +108,15 @@ test("two games of a room hear each other while one holds its talk key, and not 
       { timeout: 60_000 },
     )
     .toEqual(["connected true", "connected true"]);
+  // (a voice as loud as the voices' slider says, whatever the effects' volume)
+  await host.page.evaluate(() => window.gameState.setVoiceVolume(0.3));
+  await advanceBoth(games, 2);
+  expect(
+    await host.page.evaluate(
+      () => [...window.gameState.voice.peers.values()][0].gain.gain.value,
+    ),
+  ).toBeCloseTo(0.3);
+  await host.page.evaluate(() => window.gameState.setVoiceVolume(1));
   // silent until the guest talks
   await advanceBoth(games, 5);
   expect((await voiceOf(host.page)).talking).toBe(false);
@@ -157,8 +166,15 @@ test("by voice a player is heard whenever the microphone hears it, without a key
   const [, guest] = games;
   await connected(games);
   await hostHearsGuest(games).toBe(true);
-  // back to push to talk: silent again until the key
-  await guest.page.evaluate(() => window.gameState.toggleByVoice());
+  // back to push to talk in the lobby: silent again until the key
+  await guest.page.evaluate(() => window.gameState.openMultiplayer());
+  await advanceBoth(games, 2);
+  const chosen = guest.page.getByLabel("Voice chat", { exact: true });
+  await expect(chosen).toHaveValue("byVoice");
+  await chosen.selectOption({ label: "Push to talk" });
+  expect(await guest.page.evaluate(() => window.gameState.voice)).toMatchObject(
+    { on: true, byVoice: false },
+  );
   await hostHearsGuest(games).toBe(false);
   await advanceBoth(games, 30);
   expect((await voiceOf(games[0].page)).talking).toBe(false);

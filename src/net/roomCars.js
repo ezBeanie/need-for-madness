@@ -2,7 +2,13 @@
 // the options, and the skins chosen in the lobby. Every game of the race gets them with its
 // start (see host.js and guest.js); other races have none.
 
-import { RACE_KIND, TEAM_COUNTS, game, raceSetup } from "../core/state.js";
+import {
+  RACE_KIND,
+  RACE_MODE,
+  TEAM_COUNTS,
+  game,
+  raceSetup,
+} from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { loadSetting, loadText, saveSetting } from "../core/storage.js";
 import { isSkin } from "../render/skins.js";
@@ -93,6 +99,14 @@ export const teamOf = (c) =>
 
 export const teamMates = (c, xc) =>
   c != xc && teamOf(c) != -1 && teamOf(c) == teamOf(xc);
+
+// Whether cars c and xc crash: not in a room's time attack or only racing, where the cars
+// pass through each other, nor team mates, unless the host let them crash.
+export const carsCrash = (c, xc) =>
+  raceSetup.mode != RACE_MODE.timeAttack &&
+  raceSetup.mode != RACE_MODE.onlyRacing &&
+  xc != c &&
+  (raceSetup.rules.teamCrashes || !teamMates(c, xc));
 
 // the skin car c races in
 export const skinOf = (c) => (inRoomRace() ? (roomCars.skins[c] ?? 0) : 0);

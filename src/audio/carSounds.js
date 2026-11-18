@@ -56,7 +56,10 @@ const voiceOf = (c) => {
   }
   const near = Math.min(1, (FAR - distance) / (FAR - NEAR));
   others[c] ??= newVoice(() => random.sound(), c);
-  return { voice: others[c], place: { volume: near * near, side, front } };
+  return {
+    voice: others[c],
+    place: { volume: near * near * audio.otherCarsVolume, side, front },
+  };
 };
 
 // one of n samples, not the one played last
