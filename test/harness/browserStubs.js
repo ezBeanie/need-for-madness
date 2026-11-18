@@ -120,6 +120,9 @@ export const glCalls = { listener: null };
 // the call returns (see canvasRecorder.js).
 export const canvasCalls = { listener: null };
 
+// how many sounds the game started playing
+export const audioCalls = { started: 0 };
+
 const create2dContextStub = () => {
   const methods = {
     measureText: (text) => ({ width: String(text).length * 8 }),
@@ -187,7 +190,7 @@ const createAudioContextClass = (queue) =>
         loop: false,
         playbackRate: { value: 1 },
         connect: chain,
-        start: noop,
+        start: () => audioCalls.started++,
         stop: noop,
       };
     }
