@@ -4,6 +4,13 @@
 
 export const CHANGELOG = [
   {
+    version: "1.2.1",
+    date: "2026-11-19",
+    changes: [
+      "Long races together no longer stutter more and more: the race forgets what its replays never show.",
+    ],
+  },
+  {
     version: "1.2.0",
     date: "2026-11-18",
     changes: [
