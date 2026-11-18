@@ -10,6 +10,7 @@ import {
   DUST,
   HIT,
   RECORDED_PER_TICK,
+  SPARK,
   TAPE_TICKS,
   newCarTape,
   NOT_WASTED,
@@ -36,8 +37,7 @@ export const wastedSince = (tape, frame) => {
 // the frame recording's tape writes the tick to
 const NEWEST = TAPE_TICKS - 1;
 
-export const SPARK = ["at", "carType", "x", "y", "z", "sx", "sy", "sz", "kind"];
-export { DUST, HIT };
+export { DUST, HIT, SPARK };
 
 // What the engine sound needs of a car every tick (see audio/replaySounds.js): its speed,
 // power and these, as bits of one number.
@@ -193,16 +193,12 @@ export const recordRaceTick = () => {
   raceTape.length++;
 };
 
-// Keeps only events before tick length.
+// Keeps only events before tick length: the last ones, as they come in order (a rollback
+// cuts a few ticks a frame, and looking at all of a long race's took ever longer).
 const cutEvents = (tape, fields, count, length) => {
-  let kept = 0;
-  for (let i = 0; i < tape[count]; i++) {
-    if (tape[fields[0]][i] < length) {
-      for (const field of fields) {
-        tape[field][kept] = tape[field][i];
-      }
-      kept++;
-    }
+  let kept = tape[count];
+  while (kept > 0 && tape[fields[0]][kept - 1] >= length) {
+    kept--;
   }
   tape[count] = kept;
   for (const field of fields) {

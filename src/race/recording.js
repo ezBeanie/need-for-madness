@@ -198,6 +198,7 @@ const KEPT_PER_TICK = [
   "speedZ",
 ];
 export const HIT = ["hitAt", "hitMtouch", "hitSide", "hitPoint", "hitMag"];
+export const SPARK = ["at", "carType", "x", "y", "z", "sx", "sy", "sz", "kind"];
 export const DUST = [
   "dustAt",
   "dustGround",
@@ -281,6 +282,52 @@ export function resetRecording() {
 
 // Records a tick of the race: every per tick field moves one back and the tick goes to
 // the end, events count down; until shortly after the race is over.
+// Keeps the events (of these fields, the first their time, counted in count) that keep
+// wants, in their order.
+const keepEvents = (tape, fields, count, keep) => {
+  let kept = 0;
+  for (let i = 0; i < tape[count]; i++) {
+    if (keep(tape[fields[0]][i])) {
+      for (const field of fields) {
+        tape[field][kept] = tape[field][i];
+      }
+      kept++;
+    }
+  }
+  if (kept < tape[count]) {
+    tape[count] = kept;
+    for (const field of fields) {
+      tape[field].length = kept;
+    }
+  }
+};
+
+// how long before the tape a fix still shows, its flicker played backwards (see rewindTape)
+const FIX_SHOWN_BEFORE = 28;
+
+// What happened before a car's tape that no tape played or started will show (else it
+// is kept all race long, and copied with every frame a race together keeps to go back
+// to): dust, and the hits and fixes before its last fix before the tape (starting the
+// tape, the car has the hits after it, see resetCarsToTapeStart).
+const forgetBeforeTape = (tape) => {
+  keepEvents(tape, DUST, "dustCount", (at) => at >= 0);
+  let fixedAt = 0;
+  for (let i = 0; i < tape.fixCount; i++) {
+    if (tape.fixAt[i] < 0) {
+      fixedAt = tape.fixAt[i];
+    }
+  }
+  if (fixedAt < 0) {
+    keepEvents(tape, HIT, "hitCount", (at) => at >= fixedAt);
+    keepEvents(
+      tape,
+      ["fixAt"],
+      "fixCount",
+      (at) => at >= Math.min(fixedAt, -FIX_SHOWN_BEFORE),
+    );
+  }
+};
+
 export function recordTick() {
   if (raceEvents.raceOverTicks >= 100) {
     return;
@@ -334,6 +381,7 @@ export function recordTick() {
     for (let i = 0; i < tape.dustCount; i++) {
       tape.dustAt[i]--;
     }
+    forgetBeforeTape(tape);
     if (tape.wastedAt != NOT_WASTED) {
       tape.wastedAt--;
       if (tape.wastedAt == WASTING_CAUGHT_AT) {
@@ -345,6 +393,7 @@ export function recordTick() {
   for (let i = 0; i < sparks.count; i++) {
     sparks.at[i]--;
   }
+  keepEvents(sparks, SPARK, "count", (at) => at >= 0);
   const tape = recording.tape;
   for (let i = 0; i < LAST_FRAME; i++) {
     tape.checkpoint[i] = tape.checkpoint[i + 1];

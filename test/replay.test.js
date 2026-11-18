@@ -68,6 +68,30 @@ test("the whole race is recorded, its last ticks as the instant replay has them"
   expect(raceTape.cars[0].x.slice(0, 5)).not.toEqual(whole.cars[0].perTick[0]);
 });
 
+test("the instant replay forgets what happened before it that it never shows, all race long", async () => {
+  const { ctx } = await race(1500);
+  const { recording } = ctx;
+  const cars = recording.tape.cars.slice(0, ctx.game.carCount);
+  // (dust and sparks before the tape never show; hits before a car's last fix before it
+  // neither, see resetCarsToTapeStart)
+  expect(cars.flatMap((car) => car.dustAt.slice(0, car.dustCount))).not.toEqual(
+    [],
+  );
+  for (const car of cars) {
+    expect(car.dustAt.slice(0, car.dustCount).every((at) => at >= 0)).toBe(
+      true,
+    );
+    const fixes = car.fixAt.slice(0, car.fixCount).filter((at) => at < 0);
+    const hits = car.hitAt.slice(0, car.hitCount);
+    expect(fixes.filter((at) => at < -28).length).toBeLessThan(2);
+    if (fixes.length > 0) {
+      expect(hits.every((at) => at >= Math.max(...fixes))).toBe(true);
+    }
+  }
+  const { sparks } = recording.tape;
+  expect(sparks.at.slice(0, sparks.count).every((at) => at >= 0)).toBe(true);
+});
+
 test("time wound back takes back what the race tape had recorded since", async () => {
   const { ctx, step } = await race(900);
   ctx.startTimeRewind();
