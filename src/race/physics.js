@@ -36,7 +36,7 @@ import {
   startDeathmatch,
 } from "./deathmatch.js";
 import * as allEffects from "./effects.js";
-import { inRoomRace, teamMates } from "../net/roomCars.js";
+import { carsCrash, inRoomRace } from "../net/roomCars.js";
 import { loadSetting, saveSetting } from "../core/storage.js";
 import { raceEvents } from "./events.js";
 import { MISSED, SKID, STUNT, car, racers, useUpStuntTurns } from "./racers.js";
@@ -198,18 +198,11 @@ export function inishmad() {
     lonorm[i] = 0;
   }
 }
-// whether cars c and xc crash: not in a room's time attack, where the cars pass through
-// each other, nor team mates, unless the host let them crash
-const crashing = (c, xc) =>
-  raceSetup.mode != RACE_MODE.timeAttack &&
-  xc != c &&
-  (raceSetup.rules.teamCrashes || !teamMates(c, xc));
-
 export function drive() {
   if (game.carCount != 1) {
     for (let c = 0; c < game.carCount; c++) {
       for (let xc = 0; xc < game.carCount; xc++) {
-        if (crashing(c, xc)) {
+        if (carsCrash(c, xc)) {
           colide(c, xc);
         }
       }
@@ -240,7 +233,10 @@ export function drive() {
   if (collisions() != COLLISIONS.original) {
     for (let c = 0; c < game.carCount; c++) {
       for (let xc = c + 1; xc < game.carCount; xc++) {
-        if (crashing(c, xc) && (racers[c].caught[xc] || drivenThrough(c, xc))) {
+        if (
+          carsCrash(c, xc) &&
+          (racers[c].caught[xc] || drivenThrough(c, xc))
+        ) {
           pushApart(c, xc);
         }
       }

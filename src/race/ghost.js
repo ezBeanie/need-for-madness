@@ -4,11 +4,12 @@
 // recorded car was each tick. Each race alone is recorded; one finished faster than the
 // ghost (or the first) becomes the stage's new ghost.
 
-import { MAX_CARS, PHASE, RACE_MODE, game, raceSetup } from "../core/state.js";
+import { MAX_CARS, PHASE, game } from "../core/state.js";
 import { camera } from "../render/camera.js";
 import { loadSetting, loadText, saveSetting } from "../core/storage.js";
 import { isCustom } from "../data/stages.js";
-import { teamMates } from "../net/roomCars.js";
+import { carsCrash } from "../net/roomCars.js";
+import { raceEvents } from "./events.js";
 import { car } from "./racers.js";
 import { poseFromTape, turnCarAfterItsAngles } from "./recording.js";
 import { track } from "./track.js";
@@ -115,22 +116,26 @@ export const forgetGhost = () => {
   ghost.driven = null;
 };
 
-// In a room's time attack the other cars are ghosts too, the more seen through the nearer
-// they come to the car the camera follows: within NEAR as little shows as SHOWS_NEAR, from
-// FAR all of it. So too its team mates where they pass through each other.
+// In a room's race the cars the player's car passes through (all in time attack and only
+// racing, its team mates where they do not crash) are ghosts too once the race started, the
+// more seen through the nearer they come to it (watching: to the car the camera follows):
+// within NEAR as little shows as SHOWS_NEAR, from FAR all of it.
 const NEAR = 40;
 const FAR = 240;
 const SHOWS_NEAR = 0.25;
 
 // How much of car c shows (1: all of it).
 export const showsOf = (c) => {
-  const ghostly =
-    raceSetup.mode == RACE_MODE.timeAttack ||
-    (!raceSetup.rules.teamCrashes && teamMates(c, camera.target));
-  if (!ghostly || game.humans.length == 0 || c == camera.target) {
+  const seen = game.player < game.carCount ? game.player : camera.target;
+  if (
+    game.humans.length == 0 ||
+    raceEvents.countdown != 0 ||
+    c == seen ||
+    carsCrash(c, seen)
+  ) {
     return 1;
   }
-  const followed = car[camera.target];
+  const followed = car[seen];
   const away = Math.hypot(car[c].x - followed.x, car[c].z - followed.z);
   const far = Math.min(1, Math.max(0, (away - NEAR) / (FAR - NEAR)));
   return SHOWS_NEAR + (1 - SHOWS_NEAR) * far;

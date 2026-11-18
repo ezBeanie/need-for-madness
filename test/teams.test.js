@@ -178,7 +178,35 @@ test("team mates passing through each other are seen through, the more the neare
   expect(showsAt(2, 10)).toBe(0.25);
   expect(showsAt(2, 1000)).toBe(1);
   expect(showsAt(1, 10)).toBe(1);
+  // (all of every car while the countdown runs)
+  ctx.raceEvents.countdown = 30;
+  expect(showsAt(2, 10)).toBe(1);
+  ctx.raceEvents.countdown = 0;
   // team mates that crash are solid
   ctx.raceSetup.rules = { ...ctx.raceSetup.rules, teamCrashes: true };
   expect(showsAt(2, 10)).toBe(1);
+});
+
+test("a guest sees through its own car's team mates, though the camera follows the host's car", async () => {
+  const { ctx } = await inTeams("mostKills", { teamCrashes: false });
+  const player = ctx.game.player;
+  reset = ((before) => () => {
+    ctx.game.player = player;
+    before();
+  })(reset);
+  // (the guest's car 1 blue, as car 3; the host's car 0 red, as car 2)
+  ctx.game.player = 1;
+  ctx.camera.target = 0;
+  const showsAt = (c, away) => {
+    ctx.car[c].x = ctx.car[1].x + away;
+    ctx.car[c].z = ctx.car[1].z;
+    return ctx.showsOf(c);
+  };
+  expect(showsAt(3, 10)).toBe(0.25);
+  expect(showsAt(2, 10)).toBe(1);
+  // watching, the car the camera follows: its team mates
+  ctx.game.player = ctx.game.carCount;
+  ctx.car[2].x = ctx.car[0].x + 10;
+  ctx.car[2].z = ctx.car[0].z;
+  expect(ctx.showsOf(2)).toBe(0.25);
 });
