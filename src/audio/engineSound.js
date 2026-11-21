@@ -6,6 +6,7 @@ import { classicEngineTick, resetClassicEngine } from "../classic/sounds.js";
 import { random } from "../core/random.js";
 import { game } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
+import { isGunGame } from "../race/deathmatch.js";
 import { raceEvents } from "../race/events.js";
 import { SKID, racers } from "../race/racers.js";
 import { LOOK, look } from "../render/look.js";
@@ -36,6 +37,8 @@ let revTarget = 0;
 let revUpStep = 0;
 let revDownStep = 0;
 let revHoldTicks = 0;
+// the car type whose engine plays (in gun game the player's car changes)
+let engineType = -1;
 let landingTicks = 0;
 let revAgainBelow = 0;
 
@@ -79,9 +82,13 @@ export function updateEngineSound(
     return;
   }
   stopClassicLoops();
+  if (engine.started && type != engineType && isGunGame()) {
+    stopEngine();
+  }
   if (!engine.started) {
     if (!over) {
       startEngine(type, true);
+      engineType = type;
     }
     coolDownCarSounds();
     return;

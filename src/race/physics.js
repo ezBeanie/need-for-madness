@@ -28,15 +28,27 @@ import { BLEND, gl, keepDamageTexture } from "../render/renderer.js";
 import { carModels, carTextures, scene } from "../render/scene.js";
 import {
   deathmatchTick,
+  gunCarOf,
   isDeathmatch,
+  isGunGame,
+  noteCrashLanding,
   noteHit,
+  noteStunt,
   noteWasted,
   startDeathmatch,
 } from "./deathmatch.js";
 import * as allEffects from "./effects.js";
 import { carsCrash } from "../net/roomCars.js";
 import { raceEvents } from "./events.js";
-import { MISSED, SKID, STUNT, car, racers, useUpStuntTurns } from "./racers.js";
+import {
+  MISSED,
+  SKID,
+  STUNT,
+  car,
+  fitCarType,
+  racers,
+  useUpStuntTurns,
+} from "./racers.js";
 import {
   HIGHLIGHT,
   NOT_WASTED,
@@ -221,7 +233,7 @@ export function drive() {
     driveCar(c);
   }
   if (isDeathmatch()) {
-    deathmatchTick(respawn);
+    deathmatchTick(respawn, upgrade);
   }
 }
 
@@ -622,6 +634,9 @@ function trackStunt(c, type) {
       }
     } else {
       if (racers[c].countingStunt != 0) {
+        if (isDeathmatch()) {
+          noteCrashLanding(c);
+        }
         forgetStunt(c);
       }
       flipBackWhenCapsized(c, type);
@@ -704,6 +719,9 @@ function rewardStunt(c) {
     racers[c].stuntPower += 30;
   }
   racers[c].power += racers[c].stuntPower;
+  if (isDeathmatch()) {
+    noteStunt(c, racers[c].stuntPower);
+  }
   if (
     c == game.player &&
     racers[c].stuntPower > recording.bestPowerUp &&
@@ -3724,16 +3742,34 @@ function chipAndScratch(c, rad, i, tmag, modpix, spots) {
 }
 // Most kills: a wasted car back where it lies, a little above it, upright, whole and
 // standing still, its progress round the stage kept.
-function respawn(c) {
-  const racer = racers[c];
+// Gun game: car c becomes a car of another type, its model, wheels and engine (the model
+// made by render/generated.js).
+export const carChange = { body: null };
+export const changeCarType = (c, type) => {
+  fitCarType(car[c], type);
+  game.carTypes[c] = type;
+  carChange.body?.(c);
+};
+
+const mend = (racer) => {
   racer.squash = 0;
   racer.nbsq = 0;
   racer.damage = 0;
   racer.cntdest = 0;
-  racer.wasted = false;
   racer.embos = 0;
   racer.embodir = 0;
   racer.embomag = 0;
+};
+
+// Car c whole again where it is, still, a little above the ground (in gun game in the car
+// its kills got it).
+const rebuild = (c) => {
+  if (isGunGame() && car[c].typ != gunCarOf(c)) {
+    changeCarType(c, gunCarOf(c));
+  }
+  const racer = racers[c];
+  mend(racer);
+  racer.wasted = false;
   racer.lastcolido = 0;
   racer.speed = 0;
   racer.pitch = 0;
@@ -3748,6 +3784,23 @@ function respawn(c) {
   car[c].xy = 0;
   car[c].zy = 0;
   car[c].y = Math.max(car[c].y, car[c].grat) + 10;
+};
+
+// Gun game: car c, not wasted, becomes the car its kills got it, whole, driving on as it
+// was, its wheels where they were.
+const upgrade = (c) => {
+  const height = car[c].grat;
+  changeCarType(c, gunCarOf(c));
+  car[c].y += car[c].grat - height;
+  mend(racers[c]);
+  const tape = recording.tape.cars[c];
+  tape.fixAt[tape.fixCount] = 430;
+  tape.fixCount++;
+  fixcar(c);
+};
+
+function respawn(c) {
+  rebuild(c);
   if (c == game.player) {
     raceEvents.playerWreckTicks = 0;
   }

@@ -75,6 +75,7 @@ import {
 import { raceEvents } from "./race/events.js";
 import { control } from "./race/ai.js";
 import { chipsfly, dustfly, expburn, sprksfly } from "./race/effects.js";
+import { restoreOwnCar } from "./race/field.js";
 import { drive } from "./race/physics.js";
 import { raceEndScreen, unlockedCarTick } from "./screens/raceEnd.js";
 import {
@@ -266,6 +267,7 @@ export function runTick() {
   // (a guest learns of the next race of the room here, a host as it starts)
   if (MENU_PHASES.includes(game.phase)) {
     forgetRoomCars();
+    restoreOwnCar();
     // (a race left together goes to the menus without the pause, which stops it otherwise)
     stopEngine();
   }

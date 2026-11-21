@@ -1,4 +1,5 @@
 import { MAX_CARS } from "../core/state.js";
+import { carStats } from "../data/carStats.js";
 
 // The race state of every car, one object per car (index = car number, the player drives
 // car 0). Fields keep their original names for now; the ones not listed here start
@@ -127,3 +128,18 @@ const newCar = () => ({
 
 // The car models in the race, placed by the physics every tick.
 export const car = Array.from({ length: MAX_CARS }, newCar);
+
+// Car model body as a car of the type: how high its wheels hold it, and where they are
+// (front left, front right, rear left, rear right).
+export const fitCarType = (body, type) => {
+  body.typ = type;
+  body.grat = carStats.wly[type][1] + 1.5 * carStats.wlh[type][1];
+  body.keyx[0] = -carStats.wlx[type][0];
+  body.keyz[0] = carStats.wlz[type][0];
+  body.keyx[1] = carStats.wlx[type][0];
+  body.keyz[1] = carStats.wlz[type][0];
+  body.keyx[2] = -carStats.wlx[type][1];
+  body.keyz[2] = carStats.wlz[type][1];
+  body.keyx[3] = carStats.wlx[type][1];
+  body.keyz[3] = carStats.wlz[type][1];
+};

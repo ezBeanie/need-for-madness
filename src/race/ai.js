@@ -2394,7 +2394,8 @@ function chooseWhetherToBully(c) {
 const hunts = () =>
   raceSetup.rules.strength == STRENGTH.hard &&
   (raceSetup.mode == RACE_MODE.lastSurvivor ||
-    raceSetup.mode == RACE_MODE.mostKills) &&
+    raceSetup.mode == RACE_MODE.mostKills ||
+    raceSetup.mode == RACE_MODE.gunGame) &&
   game.humans.length > 0;
 
 // how long a hunt goes on before the bot looks again for the nearest, and the power below

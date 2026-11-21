@@ -248,6 +248,126 @@ test("in most kills a wasted car counts for the car that hit it last, and comes 
   expect([ctx.car[1].xy, ctx.car[1].zy]).toEqual([0, 0]);
 });
 
+test("in stunts the cars pass through each other, landed stunts score their power, landings on the roof and wastings cost points", async () => {
+  const { ctx } = await mostKills();
+  ctx.raceSetup.mode = ctx.RACE_MODE.stunts;
+  ctx.startDeathmatch();
+  const { carsCrash } = await import("../src/net/roomCars.js");
+  const { noteStunt, CRASH_LANDING_POINTS, WASTED_POINTS } = await import(
+    "../src/race/deathmatch.js"
+  );
+  expect(carsCrash(0, 1)).toBe(false);
+
+  noteStunt(0, 123.6);
+  noteStunt(0, 0);
+  expect(ctx.deathmatch.points[0]).toBe(124);
+  expect(ctx.deathmatch.stunts[0]).toBe(1);
+
+  // car 0 coming down on its roof, a stunt still counting
+  ctx.racers[0].roll = 180;
+  ctx.car[0].y = ctx.car[0].grat + 30;
+  ctx.racers[0].countingStunt = 3;
+  for (let i = 0; i < 60 && ctx.deathmatch.crashes[0] == 0; i++) {
+    ctx.drive();
+  }
+  expect(ctx.deathmatch.crashes[0]).toBe(1);
+  expect(ctx.deathmatch.points[0]).toBe(124 - CRASH_LANDING_POINTS);
+
+  // car 1 wasted, hit by bot 2: no kill, points lost, back after a while
+  ctx.racers[1].lastHitBy = 2;
+  ctx.racers[1].damage = 100000;
+  for (let i = 0; i < 200 && !ctx.racers[1].wasted; i++) {
+    ctx.drive();
+    ctx.racers[1].lastcolido = 70;
+  }
+  expect(ctx.racers[1].wasted).toBe(true);
+  expect(ctx.deathmatch.kills[2]).toBe(0);
+  expect(ctx.deathmatch.points[1]).toBe(-WASTED_POINTS);
+  expect(ctx.deathmatch.deaths[1]).toBe(1);
+  expect(ctx.killTable()[0]).toMatchObject({ c: 0, score: 74 });
+
+  // (the points go with the race's state)
+  const saved = ctx.saveRace();
+  expect(ctx.isRaceState(saved, ctx.game.carCount)).toBe(true);
+  ctx.deathmatch.points[0] = 0;
+  ctx.restoreRace(saved);
+  expect(ctx.deathmatch.points[0]).toBe(74);
+  for (let i = 0; i < ctx.respawnTicks(); i++) {
+    ctx.drive();
+  }
+  expect(ctx.racers[1].wasted).toBe(false);
+  // (the HUD's standing, and once the time is up its results)
+  expect(() => ctx.drawHud()).not.toThrow();
+  ctx.deathmatch.ticks = ctx.deathmatchTicks();
+  ctx.updateStandings();
+  expect(ctx.track.haltall).toBe(true);
+  expect(() => ctx.drawHud()).not.toThrow();
+});
+
+test("in gun game a kill gets the car the next of the ladder a moment later, driving on, and a kill in the last one wins", async () => {
+  const { ctx } = await mostKills();
+  ctx.raceSetup.mode = ctx.RACE_MODE.gunGame;
+  ctx.startDeathmatch();
+  const { GUN_LADDER } = await import("../src/race/deathmatch.js");
+  // car 1, hit by bot 2, wasted
+  ctx.racers[1].lastHitBy = 2;
+  ctx.racers[1].damage = 100000;
+  for (let i = 0; i < 200 && !ctx.racers[1].wasted; i++) {
+    ctx.drive();
+    ctx.racers[1].lastcolido = 70;
+  }
+  expect(ctx.deathmatch.kills[2]).toBe(1);
+  const before = ctx.saveRace();
+  const body = ctx.racers[2].body;
+  ctx.racers[2].speed = 50;
+  for (let i = 0; i < 60 && ctx.car[2].typ != GUN_LADDER[1]; i++) {
+    ctx.drive();
+  }
+  expect(ctx.car[2].typ).toBe(GUN_LADDER[1]);
+  expect(ctx.game.carTypes[2]).toBe(GUN_LADDER[1]);
+  expect(ctx.racers[2].body).not.toBe(body);
+  expect(ctx.racers[2].speed).not.toBe(0);
+  // (the wasted car comes back in the ladder's first)
+  for (let i = 0; i < ctx.respawnTicks() && ctx.racers[1].wasted; i++) {
+    ctx.drive();
+  }
+  expect(ctx.racers[1].wasted).toBe(false);
+  expect(ctx.car[1].typ).toBe(GUN_LADDER[0]);
+
+  // wound back to before it changed, the car is the one it was
+  ctx.restoreRace(before);
+  expect(ctx.car[2].typ).not.toBe(GUN_LADDER[1]);
+  expect(ctx.isRaceState(ctx.saveRace(), ctx.game.carCount)).toBe(true);
+
+  // the last kill
+  ctx.deathmatch.kills[2] = GUN_LADDER.length - 1;
+  ctx.racers[3].lastHitBy = 2;
+  ctx.racers[3].damage = 100000;
+  ctx.track.haltall = false;
+  for (let i = 0; i < 200 && !ctx.racers[3].wasted; i++) {
+    ctx.drive();
+    ctx.racers[3].lastcolido = 70;
+  }
+  ctx.updateStandings();
+  expect(ctx.track.haltall).toBe(true);
+  expect(ctx.killTable()[0].c).toBe(2);
+  // (the HUD's results of it)
+  expect(() => ctx.drawHud()).not.toThrow();
+});
+
+test("a room's bots keep the names of the cars the lobby gave them, whatever they race in", async () => {
+  const { ctx } = await mostKills();
+  const { setRoomCars, nameOfCar } = await import("../src/net/roomCars.js");
+  setRoomCars(["Ann", null, null], [0, 0, 0], [], [5, 17, 17]);
+  ctx.game.carTypes[1] = 0;
+  ctx.game.carTypes[2] = 0;
+  expect([nameOfCar(1), nameOfCar(2)]).toEqual([
+    "Radical One 1",
+    "Radical One 2",
+  ]);
+  setRoomCars([], [], []);
+});
+
 test("a normal race keeps its wrecks and counts no kills", async () => {
   const { ctx } = await mostKills();
   ctx.raceSetup.mode = ctx.RACE_MODE.normal;

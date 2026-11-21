@@ -51,6 +51,7 @@ import { linkDirectly } from "./direct.js";
 import { receiveVoice } from "./voice.js";
 import {
   MOST_NAME_CHARACTERS,
+  isCarType,
   isTeam,
   isTeamChosen,
   own,
@@ -152,6 +153,7 @@ const isStart = ({
   names,
   skins,
   teams,
+  botCars,
   raceId,
   state,
 }) =>
@@ -174,6 +176,10 @@ const isStart = ({
   Array.isArray(teams) &&
   teams.length == carTypes.length &&
   teams.every(isTeam) &&
+  (botCars === undefined ||
+    (Array.isArray(botCars) &&
+      botCars.length == carTypes.length &&
+      botCars.every(isCarType))) &&
   isRaceState(state, carTypes.length);
 
 // the parts of the host's start of the race raceId that came
@@ -333,7 +339,7 @@ const loadHostedRace = (start) => {
   guest.ready = false;
   track.stage = start.stage;
   field.replayCars = start.carTypes;
-  setRoomCars(start.names, start.skins, start.teams);
+  setRoomCars(start.names, start.skins, start.teams, start.botCars);
   // (as the host's: it starts no other)
   game.mode = MODE.championship;
   raceSetup.kind = RACE_KIND.together;

@@ -3,7 +3,8 @@
 
 import { random } from "../core/random.js";
 import { game } from "../core/state.js";
-import { bodyDamage, fixcar } from "../race/physics.js";
+import { GUN_LADDER, racesGunGame } from "../race/deathmatch.js";
+import { bodyDamage, carChange, fixcar } from "../race/physics.js";
 import { car, racers } from "../race/racers.js";
 import { hslToRgb, rgbToHsl } from "../ui/color.js";
 import { images } from "../ui/images.js";
@@ -132,70 +133,83 @@ export const CAR_TEXTURE = { menu: 0, race: 1 };
 // damage scratched into them.
 export function raceCarTextures() {
   for (let c = 0; c < game.carCount; c++) {
-    const model = carModels[car[c].typ];
-    if (model.loaded == 4) {
-      gl.deleteTexture(model.texture[1]);
-      model.texture[1] = null;
-    }
-    const { texture, pixels } = recoloredTexture(
-      carTextures[car[c].typ],
-      256,
-      mipmapped,
-      (pixels, p) => {
-        if (isGlass(pixels, p)) {
-          pixels[p] = scene.glassColor[0];
-          pixels[p + 1] = scene.glassColor[1];
-          pixels[p + 2] = scene.glassColor[2];
-          pixels[p + 3] = 210;
-        }
-      },
-    );
-    model.texture[1] = texture;
-    keepDamageTexture(model, pixels);
-    model.cleanPixels = pixels && Uint8Array.from(pixels);
-    model.shownTexture = CAR_TEXTURE.race;
-    model.loaded = 4;
+    raceTextureOf(car[c].typ);
   }
-  // The first car of a type dents the type's model, as every car did when all types
-  // differed. Further cars of that type, and any in a skin, get their own copy to dent and
-  // scratch, sharing what never changes (normals, texture coordinates, the menu texture).
-  for (let c = 0; c < game.carCount; c++) {
-    const model = carModels[car[c].typ];
-    let shared = false;
-    for (let o = 0; o < c; o++) {
-      if (car[o].typ == car[c].typ) {
-        shared = true;
+  if (racesGunGame()) {
+    for (const type of GUN_LADDER) {
+      if (!game.carTypes.slice(0, game.carCount).includes(type)) {
+        raceTextureOf(type);
       }
     }
-    // (a copy of a race before goes, with what it holds on the GPU)
-    const old = racers[c].body;
-    if (old?.copied) {
-      gl.deleteTexture(old.texture[1]);
-      gl.deleteBuffer(old.vbuf);
-    }
-    racers[c].body = model;
-    bodyDamage.repair?.(c);
-    const skin = skinOf(c);
-    if (shared || skin) {
-      racers[c].body = {
-        ...model,
-        copied: true,
-        texture: [model.texture[0], null],
-        vbuf: null,
-        // (fixcar makes the race texture of these, the glass kept)
-        cleanPixels:
-          skin && model.cleanPixels
-            ? paintPixels(
-                Uint8Array.from(model.cleanPixels),
-                skin,
-                isSeeThrough,
-              )
-            : model.cleanPixels,
-      };
-      fixcar(c);
-    }
+  }
+  for (let c = 0; c < game.carCount; c++) {
+    makeBody(c);
   }
 }
+
+const raceTextureOf = (type) => {
+  const model = carModels[type];
+  if (model.loaded == 4) {
+    gl.deleteTexture(model.texture[1]);
+    model.texture[1] = null;
+  }
+  const { texture, pixels } = recoloredTexture(
+    carTextures[type],
+    256,
+    mipmapped,
+    (pixels, p) => {
+      if (isGlass(pixels, p)) {
+        pixels[p] = scene.glassColor[0];
+        pixels[p + 1] = scene.glassColor[1];
+        pixels[p + 2] = scene.glassColor[2];
+        pixels[p + 3] = 210;
+      }
+    },
+  );
+  model.texture[1] = texture;
+  keepDamageTexture(model, pixels);
+  model.cleanPixels = pixels && Uint8Array.from(pixels);
+  model.shownTexture = CAR_TEXTURE.race;
+  model.loaded = 4;
+};
+
+// The first car of a type dents the type's model, as every car did when all types
+// differed. Further cars of that type, and any in a skin (or in gun game, whose cars change
+// their type), get their own copy to dent and scratch, sharing what never changes
+// (normals, texture coordinates, the menu texture).
+const makeBody = (c) => {
+  const model = carModels[car[c].typ];
+  let shared = racesGunGame();
+  for (let o = 0; o < c; o++) {
+    if (car[o].typ == car[c].typ) {
+      shared = true;
+    }
+  }
+  // (a copy of a race before goes, with what it holds on the GPU)
+  const old = racers[c].body;
+  if (old?.copied) {
+    gl.deleteTexture(old.texture[1]);
+    gl.deleteBuffer(old.vbuf);
+  }
+  racers[c].body = model;
+  bodyDamage.repair?.(c);
+  const skin = skinOf(c);
+  if (shared || skin) {
+    racers[c].body = {
+      ...model,
+      copied: true,
+      texture: [model.texture[0], null],
+      vbuf: null,
+      // (fixcar makes the race texture of these, the glass kept)
+      cleanPixels:
+        skin && model.cleanPixels
+          ? paintPixels(Uint8Array.from(model.cleanPixels), skin, isSeeThrough)
+          : model.cleanPixels,
+    };
+    fixcar(c);
+  }
+};
+carChange.body = makeBody;
 
 // The ground (texture n) in the stage's colour: darker texture pixels shift hue and
 // saturation by hueShift and saturationShift. The stage's dust (kinds 6 to 8) gets a

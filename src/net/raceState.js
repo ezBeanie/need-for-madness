@@ -14,10 +14,11 @@ import { game } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { ai } from "../race/ai.js";
 import { raceEvents } from "../race/events.js";
-import { physics, undentedVertices } from "../race/physics.js";
-import { racers } from "../race/racers.js";
+import { changeCarType, physics, undentedVertices } from "../race/physics.js";
+import { car, racers } from "../race/racers.js";
 import { track } from "../race/track.js";
 import { copyCarState, isCarState, restoreCarState } from "./carState.js";
+import { isCarType } from "./roomCars.js";
 
 // the standings on the track (see track.insih)
 const STANDINGS = ["pos", "clear", "dested", "magperc"];
@@ -66,6 +67,8 @@ export const saveRace = () => {
     const body = racers[c].body;
     cars.push({
       ...copyCarState(c),
+      // (in gun game it changes)
+      type: car[c].typ,
       keys: { ...racers[c].u },
       dents: savedDents(body),
       dented: body.iscar,
@@ -99,6 +102,9 @@ export const sharedRace = () => {
 
 export const restoreRace = (state) => {
   state.cars.forEach((saved, c) => {
+    if (car[c].typ != saved.type) {
+      changeCarType(c, saved.type);
+    }
     restoreCarState(c, saved);
     Object.assign(racers[c].u, saved.keys);
     const body = racers[c].body;
@@ -129,6 +135,7 @@ export const isRaceState = (state, cars) =>
   state.cars.every(
     (saved) =>
       isCarState(saved) &&
+      isCarType(saved.type) &&
       typeof saved.keys == "object" &&
       typeof saved.driver == "object",
   ) &&

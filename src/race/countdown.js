@@ -7,6 +7,7 @@ import { updateEngineSound, resetEngineSound } from "../audio/engineSound.js";
 import { isPhone } from "../core/platform.js";
 import { MODE, PHASE, game, raceSetup } from "../core/state.js";
 import { startTimeAttack } from "./timeAttack.js";
+import { GUN_LADDER, racesGunGame } from "./deathmatch.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { pointer } from "../input/pointer.js";
 import { CAMERA, camera } from "../render/camera.js";
@@ -56,6 +57,14 @@ const beginRace = () => {
     scene.light[2],
     scene.fogDistance,
   );
+  // gun game: the player's car becomes every car of the ladder
+  if (racesGunGame()) {
+    for (const type of GUN_LADDER) {
+      if (!isEngineLoaded(type)) {
+        loadEngine(type);
+      }
+    }
+  }
   // switch mode: the player can drive every car, in one lap
   if (game.mode == MODE.switchCars) {
     for (let c = 1; c < game.carCount; c++) {

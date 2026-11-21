@@ -4,12 +4,13 @@ import { LAST_STAGE, levelOf, ownStage } from "../data/stages.js";
 import { random } from "../core/random.js";
 import { MAX_CARS, RACE_SIZES, game, raceSetup } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
-import { CAR, carStats } from "../data/carStats.js";
+import { CAR } from "../data/carStats.js";
 import { raceCarTextures } from "../render/generated.js";
 import { resetHud } from "../ui/hud.js";
 import { inishcontrol } from "./ai.js";
+import { GUN_LADDER, racesGunGame } from "./deathmatch.js";
 import { inishmad } from "./physics.js";
-import { car } from "./racers.js";
+import { car, fitCarType } from "./racers.js";
 import { resetRaceTape } from "./raceTape.js";
 import { resetRecording } from "./recording.js";
 import { track } from "./track.js";
@@ -27,8 +28,9 @@ const gridZ = Array.from(
 
 // a replay's cars (see screens/replays.js): the field it was raced in, not new opponents;
 // roomCarTypes: in a room with guests, the cars they chose and those of the bots the host
-// added (see net/host.js), the whole field beside the player's
-export const field = { replayCars: null, roomCarTypes: null };
+// added (see net/host.js), the whole field beside the player's; ownCarType: the player's
+// own car while gun game races it in another (see restoreOwnCar)
+export const field = { replayCars: null, roomCarTypes: null, ownCarType: null };
 
 // Chooses the opponents and puts all cars on the start grid.
 export function setUpField() {
@@ -44,6 +46,14 @@ export function setUpField() {
   } else {
     chooseOpponents(track.stage);
   }
+  // (gun game: every car starts in the ladder's first, see deathmatch.js; a guest gets its
+  // own car back as a guest)
+  if (racesGunGame()) {
+    if (!field.replayCars) {
+      field.ownCarType ??= game.carTypes[0];
+    }
+    game.carTypes.fill(GUN_LADDER[0], 0, game.carCount);
+  }
   resetHud();
   placeOnGrid();
   inishcontrol();
@@ -55,6 +65,14 @@ export function setUpField() {
 // The field size the cars were chosen for: it can change in the stage select after the
 // stage loaded with its cars.
 let fieldSize = 0;
+
+// Back in the menus: the player's own car again.
+export const restoreOwnCar = () => {
+  if (field.ownCarType !== null) {
+    game.carTypes[0] = field.ownCarType;
+    field.ownCarType = null;
+  }
+};
 
 export function applyFieldSize() {
   if (fieldSize != game.raceCars) {
@@ -72,26 +90,15 @@ export function nextRaceSize() {
 const placeOnGrid = () => {
   for (let i = 0; i < game.carCount; i++) {
     const body = car[i];
-    const type = game.carTypes[i];
-    body.typ = type;
+    fitCarType(body, game.carTypes[i]);
     body.x = gridX[i] + 4 * random.sim() - 2;
     body.z = gridZ[i];
-    body.grat = carStats.wly[type][1] + 1.5 * carStats.wlh[type][1];
     body.y = body.grat;
     body.xy = 0;
     body.xz = 0;
     body.zy = 0;
     body.wzy = 0;
     body.wxz = 0;
-    // the wheels' places: front left, front right, rear left, rear right
-    body.keyx[0] = -carStats.wlx[type][0];
-    body.keyz[0] = carStats.wlz[type][0];
-    body.keyx[1] = carStats.wlx[type][0];
-    body.keyz[1] = carStats.wlz[type][0];
-    body.keyx[2] = -carStats.wlx[type][1];
-    body.keyz[2] = carStats.wlz[type][1];
-    body.keyx[3] = carStats.wlx[type][1];
-    body.keyz[3] = carStats.wlz[type][1];
     body.mat = mat4.create();
     body.ctxl[0] = random.fx();
     body.ctxl[1] = random.fx();

@@ -1086,6 +1086,84 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
   );
 });
 
+test("in gun game every car starts in the ladder's first, the bots keep their names, a car changes into another as it races, and the host has its own car back after", async ({
+  context,
+}) => {
+  const games = await openTwoGames(context, "/?host=gungame", "/?join=gungame");
+  const { host, guest, hostPage, guestPage } = games;
+  const errors = [];
+  hostPage.on("pageerror", (error) => errors.push(error.message));
+  const both = [
+    { game: host, page: hostPage },
+    { game: guest, page: guestPage },
+  ];
+  const deliver = async () => {
+    await guestPage.waitForTimeout(DELIVERY_MS);
+    await advanceBoth(...both, 35);
+  };
+  await deliver();
+  await hostPage.locator("#menuMultiplayer").click();
+  await guestPage.locator("#menuMultiplayer").click();
+  await hostPage.getByLabel("Mode", { exact: true }).selectOption("Gun game");
+  await expect(hostPage.getByLabel("Time", { exact: true })).toBeVisible();
+  await hostPage.getByRole("button", { name: "Add a bot" }).click();
+  await hostPage
+    .locator("#multiplayerBot0")
+    .selectOption({ label: "Radical One" });
+  const own = await hostPage.evaluate(() => window.gameState.game.carTypes[0]);
+  await deliver();
+  await guestPage.getByRole("button", { name: "Ready" }).click();
+  await deliver();
+  await hostPage.getByRole("button", { name: "Start the race" }).click();
+  await host.advanceUntil(PHASE.race);
+  await host.advance();
+  await guestPage.waitForTimeout(DELIVERY_MS);
+  await guest.advanceUntil(PHASE.race);
+  const raced = (page) =>
+    page.evaluate(async () => {
+      const { game } = window.gameState;
+      const { nameOfCar } = await import("/src/net/roomCars.js");
+      return {
+        field: game.carTypes.slice(0, game.carCount),
+        bot: nameOfCar(2),
+      };
+    });
+  expect(await raced(hostPage)).toEqual({
+    field: [0, 0, 0],
+    bot: "Radical One",
+  });
+  expect(await raced(guestPage)).toEqual(await raced(hostPage));
+  await advanceBoth(...both, 150);
+  expect(await apartAt(hostPage)).toBe(-1);
+  expect(await apartAt(guestPage)).toBe(-1);
+
+  // (as a kill gets it: here in the host's game alone, which only draws it)
+  const changed = await hostPage.evaluate(async () => {
+    const { changeCarType } = await import("/src/race/physics.js");
+    changeCarType(1, 16);
+    return window.gameState.carStats.names[16];
+  });
+  await host.advance(5);
+  expect(
+    await hostPage.evaluate(async () => {
+      const { car, racers } = await import("/src/race/racers.js");
+      const { carModels } = await import("/src/render/scene.js");
+      return [car[1].typ, racers[1].body.ni == carModels[16].ni];
+    }),
+  ).toEqual([16, true]);
+  expect(changed).toBe("M A S H E E N");
+  expect(errors).toEqual([]);
+
+  for (const key of ["Escape", "ArrowDown", "Enter"]) {
+    await pressInRace(host, hostPage, key);
+  }
+  await host.advanceUntil(PHASE.mainMenu);
+  await host.advance(2);
+  expect(await hostPage.evaluate(() => window.gameState.game.carTypes[0])).toBe(
+    own,
+  );
+});
+
 test("a race of the host's own while it waits for guests goes on to the car select, not to the lobby", async ({
   page,
 }) => {
