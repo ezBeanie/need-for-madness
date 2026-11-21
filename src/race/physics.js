@@ -44,7 +44,7 @@ import {
   catchWastingNow,
   recording,
 } from "./recording.js";
-import { PIECE, pieceModels, pieces, track } from "./track.js";
+import { PIECE, pieceModels, pieces, throughTheRace, track } from "./track.js";
 import { acos } from "../core/exactMath.js";
 
 // Run again quietly, the race is computed as ever, but nothing of it is heard or thrown
@@ -215,12 +215,24 @@ export function drive() {
     }
   }
   for (let c = 0; c < game.carCount; c++) {
+    if (throughTheRace(c)) {
+      stopDriving(c);
+    }
     driveCar(c);
   }
   if (isDeathmatch()) {
     deathmatchTick(respawn);
   }
 }
+
+const stopDriving = (c) => {
+  const keys = racers[c].u;
+  keys.left = false;
+  keys.right = false;
+  keys.up = false;
+  keys.down = false;
+  keys.handb = false;
+};
 
 function driveCar(c) {
   let type = car[c].typ;

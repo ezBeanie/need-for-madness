@@ -4,12 +4,14 @@
 // (ICE_PATH: the STUN and TURN servers, see server/ice.js). A player is heard only while
 // talking: holding the talk key (push to talk, the microphone asked for at the first press),
 // or, by voice, while the microphone hears the player (asked for on entering the room). In a
-// race each voice comes from its car, quieter the farther away; in the lobby all alike.
+// race each voice comes from its car, quieter the farther away; in the lobby all alike, as
+// is the voice of a player out of the race (wasted, or through it), watching.
 
 import { audio, placeSound, placedIn } from "../audio/audio.js";
 import { loadSetting, saveSetting } from "../core/storage.js";
 import { RACE_PHASES, game } from "../core/state.js";
 import { car } from "../race/racers.js";
+import { outOfTheRace } from "../race/spectate.js";
 import { heardFrom } from "../render/camera.js";
 import { MESSAGE, ROLE, isPlayerId, link } from "./link.js";
 import { lockstep } from "./lockstep.js";
@@ -342,7 +344,8 @@ const talkByVoice = (inRoom) => {
 export const voiceLoudness = (distance) =>
   Math.max(0, Math.min(1, (FAR - distance) / (FAR - NEAR))) ** 2;
 
-// Each voice from its car in a race, quieter the farther; in the lobby all alike.
+// Each voice from its car in a race, quieter the farther; in the lobby, or out of the race,
+// all alike.
 const placeVoices = () => {
   const racing = RACE_PHASES.includes(game.phase) && lockstep.active;
   for (const [id, peer] of voice.peers) {
@@ -352,7 +355,7 @@ const placeVoices = () => {
     const c = racing ? lockstep.players.indexOf(id) : -1;
     let volume = audio.muteSound ? 0 : audio.voiceVolume;
     let place = { side: 0, front: 1 };
-    if (c >= 0) {
+    if (c >= 0 && !outOfTheRace(c)) {
       place = heardFrom(car[c].x, car[c].z);
       volume *= voiceLoudness(place.distance);
     }

@@ -78,6 +78,7 @@ import {
 import { HIGHLIGHT, startHighlight, recording } from "../race/recording.js";
 import { VIEWER_FROM, nextCamera, openReplay } from "../race/replayViewer.js";
 import {
+  clocked,
   currentLapTicks,
   finishTimes,
   formatTime,
@@ -766,7 +767,11 @@ const timeAttackOutcome = () => {
     return true;
   }
   const place = through.findIndex(({ c }) => c == game.player);
-  if (place != -1) {
+  // (through, the car stops there and the player may watch the others)
+  if (place == -1) {
+    return false;
+  }
+  if (!watchingOthers()) {
     drawOutcome("Finished!", "youwon");
     drawBlinking(
       192,
@@ -779,7 +784,7 @@ const timeAttackOutcome = () => {
       255,
     );
   }
-  return false;
+  return true;
 };
 
 // the player's car being wasted: a crash, then its burning out
@@ -2113,6 +2118,10 @@ const announceEvents = () => {
   if (raceEvents.checkpointsAnnounced != player.clear && player.clear != 0) {
     if (!messageImportant) {
       message = classicMenus() ? "Checkpoint!" : t("Check Point");
+      // (against the clock, with the time it was reached)
+      if (clocked() && timeAttack.split.cleared == player.clear) {
+        message += `  ${formatTime(timeAttack.split.time)}`;
+      }
       raceEvents.messageTicks = 15;
     }
     raceEvents.checkpointsAnnounced = player.clear;
@@ -2158,7 +2167,7 @@ export function drawHud() {
     ) {
       drawSwitchTimer();
     }
-    if (isTimeAttack() && raceEvents.countdown == 0) {
+    if (clocked() && raceEvents.countdown == 0 && !watchingOthers()) {
       drawClock();
     }
     // the left under the standing (and the arrow button, not up there on phones), down to

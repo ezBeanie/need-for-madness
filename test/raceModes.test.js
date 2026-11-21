@@ -132,6 +132,49 @@ test("a room's time attack goes on until every car is through or wasted, timed f
   expect(times[1]).toBe(3.5);
 });
 
+test("in a room's time attack the clock runs with each checkpoint's time, and a car through stops while its player watches, heard by all", async () => {
+  const { ctx, step } = await startRace({ stage: 1, car: 5 });
+  reset = () => {
+    ctx.raceSetup.mode = ctx.RACE_MODE.normal;
+    ctx.game.humans = [];
+  };
+  const { clocked, timeAttack } = await import("../src/race/timeAttack.js");
+  const { throughTheRace } = await import("../src/race/track.js");
+  const { outOfTheRace, spectating } = await import("../src/race/spectate.js");
+  for (let i = 0; i < 3; i++) {
+    step();
+  }
+  // (a normal room race has no clock)
+  ctx.game.humans = [0, 1];
+  expect(clocked()).toBe(false);
+  ctx.raceSetup.mode = ctx.RACE_MODE.timeAttack;
+  ctx.startTimeAttack();
+  expect(clocked()).toBe(true);
+  expect(timeAttack.best).toBe(null);
+  ctx.timeAttackTick();
+  ctx.timeAttackTick();
+  expect(timeAttack.ticks).toBe(2);
+
+  ctx.racers[0].clear = 1;
+  ctx.updateStandings();
+  ctx.timeAttackTick();
+  expect(timeAttack.split.cleared).toBe(1);
+  expect(timeAttack.split.time).toBeGreaterThan(1);
+  expect(timeAttack.split.time).toBeLessThanOrEqual(4);
+
+  expect(throughTheRace(0)).toBe(false);
+  expect(spectating()).toBe(false);
+  ctx.racers[0].clear = ctx.track.nlaps * ctx.track.nsp;
+  ctx.updateStandings();
+  expect(throughTheRace(0)).toBe(true);
+  expect(spectating()).toBe(true);
+  expect(outOfTheRace(0)).toBe(true);
+  expect(outOfTheRace(1)).toBe(false);
+  ctx.racers[0].u.up = true;
+  ctx.drive();
+  expect(ctx.racers[0].u.up).toBe(false);
+});
+
 test("in a room's time attack and racing only the other cars are seen through once racing, the more the nearer they come", async () => {
   const { ctx } = await startRace({ stage: 1, car: 5 });
   reset = () => {

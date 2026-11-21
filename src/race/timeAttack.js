@@ -1,6 +1,8 @@
 // Time attack: the player alone against the clock, timed in ticks from the start to each
 // lap and to the finish. The best lap and the best race of each stage are kept. A lap ends
-// where within its tick the car crossed the line, so times are finer than ticks.
+// where within its tick the car crossed the line, so times are finer than ticks. A room's
+// race against the clock is timed alike, without best times or ghost; a car through its
+// laps stops there and its driver watches the others.
 
 import { RACE_KIND, game, raceSetup } from "../core/state.js";
 import { loadText, saveSetting } from "../core/storage.js";
@@ -9,15 +11,16 @@ import { isCustom } from "../data/stages.js";
 import { forgetGhost, ghostTick, keepGhost, startGhost } from "./ghost.js";
 import { raceTape } from "./raceTape.js";
 import { car, racers } from "./racers.js";
-import { track } from "./track.js";
+import { isRoomTimeAttack, track } from "./track.js";
 
 // ticks: since the start; time: the race's, once finished; laps: the time of each lap
-// done; best: the stage's best times before this race ({ lap, race } or null); newBest:
+// done; split: the checkpoints cleared and when the last was; best: the stage's best times before this race ({ lap, race } or null); newBest:
 // what this race bettered
 export const timeAttack = {
   ticks: 0,
   time: 0,
   laps: [],
+  split: { cleared: 0, time: 0 },
   best: null,
   finished: false,
   newBest: { lap: false, race: false },
@@ -59,13 +62,16 @@ export const formatTime = (ticks) => {
 };
 
 export const isTimeAttack = () => raceSetup.kind == RACE_KIND.timeAttack;
+// whether the HUD shows the clock
+export const clocked = () => isTimeAttack() || isRoomTimeAttack();
 
 // As the race begins.
 export const startTimeAttack = () => {
   timeAttack.ticks = 0;
   timeAttack.time = 0;
   timeAttack.laps = [];
-  timeAttack.best = bestTimes(track.stage);
+  timeAttack.split = { cleared: 0, time: 0 };
+  timeAttack.best = isTimeAttack() ? bestTimes(track.stage) : null;
   timeAttack.finished = false;
   timeAttack.newBest = { lap: false, race: false };
   if (isTimeAttack()) {
@@ -165,20 +171,33 @@ const keepBest = () => {
 
 // Every tick of the race: the clock runs until the last lap is done (or the car wasted).
 export const timeAttackTick = () => {
-  if (!isTimeAttack() || timeAttack.finished || track.haltall) {
+  if (
+    !clocked() ||
+    timeAttack.finished ||
+    track.haltall ||
+    racers[game.player].wasted
+  ) {
     return;
   }
   timeAttack.ticks++;
-  ghostTick(timeAttack.ticks);
-  const lapsDone = Math.floor(track.clear[game.player] / track.nsp);
+  if (isTimeAttack()) {
+    ghostTick(timeAttack.ticks);
+  }
+  const cleared = track.clear[game.player];
+  if (cleared > timeAttack.split.cleared) {
+    timeAttack.split = { cleared, time: crossedAt(timeAttack.ticks) };
+  }
+  const lapsDone = Math.floor(cleared / track.nsp);
   while (timeAttack.laps.length < Math.min(lapsDone, track.nlaps)) {
     timeAttack.laps.push(crossedAt(timeAttack.ticks) - lapStart());
   }
   if (timeAttack.laps.length == track.nlaps) {
     timeAttack.finished = true;
     timeAttack.time = lapStart();
-    keepBest();
-    keepGhost(timeAttack.ticks, timeAttack.time);
+    if (isTimeAttack()) {
+      keepBest();
+      keepGhost(timeAttack.ticks, timeAttack.time);
+    }
   }
   keepWhereBefore();
 };
