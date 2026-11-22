@@ -103,10 +103,19 @@ Deployment auf beanie (seit 29.10.2026 live):
   `{"relay":"listing","listing":{…}}` (geht an kein Spiel), alle paar Sekunden neu und `null`,
   wenn der Raum wieder privat ist; verlässt er den Raum, ist die Listung weg. Standard: privat.
   Der Mehrspieler-Dialog zeigt die Liste über "Host a race" und dem Beitreten per Code.
-- Übersicht `lobbies.html`: Der Relay beantwortet `/net/rooms` nur mit dem Token aus
-  `ROOMS_TOKEN` (ohne gesetzten Token gar nicht). Der Token kommt aus einer Env-Datei, die nur
-  auf beanie liegt und nie ins Repository gehört, z. B. `--env-file /home/janu/nfm-relay.env`
-  mit `ROOMS_TOKEN=…`. Die Seite fragt einmal danach und merkt ihn sich im Browser.
+- Admin-Seite `admin.html` (früher `lobbies.html`, leitet weiter): Der Relay beantwortet
+  `/net/rooms` nur mit dem Token aus `ROOMS_TOKEN` (ohne gesetzten Token gar nicht). Der Token
+  kommt aus einer Env-Datei, die nur auf dem Server liegt und nie ins Repository gehört, z. B.
+  `--env-file /home/janu/nfm-relay.env` mit `ROOMS_TOKEN=…`. Die Seite fragt einmal danach und
+  merkt ihn sich im Browser. Sie zeigt laufende Lobbys, den Lobby-Verlauf und die geöffneten
+  Spiele, jeweils 90 Tage.
+- Geöffnete Spiele: Das Spiel schickt beim Start `POST /net/visit` (Version, Gerätetyp,
+  installiert ja/nein). Der Relay speichert Zeit, gekürzte Adresse (IPv4 a.b.x.x, IPv6 /48) und
+  Land, nie die ganze Adresse, in `VISITS_FILE` (z. B. `-e VISITS_FILE=/data/visits.json`);
+  dieselbe Adresse zählt innerhalb von 10 Minuten einmal. Das Land kommt offline aus DB-IPs
+  "IP to Country Lite" (CC BY 4.0, Hinweis auf der Admin-Seite), die das Dockerfile beim Bauen
+  des Images lädt (`GEOIP_FILE`); fehlt sie, steht dort `?`. Für ein neues Monatsfile das
+  Image neu bauen.
 - nginx: Container `nfm` im Host-Netz, damit das Access-Log die echten Absender zeigt (über
   Dockers Port-Weiterleitung stand dort nur das Docker-Gateway):
   `docker run -d --name nfm --restart unless-stopped --network host -v /home/janu/nfm:/usr/share/nginx/html:ro -v /home/janu/nfm-nginx/default.conf:/etc/nginx/conf.d/default.conf:ro -v /home/janu/nfm-logs:/var/log/nginx nginx:alpine`.

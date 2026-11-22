@@ -18,12 +18,12 @@ test("an address is cut down to its network", () => {
   expect(shortAddress("not an address")).toBe("?");
 });
 
-test("sessions are kept in the file for a week and read again by a new relay", () => {
+test("sessions are kept in the file for 90 days and read again by a new relay", () => {
   const file = join(mkdtempSync(join(tmpdir(), "nfm-sessions-")), "s.json");
   const now = Date.now();
   writeFileSync(
     file,
-    JSON.stringify([{ since: now - 9 * DAY_MS, until: now - 8 * DAY_MS }]),
+    JSON.stringify([{ since: now - 92 * DAY_MS, until: now - 91 * DAY_MS }]),
   );
   const sessions = keepSessions(file);
   sessions.add({ since: now - 1000, until: now, host: "89.12.x.x" });

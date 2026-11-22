@@ -1,8 +1,10 @@
 // The relay on its own, for the server the game is published on: node server/main.js,
 // listening on PORT (8787 if not set). The web server in front passes /net on to it, the
 // rooms report (ROOMS_PATH) and the rooms listed (PUBLIC_PATH) too, and says in X-Real-IP whose a connection is. The rooms'
-// history is kept in HISTORY_FILE, if set. The report answers only with ROOMS_TOKEN. The
-// voice chat's TURN server is TURN_HOST, sharing TURN_SECRET with the relay (see ice.js).
+// history is kept in HISTORY_FILE, if set, the games opened (VISIT_PATH, see visits.js) in
+// VISITS_FILE, their countries from GEOIP_FILE (see geo.js). The report answers only with
+// ROOMS_TOKEN. The voice chat's TURN server is TURN_HOST, sharing TURN_SECRET with the
+// relay (see ice.js).
 
 import { createServer } from "node:http";
 import {
@@ -14,11 +16,20 @@ import {
   attachRelay,
 } from "./relay.js";
 import { ICE_PATH, answerIce } from "./ice.js";
+import { loadCountries } from "./geo.js";
+import { VISIT_PATH, keepVisits } from "./visits.js";
 
 const port = Number(process.env.PORT ?? 8787);
 const server = createServer();
 const relay = attachRelay(server, process.env.HISTORY_FILE);
-const rooms = answerRooms(relay.report, process.env.ROOMS_TOKEN);
+const visits = keepVisits(
+  process.env.VISITS_FILE,
+  loadCountries(process.env.GEOIP_FILE),
+);
+const rooms = answerRooms(
+  () => ({ ...relay.report(), visits: visits.summary() }),
+  process.env.ROOMS_TOKEN,
+);
 const listed = answerPublic(relay.listed);
 const ice = answerIce(process.env.TURN_HOST, process.env.TURN_SECRET);
 server.on("request", (request, response) => {
@@ -33,6 +44,10 @@ server.on("request", (request, response) => {
   }
   if (pathname == ICE_PATH) {
     ice(request, response);
+    return;
+  }
+  if (pathname == VISIT_PATH) {
+    visits.answer(request, response);
     return;
   }
   response.writeHead(404);

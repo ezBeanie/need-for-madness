@@ -9,7 +9,7 @@ import { WebSocket, WebSocketServer } from "ws";
 import { keepSessions, shortAddress } from "./sessions.js";
 
 export const RELAY_PATH = "/net";
-// what the rooms are like right now and were, for lobbies.html: no room names (they let one
+// what the rooms are like right now and were, for admin.html: no room names (they let one
 // in) and no whole addresses
 export const ROOMS_PATH = "/net/rooms";
 // the rooms their hosts listed, with their names, for the game's room browser: what the
