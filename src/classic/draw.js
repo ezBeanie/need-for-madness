@@ -193,20 +193,28 @@ const wheels = {
   steerSin: 0,
 };
 
-// Our wheel angles; the original's x and y point the other way, so they turn back.
-const turnWheels = (wxz, wzy) => {
+// Our wheel angles. Steering turns back, the original's x pointing the other way; the spin
+// is about the axle, x, where only y points the other way: a wheel rolling forward turns
+// its top forward (the original's +z) as ours do (see raceScene.js).
+export const turnWheels = (wxz, wzy) => {
   wheels.spin = wzy;
   wheels.steer = wxz;
-  wheels.spinCos = cosDeg(-wzy);
-  wheels.spinSin = sinDeg(-wzy);
+  wheels.spinCos = cosDeg(wzy);
+  wheels.spinSin = sinDeg(wzy);
   wheels.steerCos = cosDeg(-wxz);
   wheels.steerSin = sinDeg(-wxz);
 };
 
+// A wheel's corner (dy, dz) from its axle, in the original's axes, turned by the spin.
+export const spun = (dy, dz) => [
+  dy * wheels.spinCos - dz * wheels.spinSin,
+  dy * wheels.spinSin + dz * wheels.spinCos,
+];
+
 const placePoly = (poly, matrix, groundY) => {
   const points = poly.points;
   const turns = poly.wz != 0 || poly.wx != 0;
-  const { spin, steer, spinCos, spinSin, steerCos, steerSin } = wheels;
+  const { spin, steer, steerCos, steerSin } = wheels;
   for (let i = 0; i < points.length; i++) {
     let [px, py, pz] = points[i];
     // a wrecked car's polygon swells along its flattest axis (see wreck)
@@ -223,10 +231,9 @@ const placePoly = (poly, matrix, groundY) => {
     }
     if (turns) {
       if (poly.wz != 0 && spin != 0) {
-        const dy = py - poly.wy;
-        const dz = pz - poly.wz;
-        py = poly.wy + dy * spinCos - dz * spinSin;
-        pz = poly.wz + dy * spinSin + dz * spinCos;
+        const [dy, dz] = spun(py - poly.wy, pz - poly.wz);
+        py = poly.wy + dy;
+        pz = poly.wz + dz;
       }
       if (poly.wx != 0 && steer != 0) {
         const dx = px - poly.wx;
