@@ -20,7 +20,9 @@ export const TEAM_COLORS = ["#FF4C4C", "#4C9BFF", "#4CD964", "#FFD23F"];
 
 // names: by car, the player's name, "" for one without and null for a bot; skins: by car;
 // teams: by car, its team (see teamOf)
-export const roomCars = { names: [], skins: [], teams: [] };
+// (botCars: the cars the lobby gave the bots, by car, which name them: in gun game the
+// race's cars change)
+export const roomCars = { names: [], skins: [], teams: [], botCars: [] };
 
 // (control characters and runs of spaces could garble the lists and the name tags)
 export const cleanName = (text) =>
@@ -61,7 +63,7 @@ export const inRoomRace = () =>
 // Back in the menus: the next race may be no room's.
 export const forgetRoomCars = () => setRoomCars([], [], []);
 
-export const setRoomCars = (names, skins, teams = []) => {
+export const setRoomCars = (names, skins, teams = [], botCars = []) => {
   roomCars.names = Array.isArray(names)
     ? names.map((name) => (name === null ? null : cleanName(name)))
     : [];
@@ -71,7 +73,13 @@ export const setRoomCars = (names, skins, teams = []) => {
   roomCars.teams = Array.isArray(teams)
     ? teams.map((team) => (isTeam(team) ? team : 0))
     : [];
+  roomCars.botCars = Array.isArray(botCars)
+    ? botCars.map((type) => (isCarType(type) ? type : 0))
+    : [];
 };
+
+export const isCarType = (type) =>
+  Number.isInteger(type) && type >= 0 && type < carStats.names.length;
 
 // a team of a room's race with teams: 0 up to below their count
 export const isTeam = (team) =>
@@ -100,11 +108,12 @@ export const teamOf = (c) =>
 export const teamMates = (c, xc) =>
   c != xc && teamOf(c) != -1 && teamOf(c) == teamOf(xc);
 
-// Whether cars c and xc crash: not in a room's time attack or only racing, where the cars
-// pass through each other, nor team mates, unless the host let them crash.
+// Whether cars c and xc crash: not in a room's time attack, only racing or stunts, where
+// the cars pass through each other, nor team mates, unless the host let them crash.
 export const carsCrash = (c, xc) =>
   raceSetup.mode != RACE_MODE.timeAttack &&
   raceSetup.mode != RACE_MODE.onlyRacing &&
+  raceSetup.mode != RACE_MODE.stunts &&
   xc != c &&
   (raceSetup.rules.teamCrashes || !teamMates(c, xc));
 
@@ -136,7 +145,9 @@ export const nameOfCar = (c) => {
     const bots = roomCars.names
       .map((_, k) => k)
       .filter((k) => roomCars.names[k] === null);
-    return botNames(bots.map((k) => game.carTypes[k]))[bots.indexOf(c)];
+    return botNames(bots.map((k) => roomCars.botCars[k] ?? game.carTypes[k]))[
+      bots.indexOf(c)
+    ];
   }
   return name || `Player ${c + 1}`;
 };

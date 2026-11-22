@@ -80,14 +80,18 @@ export const RACE_KIND = {
 // How a room's race is won (see net/host.js): as any race, finishing first or wasting the
 // others; only racing, no car taking damage; as the last car not wasted, the laps
 // counting for nothing; against the clock, the cars passing through each other and the
-// race going on until every car is through; or for a fixed time wasting the others, the
-// wasted coming back, the most kills winning (see race/deathmatch.js).
+// race going on until every car is through; or for a fixed time, the wasted coming back
+// (see race/deathmatch.js): wasting the others, the most kills winning; doing stunts, the
+// cars passing through each other, the most points winning; or wasting the others to get
+// the next car of a ladder, a kill with the last one winning (gun game).
 export const RACE_MODE = {
   normal: 0,
   onlyRacing: 1,
   lastSurvivor: 2,
   timeAttack: 3,
   mostKills: 4,
+  stunts: 5,
+  gunGame: 6,
 };
 export const RACE_MODE_NAMES = [
   "Normal race",
@@ -95,6 +99,8 @@ export const RACE_MODE_NAMES = [
   "Last survivor",
   "Time attack",
   "Most kills",
+  "Stunts",
+  "Gun game",
 ];
 
 // whether the first car through its laps ends the race (in a room's time attack every car
@@ -113,7 +119,7 @@ export const TEAM_COUNTS = [0, 2, 3, 4];
 export const TEAM_NAMES = ["Red", "Blue", "Green", "Yellow"];
 
 // What a room's host chooses beyond the stage and the mode: how strong its bots are (hard
-// ones hunt the others in the wasting modes) and, in most kills, how long
+// ones hunt the others in the wasting modes) and, in the modes of a fixed time, how long
 // the race lasts and how long a wasted car stays out.
 export const MATCH_MINUTES = [1, 2, 3, 5, 10];
 export const RESPAWN_SECONDS = [1, 3, 5, 10];

@@ -2,7 +2,9 @@
 // buttons, and the overlays of replays, winding back time and switch mode.
 
 import {
+  GUN_LADDER,
   deathmatch,
+  gunCarOf,
   isDeathmatch,
   killTable,
   teamTable,
@@ -78,6 +80,7 @@ import {
 import { HIGHLIGHT, startHighlight, recording } from "../race/recording.js";
 import { VIEWER_FROM, nextCamera, openReplay } from "../race/replayViewer.js";
 import {
+  clocked,
   currentLapTicks,
   finishTimes,
   formatTime,
@@ -569,6 +572,9 @@ let damageBlinkTicks = 0;
 let damageBlink = false;
 // how the HUD last saw each car wasted (see track.dested), to announce changes
 const knownWrecks = [];
+// in stunts, the player's points as last announced; in gun game the player's car
+let knownPoints = 0;
+let knownCar = -1;
 
 export function resetHud() {
   game.player = 0;
@@ -593,6 +599,8 @@ export function resetHud() {
   for (let i = 0; i < MAX_CARS; i++) {
     knownWrecks[i] = 0;
   }
+  knownPoints = 0;
+  knownCar = -1;
   clearFeed();
   raceEvents.raceOverTicks = 0;
   camera.mode = CAMERA.behind;
@@ -766,7 +774,11 @@ const timeAttackOutcome = () => {
     return true;
   }
   const place = through.findIndex(({ c }) => c == game.player);
-  if (place != -1) {
+  // (through, the car stops there and the player may watch the others)
+  if (place == -1) {
+    return false;
+  }
+  if (!watchingOthers()) {
     drawOutcome("Finished!", "youwon");
     drawBlinking(
       192,
@@ -779,7 +791,7 @@ const timeAttackOutcome = () => {
       255,
     );
   }
-  return false;
+  return true;
 };
 
 // the player's car being wasted: a crash, then its burning out
@@ -821,9 +833,66 @@ export const killRow = ({ c, team, kills, assists, dealt, deaths }, place) => {
   };
 };
 
-// A room's race of most kills: the player's wreck and its way back, and once the time is
-// up every car's kills. Returns whether the race is over.
+// Stunts' results, a row per car: its points, the stunts it landed, its landings on the
+// roof and how often it was wasted.
+export const STUNT_HEADS = ["", "", "Points", "Stunts", "Crashes", "Wasted"];
+export const stuntRow = ({ c, points, stunts, crashes, deaths }, place) => ({
+  cells: [
+    placeName(place),
+    nameOfCar(c),
+    String(points),
+    String(stunts),
+    String(crashes),
+    String(deaths),
+  ],
+  mine: c == game.player,
+  line: `${placeName(place, said)}  ${nameOfCar(c)}  ${points} points, ${stunts} stunts, ${crashes} crashes, wasted ${deaths}`,
+});
+
+// Gun game's results, a row per car: its kills, the car of the ladder it got to and how
+// often it was wasted.
+export const GUN_HEADS = ["", "", "Kills", "Car", "Wasted"];
+export const gunRow = ({ c, kills, deaths }, place) => {
+  const reached = carStats.names[gunCarOf(c)];
+  return {
+    cells: [
+      placeName(place),
+      nameOfCar(c),
+      String(kills),
+      reached,
+      String(deaths),
+    ],
+    mine: c == game.player,
+    line: `${placeName(place, said)}  ${nameOfCar(c)}  ${kills} kills, in ${reached}, wasted ${deaths}`,
+  };
+};
+
+// A room's race of a fixed time: the player's wreck and its way back, and once the time is
+// up (or in gun game the last kill done) every car's kills (or points). Returns whether
+// the race is over.
 const deathmatchOutcome = () => {
+  if (track.haltall && raceSetup.mode == RACE_MODE.gunGame) {
+    const table = killTable();
+    const won = table[0]?.c == game.player;
+    drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
+    raceEvents.winner = won;
+    drawResults(
+      GUN_HEADS.map((head) => t(head)),
+      table.map(gunRow),
+    );
+    return true;
+  }
+  if (track.haltall && raceSetup.mode == RACE_MODE.stunts) {
+    const table = killTable();
+    const won = table[0]?.c == game.player;
+    drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
+    raceEvents.winner = won;
+    drawResults(
+      STUNT_HEADS.map((head) => t(head)),
+      table.map(stuntRow),
+    );
+    return true;
+  }
   if (track.haltall) {
     const table = killTable();
     const teams = teamTable();
@@ -1412,6 +1481,38 @@ const drawSwitchTimer = () => {
   }
 };
 
+// In gun game, the player's next car.
+const announceNextCar = () => {
+  const type = car[game.player].typ;
+  if (raceSetup.mode != RACE_MODE.gunGame || type == knownCar) {
+    return;
+  }
+  const first = knownCar == -1;
+  knownCar = type;
+  if (first) {
+    return;
+  }
+  messageImportant = true;
+  message = said("Next car: {car}!", { car: carStats.names[type] });
+  raceEvents.messageTicks = -15;
+};
+
+// In stunts, the points the player's car just won or lost.
+const announcePoints = () => {
+  const points = deathmatch.points[game.player] ?? 0;
+  if (raceSetup.mode != RACE_MODE.stunts || points == knownPoints) {
+    return;
+  }
+  const change = points - knownPoints;
+  knownPoints = points;
+  messageImportant = false;
+  message =
+    change > 0
+      ? said("+{points} points", { points: change })
+      : said("{points} points", { points: change });
+  raceEvents.messageTicks = -5;
+};
+
 // A message in the middle of the race, for a moment.
 export const announce = (english, values) => {
   messageImportant = false;
@@ -1564,13 +1665,30 @@ const drawStanding = () => {
 // Most kills, top left: the player's kills, how often it was wasted and its place by kills.
 const drawKillStanding = () => {
   const p = game.player;
+  const place = ["Place", placeName(killTable().findIndex(({ c }) => c == p))];
+  const ladder = GUN_LADDER.length;
+  const shown =
+    raceSetup.mode == RACE_MODE.stunts
+      ? [
+          ["Points", deathmatch.points[p]],
+          ["Stunts", deathmatch.stunts[p]],
+          place,
+        ]
+      : raceSetup.mode == RACE_MODE.gunGame
+        ? [
+            ["Car", `${Math.min(deathmatch.kills[p] + 1, ladder)}/${ladder}`],
+            ["Kills", deathmatch.kills[p]],
+            ["Wasted", deathmatch.deaths[p]],
+            place,
+          ]
+        : [
+            ["Kills", deathmatch.kills[p]],
+            ["Assists", deathmatch.assists[p]],
+            ["Wasted", deathmatch.deaths[p]],
+            place,
+          ];
   let x = 20 * view.scale;
-  for (const [label, value] of [
-    ["Kills", deathmatch.kills[p]],
-    ["Assists", deathmatch.assists[p]],
-    ["Wasted", deathmatch.deaths[p]],
-    ["Place", placeName(killTable().findIndex(({ c }) => c == p))],
-  ]) {
+  for (const [label, value] of shown) {
     rd.fillStyle = "#000000";
     rd.fillText(t(label), x, 19 * view.scale);
     x += rd.measureText(t(label)).width + 8 * view.scale;
@@ -2082,6 +2200,8 @@ const announceEvents = () => {
       raceEvents.messageTicks = 0;
     }
   }
+  announcePoints();
+  announceNextCar();
   if (game.carCount != 1) {
     for (let i = 0; i < game.carCount; i++) {
       if (knownWrecks[i] == track.dested[i]) {
@@ -2113,6 +2233,10 @@ const announceEvents = () => {
   if (raceEvents.checkpointsAnnounced != player.clear && player.clear != 0) {
     if (!messageImportant) {
       message = classicMenus() ? "Checkpoint!" : t("Check Point");
+      // (against the clock, with the time it was reached)
+      if (clocked() && timeAttack.split.cleared == player.clear) {
+        message += `  ${formatTime(timeAttack.split.time)}`;
+      }
       raceEvents.messageTicks = 15;
     }
     raceEvents.checkpointsAnnounced = player.clear;
@@ -2158,7 +2282,7 @@ export function drawHud() {
     ) {
       drawSwitchTimer();
     }
-    if (isTimeAttack() && raceEvents.countdown == 0) {
+    if (clocked() && raceEvents.countdown == 0 && !watchingOthers()) {
       drawClock();
     }
     // the left under the standing (and the arrow button, not up there on phones), down to

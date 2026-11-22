@@ -10,7 +10,6 @@ import {
   MATCH_MINUTES,
   PHASE,
   RACE_KIND,
-  RACE_MODE,
   RACE_MODE_NAMES,
   RESPAWN_SECONDS,
   STRENGTH_NAMES,
@@ -56,6 +55,7 @@ import {
   tellHost,
 } from "../net/guest.js";
 import { menu } from "../screens/menuState.js";
+import { isTimedMode } from "../race/deathmatch.js";
 import {
   MOST_PLAYERS,
   PLAYER_STATUS,
@@ -326,7 +326,7 @@ const showRace = () => {
   const stage = isHost ? roomStage() : guest.stage;
   const mode = isHost ? roomMode() : guest.mode;
   const rules = isHost ? roomRulesChosen() : guest.rules;
-  const mostKills = mode == RACE_MODE.mostKills;
+  const timed = isTimedMode(mode);
   element("lobbySettings").hidden = !isHost;
   element("lobbyRules").hidden = isHost;
   if (isHost) {
@@ -338,8 +338,8 @@ const showRace = () => {
     setSelect("lobbyRespawn", rules.respawnSeconds);
     setSelect("lobbyTeams", rules.teams);
     setSelect("lobbyTeamCrashes", rules.teamCrashes ? 1 : 0);
-    element("lobbyMinutesChoice").hidden = !mostKills;
-    element("lobbyRespawnChoice").hidden = !mostKills;
+    element("lobbyMinutesChoice").hidden = !timed;
+    element("lobbyRespawnChoice").hidden = !timed;
     element("lobbyTeamCrashesChoice").hidden = rules.teams == 0;
     return;
   }
@@ -348,7 +348,7 @@ const showRace = () => {
     [t("Mode"), t(RACE_MODE_NAMES[mode])],
     [t("Bot strength"), t(STRENGTH_NAMES[rules.strength])],
   ];
-  if (mostKills) {
+  if (timed) {
     shown.push(
       [t("Time"), minutesText(rules.minutes)],
       [t("Back after"), secondsText(rules.respawnSeconds)],

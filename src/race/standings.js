@@ -5,7 +5,7 @@ import { distanceSquaredXZ } from "../core/math.js";
 import { RACE_MODE, finishingEnds, game, raceSetup } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { tick } from "../core/tick.js";
-import { deathmatchLeft } from "./deathmatch.js";
+import { deathmatchLeft, gunGameWon, isDeathmatch } from "./deathmatch.js";
 import { raceEvents } from "./events.js";
 import { MISSED, car, countMissedCheckpoint, racers } from "./racers.js";
 import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
@@ -52,9 +52,10 @@ export function updateStandings() {
   if (game.humans.length > 0) {
     const cars = racers.slice(0, game.carCount);
     const done = track.nlaps * track.nsp;
-    if (raceSetup.mode == RACE_MODE.mostKills) {
-      // (most kills: until the time is up, the wasted coming back)
-      if (deathmatchLeft() == 0) {
+    if (isDeathmatch()) {
+      // (of a fixed time: until it is up, the wasted coming back; gun game also until a
+      // kill in the ladder's last car)
+      if (deathmatchLeft() == 0 || gunGameWon()) {
         track.haltall = true;
       }
     } else if (raceSetup.mode == RACE_MODE.timeAttack) {

@@ -4,6 +4,17 @@
 
 export const CHANGELOG = [
   {
+    version: "1.3.0",
+    date: "2026-11-22",
+    changes: [
+      "New room mode Stunts: the most points from stunts in the time wins; landing on the roof and being wasted cost points.",
+      "New room mode Gun game: every kill gets you the next car of a ladder up to DR Monstaa; a kill in it wins.",
+      "Time attack together: a car through stops and its player watches; a running clock and each checkpoint's time to the thousandth.",
+      "A player out of the race, watching, is heard by all as in the lobby.",
+      "The lobby's turning cars no longer slow the game with many bots, and big cars fit their cards.",
+    ],
+  },
+  {
     version: "1.2.2",
     date: "2026-11-19",
     changes: [

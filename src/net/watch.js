@@ -35,6 +35,7 @@ export const answerWatch = (id) => {
     names: roomCars.names,
     skins: roomCars.skins,
     teams: roomCars.teams,
+    botCars: roomCars.botCars,
     raceId: lockstep.raceId,
     ...raceToWatch(),
   });

@@ -3,10 +3,10 @@
 // leaders at the top, and at the end every car's result in a table.
 
 import { drawClassicMessage } from "../classic/hud.js";
-import { game } from "../core/state.js";
+import { RACE_MODE, game, raceSetup } from "../core/state.js";
 import { TICK_MS, tick } from "../core/tick.js";
 import { nameOfCar } from "../net/roomCars.js";
-import { deathmatch, deathmatchLeft, killTable } from "../race/deathmatch.js";
+import { deathmatchLeft, killTable } from "../race/deathmatch.js";
 import { racers } from "../race/racers.js";
 import { track } from "../race/track.js";
 import { classicMenus } from "../render/look.js";
@@ -119,7 +119,7 @@ export const drawFeed = (top, bottom) => {
   rd.restore();
 };
 
-// Most kills at the left from top on (the middle is the original's, for its messages): the
+// A race of a fixed time (most kills, stunts) at the left from top on (the middle is the original's, for its messages): the
 // time left, under it the leaders (the player too, if not among them). Returns where what
 // comes under it may start. In the classic look a line at the bottom, as the original would.
 const LEADERS = 3;
@@ -127,10 +127,12 @@ export const drawDeathmatchBoard = (top) => {
   const table = killTable();
   if (classicMenus()) {
     const [lead] = table;
+    const own = table.find(({ c }) => c == game.player);
+    const scored = raceSetup.mode == RACE_MODE.stunts ? "points" : "kills";
     drawCenteredText(
       636,
-      `Your kills ${deathmatch.kills[game.player]}` +
-        (lead?.kills ? `   Leading: ${nameOfCar(lead.c)} ${lead.kills}` : ""),
+      `Your ${scored} ${own?.score ?? 0}` +
+        (lead?.score ? `   Leading: ${nameOfCar(lead.c)} ${lead.score}` : ""),
       0,
       0,
       0,
@@ -163,7 +165,7 @@ export const drawDeathmatchBoard = (top) => {
   const rowHeight = 22 * s;
   let rowTop = top + clockHeight + 6 * s;
   font(13);
-  for (const { c, kills, place } of shown) {
+  for (const { c, score, place } of shown) {
     bar(left, rowTop, rowWidth, rowHeight, 0.45);
     rd.fillStyle = c == game.player ? "#FFB401" : "#FFFFFF";
     rd.textAlign = "left";
@@ -174,7 +176,7 @@ export const drawDeathmatchBoard = (top) => {
     );
     rd.textAlign = "right";
     rd.fillText(
-      String(kills),
+      String(score),
       left + rowWidth - 12 * s,
       rowTop + rowHeight / 2,
     );

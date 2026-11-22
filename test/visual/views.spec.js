@@ -143,6 +143,84 @@ test("the lobby shows each player's and bot's car on its card", async ({
   expect(await page.evaluate(() => window.gameState.previews.root)).toBeNull();
 });
 
+// the box around what a card shows, in pixels
+const shownBox = (page, index) =>
+  page.evaluate((i) => {
+    const canvas = document.querySelectorAll("#multiplayer canvas.car-preview")[
+      i
+    ];
+    const { data, width, height } = canvas
+      .getContext("2d")
+      .getImageData(0, 0, canvas.width, canvas.height);
+    const box = { left: width, right: -1, top: height, bottom: -1 };
+    for (let y = 0; y < height; y++) {
+      for (let x = 0; x < width; x++) {
+        if (data[(y * width + x) * 4 + 3] > 0) {
+          box.left = Math.min(box.left, x);
+          box.right = Math.max(box.right, x);
+          box.top = Math.min(box.top, y);
+          box.bottom = Math.max(box.bottom, y);
+        }
+      }
+    }
+    return { ...box, width, height };
+  }, index);
+
+test("the lobby's biggest cars fit their cards all the way round", async ({
+  page,
+}) => {
+  const game = await toMainMenu(page);
+  await page.locator("#menuMultiplayer").click();
+  await page.getByRole("button", { name: "Host a race" }).click();
+  await page.getByRole("button", { name: "Add a bot" }).click();
+  // Ice Cream, Tragdor, EL KING, M A S H E E N, Radical One, DR Monstaa
+  for (const car of [9, 7, 14, 16, 17, 18]) {
+    await page.locator("#multiplayerBot0").selectOption(String(car));
+    // (3 degrees a tick: once round in 120)
+    for (let turn = 0; turn < 120; turn += 6) {
+      await game.advance(6);
+      const box = await shownBox(page, 1);
+      expect(box.left, `car ${car}`).toBeGreaterThan(0);
+      expect(box.top, `car ${car}`).toBeGreaterThan(0);
+      expect(box.right, `car ${car}`).toBeLessThan(box.width - 1);
+      expect(box.bottom, `car ${car}`).toBeLessThan(box.height - 1);
+    }
+  }
+});
+
+test("the lobby draws all its cars with one read back a tick, none between ticks", async ({
+  page,
+}) => {
+  const game = await toMainMenu(page);
+  await page.locator("#menuMultiplayer").click();
+  await page.getByRole("button", { name: "Host a race" }).click();
+  // (more than a row of the drawing's tiles)
+  const cars = [0, 2, 4, 6, 8, 10, 12];
+  for (const [i, car] of cars.entries()) {
+    await page.getByRole("button", { name: "Add a bot" }).click();
+    await page.locator(`#multiplayerBot${i}`).selectOption(String(car));
+  }
+  await game.advance(2);
+  await page.evaluate(() => {
+    window.readBacks = 0;
+    const read = WebGLRenderingContext.prototype.readPixels;
+    WebGLRenderingContext.prototype.readPixels = function (...args) {
+      window.readBacks++;
+      return read.apply(this, args);
+    };
+  });
+  const readBacks = () => page.evaluate(() => window.readBacks);
+  await game.advance(3);
+  expect(await readBacks()).toBe(3);
+  // (frames a quarter tick apart: one in four turns the cars)
+  await game.advance(8, 35 / 4);
+  expect(await readBacks()).toBe(5);
+  for (let card = 0; card <= cars.length; card++) {
+    const box = await shownBox(page, card);
+    expect(box.right - box.left, `card ${card}`).toBeGreaterThan(60);
+  }
+});
+
 test("the lobby lights its cars anew after the game was away from the menus", async ({
   page,
 }) => {

@@ -371,6 +371,7 @@ export const startHostedRace = () => {
       cars.map(({ team }) => team),
       raceSetup.rules.teams,
     ),
+    cars.map(({ carType }) => carType),
   );
   // (the cars' textures were made as the stage loaded, before their paint was known)
   const paint = () => roomCars.skins.some(Boolean) && raceCarTextures();
@@ -419,6 +420,7 @@ export const startHostedRace = () => {
       names: roomCars.names,
       skins: roomCars.skins,
       teams: roomCars.teams,
+      botCars: roomCars.botCars,
       raceId,
       state: saveRace(),
     });

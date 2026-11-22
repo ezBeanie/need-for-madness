@@ -50,7 +50,8 @@ export const otherEnginesTick = () => {
       continue;
     }
     const loop = classic ? classicEngineFileOf(racers[c], type) : MODERN;
-    if (engines[c] && engines[c].loop != loop) {
+    // (in gun game a car changes its type)
+    if (engines[c] && (engines[c].loop != loop || engines[c].type != type)) {
       stop(c);
     }
     engines[c] ??= classic
@@ -61,6 +62,7 @@ export const otherEnginesTick = () => {
       continue;
     }
     engine.loop = loop;
+    engine.type = type;
     const speed = Math.min(
       1,
       Math.abs(racers[c].speed) / carStats.swits[type][2],
