@@ -71,6 +71,27 @@
         color: #01eaff;
         margin: 32px 0 12px;
       }
+      .session {
+        display: block;
+        padding: 8px 12px;
+      }
+      .session p {
+        margin: 0 0 6px;
+        font-weight: bold;
+      }
+      .session ol {
+        margin: 0;
+        padding-left: 18px;
+        font-size: 14px;
+        color: #d8e0e4;
+      }
+      .session ol li {
+        display: list-item;
+        padding: 2px 0;
+        margin: 0;
+        border: none;
+        background: none;
+      }
       h3 {
         font-size: 15px;
         font-weight: normal;
@@ -150,20 +171,23 @@
         <div id="rooms" aria-live="polite"><p>Looking…</p></div>
         <h2>Past lobbies (last 90 days)</h2>
         <div id="past" class="table-box"></div>
-        <h2>Games opened (last 90 days)</h2>
+        <h2>Players and games opened (last 90 days)</h2>
         <p id="visitsTotal"></p>
         <h3>By day</h3>
         <div id="visitsByDay" class="table-box"></div>
-        <h3>By country</h3>
+        <h3>What was played</h3>
+        <div id="visitsByEvent" class="table-box"></div>
+        <h3>Players by country</h3>
         <div id="visitsByCountry" class="table-box"></div>
-        <h3>By device</h3>
+        <h3>Players by device</h3>
         <div id="visitsByDevice" class="table-box"></div>
-        <h3>Latest</h3>
-        <div id="visitsLatest" class="table-box"></div>
+        <h3>Players seen last</h3>
+        <div id="visitsPlayers" class="table-box"></div>
+        <h2>Sessions played last</h2>
+        <div id="visitsSessions"></div>
         <p class="muted">
-          Hosts and visitors are shown by their network only, never by their
-          whole address. A game opened again from the same address within ten
-          minutes counts once.
+          A player is a browser: the game keeps a random id in it. Hosts and
+          players are shown by their network only, never by their whole address.
           <a href="https://db-ip.com">IP Geolocation by DB-IP</a>.
         </p>
       </div>
@@ -265,35 +289,111 @@
         box.replaceChildren(element);
       };
 
+      // (a player by its name, else by the start of its id)
+      const who = ({ name, player }) =>
+        name ? `${name} (${player.slice(0, 6)})` : player.slice(0, 6);
+
+      // what an event of a session says
+      const told = ({ kind, detail }) => {
+        // (numbers with what they count: "7 cars")
+        const parts = Object.entries(detail)
+          .map(([key, value]) =>
+            typeof value == "number" ? `${value} ${key}` : value,
+          )
+          .join(", ");
+        const what = {
+          race: "Race",
+          result: "Race over",
+          host: "Hosted room",
+          join: "Joined room",
+          editor: "Stage editor",
+          replay: "Replay",
+        }[kind];
+        return parts ? `${what}: ${parts}` : what;
+      };
+
+      const showSessions = (sessions) => {
+        const box = document.getElementById("visitsSessions");
+        if (sessions.length == 0) {
+          box.innerHTML = "<p>None yet.</p>";
+          return;
+        }
+        const list = document.createElement("ul");
+        for (const session of sessions) {
+          const item = document.createElement("li");
+          item.className = "session";
+          const head = document.createElement("p");
+          head.textContent = [
+            session.at ? when(session.at) : "",
+            who(session),
+            session.country,
+            session.device &&
+              `${session.device}${session.installed ? " (app)" : ""}`,
+            session.network,
+            session.version,
+          ]
+            .filter(Boolean)
+            .join(" · ");
+          const events = document.createElement("ol");
+          for (const event of session.events) {
+            const line = document.createElement("li");
+            line.textContent = `${new Date(event.at).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}  ${told(event)}`;
+            events.append(line);
+          }
+          item.append(head, events);
+          list.append(item);
+        }
+        box.replaceChildren(list);
+      };
+
       const showVisits = (visits) => {
         document.getElementById("visitsTotal").textContent =
-          `${visits.total} game${visits.total == 1 ? "" : "s"} opened.`;
+          `${visits.players} player${visits.players == 1 ? "" : "s"}, ${visits.total} game${visits.total == 1 ? "" : "s"} opened.`;
         table(
           document.getElementById("visitsByDay"),
-          ["Day", "Opened"],
+          ["Day", "Opened", "Players", "New players"],
           visits.byDay.slice(0, DAYS_SHOWN),
         );
         table(
+          document.getElementById("visitsByEvent"),
+          ["What", "Times"],
+          visits.byEvent,
+        );
+        table(
           document.getElementById("visitsByCountry"),
-          ["Country", "Opened"],
+          ["Country", "Players"],
           visits.byCountry,
         );
         table(
           document.getElementById("visitsByDevice"),
-          ["Device", "Opened"],
+          ["Device", "Players"],
           visits.byDevice,
         );
         table(
-          document.getElementById("visitsLatest"),
-          ["When", "Network", "Country", "Device", "Version"],
-          visits.latest.map((visit) => [
-            when(visit.at),
-            visit.network,
-            visit.country,
-            `${visit.device}${visit.installed ? " (app)" : ""}`,
-            visit.version,
+          document.getElementById("visitsPlayers"),
+          [
+            "Player",
+            "First seen",
+            "Last seen",
+            "Opened",
+            "Races",
+            "Country",
+            "Device",
+          ],
+          visits.latestPlayers.map((player) => [
+            who(player),
+            when(player.first),
+            when(player.last),
+            player.visits,
+            player.races,
+            player.country,
+            player.device,
           ]),
         );
+        showSessions(visits.sessions);
       };
 
       const show = ({ now, rooms, past, visits }) => {
