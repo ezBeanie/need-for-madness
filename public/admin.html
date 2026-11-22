@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#15190D" />
-    <title>Multiplayer Lobbies</title>
+    <title>Need for Madness Admin</title>
     <link
       rel="icon"
       type="image/png"
@@ -26,7 +26,7 @@
         font-family: Verdana, sans-serif;
       }
       main {
-        max-width: 640px;
+        max-width: 760px;
         margin: 0 auto;
       }
       h1 {
@@ -70,6 +70,12 @@
         font-size: 18px;
         color: #01eaff;
         margin: 32px 0 12px;
+      }
+      h3 {
+        font-size: 15px;
+        font-weight: normal;
+        color: #b8c2c8;
+        margin: 16px 0 8px;
       }
       .table-box {
         overflow-x: auto;
@@ -123,7 +129,7 @@
   </head>
   <body>
     <main>
-      <h1>Multiplayer Lobbies</h1>
+      <h1>Admin</h1>
       <form id="login" hidden>
         <label for="token">Token</label>
         <input
@@ -136,20 +142,36 @@
         <button type="submit">Show</button>
         <p id="loginError" role="alert"></p>
       </form>
+      <h2>Lobbies open now</h2>
       <div id="rooms" aria-live="polite"><p>Looking…</p></div>
       <p class="muted" id="updated"></p>
-      <h2>Past sessions (last 7 days)</h2>
+      <h2>Past lobbies (last 90 days)</h2>
       <div id="past" class="table-box"></div>
+      <h2>Games opened (last 90 days)</h2>
+      <p id="visitsTotal"></p>
+      <h3>By day</h3>
+      <div id="visitsByDay" class="table-box"></div>
+      <h3>By country</h3>
+      <div id="visitsByCountry" class="table-box"></div>
+      <h3>By device</h3>
+      <div id="visitsByDevice" class="table-box"></div>
+      <h3>Latest</h3>
+      <div id="visitsLatest" class="table-box"></div>
       <p class="muted">
-        Hosts are shown by their network only, never by their whole address.
+        Hosts and visitors are shown by their network only, never by their whole
+        address. A game opened again from the same address within ten minutes
+        counts once.
+        <a href="https://db-ip.com">IP Geolocation by DB-IP</a>.
       </p>
       <p><a href="./">Play Need for Madness</a></p>
     </main>
     <script>
       // What the relay's rooms are like (see server/relay.js), asked anew every few seconds.
       const ASK_EVERY_MS = 5000;
-      // (the newest; a week of rooms can be many)
+      // (the newest; 90 days of rooms can be many)
       const MOST_PAST_SHOWN = 100;
+      // (the days of the visits shown, the newest first)
+      const DAYS_SHOWN = 30;
       const roomsBox = document.getElementById("rooms");
       const pastBox = document.getElementById("past");
       const updated = document.getElementById("updated");
@@ -224,8 +246,57 @@
         pastBox.replaceChildren(table);
       };
 
-      const show = ({ now, rooms, past }) => {
+      // a table of rows of cells under heads, or "None yet."
+      const table = (box, heads, rows) => {
+        if (rows.length == 0) {
+          box.innerHTML = "<p>None yet.</p>";
+          return;
+        }
+        const element = document.createElement("table");
+        const head = document.createElement("thead");
+        head.append(row(heads, "th"));
+        const body = document.createElement("tbody");
+        body.append(...rows.map((cells) => row(cells.map(String))));
+        element.append(head, body);
+        box.replaceChildren(element);
+      };
+
+      const showVisits = (visits) => {
+        document.getElementById("visitsTotal").textContent =
+          `${visits.total} game${visits.total == 1 ? "" : "s"} opened.`;
+        table(
+          document.getElementById("visitsByDay"),
+          ["Day", "Opened"],
+          visits.byDay.slice(0, DAYS_SHOWN),
+        );
+        table(
+          document.getElementById("visitsByCountry"),
+          ["Country", "Opened"],
+          visits.byCountry,
+        );
+        table(
+          document.getElementById("visitsByDevice"),
+          ["Device", "Opened"],
+          visits.byDevice,
+        );
+        table(
+          document.getElementById("visitsLatest"),
+          ["When", "Network", "Country", "Device", "Version"],
+          visits.latest.map((visit) => [
+            when(visit.at),
+            visit.network,
+            visit.country,
+            `${visit.device}${visit.installed ? " (app)" : ""}`,
+            visit.version,
+          ]),
+        );
+      };
+
+      const show = ({ now, rooms, past, visits }) => {
         showPast(past);
+        if (visits) {
+          showVisits(visits);
+        }
         if (rooms.length == 0) {
           roomsBox.innerHTML = "<p>No lobby open right now.</p>";
           return;
@@ -250,6 +321,9 @@
         loginError.textContent = error;
         roomsBox.replaceChildren();
         pastBox.replaceChildren();
+        for (const box of document.querySelectorAll("[id^=visits]")) {
+          box.replaceChildren();
+        }
         updated.textContent = "";
         login.hidden = false;
         tokenInput.focus();
