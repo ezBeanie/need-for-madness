@@ -2,6 +2,7 @@
 // guest.js), which starts the race with them and sends its whole state to them, then every
 // game computes it, each sending only its keys (see lockstep.js).
 
+import { tellActivity } from "./activity.js";
 import { carStats } from "../data/carStats.js";
 import { VERSION } from "../data/changelog.js";
 import { random, seededRandom } from "../core/random.js";
@@ -334,6 +335,7 @@ export const hostRoom = (room) => {
   host.stage = isRoomStage(track.stage) ? track.stage : 1;
   clearChat();
   openLink(ROLE.host, room, receive);
+  tellActivity("host", { room });
 };
 
 // The lobby's Start: the room's race on the stage chosen, the guests along (see

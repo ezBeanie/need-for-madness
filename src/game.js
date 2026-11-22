@@ -101,7 +101,7 @@ import { spectateTick, watchingOthers } from "./race/spectate.js";
 import { otherEnginesTick } from "./audio/otherEngines.js";
 import { voiceTick } from "./net/voice.js";
 import { forgetRoomCars } from "./net/roomCars.js";
-import { tellVisit } from "./net/visit.js";
+import { tellVisit } from "./net/activity.js";
 import { ROLE, link } from "./net/link.js";
 import {
   OUT_OF_SYNC,

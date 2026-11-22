@@ -3,6 +3,7 @@
 // Opened from the pause menu, after the race, or with a replay file; closing it goes back
 // there, the race as it was.
 
+import { tellActivity } from "../net/activity.js";
 import { random } from "../core/random.js";
 import { tick } from "../core/tick.js";
 import { takePressedKeys } from "../input/keyboard.js";
@@ -274,6 +275,7 @@ const changedBetween = (from, to) =>
   );
 
 export const openReplay = (from, frame) => {
+  tellActivity("replay", { from: from == VIEWER_FROM.file ? "file" : "race" });
   viewer.from = from;
   viewer.race = from == VIEWER_FROM.file ? null : keepRace();
   if (viewer.race) {

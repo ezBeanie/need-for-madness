@@ -3,6 +3,7 @@
 // over the game in a dialog of its own, so the game's keys stay away while it is open; the
 // stage being edited is kept in the browser as it changes.
 
+import { tellActivity } from "../net/activity.js";
 import { PHASE, game } from "../core/state.js";
 import { onLanguage, t } from "../core/language.js";
 import {
@@ -1335,6 +1336,7 @@ export const openStageEditor = () => {
   editor.placing = null;
   editor.ordering = null;
   game.phase = PHASE.stageEditor;
+  tellActivity("editor");
   draw2D ??= map.getContext("2d");
   buildPalette();
   dialog.showModal?.();

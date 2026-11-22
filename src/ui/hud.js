@@ -1,6 +1,7 @@
 // What is drawn over the race: positions, laps, damage and power, the arrow, messages, the
 // buttons, and the overlays of replays, winding back time and switch mode.
 
+import { tellRaceOver } from "../net/activity.js";
 import {
   GUN_LADDER,
   deathmatch,
@@ -1310,6 +1311,7 @@ const drawWatcherHud = () => {
 // and goes on to the highlight replay or the race end.
 const afterRaceOver = () => {
   if (raceEvents.raceOverTicks == 0) {
+    tellRaceOver(raceEvents.winner);
     if (
       raceEvents.winner &&
       raceSetup.newestStage == track.stage &&

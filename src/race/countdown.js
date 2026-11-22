@@ -25,6 +25,7 @@ import { raceEvents } from "./events.js";
 import { racers } from "./racers.js";
 import { track } from "./track.js";
 import { startHostedRace } from "../net/host.js";
+import { tellRaceBegun } from "../net/activity.js";
 
 // raceEvents.countdown: where it starts, where the race has faded in from white, and from
 // where the camera is behind the car with the numbers counting down to 0
@@ -78,6 +79,7 @@ const beginRace = () => {
   game.phase = PHASE.race;
   startTimeAttack();
   startHostedRace();
+  tellRaceBegun();
 };
 
 // The camera circles the field high above while the countdown starts.
