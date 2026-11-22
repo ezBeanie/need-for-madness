@@ -995,7 +995,14 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
   await hostPage.getByLabel("Mode", { exact: true }).selectOption("Most kills");
   await hostPage.getByLabel("Bot strength").selectOption("Hard");
   await hostPage.getByLabel("Time", { exact: true }).selectOption("5 min");
-  await guestPage.getByLabel("Your car").selectOption("12");
+  // (the car select chooses the guest's car, OK back in the lobby)
+  await guestPage.getByRole("button", { name: /^Your car/ }).click();
+  await guest.advanceUntil(PHASE.carSelect);
+  await guestPage.evaluate(() => (window.gameState.game.carTypes[0] = 12));
+  await guest.advance(40);
+  await guest.tap("Enter");
+  await guest.advanceUntil(PHASE.mainMenu);
+  await guest.advance(2);
   // (a chat line is text, whatever it says)
   await hostPage.getByLabel("Message").fill("on <b>three</b>?");
   await hostPage.getByRole("button", { name: "Send" }).click();

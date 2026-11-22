@@ -4,6 +4,17 @@ import { PHASE } from "../../src/core/state.js";
 
 const focused = (page) => page.evaluate(() => document.activeElement.id);
 
+// (the original went on to the car select by itself on the very first start)
+test("a new player's main menu waits for a choice", async ({ page }) => {
+  const game = await openGame(page);
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance(600);
+  expect(await page.evaluate(() => window.gameState.game.phase)).toBe(
+    PHASE.mainMenu,
+  );
+  await expect(page.locator("#mainMenu")).toBeVisible();
+});
+
 test("the main menu's buttons are gone through with the keys and open what they name", async ({
   page,
 }) => {

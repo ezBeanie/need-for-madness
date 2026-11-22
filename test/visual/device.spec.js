@@ -9,14 +9,15 @@ test("a phone held upright shows the game turned sideways, a tap where it shows"
   browser,
   baseURL,
 }) => {
-  // (touched, the game goes on to choosing a car; not fullscreen, which keeps the window as
-  // large as it is)
+  // (in the car select, not fullscreen, which keeps the window as large as it is)
   const open = async (options) => {
     const context = await browser.newContext({ ...options, baseURL });
     const page = await context.newPage();
     const game = await openGame(page, {
       storage: { fullscreenOnTouch: "0" },
     });
+    await game.advanceUntil(PHASE.mainMenu);
+    await page.evaluate(() => document.getElementById("menuCampaign").click());
     await game.advanceUntil(PHASE.carSelect);
     await game.advance(2);
     return { context, page, game };
@@ -160,6 +161,52 @@ test("a touch keeps the screen on, and a click in a dialog allows the music", as
   // (held already: not asked again)
   await page.mouse.click(640, 700);
   expect(await page.evaluate(() => window.wakeLocks)).toBe(1);
+});
+
+// The first touch opening a dialog (Multiplayer) makes the page fullscreen after it: the
+// dialog still shows above the menu and takes the touches, and stays open as it was.
+test("a dialog opened by the touch that makes the game fullscreen shows above it and works", async ({
+  browser,
+  baseURL,
+}) => {
+  const phone = await browser.newContext({
+    baseURL,
+    isMobile: true,
+    hasTouch: true,
+    viewport: { width: 844, height: 390 },
+  });
+  const page = await phone.newPage();
+  const game = await openGame(page, {
+    storage: { carsel: "5", unlocked: "17" },
+  });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance(2);
+  await page.evaluate(() => {
+    window.dialogClosed = 0;
+    document
+      .getElementById("multiplayer")
+      .addEventListener("close", () => window.dialogClosed++);
+  });
+  await page.locator("#menuMultiplayer").tap();
+  await expect
+    .poll(() => page.evaluate(() => document.fullscreenElement != null))
+    .toBe(true);
+  // (what a touch in the middle of the dialog reaches)
+  const onTop = () =>
+    page.evaluate(() => {
+      const dialog = document.getElementById("multiplayer");
+      const box = dialog.getBoundingClientRect();
+      const hit = document.elementFromPoint(
+        box.left + box.width / 2,
+        box.top + box.height / 2,
+      );
+      return dialog.open && dialog.contains(hit);
+    });
+  await expect.poll(onTop).toBe(true);
+  expect(await page.evaluate(() => window.dialogClosed)).toBe(0);
+  await page.getByRole("button", { name: "Host a race" }).tap();
+  await expect(page.getByRole("button", { name: "Add a bot" })).toBeVisible();
+  await phone.close();
 });
 
 // as games on the web do: a phone's browser goes fullscreen at a touch, a mouse's click

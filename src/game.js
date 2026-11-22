@@ -20,7 +20,7 @@ import { loadLook } from "./render/look.js";
 import { loadMinimap } from "./ui/minimap.js";
 import { canvas2D, turnIfUpright, turned, view } from "./ui/view.js";
 import { keepScreenOn } from "./ui/screenAwake.js";
-import { fullscreenOnTouch } from "./ui/fullscreen.js";
+import { fullscreenOnTouch, installFullscreen } from "./ui/fullscreen.js";
 import { loadAiming, startProjection, turnView } from "./render/camera.js";
 import { moveCamera } from "./render/cameraMoves.js";
 import { render } from "./render/drawFrame.js";
@@ -101,6 +101,7 @@ import { spectateTick, watchingOthers } from "./race/spectate.js";
 import { otherEnginesTick } from "./audio/otherEngines.js";
 import { voiceTick } from "./net/voice.js";
 import { forgetRoomCars } from "./net/roomCars.js";
+import { tellVisit } from "./net/visit.js";
 import { ROLE, link } from "./net/link.js";
 import {
   OUT_OF_SYNC,
@@ -458,6 +459,8 @@ installPointer(canvas2D, {
   keepPressedWhileTouching: () => game.phase == PHASE.race,
 });
 installKeyboard(onKey);
+installFullscreen();
+tellVisit();
 document.addEventListener("keydown", keepScreenOn);
 // (so too the buttons and dialogs over the game: a guest may join and wait for the race
 // without touching the game itself)

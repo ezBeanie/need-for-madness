@@ -35,6 +35,43 @@ export const toggleFullscreen = () => {
   }
 };
 
+// Going fullscreen puts the page above the dialogs open (both in the browser's top layer,
+// the later on top): they would stay open and modal but unseen, the menu under them showing
+// and out of reach. So they are opened again above it, unknown to their close listeners
+// (the stage editor's saves and leaves), the focus kept.
+const reopening = new Set();
+
+const reopenDialogs = () => {
+  if (!isFullscreen()) {
+    return;
+  }
+  const focused = document.activeElement;
+  for (const dialog of document.querySelectorAll("dialog[open]")) {
+    if (dialog.matches(":modal")) {
+      reopening.add(dialog);
+      dialog.close();
+      dialog.showModal();
+    }
+  }
+  focused?.focus?.();
+};
+
+export const installFullscreen = () => {
+  // (a close event is sent later, to the dialog: caught on its way there)
+  document.addEventListener(
+    "close",
+    (event) => {
+      if (reopening.delete(event.target)) {
+        event.stopImmediatePropagation();
+      }
+    },
+    true,
+  );
+  for (const name of ["fullscreenchange", "webkitfullscreenchange"]) {
+    document.addEventListener(name, reopenDialogs);
+  }
+};
+
 // A touch (not a mouse's click): fullscreen, unless the player turned it off.
 export const fullscreenOnTouch = () => {
   if (

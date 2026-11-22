@@ -7,6 +7,7 @@ import {
   attachRelay,
 } from "./server/relay.js";
 import { ICE_PATH, answerIce } from "./server/ice.js";
+import { VISIT_PATH, keepVisits } from "./server/visits.js";
 import { exposeGameState } from "./test/harness/exposeState.js";
 import { writeOfflineList } from "./tools/offline/list.js";
 
@@ -15,10 +16,16 @@ import { writeOfflineList } from "./tools/offline/list.js";
 // (gives back nothing: a function given back would be taken for a hook after Vite's own)
 const withRelay = (server) => {
   const relay = attachRelay(server.httpServer);
+  // (no countries here, and the visits forgotten with the server)
+  const visits = keepVisits(undefined, () => null);
   server.middlewares.use(
     ROOMS_PATH,
-    answerRooms(relay.report, process.env.ROOMS_TOKEN),
+    answerRooms(
+      () => ({ ...relay.report(), visits: visits.summary() }),
+      process.env.ROOMS_TOKEN,
+    ),
   );
+  server.middlewares.use(VISIT_PATH, visits.answer);
   server.middlewares.use(PUBLIC_PATH, answerPublic(relay.listed));
   server.middlewares.use(
     ICE_PATH,

@@ -173,7 +173,10 @@ test.describe("installed", () => {
     });
     await page.reload();
     await page.waitForLoadState("networkidle");
-    return failed.filter((url) => !url.endsWith("/offline.json"));
+    // (the server's own answers, as the game's visit, are never kept: see sw.js)
+    return failed.filter(
+      (url) => !url.endsWith("/offline.json") && !url.includes("/net/"),
+    );
   };
 
   test("once installed the game starts without the network, every file of it kept", async ({

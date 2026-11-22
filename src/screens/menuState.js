@@ -4,9 +4,12 @@ export const menu = {
   redraw: false,
   // ticks of a screen's opening animation (see raceEnd.js for that screen's values)
   animation: 0,
-  // the main menu shows only its intro and continues to car select by itself (on the very
-  // first start and after a race)
-  continuesToCarSelect: true,
+  // the main menu shows only its intro and continues to car select by itself (after a
+  // race's end; at the start it waits for a choice, the very first start too)
+  continuesToCarSelect: false,
   // the main menu offers to reset the game (after the last stage was won)
   resetOffered: false,
+  // the room's lobby sent the player to the car select (see ui/multiplayerMenu.js): the car
+  // the player had then, and once back whether the player chose (null: not from the lobby)
+  lobbyCar: null,
 };

@@ -1,12 +1,12 @@
-// The rooms the relay had, for lobbies.html: when, how many games, whether they raced and
+// The rooms the relay had, for admin.html: when, how many games, whether they raced and
 // the host's network, its address cut short (see shortAddress), never the whole address.
-// Kept for a week, in a file if there is one, so a new relay still knows them.
+// Kept for 90 days, in a file if there is one, so a new relay still knows them.
 
 import { readFileSync, writeFileSync } from "node:fs";
 
-const KEEP_MS = 7 * 24 * 60 * 60 * 1000;
+export const KEEP_MS = 90 * 24 * 60 * 60 * 1000;
 // (rooms are cheap to open; the file must not grow without end)
-const MOST_SESSIONS = 1000;
+const MOST_SESSIONS = 5000;
 
 // The network an address is in: the first two parts of an IPv4 one, the first three groups
 // (the /48 a provider hands out) of an IPv6 one.
@@ -24,7 +24,9 @@ export const shortAddress = (address = "") => {
   return groups.length == 8 ? groups.slice(0, 3).join(":") + "::" : "?";
 };
 
-export const keepSessions = (file) => {
+// What happened lately, oldest first, for KEEP_MS by its time (timeOf) and at most most of
+// it: in a file, if given, written anew with each one added.
+export const keepRecent = (file, timeOf, most) => {
   let sessions = [];
   if (file) {
     try {
@@ -36,8 +38,8 @@ export const keepSessions = (file) => {
   const recent = () => {
     const now = Date.now();
     sessions = sessions
-      .filter((session) => now - session.until < KEEP_MS)
-      .slice(-MOST_SESSIONS);
+      .filter((session) => now - timeOf(session) < KEEP_MS)
+      .slice(-most);
     return sessions;
   };
   return {
@@ -51,9 +53,12 @@ export const keepSessions = (file) => {
       try {
         writeFileSync(file, JSON.stringify(sessions));
       } catch (error) {
-        console.error(`sessions not kept: ${error.code ?? error.message}`);
+        console.error(`history not kept: ${error.code ?? error.message}`);
       }
     },
     past: recent,
   };
 };
+
+export const keepSessions = (file) =>
+  keepRecent(file, (session) => session.until, MOST_SESSIONS);
