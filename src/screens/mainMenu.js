@@ -283,7 +283,7 @@ const openInstructions = () => {
   game.phase = PHASE.instructions;
 };
 
-const openCarSelect = () => {
+export const openCarSelect = () => {
   lookForGamepads();
   game.player = 0;
   const input = racers[game.player].u;
@@ -384,6 +384,7 @@ const choices = new Map();
 
 // The kind of race chosen: the car select opens, after the menu's own way out.
 const startRaces = (kind) => {
+  menu.lobbyCar = null;
   chooseRaceKind(kind);
   menu.animation = LEAVING;
   introFrame = INTRO_FRAMES;

@@ -12,6 +12,7 @@ import {
 import { carStats } from "../data/carStats.js";
 import { loadSetting, loadText, saveSetting } from "../core/storage.js";
 import { isSkin } from "../render/skins.js";
+import { menu } from "../screens/menuState.js";
 
 export const MOST_NAME_CHARACTERS = 16;
 
@@ -41,6 +42,13 @@ export const own = {
   skin: isSkin(loadSetting("carSkin")) ? loadSetting("carSkin") : 0,
   team: null,
 };
+
+// The player's car the room knows: while the lobby's player browses the car select, the one
+// before (see screens/carSelect.js).
+export const ownCarType = () =>
+  menu.lobbyCar && !menu.lobbyCar.done
+    ? menu.lobbyCar.before
+    : game.carTypes[0];
 
 export const setOwnName = (text) => {
   own.name = cleanName(text);

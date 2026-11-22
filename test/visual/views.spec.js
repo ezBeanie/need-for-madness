@@ -221,6 +221,57 @@ test("the lobby draws all its cars with one read back a tick, none between ticks
   }
 });
 
+test("the lobby's car is chosen in the car select, every car there, Back keeping the one before; gun game has none to choose", async ({
+  page,
+}) => {
+  const game = await openGame(page, { storage: { carsel: "5" } });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance(2);
+  await page.locator("#menuMultiplayer").click();
+  await page.getByRole("button", { name: "Host a race" }).click();
+  const carButton = page.getByRole("button", { name: /^Your car/ });
+  await expect(carButton).toHaveText("MAX Revenge");
+  const phase = () => page.evaluate(() => window.gameState.game.phase);
+  const choose = async (type, leave) => {
+    await carButton.click();
+    await game.advanceUntil(PHASE.carSelect);
+    await expect(page.locator("#multiplayer")).toBeHidden();
+    // (M A S H E E N: locked for a new player, not in a room)
+    await page.evaluate((t) => (window.gameState.game.carTypes[0] = t), type);
+    await game.advance(40);
+    await leave();
+    await game.advanceUntil(PHASE.mainMenu);
+    await game.advance(2);
+    await expect(page.locator("#multiplayer")).toBeVisible();
+    await expect(carButton).toBeFocused();
+  };
+  // Back (at the bottom left): the car before kept
+  await choose(16, async () => {
+    await page.mouse.move(110, 655);
+    await page.mouse.down();
+    await game.advance(2);
+    await page.mouse.up();
+    await game.advance(2);
+  });
+  expect(await phase()).toBe(PHASE.mainMenu);
+  await expect(carButton).toHaveText("MAX Revenge");
+  await choose(16, () => game.tap("Enter"));
+  await expect(carButton).toHaveText("M A S H E E N");
+  expect(await page.evaluate(() => localStorage.getItem("carsel"))).toBe("16");
+  await expect(page.locator("#multiplayer canvas.car-preview")).toHaveAttribute(
+    "data-car",
+    "16",
+  );
+
+  await page.getByLabel("Mode", { exact: true }).selectOption("Gun game");
+  await game.advance(2);
+  await expect(carButton).toBeHidden();
+  await expect(page.locator("#multiplayer canvas.car-preview")).toHaveAttribute(
+    "data-car",
+    "0",
+  );
+});
+
 test("the lobby lights its cars anew after the game was away from the menus", async ({
   page,
 }) => {

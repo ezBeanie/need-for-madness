@@ -9,4 +9,7 @@ export const menu = {
   continuesToCarSelect: false,
   // the main menu offers to reset the game (after the last stage was won)
   resetOffered: false,
+  // the room's lobby sent the player to the car select (see ui/multiplayerMenu.js): the car
+  // the player had then, and once back whether the player chose (null: not from the lobby)
+  lobbyCar: null,
 };

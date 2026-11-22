@@ -33,6 +33,7 @@ import {
   cleanName,
   isTeamChosen,
   own,
+  ownCarType,
   roomCars,
   setRoomCars,
   teamsOf,
@@ -133,7 +134,7 @@ export const sendPlayers = () => {
       {
         id: link.id,
         name: own.name,
-        carType: game.carTypes[0],
+        carType: ownCarType(),
         skin: own.skin,
         team: own.team,
         ready: true,

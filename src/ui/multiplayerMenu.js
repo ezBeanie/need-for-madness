@@ -10,6 +10,7 @@ import {
   MATCH_MINUTES,
   PHASE,
   RACE_KIND,
+  RACE_MODE,
   RACE_MODE_NAMES,
   RESPAWN_SECONDS,
   STRENGTH_NAMES,
@@ -55,7 +56,8 @@ import {
   tellHost,
 } from "../net/guest.js";
 import { menu } from "../screens/menuState.js";
-import { isTimedMode } from "../race/deathmatch.js";
+import { GUN_LADDER, isTimedMode } from "../race/deathmatch.js";
+import { openCarSelect } from "../screens/mainMenu.js";
 import {
   MOST_PLAYERS,
   PLAYER_STATUS,
@@ -72,6 +74,7 @@ import {
   TEAM_COLORS,
   botNames,
   own,
+  ownCarType,
   setOwnName,
   setOwnSkin,
   setOwnTeam,
@@ -184,6 +187,7 @@ const carPreview = (carType, skin) => {
   canvas.className = "car-preview";
   canvas.width = PREVIEW_WIDTH;
   canvas.height = PREVIEW_HEIGHT;
+  canvas.dataset.chosen = String(carType);
   canvas.dataset.car = String(carType);
   canvas.dataset.skin = String(skin);
   canvas.setAttribute("aria-hidden", "true");
@@ -230,6 +234,24 @@ const stateText = (ready, status) => {
 // the rules the room races by, as the host chose them
 const rulesShown = () =>
   link.role == ROLE.host ? roomRulesChosen() : guest.rules;
+const modeShown = () => (link.role == ROLE.host ? roomMode() : guest.mode);
+
+// In gun game every car starts in the ladder's first: no car to choose, the cards show it.
+const showGunGame = () => {
+  const gunGame = modeShown() == RACE_MODE.gunGame;
+  element("lobbyCarChoice").hidden = gunGame;
+  for (const select of dialog.querySelectorAll("select")) {
+    if (/^multiplayerBot\d+$/.test(select.id)) {
+      select.hidden = gunGame;
+    }
+  }
+  for (const canvas of dialog.querySelectorAll("canvas.car-preview")) {
+    const shown = gunGame ? String(GUN_LADDER[0]) : canvas.dataset.chosen;
+    if (canvas.dataset.car != shown) {
+      canvas.dataset.car = shown;
+    }
+  }
+};
 
 // In a room racing in teams, the team of each of its players and then its bots, as the
 // race would give them (see teamsOf); else none.
@@ -386,8 +408,9 @@ const secondsText = (seconds) => `${seconds} s`;
 const showChoices = () => {
   const isHost = link.role == ROLE.host;
   const car = element("lobbyCar");
-  if (document.activeElement != car && car.value != String(game.carTypes[0])) {
-    car.value = String(game.carTypes[0]);
+  const carName = carStats.names[ownCarType()];
+  if (car.textContent != carName) {
+    car.textContent = carName;
   }
   const skin = element("lobbySkin");
   if (document.activeElement != skin && skin.value != String(own.skin)) {
@@ -533,6 +556,7 @@ const hostBotItem = ({ carType, skin, team }, i) => {
   select.value = String(carType);
   select.addEventListener("change", () => {
     chooseBotCar(i, Number(select.value));
+    preview.dataset.chosen = select.value;
     preview.dataset.car = select.value;
     showBots();
   });
@@ -772,6 +796,7 @@ const showRoom = () => {
   showBots();
   showRace();
   showChoices();
+  showGunGame();
   showChat();
 };
 
@@ -804,9 +829,6 @@ export const openMultiplayer = () => {
 let filled = false;
 const fillChoices = () => {
   filled = true;
-  element("lobbyCar").replaceChildren(
-    ...carStats.names.map((name, type) => new Option(name, String(type))),
-  );
   element("lobbySkin").replaceChildren(
     ...SKINS.map((name, skin) => new Option(t(name), String(skin))),
   );
@@ -843,6 +865,22 @@ const fillChoices = () => {
   );
 };
 
+// Back from the car select the lobby sent the player to: the room told of a new car.
+const lobbyCarChosen = () => {
+  const { before, chosen } = menu.lobbyCar;
+  menu.lobbyCar = null;
+  openMultiplayer();
+  element("lobbyCar").focus();
+  if (!chosen || game.carTypes[0] == before) {
+    return;
+  }
+  saveSetting("carsel", game.carTypes[0]);
+  if (link.role == ROLE.host) {
+    sendPlayers();
+  }
+  tellHost();
+};
+
 export const installMultiplayerMenu = () => {
   button.addEventListener("click", openMultiplayer);
   onLanguage(() => {
@@ -851,13 +889,11 @@ export const installMultiplayerMenu = () => {
     }
     element("multiplayerCopy").textContent = t("Copy");
   });
-  element("lobbyCar").addEventListener("change", (event) => {
-    game.carTypes[0] = Number(event.target.value);
-    saveSetting("carsel", game.carTypes[0]);
-    if (link.role == ROLE.host) {
-      sendPlayers();
-    }
-    tellHost();
+  // the car select chooses the car, then the lobby is back (see lobbyCarChosen)
+  element("lobbyCar").addEventListener("click", () => {
+    menu.lobbyCar = { before: game.carTypes[0], done: false, chosen: false };
+    dialog.close?.();
+    openCarSelect();
   });
   // (as the options' name: kept with every letter typed, the room told once it is typed)
   const name = element("lobbyName");
@@ -1058,10 +1094,15 @@ export const placeMultiplayerButton = () => {
       game.phase == PHASE.race &&
       (game.humans.length > 0 || raceSetup.kind == RACE_KIND.together);
     dialog.close?.();
+    // (a race that began while the player chose a car took the one before, see ownCarType)
+    menu.lobbyCar = null;
     // (a race lights its stage: the cards need the car select's light again after it)
     previews.root = null;
     previews.lit = false;
     return;
+  }
+  if (menu.lobbyCar?.done && game.phase == PHASE.mainMenu) {
+    lobbyCarChosen();
   }
   if (raced && game.phase == PHASE.mainMenu) {
     raced = false;

@@ -55,6 +55,7 @@ import {
   isTeam,
   isTeamChosen,
   own,
+  ownCarType,
   setRoomCars,
 } from "./roomCars.js";
 import { isSkin } from "../render/skins.js";
@@ -271,7 +272,7 @@ const sendJoin = () =>
   link.send({
     type: MESSAGE.join,
     name: own.name,
-    carType: game.carTypes[0],
+    carType: ownCarType(),
     skin: own.skin,
     team: own.team,
     ready: guest.ready,
@@ -329,7 +330,7 @@ export const startGuesting = () => {
 
 const loadHostedRace = (start) => {
   if (guest.ownBack) {
-    guest.ownCarType = game.carTypes[0];
+    guest.ownCarType = ownCarType();
     guest.ownPlayer = game.player;
     guest.ownStage = track.stage;
     guest.ownBack = false;

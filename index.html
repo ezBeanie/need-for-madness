@@ -210,6 +210,8 @@ src: url(data/verdana.ttf);
 .lobby .settings .wide { grid-column: 1 / -1; }
 .lobby .setting label { margin: 0 0 6px; }
 .lobby .setting select { width: 100%; }
+.lobby .setting .car-choice { width: 100%; margin: 0; text-align: left; }
+.lobby .setting .car-choice::after { content: "  \203A"; }
 .lobby .share { margin-bottom: 14px; }
 .lobby .share label { margin-top: 0; }
 .lobby .rules:not([hidden]) { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; font-size: 15px; }
@@ -694,7 +696,7 @@ html.turned dialog:modal:is(.view, .touch-layout, .stage-editor) {
 <h3 id="lobbyYouTitle">You</h3>
 <div class="settings">
 <div class="setting wide"><label for="lobbyName">Your name</label><input id="lobbyName" maxlength="16" autocomplete="nickname" spellcheck="false"></div>
-<div class="setting"><label for="lobbyCar">Your car</label><select id="lobbyCar"></select></div>
+<div class="setting" id="lobbyCarChoice"><label for="lobbyCar" id="lobbyCarLabel">Your car</label><button type="button" id="lobbyCar" class="car-choice" aria-labelledby="lobbyCarLabel lobbyCar"></button></div>
 <div class="setting"><label for="lobbySkin">Your paint</label><select id="lobbySkin"></select></div>
 <div class="setting" id="lobbyTeamChoice"><label for="lobbyTeam">Your team</label><select id="lobbyTeam"></select></div>
 <div class="setting wide"><label for="lobbyVoice">Voice chat</label><select id="lobbyVoice" aria-describedby="lobbyTalkHint"><option value="off">Off</option><option value="push">Push to talk</option><option value="byVoice">By voice</option></select></div>

@@ -323,6 +323,10 @@ const flyOut = (to) => {
 
 // The stage that unlocks the car, or 0 when it can be driven.
 const unlockingStage = (type) => {
+  // (in a room every car races)
+  if (menu.lobbyCar) {
+    return 0;
+  }
   const stage = (type - 10) * 2;
   return type >= FIRST_LOCKED_CAR && game.unlocked <= stage ? stage : 0;
 };
@@ -361,7 +365,11 @@ function drawCarSelect() {
     drawLockedStand();
   }
   if (!locked && showcase.motion == SHOWCASE.hovering) {
-    drawStart(right);
+    if (menu.lobbyCar) {
+      drawChoose(right);
+    } else {
+      drawStart(right);
+    }
   }
   drawBack(left);
   pulseButtons();
@@ -380,9 +388,53 @@ const drawBack = (left) => {
       image: images.buttons[5],
     })
   ) {
+    if (menu.lobbyCar) {
+      backToLobby(false);
+      return;
+    }
     menu.animation = 0;
     menu.continuesToCarSelect = false;
     game.phase = PHASE.mainMenu;
+  }
+};
+
+// From the lobby: back to it with the car chosen, or the one before.
+const backToLobby = (chosen) => {
+  if (!chosen) {
+    game.carTypes[0] = menu.lobbyCar.before;
+  }
+  menu.lobbyCar.done = true;
+  menu.lobbyCar.chosen = chosen;
+  menu.animation = 0;
+  menu.continuesToCarSelect = false;
+  game.phase = PHASE.mainMenu;
+};
+
+// From the lobby: OK takes the car back to it.
+const drawChoose = (right) => {
+  if (
+    drawButton({
+      id: 3,
+      x: right - 150 * view.scale,
+      y: 720 * view.scaleY - 100 * view.scale,
+      width: 200,
+      height: 70,
+      faceTop: "#0057E6",
+      faceBottom: "#65EFFF",
+      shadowTop: "#440078",
+      shadowBottom: "#2F00A8",
+      layout: BUTTON.textOnly,
+      text: "OK",
+      fontSize: 25,
+      textOpacity: 0.9,
+      image: null,
+      imageOpacity: 0,
+      pulsing: true,
+    }) ||
+    confirm.state == CONFIRM.pressed
+  ) {
+    confirm.state = CONFIRM.used;
+    backToLobby(true);
   }
 };
 
@@ -752,7 +804,9 @@ const classicTick = () => {
     smokeAgain();
   }
   if (chosen == "continue") {
-    if (game.unlocked == 1) {
+    if (menu.lobbyCar) {
+      backToLobby(true);
+    } else if (game.unlocked == 1) {
       practise();
     } else {
       openStageSelect();
