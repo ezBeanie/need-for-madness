@@ -47,7 +47,7 @@ test("the name typed in the options is kept at once, though the game is left bef
   );
 });
 
-test("the options say the game's version, and what changed in each one when asked", async ({
+test("the options say the game's version, and what changed in the versions before when asked", async ({
   page,
 }) => {
   const game = await openGame(page, {
@@ -61,9 +61,8 @@ test("the options say the game's version, and what changed in each one when aske
   const changes = page.locator("#changelog h4").first();
   await expect(changes).toBeHidden();
   await page.getByText("What's new").click();
-  await expect(changes).toHaveText(
-    new RegExp(`^${version.replaceAll(".", "\\.")} `),
-  );
+  // (the newest change told, of this version or one before: not every version has one)
+  await expect(changes).toHaveText(/^\d+\.\d+\.\d+ \(\d{4}-\d{2}-\d{2}\)$/);
 });
 
 test("the game is English until German is chosen in the options, then all of it at once, and English again", async ({

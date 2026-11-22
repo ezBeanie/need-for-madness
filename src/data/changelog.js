@@ -114,4 +114,5 @@ export const CHANGELOG = [
   },
 ];
 
-export const VERSION = CHANGELOG[0].version;
+// (the game's own: a version changing nothing a player sees has no entry)
+export { version as VERSION } from "../../package.json";
