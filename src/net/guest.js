@@ -2,6 +2,7 @@
 // whole state the host sends, then every game computes it, each sending only its keys (see
 // lockstep.js and host.js). The guest drives its car in it as the player.
 
+import { tellActivity, tellRaceBegun } from "./activity.js";
 import {
   isEngineLoaded,
   loadEngine,
@@ -302,6 +303,7 @@ export const setReady = (ready) => {
 
 // Joins the room of a host.
 export const joinRoom = (room) => {
+  tellActivity("join", { room });
   clearChat();
   Object.assign(guest, {
     start: null,
@@ -423,6 +425,7 @@ export const showHostedRace = () => {
   }
   // (loading the stage made car 0 the player's again)
   game.player = guest.car;
+  tellRaceBegun();
   // (the stage select loads it, which a guest does not go through)
   if (!isEngineLoaded(game.carTypes[game.player])) {
     loadEngine(game.carTypes[game.player]);
