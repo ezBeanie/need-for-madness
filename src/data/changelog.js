@@ -4,6 +4,14 @@
 
 export const CHANGELOG = [
   {
+    version: "1.3.2",
+    date: "2026-11-22",
+    changes: [
+      "The lobby's car is chosen in the car select, every car open there; OK goes back to the lobby.",
+      "Gun game has no car to choose: everyone starts in the ladder's first.",
+    ],
+  },
+  {
     version: "1.3.1",
     date: "2026-11-22",
     changes: [
