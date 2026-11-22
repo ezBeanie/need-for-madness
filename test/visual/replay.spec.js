@@ -1,4 +1,6 @@
 import { expect, test } from "@playwright/test";
+import { readFileSync } from "node:fs";
+import { gunzipSync } from "node:zlib";
 import { openGame } from "./driver.js";
 import { PHASE } from "../../src/core/state.js";
 
@@ -46,12 +48,12 @@ test("a replay saved from the viewer opens again from the main menu", async ({
     s.openReplay(s.VIEWER_FROM.pauseMenu, 0);
   }, PHASE.paused);
   await game.advance(5);
-  // Save, the last of the eight buttons, once H shows the controls
+  // Save, the last of the nine buttons, once H shows the controls
   await game.tap("h");
   const download = page.waitForEvent("download");
-  // (a row of eight along the bottom, 16 pixels in from the edges, 6 apart)
-  const each = (1248 - 7 * 6) / 8;
-  await page.mouse.move(16 + 7 * (each + 6) + each / 2, 686);
+  // (a row of nine along the bottom, 16 pixels in from the edges, 6 apart)
+  const each = (1248 - 8 * 6) / 9;
+  await page.mouse.move(16 + 8 * (each + 6) + each / 2, 686);
   await page.mouse.down();
   await game.advance(1);
   await page.mouse.up();
@@ -133,4 +135,102 @@ test("the replay's exit button is always in sight", async ({
     isMobile: true,
     hasTouch: true,
   });
+});
+
+// the header of a saved replay file: what it was raced in (see replayFile.js)
+const headerOf = (file) => {
+  const bytes = gunzipSync(readFileSync(file));
+  const size = bytes.readUInt32BE(0);
+  return JSON.parse(bytes.subarray(4, 4 + size).toString("utf8"));
+};
+
+test("the replay's camera path: keyframes set where the camera is, played back, and saved with the replay", async ({
+  page,
+}, testInfo) => {
+  const game = await openGame(page, {
+    storage: { carsel: "5", unlocked: "17" },
+  });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.settle();
+  await page.evaluate(() => {
+    const s = window.gameState;
+    s.track.stage = 5;
+    s.menu.redraw = true;
+    s.game.phase = 3;
+  });
+  await game.advanceUntil(PHASE.stageSelect);
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(async () => {
+    window.gameState.game.mode = 0;
+    const { flashIntoRace } = await import("/src/race/countdown.js");
+    flashIntoRace();
+  });
+  await game.advanceUntil(PHASE.race);
+  await page.keyboard.down("ArrowUp");
+  await game.advance(300);
+  await page.keyboard.up("ArrowUp");
+  await page.evaluate((paused) => {
+    const s = window.gameState;
+    s.game.phase = paused;
+    s.openReplay(s.VIEWER_FROM.pauseMenu, 0);
+  }, PHASE.paused);
+  await game.advance(5);
+  // I opens the path beside the race
+  await game.tap("i");
+  const panel = page.getByRole("complementary", { name: "Camera path" });
+  await expect(panel).toBeVisible();
+  const add = panel.getByRole("button", { name: "Add keyframe here" });
+  await expect(add).toBeFocused();
+  // two free cameras, at frames 20 and 100
+  const place = (frame, x) =>
+    page.evaluate(
+      async ([frame, x]) => {
+        const { CAMERA, camera } = await import("/src/render/camera.js");
+        const { seekReplay, viewer } = await import(
+          "/src/race/replayViewer.js"
+        );
+        viewer.playing = false;
+        seekReplay(frame);
+        Object.assign(camera, { mode: CAMERA.free, x, y: 60, z: 0 });
+      },
+      [frame, x],
+    );
+  await place(20, 0);
+  await add.click();
+  await place(100, 200);
+  await add.click();
+  await expect(panel.getByRole("listitem")).toHaveCount(2);
+  // played: the camera flies between them
+  await panel.getByRole("button", { name: "Play the path" }).click();
+  await expect(
+    panel.getByRole("button", { name: "Play the path" }),
+  ).toHaveAttribute("aria-pressed", "true");
+  await page.evaluate(async () => {
+    const { seekReplay, viewer } = await import("/src/race/replayViewer.js");
+    seekReplay(60);
+    viewer.playing = false;
+  });
+  await game.advance(2);
+  const x = await page.evaluate(
+    async () => (await import("/src/render/camera.js")).camera.x,
+  );
+  expect(x).toBeGreaterThan(50);
+  expect(x).toBeLessThan(150);
+  // deleted from the list, then saved with the one left
+  await panel
+    .getByRole("button", { name: /^Delete / })
+    .first()
+    .click();
+  await expect(panel.getByRole("listitem")).toHaveCount(1);
+  const download = page.waitForEvent("download");
+  await page.keyboard.press("Escape");
+  await expect(panel).toBeHidden();
+  // (the replay's keys are its own again: Ctrl+S saves)
+  await page.keyboard.press("Control+s");
+  await game.advance(2);
+  const file = testInfo.outputPath("path.nfmreplay");
+  await (await download).saveAs(file);
+  const { cameraPath } = headerOf(file).race;
+  expect(cameraPath).toHaveLength(1);
+  expect(cameraPath[0]).toMatchObject({ frame: 100, x: 200 });
 });

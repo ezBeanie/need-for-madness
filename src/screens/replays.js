@@ -18,6 +18,7 @@ import {
   encodeReplay,
 } from "../race/replayFile.js";
 import { VIEWER_FROM, openReplay } from "../race/replayViewer.js";
+import { cameraPath, isPath } from "../race/cameraPath.js";
 import { track } from "../race/track.js";
 import { menu } from "./menuState.js";
 
@@ -40,6 +41,7 @@ export const saveReplay = async () => {
     name: track.name,
     carTypes: game.carTypes.slice(0, game.carCount),
     player: game.player,
+    ...(cameraPath.keys.length > 0 ? { cameraPath: cameraPath.keys } : {}),
   });
   const url = URL.createObjectURL(
     new Blob([bytes], { type: "application/octet-stream" }),
@@ -61,7 +63,12 @@ export const openReplayFile = async (file) => {
     return;
   }
   const { race, tape } = replay;
-  opened = { tape, carType: game.carTypes[0], player: game.player };
+  opened = {
+    tape,
+    carType: game.carTypes[0],
+    player: game.player,
+    path: isPath(race.cameraPath) ? race.cameraPath : [],
+  };
   track.stage = takeRaceStage(race);
   game.player = race.player;
   field.replayCars = race.carTypes;
@@ -77,6 +84,9 @@ export const showOpenedReplay = () => {
   Object.assign(raceTape, opened.tape);
   playStageMusic(track.stage);
   openReplay(VIEWER_FROM.file, 0);
+  // (its camera path, played at once)
+  cameraPath.keys = opened.path;
+  cameraPath.playing = opened.path.length > 0;
 };
 
 // After an opened replay: the main menu, the player's own car chosen again.

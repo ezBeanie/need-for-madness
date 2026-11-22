@@ -4,6 +4,7 @@
 // there, the race as it was.
 
 import { tellActivity } from "../net/activity.js";
+import { cameraPath } from "./cameraPath.js";
 import { random } from "../core/random.js";
 import { tick } from "../core/tick.js";
 import { takePressedKeys } from "../input/keyboard.js";
@@ -278,6 +279,9 @@ export const openReplay = (from, frame) => {
   tellActivity("replay", { from: from == VIEWER_FROM.file ? "file" : "race" });
   viewer.from = from;
   viewer.race = from == VIEWER_FROM.file ? null : keepRace();
+  // (a race's replay starts without a camera path; a file brings its own, see replays.js)
+  cameraPath.keys = [];
+  cameraPath.playing = false;
   if (viewer.race) {
     // dents drawn again, dust and sparks take random numbers: not the race's, which goes
     // on after

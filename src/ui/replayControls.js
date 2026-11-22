@@ -28,6 +28,8 @@ import { stopReplaySounds } from "../audio/replaySounds.js";
 import { classicMenus } from "../render/look.js";
 import { leaveOpenedReplay, saveReplay } from "../screens/replays.js";
 import { CAMERA, camera } from "../render/camera.js";
+import { cameraPath } from "../race/cameraPath.js";
+import { toggleCameraPathPanel } from "./cameraPathPanel.js";
 import { isPhone } from "../core/platform.js";
 import {
   drawFreeCameraPad,
@@ -40,7 +42,7 @@ import { t } from "../core/language.js";
 const TICK_SECONDS = 0.035;
 // a jump back and forth
 const JUMP_FRAMES = Math.round(5 / TICK_SECONDS);
-const CAMERA_NAMES = {
+export const CAMERA_NAMES = {
   [CAMERA.orbit]: "Orbit",
   [CAMERA.behind]: "Behind",
   [CAMERA.trackside]: "Track",
@@ -58,7 +60,7 @@ export const heldArrow = () => {
   return keys.held.has("ArrowLeft") ? -1 : keys.held.has("ArrowRight") ? 1 : 0;
 };
 
-const time = (frame) => {
+export const time = (frame) => {
   const seconds = frame * TICK_SECONDS;
   const minutes = Math.floor(seconds / 60);
   return `${minutes}:${(seconds % 60).toFixed(1).padStart(4, "0")}`;
@@ -240,6 +242,12 @@ const drawSeekBar = (colors, { seek }) => {
   rd.fillStyle = colors.played;
   rounded(x, y, Math.max(height, width * played), height, height / 2);
   rd.fill();
+  // the camera path's keyframes, as marks along it
+  rd.fillStyle = "#FFB401";
+  for (const key of cameraPath.keys) {
+    const along = lastFrame() > 0 ? key.frame / lastFrame() : 0;
+    rd.fillRect(x + width * along - 1.5, y - height, 3, height * 3);
+  }
   rd.beginPath();
   rd.arc(x + width * played, middle, height, 0, 2 * Math.PI);
   rd.fillStyle = "#FFFFFF";
@@ -320,7 +328,9 @@ export const placeReplayExit = () => {
 };
 
 const jump = (frames) => seekReplay(viewer.frame + frames);
-const canSave = () => viewer.from != VIEWER_FROM.file;
+// (a replay file needs saving again only with a camera path made since)
+const canSave = () =>
+  viewer.from != VIEWER_FROM.file || cameraPath.keys.length > 0;
 const save = () => {
   if (canSave()) {
     saveReplay();
@@ -337,6 +347,7 @@ const controls = () => [
   [t("Faster"), "\u2191", () => changeSpeed(1)],
   [t(CAMERA_NAMES[camera.mode] ?? "Camera"), "V", nextCamera],
   [t("Cars"), "Tab", togglePicker],
+  [t("Path"), "I", toggleCameraPathPanel],
   ...(canSave() ? [[t("Save"), t("Ctrl+S"), save]] : []),
 ];
 
@@ -346,6 +357,7 @@ const KEYS = {
   Space: togglePlaying,
   KeyV: nextCamera,
   KeyH: () => (shown = !shown),
+  KeyI: () => toggleCameraPathPanel(),
   Home: () => seekReplay(0),
   End: () => seekReplay(lastFrame()),
   ArrowUp: () => changeSpeed(1),

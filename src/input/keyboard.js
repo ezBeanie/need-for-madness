@@ -78,7 +78,7 @@ export const installKeyboard = (onKey) => {
     // the dialogs' own buttons and fields take keys as a page does (see ui/optionsMenu.js),
     // so do the main menu's; a key the game took is let go there too (Enter choosing a car
     // for the lobby is let go in the lobby)
-    if (event.target?.closest?.("dialog, #mainMenu")) {
+    if (event.target?.closest?.("dialog, #mainMenu, #cameraPath")) {
       if (!pressed && heldCodes.has(event.code)) {
         handleKey(event, false, onKey);
       }

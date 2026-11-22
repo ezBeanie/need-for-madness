@@ -45,7 +45,9 @@ const REWIND_BUTTON = 11;
 // (unless chosen: on phones and tablets, whose touch controls make the key hard to hold
 // with steering, stunts come by themselves)
 const storedByKey = loadSetting("stuntsByKey");
-export const stunts = { byKey: storedByKey == -1 ? !isPhone : storedByKey != 0 };
+export const stunts = {
+  byKey: storedByKey == -1 ? !isPhone : storedByKey != 0,
+};
 
 export const toggleStuntsByKey = () => {
   stunts.byKey = !stunts.byKey;
