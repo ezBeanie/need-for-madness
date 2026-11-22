@@ -4,6 +4,14 @@
 
 export const CHANGELOG = [
   {
+    version: "1.3.1",
+    date: "2026-11-22",
+    changes: [
+      "A menu opened as a phone's browser goes fullscreen shows and works, instead of the main menu showing over it.",
+      "The very first start stays in the main menu instead of going on to the car select.",
+    ],
+  },
+  {
     version: "1.3.0",
     date: "2026-11-22",
     changes: [
