@@ -83,23 +83,30 @@ const translate = async ({ index }) => {
       model.texcoords[k * 2],
       model.texcoords[k * 2 + 1],
     ]);
-    // the texture's colour over the triangle: samples spread across it, averaged
-    const weights = [
-      [1, 1, 1],
-      [4, 1, 1],
-      [1, 4, 1],
-      [1, 1, 4],
-      [2, 2, 1],
-      [2, 1, 2],
-      [1, 2, 2],
-    ];
-    const color = [0, 0, 0];
-    for (const w of weights) {
-      const sum = w[0] + w[1] + w[2];
-      const u = (uvs[0][0] * w[0] + uvs[1][0] * w[1] + uvs[2][0] * w[2]) / sum;
-      const v = (uvs[0][1] * w[0] + uvs[1][1] * w[1] + uvs[2][1] * w[2]) / sum;
-      sample(u, v).forEach((c, k) => (color[k] += c / weights.length));
+    // the texture's colour over the triangle: samples spread across it, the colour most
+    // of them have (in coarse steps, then their average), so that small decals and the
+    // texture's shading do not tint the whole face
+    const STEPS = 6;
+    const STEP = 48;
+    const groups = new Map();
+    for (let i = 0; i <= STEPS; i++) {
+      for (let j = 0; j <= STEPS - i; j++) {
+        const w = [i + 0.5, j + 0.5, STEPS - i - j + 0.5];
+        const sum = w[0] + w[1] + w[2];
+        const u =
+          (uvs[0][0] * w[0] + uvs[1][0] * w[1] + uvs[2][0] * w[2]) / sum;
+        const v =
+          (uvs[0][1] * w[0] + uvs[1][1] * w[1] + uvs[2][1] * w[2]) / sum;
+        const seen = sample(u, v);
+        const key = seen.map((c) => Math.floor(c / STEP)).join(",");
+        const group = groups.get(key) ?? { count: 0, sum: [0, 0, 0] };
+        group.count++;
+        seen.forEach((c, k) => (group.sum[k] += c));
+        groups.set(key, group);
+      }
     }
+    const most = [...groups.values()].sort((g, h) => h.count - g.count)[0];
+    const color = most.sum.map((c) => c / most.count);
     const [a, b, c] = loop.map(corner);
     const normal = cross(sub(b, a), sub(c, a));
     const area = Math.hypot(...normal) / 2;
