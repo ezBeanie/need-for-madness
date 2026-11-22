@@ -4,6 +4,15 @@
 
 export const CHANGELOG = [
   {
+    version: "1.3.5",
+    date: "2026-11-22",
+    changes: [
+      "Classic look: the wheels spin forward as the car drives forward.",
+      "Classic look: no more gaps in the tyres of cars farther away.",
+      "Classic look: Tragdor, Ice Cream and Shadow Rider in cleaner colours.",
+    ],
+  },
+  {
     version: "1.3.2",
     date: "2026-11-22",
     changes: [
