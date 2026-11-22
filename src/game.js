@@ -101,6 +101,7 @@ import { spectateTick, watchingOthers } from "./race/spectate.js";
 import { otherEnginesTick } from "./audio/otherEngines.js";
 import { voiceTick } from "./net/voice.js";
 import { forgetRoomCars } from "./net/roomCars.js";
+import { tellVisit } from "./net/visit.js";
 import { ROLE, link } from "./net/link.js";
 import {
   OUT_OF_SYNC,
@@ -459,6 +460,7 @@ installPointer(canvas2D, {
 });
 installKeyboard(onKey);
 installFullscreen();
+tellVisit();
 document.addEventListener("keydown", keepScreenOn);
 // (so too the buttons and dialogs over the game: a guest may join and wait for the race
 // without touching the game itself)
