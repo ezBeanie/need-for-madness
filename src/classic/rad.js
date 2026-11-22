@@ -364,20 +364,22 @@ const RIM = [
   [-8.66, 5],
   [0, 10],
 ];
-// the tread pieces: two tyre corners each, and which way they face
+// the tread pieces: two tyre corners each, and which way their corners turn (-1 going
+// round, 1 going back), whichever side the wheel is on: which way they face (a piece
+// taken for turned away is left out far off)
 const TREAD = [
   [1, 2, -1],
   [3, 2, 1],
-  [3, 4, 1],
+  [3, 4, -1],
   [4, 5, -1],
   [6, 5, 1],
-  [6, 7, 1],
+  [6, 7, -1],
   [7, 8, -1],
   [9, 8, 1],
-  [9, 10, 1],
+  [9, 10, -1],
   [10, 11, -1],
   [0, 11, 1],
-  [0, 1, 1],
+  [0, 1, -1],
 ];
 
 const makeWheel = (wheels, polys, x, y, z, rotates, width, height, gwgr) => {
@@ -386,7 +388,6 @@ const makeWheel = (wheels, polys, x, y, z, rotates, width, height, gwgr) => {
   // front wheels (rotates 11) steer about a pivot on their outer side
   const wx = rotates == 11 ? Math.trunc(x + 4 * wide) : 0;
   wheels.ground = Math.trunc(y + 13 * high);
-  const outside = x < 0 ? 1 : -1;
   const pivot = { wx, wy: y, wz: z, disline: 7 };
   const inner = Math.trunc(x - 4 * wide);
   const tyre = TYRE.map(([dy, dz]) => [
@@ -428,7 +429,7 @@ const makeWheel = (wheels, polys, x, y, z, rotates, width, height, gwgr) => {
           [outer, ...tyre[a]],
         ],
         [45, 45, 45],
-        { gr: gwgr, fs: facing * outside, solo: true, ...pivot },
+        { gr: gwgr, fs: facing, solo: true, ...pivot },
       ),
     );
   }
