@@ -60,7 +60,7 @@ export const showCameraPath = () => {
 // (hidden, it gives up the focus: the replay's keys are the game's again)
 const hidePanel = () => {
   panel.hidden = true;
-  if (panel.contains(document.activeElement)) {
+  if (panel.contains?.(document.activeElement)) {
     document.activeElement.blur();
   }
 };
