@@ -10,6 +10,9 @@ test("the admin page asks for the token and shows the rooms and the games opened
   const token = page.getByLabel("Token");
   await expect(token).toBeFocused();
   await expect(page.getByText("No lobby open right now.")).toBeHidden();
+  // (nothing but the token's field before it is taken)
+  await expect(page.getByRole("heading", { level: 2 })).toHaveCount(0);
+  await expect(page.locator("#visitsTotal")).toBeHidden();
 
   await token.fill("wrong");
   await page.getByRole("button", { name: "Show" }).click();
@@ -26,6 +29,14 @@ test("the admin page asks for the token and shows the rooms and the games opened
   await page.reload();
   await expect(page.getByText("No lobby open right now.")).toBeVisible();
   await expect(token).toBeHidden();
+
+  // logged out: forgotten, asked for again
+  await page.getByRole("button", { name: "Log out" }).click();
+  await expect(token).toBeFocused();
+  await expect(page.locator("#visitsTotal")).toBeHidden();
+  await page.reload();
+  await expect(token).toBeVisible();
+  await expect(page.getByText("No lobby open right now.")).toBeHidden();
 });
 
 test("the rooms report is not given without the token", async ({ request }) => {

@@ -142,27 +142,31 @@
         <button type="submit">Show</button>
         <p id="loginError" role="alert"></p>
       </form>
-      <h2>Lobbies open now</h2>
-      <div id="rooms" aria-live="polite"><p>Looking…</p></div>
-      <p class="muted" id="updated"></p>
-      <h2>Past lobbies (last 90 days)</h2>
-      <div id="past" class="table-box"></div>
-      <h2>Games opened (last 90 days)</h2>
-      <p id="visitsTotal"></p>
-      <h3>By day</h3>
-      <div id="visitsByDay" class="table-box"></div>
-      <h3>By country</h3>
-      <div id="visitsByCountry" class="table-box"></div>
-      <h3>By device</h3>
-      <div id="visitsByDevice" class="table-box"></div>
-      <h3>Latest</h3>
-      <div id="visitsLatest" class="table-box"></div>
-      <p class="muted">
-        Hosts and visitors are shown by their network only, never by their whole
-        address. A game opened again from the same address within ten minutes
-        counts once.
-        <a href="https://db-ip.com">IP Geolocation by DB-IP</a>.
-      </p>
+      <p class="muted" id="updated" role="status"></p>
+      <!-- (nothing of it before the token is taken) -->
+      <div id="report" hidden>
+        <button type="button" id="logout">Log out</button>
+        <h2>Lobbies open now</h2>
+        <div id="rooms" aria-live="polite"><p>Looking…</p></div>
+        <h2>Past lobbies (last 90 days)</h2>
+        <div id="past" class="table-box"></div>
+        <h2>Games opened (last 90 days)</h2>
+        <p id="visitsTotal"></p>
+        <h3>By day</h3>
+        <div id="visitsByDay" class="table-box"></div>
+        <h3>By country</h3>
+        <div id="visitsByCountry" class="table-box"></div>
+        <h3>By device</h3>
+        <div id="visitsByDevice" class="table-box"></div>
+        <h3>Latest</h3>
+        <div id="visitsLatest" class="table-box"></div>
+        <p class="muted">
+          Hosts and visitors are shown by their network only, never by their
+          whole address. A game opened again from the same address within ten
+          minutes counts once.
+          <a href="https://db-ip.com">IP Geolocation by DB-IP</a>.
+        </p>
+      </div>
       <p><a href="./">Play Need for Madness</a></p>
     </main>
     <script>
@@ -317,7 +321,9 @@
         roomsBox.replaceChildren(heading, list);
       };
 
+      const report = document.getElementById("report");
       const askToken = (error) => {
+        report.hidden = true;
         loginError.textContent = error;
         roomsBox.replaceChildren();
         pastBox.replaceChildren();
@@ -348,11 +354,18 @@
             throw new Error(response.status);
           }
           show(await response.json());
+          report.hidden = false;
           updated.textContent = `As of ${new Date().toLocaleTimeString()}`;
         } catch {
-          roomsBox.innerHTML = "<p>The multiplayer server does not answer.</p>";
+          updated.textContent = "The multiplayer server does not answer.";
         }
       };
+
+      // (the token kept in this browser forgotten: asked for again)
+      document.getElementById("logout").addEventListener("click", () => {
+        keepToken("");
+        askToken("");
+      });
 
       login.addEventListener("submit", (event) => {
         event.preventDefault();
