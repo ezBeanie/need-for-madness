@@ -165,3 +165,31 @@ test("the options choose the graphics, High unless chosen, kept, the 3D picture'
   expect(width).toBe(Math.round(window * 0.6));
   expect(await page.evaluate(() => localStorage.getItem("graphics"))).toBe("0");
 });
+
+test("a first start is in the classic look; its stunts take the key on a desktop, not on a phone", async ({
+  browser,
+  baseURL,
+}) => {
+  const firstStart = async (options) => {
+    const context = await browser.newContext({ ...options, baseURL });
+    const page = await context.newPage();
+    // (nothing kept: the driver's modern look taken away)
+    const game = await openGame(page, { storage: { look: "" } });
+    await game.advanceUntil(PHASE.mainMenu);
+    const seen = await page.evaluate(async () => {
+      const { LOOK, look } = await import("/src/render/look.js");
+      const { stunts } = await import("/src/input/controls.js");
+      return { classic: look.current == LOOK.classic, byKey: stunts.byKey };
+    });
+    await context.close();
+    return seen;
+  };
+  expect(await firstStart({})).toEqual({ classic: true, byKey: true });
+  expect(
+    await firstStart({
+      isMobile: true,
+      hasTouch: true,
+      viewport: { width: 844, height: 390 },
+    }),
+  ).toEqual({ classic: true, byKey: false });
+});

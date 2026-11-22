@@ -52,10 +52,11 @@ const prepareBrowser = ({ seed, storage }) => {
 };
 
 export const openGame = async (page, { storage = {}, url = "/" } = {}) => {
-  // (the graphics as the original's, which the screenshots were taken with)
+  // (the graphics as the original's and the modern look, which the screenshots were
+  // taken with)
   await page.addInitScript(prepareBrowser, {
     seed: 1,
-    storage: { graphics: "1", ...storage },
+    storage: { graphics: "1", look: "0", ...storage },
   });
   await page.goto(url);
   await page.waitForFunction(() => window.advanceFrames !== undefined);

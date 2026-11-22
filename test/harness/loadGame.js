@@ -90,6 +90,12 @@ export const loadGame = async ({
   }
   const queue = createTaskQueue();
   installBrowser(queue, userAgent);
+  // (the golden masters were drawn in the modern look; nothing else is kept, as before)
+  globalThis.localStorage = {
+    getItem: (key) => (key == "look" ? "0" : null),
+    setItem: () => {},
+    removeItem: () => {},
+  };
 
   // The game reads Math.random once when loading (both random sources start as it, and
   // the car select smoke is placed right away); it never calls it afterwards.
