@@ -4,6 +4,15 @@
 
 export const CHANGELOG = [
   {
+    version: "1.3.6",
+    date: "2026-11-22",
+    changes: [
+      "The classic look is the game's look now; the modern one can be chosen in the options.",
+      "Graphics in the options: Low for slow devices, High (the default) and Ultra keep details and outlines of the classic look much farther away.",
+      "On phones and tablets stunts come by themselves unless chosen otherwise.",
+    ],
+  },
+  {
     version: "1.3.5",
     date: "2026-11-22",
     changes: [
