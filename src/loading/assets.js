@@ -140,9 +140,8 @@ const readSettings = () => {
   menu.continuesToCarSelect = false;
   game.carTypes[0] = loadSetting("carsel");
   if (game.carTypes[0] == -1) {
-    // a new player
+    // a new player (who stays in the main menu too, unlike in the original)
     game.carTypes[0] = 5;
-    menu.continuesToCarSelect = true;
     raceEvents.onautocorrect = 2;
   }
   loadCareer();
