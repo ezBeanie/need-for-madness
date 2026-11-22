@@ -90,11 +90,16 @@ export const loadGame = async ({
   }
   const queue = createTaskQueue();
   installBrowser(queue, userAgent);
-  // (the golden masters were drawn in the modern look; nothing else is kept, as before)
+  // (the golden masters were drawn in the modern look: so it is unless a test's own
+  // storage says otherwise; without one nothing else is kept, as before)
+  const own = globalThis.localStorage?.modernLook
+    ? null
+    : globalThis.localStorage;
   globalThis.localStorage = {
-    getItem: (key) => (key == "look" ? "0" : null),
-    setItem: () => {},
-    removeItem: () => {},
+    modernLook: true,
+    getItem: (key) => own?.getItem(key) ?? (key == "look" ? "0" : null),
+    setItem: (key, value) => own?.setItem(key, value),
+    removeItem: (key) => own?.removeItem?.(key),
   };
 
   // The game reads Math.random once when loading (both random sources start as it, and
