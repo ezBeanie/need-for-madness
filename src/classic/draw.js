@@ -306,9 +306,11 @@ const facesAway = (n) => {
 // whether the polygon last measured turns away from the camera (-111) or not (1)
 let side = 1;
 
+export const turnedAway = () => side == -111;
+
 // How far a placed polygon is (its av): the middle of its extent, plus its gr cubed; a
 // side turned away from the camera counts farther. Sets side.
-const distanceOf = (poly, n) => {
+export const distanceOf = (poly, n) => {
   const sx = (i) => xs(X[i], Z[i]);
   const sy = (i) => ys(Y[i], Z[i]);
   side = 1;
