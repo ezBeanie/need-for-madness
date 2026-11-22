@@ -536,6 +536,12 @@ export const GERMAN = {
   Lap: "Runde",
   Place: "Platz",
   Points: "Punkte",
+  Graphics: "Grafik",
+  Low: "Niedrig",
+  Medium: "Mittel",
+  High: "Hoch",
+  "Lower runs smoother on slow devices; higher keeps details and outlines farther away.":
+    "Niedriger läuft auf langsamen Geräten flüssiger; höher zeigt Details und Konturen weiter in die Ferne.",
   Crashes: "Bruchlandungen",
   Car: "Auto",
   "Next car: {car}!": "Nächstes Auto: {car}!",

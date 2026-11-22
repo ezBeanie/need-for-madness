@@ -141,3 +141,27 @@ test("a game started in German races with its HUD in German", async ({
   expect(texts).toEqual(expect.arrayContaining(["Runde", "Schaden"]));
   expect(texts).not.toContain("Lap");
 });
+
+test("the options choose the graphics, High unless chosen, kept, the 3D picture's pixels by it", async ({
+  page,
+}) => {
+  // (nothing kept: the driver's own Medium taken away)
+  const game = await openGame(page, {
+    storage: { carsel: "5", unlocked: "17", graphics: "" },
+  });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.advance(2);
+  await page.locator("#menuOptions").click();
+  const chosen = page.getByLabel("Graphics");
+  await expect(chosen).toHaveValue("2");
+  await chosen.selectOption("Low");
+  await game.advance(2);
+  const pixels = () =>
+    page.evaluate(() => {
+      const canvas = document.querySelector("#canvas3D");
+      return [canvas.width, window.innerWidth];
+    });
+  const [width, window] = await pixels();
+  expect(width).toBe(Math.round(window * 0.6));
+  expect(await page.evaluate(() => localStorage.getItem("graphics"))).toBe("0");
+});

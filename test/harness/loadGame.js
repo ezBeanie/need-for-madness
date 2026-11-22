@@ -109,6 +109,11 @@ export const loadGame = async ({
   // (and crash as the original's)
   const { physics } = await import("../../src/race/physics.js");
   physics.asOriginal = true;
+  // (and drawn with the original's distances and pixels)
+  const { QUALITY, chooseQuality } = await import(
+    "../../src/render/graphics.js"
+  );
+  chooseQuality(QUALITY.medium, false);
   ctx.random.sim = seededRandom(seed);
   ctx.random.fx = fxrandom;
   // (one source, as the game's two are: the golden masters recorded them as one)

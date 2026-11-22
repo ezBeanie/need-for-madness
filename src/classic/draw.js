@@ -2,6 +2,7 @@
 // buffer, the farthest object first and each object's farthest polygon first, every
 // polygon in one colour lit from above, fogged in bands, and outlined when near. With
 // medium.depth an object's nearer polygons also cover its farther ones (see batch.js).
+import { graphics } from "../render/graphics.js";
 import {
   drawPolygon,
   endObject,
@@ -488,34 +489,36 @@ const drawPoly = (poly, n, noline, size) => {
   const av = distanceOf(poly, n);
   poly.av = av;
   const race = medium.trk == 0;
-  if (race && (av > medium.fade[poly.disline] || av == 0)) {
+  // (the original's distances, times the detail chosen: see render/graphics.js)
+  const { detail } = graphics;
+  if (race && (av > medium.fade[poly.disline] * detail || av == 0)) {
     return;
   }
-  if (side == -111 && av > 4500 && !poly.road) {
+  if (side == -111 && av > 4500 * detail && !poly.road) {
     return;
   }
-  if (side == -111 && av > 1500) {
+  if (side == -111 && av > 1500 * detail) {
     far = true;
   }
-  if (av > 3000 && medium.adv <= 900) {
+  if (av > 3000 * detail && medium.adv <= 900) {
     far = true;
   }
   if (poly.gr == -13 && (!medium.lastCheck || size != -1)) {
     return;
   }
-  if (poly.master == 2 && av > 1500) {
+  if (poly.master == 2 && av > 1500 * detail) {
     return;
   }
   // (the stage select's preview, trk 2, shows them all)
   const preview = medium.trk == 2 || medium.trk == 3;
   if (
     (poly.gr == -11 || poly.gr == -14 || poly.gr == -15 || poly.gr == -12) &&
-    av > 11000 &&
+    av > 11000 * detail &&
     !preview
   ) {
     return;
   }
-  if (poly.glass == 2 && (!race || av > 6700)) {
+  if (poly.glass == 2 && (!race || av > 6700 * detail)) {
     return;
   }
   // a car being fixed flickers: most of its polygons drop out each tick
@@ -941,8 +944,9 @@ export const drawObject = (
       xs(n + maxR * 2, depth) > 0 &&
       xs(n - maxR * 2, depth) < medium.w &&
       depth > -maxR &&
-      (depth < medium.fade[rad.disline] + maxR || medium.trk != 0) &&
-      (size > rad.disp || medium.trk != 0)
+      (depth < medium.fade[rad.disline] * graphics.detail + maxR ||
+        medium.trk != 0) &&
+      (size > rad.disp / graphics.detail || medium.trk != 0)
     )
   ) {
     return 0;
@@ -965,7 +969,7 @@ export const drawObject = (
     startObject(depth - maxR, depth + maxR);
   }
   shows = alpha;
-  if (rad.shadow && depth < 2000 && alpha == 255) {
+  if (rad.shadow && depth < 2000 * graphics.detail && alpha == 255) {
     drawShadow(rad, matrix, groundY, shadowCamera, ground ?? 0);
   }
   // drawn before its polygons: the fix hoop's electricity, the bubble round a car being
@@ -1002,7 +1006,7 @@ export const drawObject = (
     }
     let corners = placePoly(poly, matrix);
     // a tyre seen from afar has no hole for its rim
-    if (poly.master == 1 && (poly.av ?? 0) > 1500) {
+    if (poly.master == 1 && (poly.av ?? 0) > 1500 * graphics.detail) {
       corners = 12;
     }
     drawPoly(poly, corners, rad.noline, size);

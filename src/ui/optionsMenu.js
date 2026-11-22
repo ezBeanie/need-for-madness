@@ -23,6 +23,9 @@ import { own, setOwnName } from "../net/roomCars.js";
 import { toggleByVoice, toggleVoice, voice } from "../net/voice.js";
 import { ghost, toggleGhost } from "../race/ghost.js";
 import { isPhone } from "../core/platform.js";
+import { chooseQuality, graphics } from "../render/graphics.js";
+import { fitCanvas3D } from "../render/renderer.js";
+import { menu } from "../screens/menuState.js";
 import { askOfflineStatus, installOffline } from "./offline.js";
 import { CHANGELOG, VERSION } from "../data/changelog.js";
 import {
@@ -116,6 +119,7 @@ export const openOptions = () => {
   document.getElementById("optionsTouch").hidden = !isPhone;
   document.getElementById("playerName").value = own.name;
   document.getElementById("languageChosen").value = language.current;
+  document.getElementById("graphicsChosen").value = String(graphics.quality);
   askOfflineStatus();
   dialog.showModal?.();
 };
@@ -149,6 +153,13 @@ export const installOptionsMenu = () => {
   showChangelog();
   // (the page and what is shown of it at once in the language chosen; a language saved
   // translates the page as the game starts)
+  const graphicsChosen = document.getElementById("graphicsChosen");
+  graphicsChosen.addEventListener("change", () => {
+    chooseQuality(Number(graphicsChosen.value));
+    // (the picture drawn anew in its pixels, also in the menus)
+    fitCanvas3D();
+    menu.redraw = true;
+  });
   const languageChosen = document.getElementById("languageChosen");
   languageChosen.addEventListener("change", () =>
     setLanguage(languageChosen.value),

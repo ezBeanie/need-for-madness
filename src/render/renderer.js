@@ -1,5 +1,6 @@
 // WebGL: the 3D canvas, the shader programs and drawing models and particles.
 
+import { graphics } from "./graphics.js";
 import { view } from "../ui/view.js";
 import { drawCamera, drawMatrix, placeModel } from "./interpolation.js";
 import { drawsClassic, look } from "./look.js";
@@ -15,8 +16,12 @@ const CLASSIC_HEIGHT = 450;
 export const fitCanvas3D = () => {
   // the classic look in the original's few pixels, unless sharp
   const classic = drawsClassic() && !look.sharp;
-  const height = classic ? CLASSIC_HEIGHT : view.height;
-  const width = classic ? Math.round(CLASSIC_HEIGHT * view.aspect) : view.width;
+  // (else as the graphics quality chose, see graphics.js)
+  const scale = graphics.resolution;
+  const height = classic ? CLASSIC_HEIGHT : Math.round(view.height * scale);
+  const width = classic
+    ? Math.round(CLASSIC_HEIGHT * view.aspect)
+    : Math.round(view.width * scale);
   if (canvas3D.width == width && canvas3D.height == height) {
     return;
   }
