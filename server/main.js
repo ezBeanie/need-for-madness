@@ -2,7 +2,8 @@
 // listening on PORT (8787 if not set). The web server in front passes /net on to it, the
 // rooms report (ROOMS_PATH) and the rooms listed (PUBLIC_PATH) too, and says in X-Real-IP whose a connection is. The rooms'
 // history is kept in HISTORY_FILE, if set, the games opened (VISIT_PATH, see visits.js) in
-// VISITS_FILE, their countries from GEOIP_FILE (see geo.js). The report answers only with
+// VISITS_FILE and what was played in them (EVENT_PATH) in EVENTS_FILE, their countries from
+// GEOIP_FILE (see geo.js). The report answers only with
 // ROOMS_TOKEN. The voice chat's TURN server is TURN_HOST, sharing TURN_SECRET with the
 // relay (see ice.js).
 
@@ -17,13 +18,14 @@ import {
 } from "./relay.js";
 import { ICE_PATH, answerIce } from "./ice.js";
 import { loadCountries } from "./geo.js";
-import { VISIT_PATH, keepVisits } from "./visits.js";
+import { EVENT_PATH, VISIT_PATH, keepVisits } from "./visits.js";
 
 const port = Number(process.env.PORT ?? 8787);
 const server = createServer();
 const relay = attachRelay(server, process.env.HISTORY_FILE);
 const visits = keepVisits(
   process.env.VISITS_FILE,
+  process.env.EVENTS_FILE,
   loadCountries(process.env.GEOIP_FILE),
 );
 const rooms = answerRooms(
@@ -47,7 +49,11 @@ server.on("request", (request, response) => {
     return;
   }
   if (pathname == VISIT_PATH) {
-    visits.answer(request, response);
+    visits.answerVisit(request, response);
+    return;
+  }
+  if (pathname == EVENT_PATH) {
+    visits.answerEvent(request, response);
     return;
   }
   response.writeHead(404);
