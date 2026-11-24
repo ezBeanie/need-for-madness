@@ -1093,7 +1093,7 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
   );
 });
 
-test("in gun game every car starts in the ladder's first, the bots keep their names, a car changes into another as it races, and the host has its own car back after", async ({
+test("in gun game every car starts in the ladder's first, the bots are numbered, a car changes into another as it races, and the host has its own car back after", async ({
   context,
 }) => {
   const games = await openTwoGames(context, "/?host=gungame", "/?join=gungame");
@@ -1137,7 +1137,7 @@ test("in gun game every car starts in the ladder's first, the bots keep their na
     });
   expect(await raced(hostPage)).toEqual({
     field: [0, 0, 0],
-    bot: "Radical One",
+    bot: "Bot 1",
   });
   expect(await raced(guestPage)).toEqual(await raced(hostPage));
   await advanceBoth(...both, 150);

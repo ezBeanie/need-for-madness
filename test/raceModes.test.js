@@ -365,7 +365,36 @@ test("a room's bots keep the names of the cars the lobby gave them, whatever the
     "Radical One 1",
     "Radical One 2",
   ]);
+  // (in gun game, whose cars change, by their order)
+  ctx.raceSetup.mode = ctx.RACE_MODE.gunGame;
+  expect([nameOfCar(1), nameOfCar(2)]).toEqual(["Bot 1", "Bot 2"]);
   setRoomCars([], [], []);
+});
+
+test("a room's race the host starts with bots alone is of its mode: in gun game the wasted come back", async () => {
+  const { ctx } = await mostKills();
+  ctx.game.humans = [];
+  ctx.raceSetup.kind = ctx.RACE_KIND.together;
+  ctx.raceSetup.mode = ctx.RACE_MODE.gunGame;
+  const deathmatch = await import("../src/race/deathmatch.js");
+  expect(deathmatch.isGunGame()).toBe(true);
+  ctx.startDeathmatch();
+  ctx.racers[1].lastHitBy = 2;
+  ctx.racers[1].damage = 100000;
+  for (let i = 0; i < 200 && !ctx.racers[1].wasted; i++) {
+    ctx.drive();
+    ctx.racers[1].lastcolido = 70;
+  }
+  expect(ctx.racers[1].wasted).toBe(true);
+  expect(ctx.deathmatch.kills[2]).toBe(1);
+  for (let i = 0; i < ctx.respawnTicks() && ctx.racers[1].wasted; i++) {
+    ctx.drive();
+  }
+  expect(ctx.racers[1].wasted).toBe(false);
+  // (and it ends as gun game does, not when the player is wasted)
+  ctx.updateStandings();
+  expect(ctx.track.haltall).toBe(false);
+  ctx.raceSetup.kind = ctx.RACE_KIND.campaign;
 });
 
 test("a normal race keeps its wrecks and counts no kills", async () => {

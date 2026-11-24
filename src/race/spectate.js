@@ -3,7 +3,7 @@
 // the player steers (or with the HUD's arrows), flying over as the replay viewer's does
 // (see replayViewer.js); V switches the camera, the free one too. The menu leaves.
 
-import { game } from "../core/state.js";
+import { game, racesRoom } from "../core/state.js";
 import { lockstep } from "../net/lockstep.js";
 import { CAMERA, camera } from "../render/camera.js";
 import { racers } from "./racers.js";
@@ -18,7 +18,7 @@ const held = { left: false, right: false };
 // whether the player could watch the race go on: its car wasted or through the race
 // against the clock, or watching only (see net/watch.js)
 export const spectating = () =>
-  game.humans.length > 0 &&
+  racesRoom() &&
   (lockstep.watching || outOfTheRace(game.player)) &&
   !track.haltall;
 

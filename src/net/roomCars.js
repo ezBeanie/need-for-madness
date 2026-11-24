@@ -129,10 +129,14 @@ export const carsCrash = (c, xc) =>
 export const skinOf = (c) => (inRoomRace() ? (roomCars.skins[c] ?? 0) : 0);
 
 // What a room's bots, by their cars, are called: after their cars, and where bots share a
-// car numbered in their order ("Radical One 1", "Radical One 2"). The lobby and every game
-// of the race know the same cars in the same order, so all show the same names.
-export const botNames = (carTypes) =>
+// car numbered in their order ("Radical One 1", "Radical One 2"); in gun game, whose cars
+// change, by their order alone ("Bot 1"). The lobby and every game of the race know the
+// same cars in the same order, so all show the same names.
+export const botNames = (carTypes, mode = raceSetup.mode) =>
   carTypes.map((type, i) => {
+    if (mode == RACE_MODE.gunGame) {
+      return `Bot ${i + 1}`;
+    }
     const sharing = carTypes.filter((other) => other == type).length;
     const nth = carTypes
       .slice(0, i + 1)

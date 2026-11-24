@@ -14,6 +14,7 @@ import {
   RACE_MODE,
   game,
   raceSetup,
+  racesRoom,
 } from "../core/state.js";
 import { TICK_MS } from "../core/tick.js";
 import { CAR } from "../data/carStats.js";
@@ -85,11 +86,10 @@ export const isTimedMode = (mode) =>
   mode == RACE_MODE.gunGame;
 
 // whether the race is a room's of a fixed time
-export const isDeathmatch = () =>
-  isTimedMode(raceSetup.mode) && game.humans.length > 0;
+export const isDeathmatch = () => isTimedMode(raceSetup.mode) && racesRoom();
 const isStunts = () => raceSetup.mode == RACE_MODE.stunts;
 export const isGunGame = () =>
-  raceSetup.mode == RACE_MODE.gunGame && game.humans.length > 0;
+  raceSetup.mode == RACE_MODE.gunGame && racesRoom();
 // whether the race is to be a room's gun game, before its players are known: its cars
 // start in the ladder's first and may become any of it
 export const racesGunGame = () =>

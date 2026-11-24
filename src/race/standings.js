@@ -2,7 +2,13 @@
 // close finish is coming that the highlights should show.
 
 import { distanceSquaredXZ } from "../core/math.js";
-import { RACE_MODE, finishingEnds, game, raceSetup } from "../core/state.js";
+import {
+  RACE_MODE,
+  finishingEnds,
+  game,
+  raceSetup,
+  racesRoom,
+} from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { tick } from "../core/tick.js";
 import { deathmatchLeft, gunGameWon, isDeathmatch } from "./deathmatch.js";
@@ -48,8 +54,8 @@ export function updateStandings() {
   }
   // The HUD stops the race as the player sees it end (see raceOutcome in ui/hud.js);
   // racing together, it stops alike in every game: one car left, or one finished (when
-  // that wins).
-  if (game.humans.length > 0) {
+  // that wins). So too a room's race of the host with bots alone.
+  if (racesRoom()) {
     const cars = racers.slice(0, game.carCount);
     const done = track.nlaps * track.nsp;
     if (isDeathmatch()) {
