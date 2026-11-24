@@ -52,7 +52,12 @@ const prepareBrowser = ({ seed, storage }) => {
 };
 
 export const openGame = async (page, { storage = {}, url = "/" } = {}) => {
-  await page.addInitScript(prepareBrowser, { seed: 1, storage });
+  // (the graphics as the original's and the modern look, which the screenshots were
+  // taken with)
+  await page.addInitScript(prepareBrowser, {
+    seed: 1,
+    storage: { graphics: "1", look: "0", ...storage },
+  });
   await page.goto(url);
   await page.waitForFunction(() => window.advanceFrames !== undefined);
   // the dev server serves the game with the test plugin that exports its state

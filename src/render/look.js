@@ -16,9 +16,10 @@ export const look = {
   menus: false,
 };
 
+// (the classic look unless the modern one was chosen)
 export const loadLook = () => {
   look.current =
-    loadSetting("look") == LOOK.classic ? LOOK.classic : LOOK.modern;
+    loadSetting("look") == LOOK.modern ? LOOK.modern : LOOK.classic;
   look.sharp = loadSetting("classicSharp") == 1;
   look.menus = loadSetting("classicMenus") == 1;
 };

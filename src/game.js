@@ -23,6 +23,11 @@ import { keepScreenOn } from "./ui/screenAwake.js";
 import { fullscreenOnTouch, installFullscreen } from "./ui/fullscreen.js";
 import { loadAiming, startProjection, turnView } from "./render/camera.js";
 import { moveCamera } from "./render/cameraMoves.js";
+import { followPath } from "./race/cameraPath.js";
+import {
+  installCameraPathPanel,
+  placeCameraPathPanel,
+} from "./ui/cameraPathPanel.js";
 import { render } from "./render/drawFrame.js";
 import { lookForGamepads, pollGamepads } from "./input/gamepad.js";
 import {
@@ -214,6 +219,10 @@ function raceTick() {
     moveScenery(true);
     drawRewindOverlay();
   }
+  // (a replay's camera path sets the camera first, the cars' cameras follow from it)
+  if (game.phase == PHASE.replay) {
+    followPath();
+  }
   moveCamera();
   if (game.phase == PHASE.replay || watchingOthers()) {
     flyCamera();
@@ -296,6 +305,7 @@ export function runTick() {
   placeMainMenu();
   placeOptionsButton();
   placeReplayExit();
+  placeCameraPathPanel();
   placeMultiplayerButton();
   placeStageEditorButton();
   voiceTick(roomPlayerIds());
@@ -444,6 +454,7 @@ startHosting();
 startGuesting();
 installOptionsMenu();
 installReplayExit();
+installCameraPathPanel();
 installTouchLayout();
 installMainMenu();
 installMultiplayerMenu();

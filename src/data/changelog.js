@@ -4,6 +4,22 @@
 
 export const CHANGELOG = [
   {
+    version: "1.4.0",
+    date: "2026-11-24",
+    changes: [
+      "Replays get a camera path (I, or Path in the controls): keyframes of the camera, flown smoothly between free cameras or cut to the cars', each with its speed; saved with the replay.",
+    ],
+  },
+  {
+    version: "1.3.6",
+    date: "2026-11-22",
+    changes: [
+      "The classic look is the game's look now; the modern one can be chosen in the options.",
+      "Graphics in the options: Low for slow devices, High (the default) and Ultra keep details and outlines of the classic look much farther away.",
+      "On phones and tablets stunts come by themselves unless chosen otherwise.",
+    ],
+  },
+  {
     version: "1.3.5",
     date: "2026-11-22",
     changes: [

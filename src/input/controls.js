@@ -31,6 +31,7 @@ import { lockNext } from "../render/cameraMoves.js";
 import { keys } from "./keyboard.js";
 import { watchingOthers } from "../race/spectate.js";
 import { loadSetting, saveSetting } from "../core/storage.js";
+import { isPhone } from "../core/platform.js";
 
 // the button a key shows pressed: the arrow button of the race
 const ARROW_BUTTON = 1;
@@ -41,7 +42,12 @@ const REWIND_BUTTON = 11;
 // (else, as in the original, an arrow pressed in the air begins one too). It goes with
 // the player's keys as one more (stuntKey), so every game of a race together drives the
 // car alike.
-export const stunts = { byKey: loadSetting("stuntsByKey") != 0 };
+// (unless chosen: on phones and tablets, whose touch controls make the key hard to hold
+// with steering, stunts come by themselves)
+const storedByKey = loadSetting("stuntsByKey");
+export const stunts = {
+  byKey: storedByKey == -1 ? !isPhone : storedByKey != 0,
+};
 
 export const toggleStuntsByKey = () => {
   stunts.byKey = !stunts.byKey;

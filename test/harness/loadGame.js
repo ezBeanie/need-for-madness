@@ -90,6 +90,17 @@ export const loadGame = async ({
   }
   const queue = createTaskQueue();
   installBrowser(queue, userAgent);
+  // (the golden masters were drawn in the modern look: so it is unless a test's own
+  // storage says otherwise; without one nothing else is kept, as before)
+  const own = globalThis.localStorage?.modernLook
+    ? null
+    : globalThis.localStorage;
+  globalThis.localStorage = {
+    modernLook: true,
+    getItem: (key) => own?.getItem(key) ?? (key == "look" ? "0" : null),
+    setItem: (key, value) => own?.setItem(key, value),
+    removeItem: (key) => own?.removeItem?.(key),
+  };
 
   // The game reads Math.random once when loading (both random sources start as it, and
   // the car select smoke is placed right away); it never calls it afterwards.
@@ -109,6 +120,11 @@ export const loadGame = async ({
   // (and crash as the original's)
   const { physics } = await import("../../src/race/physics.js");
   physics.asOriginal = true;
+  // (and drawn with the original's distances and pixels)
+  const { QUALITY, chooseQuality } = await import(
+    "../../src/render/graphics.js"
+  );
+  chooseQuality(QUALITY.medium, false);
   ctx.random.sim = seededRandom(seed);
   ctx.random.fx = fxrandom;
   // (one source, as the game's two are: the golden masters recorded them as one)
