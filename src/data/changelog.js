@@ -4,6 +4,13 @@
 
 export const CHANGELOG = [
   {
+    version: "1.4.0",
+    date: "2026-11-24",
+    changes: [
+      "Replays get a camera path (I, or Path in the controls): keyframes of the camera, flown smoothly between free cameras or cut to the cars', each with its speed; saved with the replay.",
+    ],
+  },
+  {
     version: "1.3.6",
     date: "2026-11-22",
     changes: [
