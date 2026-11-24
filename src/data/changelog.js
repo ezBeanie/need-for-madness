@@ -4,6 +4,13 @@
 
 export const CHANGELOG = [
   {
+    version: "1.4.1",
+    date: "2026-11-24",
+    changes: [
+      "A room's mode holds also when its host starts it with bots alone: in Gun Game a wasted car comes back, and the bots are called Bot 1, Bot 2 and so on instead of after their cars.",
+    ],
+  },
+  {
     version: "1.4.0",
     date: "2026-11-24",
     changes: [

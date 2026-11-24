@@ -629,8 +629,11 @@ const showBots = () => {
   const teams = lobbyTeams().slice(players().length);
   const shape = isHost
     ? `host ${bots.length} ${language.current}`
-    : `guest ${JSON.stringify([bots, teams, language.current])}`;
-  const names = botNames(bots.map(({ carType }) => carType));
+    : `guest ${JSON.stringify([bots, teams, language.current, modeShown()])}`;
+  const names = botNames(
+    bots.map(({ carType }) => carType),
+    modeShown(),
+  );
   if (list.dataset.shape != shape) {
     list.dataset.shape = shape;
     list.replaceChildren(

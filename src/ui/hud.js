@@ -62,6 +62,7 @@ import {
   finishingEnds,
   game,
   raceSetup,
+  racesRoom,
 } from "../core/state.js";
 import { saveSetting } from "../core/storage.js";
 import { tick } from "../core/tick.js";
@@ -964,8 +965,7 @@ const raceOutcome = () => {
   if (isDeathmatch()) {
     return deathmatchOutcome();
   }
-  const againstTheClock =
-    raceSetup.mode == RACE_MODE.timeAttack && game.humans.length > 0;
+  const againstTheClock = raceSetup.mode == RACE_MODE.timeAttack && racesRoom();
   if (againstTheClock && timeAttackOutcome()) {
     return true;
   }

@@ -103,6 +103,11 @@ export const RACE_MODE_NAMES = [
   "Gun game",
 ];
 
+// Whether the race is a room's, with its mode and rules: with guests, or the lobby's started
+// by the host with bots alone.
+export const racesRoom = () =>
+  game.humans.length > 0 || raceSetup.kind == RACE_KIND.together;
+
 // whether the first car through its laps ends the race (in a room's time attack every car
 // gets through, in last survivor the laps count for nothing)
 export const finishingEnds = () =>

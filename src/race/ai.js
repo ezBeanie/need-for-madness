@@ -12,6 +12,7 @@ import {
   isHuman,
   onNewestStage,
   raceSetup,
+  racesRoom,
 } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { CAR, carStats } from "../data/carStats.js";
@@ -2396,7 +2397,7 @@ const hunts = () =>
   (raceSetup.mode == RACE_MODE.lastSurvivor ||
     raceSetup.mode == RACE_MODE.mostKills ||
     raceSetup.mode == RACE_MODE.gunGame) &&
-  game.humans.length > 0;
+  racesRoom();
 
 // how long a hunt goes on before the bot looks again for the nearest, and the power below
 // which it rather fixes
