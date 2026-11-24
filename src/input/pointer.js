@@ -1,8 +1,15 @@
 import { pageBox, pagePoint } from "../ui/view.js";
 
 // Mouse and touch on the 2D canvas: where the pointers are (several when touching with
-// several fingers) and whether one is down.
-export const pointer = { x: [], y: [], count: 0, down: false };
+// several fingers), whether one is down, and how far the wheel turned since a screen took
+// it (see takeWheel).
+export const pointer = { x: [], y: [], count: 0, down: false, wheel: 0 };
+
+export const takeWheel = () => {
+  const turned = pointer.wheel;
+  pointer.wheel = 0;
+  return turned;
+};
 
 // Touches and clicks that hardly moved, each where it let go and how long it was down,
 // until a screen takes them: one finger's tap while others drive (the pointers above keep
@@ -59,6 +66,14 @@ export const installPointer = (
 ) => {
   const moveMouse = (event) => positions(canvas, [event]);
   canvas.addEventListener("mousemove", moveMouse, false);
+  canvas.addEventListener(
+    "wheel",
+    (event) => {
+      event.preventDefault();
+      pointer.wheel += event.deltaY;
+    },
+    { passive: false },
+  );
   canvas.addEventListener(
     "mousedown",
     (event) => {

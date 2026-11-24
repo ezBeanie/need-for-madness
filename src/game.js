@@ -23,7 +23,7 @@ import { keepScreenOn } from "./ui/screenAwake.js";
 import { fullscreenOnTouch, installFullscreen } from "./ui/fullscreen.js";
 import { loadAiming, startProjection, turnView } from "./render/camera.js";
 import { moveCamera } from "./render/cameraMoves.js";
-import { followPath } from "./race/cameraPath.js";
+import { blendPath, followPath } from "./race/cameraPath.js";
 import {
   installCameraPathPanel,
   placeCameraPathPanel,
@@ -226,6 +226,9 @@ function raceTick() {
   moveCamera();
   if (game.phase == PHASE.replay || watchingOthers()) {
     flyCamera();
+  }
+  if (game.phase == PHASE.replay) {
+    blendPath();
   }
   turnView();
   menu.redraw = true;

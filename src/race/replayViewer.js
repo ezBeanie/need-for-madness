@@ -4,12 +4,13 @@
 // there, the race as it was.
 
 import { tellActivity } from "../net/activity.js";
-import { cameraPath } from "./cameraPath.js";
+import { MAX_FOV, MIN_FOV, cameraPath } from "./cameraPath.js";
 import { random } from "../core/random.js";
 import { tick } from "../core/tick.js";
 import { takePressedKeys } from "../input/keyboard.js";
+import { takeWheel } from "../input/pointer.js";
 import { PHASE, game } from "../core/state.js";
-import { CAMERA, camera } from "../render/camera.js";
+import { CAMERA, DEFAULT_FOV, camera } from "../render/camera.js";
 import { BLEND, gl } from "../render/renderer.js";
 import { burn, effects } from "./effects.js";
 import { raceEvents } from "./events.js";
@@ -295,9 +296,11 @@ export const openReplay = (from, frame) => {
   viewer.heldTicks = 0;
   camera.mode = CAMERA.orbit;
   camera.target = game.player;
+  camera.fov = DEFAULT_FOV;
   game.phase = PHASE.replay;
-  // (keys pressed before, in the menus, are not the viewer's)
+  // (keys pressed and the wheel turned before, in the menus, are not the viewer's)
   takePressedKeys();
+  takeWheel();
   seekReplay(frame);
 };
 
@@ -311,6 +314,7 @@ export const closeReplay = () => {
   }
   camera.mode = CAMERA.behind;
   camera.target = game.player;
+  camera.fov = DEFAULT_FOV;
 };
 
 export const togglePlaying = () => {
@@ -376,6 +380,11 @@ export const moveFreeCamera = (forward, side, up, yaw, pitch) => {
   camera.x += forward * Math.sin(heading) + side * Math.cos(heading);
   camera.z += -forward * Math.cos(heading) + side * Math.sin(heading);
   camera.y = Math.max(1, camera.y + up);
+};
+
+// Any camera zoomed: in (below 1) or out (above 1) by a factor of its field of view.
+export const zoomCamera = (factor) => {
+  camera.fov = Math.max(MIN_FOV, Math.min(MAX_FOV, camera.fov * factor));
 };
 
 // Plays the frames up to `to`, their events happening.

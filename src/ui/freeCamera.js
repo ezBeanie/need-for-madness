@@ -1,5 +1,6 @@
 // The free camera's controls, in the replay viewer and watching a race together: W A S D,
-// Q and E down and up, Z and X to turn, Shift faster, the mouse dragged to look. On touch
+// Q and E down and up, Z and X to turn, R and F to look up and down, Shift faster, the
+// mouse dragged to look. Keys speed it up and slow it down smoothly. On touch
 // screens a pad flies it (pushed up: forward, aside: sideways) and two buttons beside it
 // lift and lower it; a finger dragged elsewhere looks round.
 
@@ -14,6 +15,8 @@ const MOVE = 6;
 const FAST = 4;
 const TURN = 2.5;
 const DRAG_TURN = 0.25;
+// how much of the way to the speed the keys ask for it goes a tick
+const EASE = 0.2;
 // the pad and the buttons (design units): their size, and how far from the corner
 const PAD = 70;
 const BUTTON = 34;
@@ -21,6 +24,16 @@ const MARGIN = 30;
 
 // the finger (or mouse) looking round: where it was last tick
 let dragFrom = null;
+// how fast it moves and turns by the keys, eased towards what they ask
+const velocity = { forward: 0, side: 0, up: 0, yaw: 0, pitch: 0 };
+const easeTowards = (wanted) => {
+  for (const [way, value] of Object.entries(wanted)) {
+    velocity[way] += (value - velocity[way]) * EASE;
+    if (Math.abs(velocity[way]) < 0.01) {
+      velocity[way] = 0;
+    }
+  }
+};
 
 // Where the pad and the up and down buttons are, with their bottom at bottom (pixels).
 const placeOf = (bottom) => {
@@ -45,11 +58,14 @@ export const steerFreeCamera = (bottom, looks = () => true) => {
   const step =
     MOVE *
     (keys.held.has("ShiftLeft") || keys.held.has("ShiftRight") ? FAST : 1);
-  let forward = (held("KeyW") - held("KeyS")) * step;
-  let side = (held("KeyD") - held("KeyA")) * step;
-  let up = (held("KeyE") - held("KeyQ")) * step;
-  let yaw = (held("KeyX") - held("KeyZ")) * TURN;
-  let pitch = 0;
+  easeTowards({
+    forward: (held("KeyW") - held("KeyS")) * step,
+    side: (held("KeyD") - held("KeyA")) * step,
+    up: (held("KeyE") - held("KeyQ")) * step,
+    yaw: (held("KeyX") - held("KeyZ")) * TURN,
+    pitch: (held("KeyF") - held("KeyR")) * TURN,
+  });
+  let { forward, side, up, yaw, pitch } = velocity;
   const place = placeOf(bottom);
   let looking = null;
   for (let i = 0; pointer.down && i < Math.max(pointer.count, 1); i++) {
@@ -77,6 +93,7 @@ export const steerFreeCamera = (bottom, looks = () => true) => {
 
 export const stopSteeringFreeCamera = () => {
   dragFrom = null;
+  Object.assign(velocity, { forward: 0, side: 0, up: 0, yaw: 0, pitch: 0 });
 };
 
 const circle = (at, r, fill) => {

@@ -51,8 +51,8 @@ src: url(data/verdana.ttf);
 .camera-path button[aria-pressed="true"] { background: #01eaff; color: #001020; }
 .camera-path button:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
 .camera-path ol { margin: 0 0 10px; padding: 0; list-style: none; }
-.camera-path li { display: flex; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid rgba(1, 234, 255, 0.25); font-size: 14px; }
-.camera-path li span { flex: 1; }
+.camera-path li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid rgba(1, 234, 255, 0.25); font-size: 14px; }
+.camera-path li span { flex: 1 0 100%; }
 .options-button:hover, .multiplayer-button:hover, .replay-exit:hover { filter: brightness(1.15); }
 .options-button:focus-visible, .multiplayer-button:focus-visible, .replay-exit:focus-visible { outline: none; background: #ffffff; }
 .menu-dialog button:focus-visible, .menu-dialog input:focus-visible,
@@ -653,7 +653,7 @@ html.turned dialog:modal:is(.view, .touch-layout, .stage-editor) {
 </dialog>
 <aside id="cameraPath" class="camera-path" aria-labelledby="cameraPathTitle" hidden>
 <h2 id="cameraPathTitle">Camera path</h2>
-<p class="hint">Fly and turn the camera, pause where it should be, then add a keyframe. Between free cameras the path flies; other cameras cut in. Each keyframe keeps the speed.</p>
+<p class="hint">Fly and turn the camera, pause where it should be, then add a keyframe (K). From each keyframe the path flies on or cuts; into and out of a car's camera it glides. Each keyframe keeps the speed and the zoom (wheel). , and . jump between keyframes.</p>
 <div class="row"><button type="button" id="cameraPathAdd">Add keyframe here</button><button type="button" id="cameraPathPlay" aria-pressed="false">Play the path</button></div>
 <ol id="cameraPathKeys" aria-label="Keyframes"></ol>
 <button type="button" id="cameraPathClose">Close</button>

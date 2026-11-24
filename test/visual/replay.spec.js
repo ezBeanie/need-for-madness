@@ -200,6 +200,31 @@ test("the replay's camera path: keyframes set where the camera is, played back, 
   await place(100, 200);
   await add.click();
   await expect(panel.getByRole("listitem")).toHaveCount(2);
+  // the first flies on to the second
+  await expect(
+    panel.getByRole("button", { name: /^Fly on from / }),
+  ).toHaveAttribute("aria-pressed", "true");
+  // the wheel over the race zooms in
+  const fov = () =>
+    page.evaluate(
+      async () => (await import("/src/render/camera.js")).camera.fov,
+    );
+  await page.mouse.move(200, 300);
+  await page.mouse.wheel(0, -500);
+  await game.advance(2);
+  expect(await fov()).toBeLessThan(55);
+  // , and . jump between the keyframes (off the panel, the keys are the replay's)
+  await page.evaluate(() => document.activeElement.blur());
+  const frame = () =>
+    page.evaluate(
+      async () => (await import("/src/race/replayViewer.js")).viewer.frame,
+    );
+  await page.keyboard.press("Comma");
+  await game.advance(2);
+  expect(await frame()).toBe(20);
+  await page.keyboard.press("Period");
+  await game.advance(2);
+  expect(await frame()).toBe(100);
   // played: the camera flies between them
   await panel.getByRole("button", { name: "Play the path" }).click();
   await expect(
