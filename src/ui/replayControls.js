@@ -31,6 +31,8 @@ import { leaveOpenedReplay, saveReplay } from "../screens/replays.js";
 import { CAMERA, camera } from "../render/camera.js";
 import { cameraPath, nextKeyFrame } from "../race/cameraPath.js";
 import { addKeyHere, toggleCameraPathPanel } from "./cameraPathPanel.js";
+import { video } from "../render/video.js";
+import { recordingTick } from "./replayVideo.js";
 import { isPhone } from "../core/platform.js";
 import {
   drawFreeCameraPad,
@@ -705,6 +707,18 @@ const drawControls = (colors) => {
 
 export function drawReplayOverlay() {
   rd.clearRect(0, 0, view.width, view.height);
+  // (recording a video: only its mark; Esc stops it, not the replay)
+  if (video.recording) {
+    const escaped =
+      takePressedKeys().some(({ code }) => code == "Escape") ||
+      confirm.state == CONFIRM.pressed;
+    if (confirm.state == CONFIRM.pressed) {
+      confirm.state = CONFIRM.used;
+    }
+    if (recordingTick(escaped)) {
+      return;
+    }
+  }
   const classic = classicMenus();
   const colors = classic ? COLORS.classic : COLORS.modern;
   watchPointer();

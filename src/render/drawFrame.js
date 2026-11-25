@@ -35,6 +35,7 @@ import {
   presentScreen,
 } from "../classic/screen.js";
 import { CAR_TEXTURE } from "./generated.js";
+import { recordVideoFrame } from "./video.js";
 import {
   BLEND,
   GHOST_SHOWS,
@@ -80,6 +81,9 @@ const WALL = 29;
 let drawnPhase = -1;
 let lastPhase = -1;
 
+// whether the race was drawn this frame
+let drewRace = false;
+
 export function render() {
   interpolation.frame++;
   paintDents(SCRATCH_STEPS_PER_FRAME);
@@ -88,6 +92,7 @@ export function render() {
     lastPhase = game.phase;
   }
   fadeCorrections();
+  drewRace = false;
   placeCamera(camera.x, camera.y, camera.z, camera.matrix);
   // the classic look draws races the original game's way (see classic/frame.js)
   const classicRace =
@@ -120,10 +125,15 @@ export function render() {
   drawCarPreviews();
   drawPiecePreview();
   placeNameTags();
+  // (a replay being recorded: only frames drawn, the others are blank)
+  if (drewRace) {
+    recordVideoFrame();
+  }
 }
 
 const drawWhenDue = (drawScene) => {
   if (menu.redraw || drawnPhase == game.phase) {
+    drewRace = RACE_PHASES.includes(game.phase);
     drawnPhase = game.phase;
     // the classic look's few pixels only where it is drawn (see look.drawsClassic)
     fitCanvas3D();

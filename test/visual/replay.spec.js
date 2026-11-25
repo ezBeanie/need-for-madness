@@ -259,3 +259,93 @@ test("the replay's camera path: keyframes set where the camera is, played back, 
   expect(cameraPath).toHaveLength(1);
   expect(cameraPath[0]).toMatchObject({ frame: 100, x: 200 });
 });
+
+test("a replay records as a video from the camera path's first keyframe to its last, downloaded", async ({
+  page,
+}, testInfo) => {
+  const game = await openGame(page, {
+    storage: { carsel: "5", unlocked: "17" },
+  });
+  await game.advanceUntil(PHASE.mainMenu);
+  await game.settle();
+  await page.evaluate(() => {
+    const s = window.gameState;
+    s.track.stage = 5;
+    s.menu.redraw = true;
+    s.game.phase = 3;
+  });
+  await game.advanceUntil(PHASE.stageSelect);
+  await page.waitForLoadState("networkidle");
+  await page.evaluate(async () => {
+    window.gameState.game.mode = 0;
+    const { flashIntoRace } = await import("/src/race/countdown.js");
+    flashIntoRace();
+  });
+  await game.advanceUntil(PHASE.race);
+  // (past the countdown, a race of 100 frames)
+  await page.evaluate(() => (window.gameState.raceEvents.countdown = 0));
+  await page.keyboard.down("ArrowUp");
+  await game.advance(100);
+  await page.keyboard.up("ArrowUp");
+  await page.evaluate((paused) => {
+    const s = window.gameState;
+    s.game.phase = paused;
+    s.openReplay(s.VIEWER_FROM.pauseMenu, 0);
+  }, PHASE.paused);
+  await game.advance(5);
+  // a path of two keyframes, from frame 20 to frame 60
+  await page.evaluate(async () => {
+    const { CAMERA, camera } = await import("/src/render/camera.js");
+    const { cameraPath } = await import("/src/race/cameraPath.js");
+    const key = (frame, x) => ({
+      frame,
+      mode: CAMERA.free,
+      target: 0,
+      x,
+      y: 80,
+      z: camera.z,
+      yaw: 0,
+      pitch: 20,
+      fov: 55,
+      speed: 2,
+      fly: true,
+    });
+    cameraPath.keys = [key(20, camera.x), key(60, camera.x + 100)];
+  });
+  await game.tap("i");
+  const panel = page.getByRole("complementary", { name: "Camera path" });
+  await expect(panel.locator("#cameraPathVideoHint")).toHaveText(
+    "From the first keyframe to the last, as the path plays. Esc stops.",
+  );
+  const download = page.waitForEvent("download");
+  await panel.getByRole("button", { name: "Record video" }).click();
+  await expect(panel).toBeHidden();
+  const recording = () =>
+    page.evaluate(
+      async () => (await import("/src/render/video.js")).video.recording,
+    );
+  expect(await recording()).toBe(true);
+  // played from the first keyframe, the video stops at the last
+  expect(
+    await page.evaluate(
+      async () => (await import("/src/race/replayViewer.js")).viewer.frame,
+    ),
+  ).toBeLessThanOrEqual(21);
+  for (let i = 0; i < 60 && (await recording()); i++) {
+    await game.advance(2);
+    await page.waitForTimeout(20);
+  }
+  expect(await recording()).toBe(false);
+  const file = await download;
+  expect(file.suggestedFilename()).toMatch(/^NFM-.*\.webm$/);
+  const saved = testInfo.outputPath("replay.webm");
+  await file.saveAs(saved);
+  // a WebM file (EBML header), with frames in it
+  const bytes = readFileSync(saved);
+  expect(bytes.subarray(0, 4).toString("hex")).toBe("1a45dfa3");
+  expect(bytes.length).toBeGreaterThan(2000);
+  // (the replay goes on, its controls back)
+  expect(await page.evaluate(() => window.gameState.game.phase)).toBe(
+    PHASE.replay,
+  );
+});

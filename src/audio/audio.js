@@ -315,6 +315,44 @@ const createContexts = () => {
 };
 
 const contexts = createContexts();
+
+// The sounds, the engines and the music as one stream, for a video (see render/video.js),
+// until stopped: the engines' context reaches the sounds' through a stream of its own.
+let tap = null;
+export const audioStream = () => {
+  if (!contexts) {
+    return null;
+  }
+  const { sounds, engines, soundsOut, enginesOut } = contexts;
+  const out = sounds.createMediaStreamDestination();
+  const bridge = engines.createMediaStreamDestination();
+  enginesOut.connect(bridge);
+  const fromEngines = sounds.createMediaStreamSource(bridge.stream);
+  fromEngines.connect(out);
+  soundsOut.connect(out);
+  const music = [stageMusic, menuMusic]
+    .map(({ track }) => track?.gain)
+    .filter(Boolean);
+  for (const gain of music) {
+    gain.connect(out);
+  }
+  tap = { out, bridge, fromEngines, music };
+  return out.stream;
+};
+
+export const stopAudioStream = () => {
+  if (!tap) {
+    return;
+  }
+  const { out, bridge, fromEngines, music } = tap;
+  contexts.soundsOut.disconnect(out);
+  contexts.enginesOut.disconnect(bridge);
+  fromEngines.disconnect();
+  for (const gain of music) {
+    gain.disconnect(out);
+  }
+  tap = null;
+};
 const soundBuffers = [];
 const soundLoaded = [];
 const engineBuffers = [];

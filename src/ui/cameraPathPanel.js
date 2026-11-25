@@ -17,6 +17,8 @@ import {
 } from "../race/cameraPath.js";
 import { seekReplay, viewer } from "../race/replayViewer.js";
 import { CAMERA, DEFAULT_FOV } from "../render/camera.js";
+import { videoType } from "../render/video.js";
+import { recordReplay } from "./replayVideo.js";
 import { CAMERA_NAMES, time } from "./replayControls.js";
 
 const panel = document.getElementById("cameraPath");
@@ -39,7 +41,18 @@ const button = (text, label, onClick) => {
   return made;
 };
 
+// what a video takes in, or that none can be recorded
+const videoHint = () =>
+  !videoType()
+    ? t("This browser cannot record videos.")
+    : cameraPath.keys.length > 0
+      ? t("From the first keyframe to the last, as the path plays. Esc stops.")
+      : t("From here to the end of the replay. Esc stops.");
+
 export const showCameraPath = () => {
+  const recordable = videoType() != null;
+  element("cameraPathVideo").disabled = !recordable;
+  element("cameraPathVideoHint").textContent = videoHint();
   const play = element("cameraPathPlay");
   play.setAttribute("aria-pressed", cameraPath.playing ? "true" : "false");
   play.disabled = cameraPath.keys.length == 0;
@@ -127,6 +140,10 @@ export const installCameraPathPanel = () => {
     showCameraPath();
   });
   element("cameraPathClose").addEventListener("click", hidePanel);
+  element("cameraPathVideo").addEventListener("click", () => {
+    hidePanel();
+    recordReplay();
+  });
   // (Escape closes the panel, not the replay)
   panel.addEventListener("keydown", (event) => {
     if (event.key == "Escape") {
