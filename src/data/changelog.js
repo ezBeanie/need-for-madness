@@ -4,6 +4,17 @@
 
 export const CHANGELOG = [
   {
+    version: "1.5.0",
+    date: "2026-11-25",
+    changes: [
+      "Time attack is a session of laps for a time of your choice (2, 3, 5 or 10 minutes; in a room the host's): the fastest lap wins. A lap begun before the time is up may be finished.",
+      "Time attack shows sector times at every checkpoint, coloured against the best (purple), your own best (green) or slower (yellow); in a room a live timing board ranks everyone by their fastest lap with the gaps.",
+      "Wasted in time attack, you come back at your last checkpoint; that lap counts for nothing. Alone, the stage keeps your best lap and its ghost drives it again on every lap.",
+      "Replay camera paths glide into and out of the cars' cameras, keep a zoom per keyframe (wheel, Page Up/Down) and no longer swing past keyframes close together; keyframes can be moved, flown or cut, K adds one and , / . jump between them.",
+      "The free camera eases in and out of its moves, and R / F look up and down.",
+    ],
+  },
+  {
     version: "1.4.1",
     date: "2026-11-24",
     changes: [

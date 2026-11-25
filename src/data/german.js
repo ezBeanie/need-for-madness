@@ -682,7 +682,6 @@ export const GERMAN = {
   "{cars} Cars  [C]": "{cars} Autos  [C]",
   "AI: {strength}  [B]": "KI: {strength}  [B]",
   "Best lap {lap}": "Beste Runde {lap}",
-  "{minutes} Min  [C]": "{minutes} Min  [C]",
   "No best time yet": "Noch keine Bestzeit",
   "TIP ": "TIPP ",
   "PLAY SWITCH ": "SWITCH ",
