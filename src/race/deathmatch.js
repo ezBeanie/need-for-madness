@@ -23,9 +23,12 @@ import { CAR } from "../data/carStats.js";
 import { racers } from "./racers.js";
 import { teamMates, teamOf } from "../net/roomCars.js";
 
-// how long the race goes on, and a wasted car stays out, as the host chose
+// how long the race goes on (time attack alone: as long as the player likes), and a wasted
+// car stays out, as the host chose
 export const deathmatchTicks = () =>
-  Math.round((raceSetup.rules.minutes * 60 * 1000) / TICK_MS);
+  raceSetup.kind == RACE_KIND.timeAttack
+    ? Infinity
+    : Math.round((raceSetup.rules.minutes * 60 * 1000) / TICK_MS);
 export const respawnTicks = () =>
   Math.round((raceSetup.rules.respawnSeconds * 1000) / TICK_MS);
 

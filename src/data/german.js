@@ -526,11 +526,12 @@ export const GERMAN = {
   "{time} left": "noch {time}",
   "Last lap": "Letzte Runde",
   "(no time)": "(ohne Zeit)",
-  "No lap counted": "Keine Runde gewertet",
-  "Best lap {time}": "Beste Runde {time}",
-  "Best lap {time}, a new best!": "Beste Runde {time}, neue Bestzeit!",
-  "Best lap {time}, the stage's best {best}":
-    "Beste Runde {time}, Bestzeit der Stage {best}",
+  "Warm-up lap": "Aufwärmrunde",
+  "Warm-up": "Aufwärmen",
+  "Timing starts at the line": "Zeitnahme ab der Linie",
+  "Best {time}": "Beste {time}",
+  "No best lap yet": "Noch keine Bestzeit",
+  "Last {time}": "Letzte {time}",
   "No lap counted, the others on their last laps":
     "Keine Runde gewertet, die anderen fahren ihre letzte Runde",
   "{place} with {time}, the others on their last laps":

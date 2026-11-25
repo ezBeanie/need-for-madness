@@ -1,9 +1,10 @@
-// Time attack alone: laps for a fixed time (see lapTimes.js), the stage's best lap kept
-// with its splits, the times told against it, and its ghost driven again on every lap.
+// Time attack alone: laps for as long as the player likes (see lapTimes.js), the stage's
+// best lap kept with its splits, the times told against it, and its ghost driven again on
+// every lap after the warm-up lap (which records none).
 // Stages made in the editor keep none: their numbers change as stages are deleted.
 
 import { RACE_KIND, game, raceSetup } from "../core/state.js";
-import { loadSetting, loadText, saveSetting } from "../core/storage.js";
+import { loadText, saveSetting } from "../core/storage.js";
 import { TICK_MS } from "../core/tick.js";
 import { isCustom } from "../data/stages.js";
 import { deathmatch, isLapSession } from "./deathmatch.js";
@@ -13,32 +14,18 @@ import { track } from "./track.js";
 
 // best: the stage's best lap before this session ({ lap, splits } or null); kept: the best
 // lap kept since (0: none); newBest: whether this session bettered it; lapsSeen: the
-// player's laps done as last seen; lapTick: the tick the player's lap began
+// player's laps done as last seen; timed: whether its warm-up lap is over; lapTick: the
+// tick the player's lap began
 export const timeAttack = {
   best: null,
   kept: 0,
   newBest: false,
   lapsSeen: 0,
+  timed: false,
   lapTick: 0,
 };
 
 const STORED = "bestTimes";
-// how long a session alone lasts (minutes), as last chosen
-export const SESSION_MINUTES = [2, 3, 5, 10];
-const MINUTES_STORED = "timeAttackMinutes";
-
-export const sessionMinutes = () => {
-  const minutes = loadSetting(MINUTES_STORED);
-  return SESSION_MINUTES.includes(minutes) ? minutes : 3;
-};
-
-export const nextSessionMinutes = () => {
-  const at = SESSION_MINUTES.indexOf(sessionMinutes());
-  const minutes = SESSION_MINUTES[(at + 1) % SESSION_MINUTES.length];
-  saveSetting(MINUTES_STORED, minutes);
-  raceSetup.rules.minutes = minutes;
-};
-
 const allBestTimes = () => {
   try {
     const times = JSON.parse(loadText(STORED) || "{}");
@@ -101,18 +88,16 @@ export const startTimeAttack = () => {
   timeAttack.kept = timeAttack.best?.lap ?? 0;
   timeAttack.newBest = false;
   timeAttack.lapsSeen = 0;
+  timeAttack.timed = false;
   timeAttack.lapTick = 0;
   if (isLapSession()) {
     startLaps(game.player, timeAttack.best);
   }
-  if (isTimeAttack()) {
-    startGhost();
-  } else {
-    forgetGhost();
-  }
+  // (the ghost comes with the first timed lap)
+  forgetGhost();
 };
 
-// The current lap's ticks so far.
+// The current lap's ticks so far (on the warm-up lap: since the start).
 export const currentLapTicks = () =>
   Math.max(0, deathmatch.ticks - laps.from[game.player]);
 
@@ -123,6 +108,14 @@ export const timeAttackTick = () => {
     return;
   }
   const p = game.player;
+  if (laps.warm[p]) {
+    return;
+  }
+  if (!timeAttack.timed) {
+    timeAttack.timed = true;
+    timeAttack.lapTick = deathmatch.ticks;
+    startGhost();
+  }
   if (laps.done[p] > timeAttack.lapsSeen) {
     timeAttack.lapsSeen = laps.done[p];
     // (the player's own best changes only with a lap that counts and is faster)
