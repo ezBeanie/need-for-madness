@@ -2,16 +2,16 @@
 // close finish is coming that the highlights should show.
 
 import { distanceSquaredXZ } from "../core/math.js";
-import {
-  RACE_MODE,
-  finishingEnds,
-  game,
-  raceSetup,
-  racesRoom,
-} from "../core/state.js";
+import { finishingEnds, game, racesRoom } from "../core/state.js";
 import { carStats } from "../data/carStats.js";
 import { tick } from "../core/tick.js";
-import { deathmatchLeft, gunGameWon, isDeathmatch } from "./deathmatch.js";
+import {
+  deathmatchLeft,
+  gunGameWon,
+  isDeathmatch,
+  isLapSession,
+} from "./deathmatch.js";
+import { laps, overtimeIsUp, timeIsUp } from "./lapTimes.js";
 import { raceEvents } from "./events.js";
 import { MISSED, car, countMissedCheckpoint, racers } from "./racers.js";
 import { HIGHLIGHT, catchHighlight, recording } from "./recording.js";
@@ -54,19 +54,20 @@ export function updateStandings() {
   }
   // The HUD stops the race as the player sees it end (see raceOutcome in ui/hud.js);
   // racing together, it stops alike in every game: one car left, or one finished (when
-  // that wins). So too a room's race of the host with bots alone.
-  if (racesRoom()) {
+  // that wins). So too a room's race of the host with bots alone. Time attack, alone too,
+  // stops once its time is up and every car through (or its last laps take too long).
+  if (isLapSession()) {
+    const through = laps.through.slice(0, game.carCount).every(Boolean);
+    if ((timeIsUp() && through) || overtimeIsUp()) {
+      track.haltall = true;
+    }
+  } else if (racesRoom()) {
     const cars = racers.slice(0, game.carCount);
     const done = track.nlaps * track.nsp;
     if (isDeathmatch()) {
       // (of a fixed time: until it is up, the wasted coming back; gun game also until a
       // kill in the ladder's last car)
       if (deathmatchLeft() == 0 || gunGameWon()) {
-        track.haltall = true;
-      }
-    } else if (raceSetup.mode == RACE_MODE.timeAttack) {
-      // (against the clock: until every car is through or wasted)
-      if (cars.every((racer) => racer.wasted || racer.clear >= done)) {
         track.haltall = true;
       }
     } else if (

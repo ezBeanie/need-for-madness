@@ -142,13 +142,17 @@ const bold = (size) => {
 const snapped = ([r, g, b]) =>
   `rgb(${clamp(r + r * (medium.snap[0] / 100))},${clamp(g + g * (medium.snap[1] / 100))},${clamp(b + b * (medium.snap[2] / 100))})`;
 
-// Lap, wasted cars and the place, top left.
+// Lap (of laps; null: laps without end), wasted cars and the place, top left.
 export const drawClassicStanding = (lap, laps, wasted, rivals, place) => {
   draw("lap", fromLeft(19), 7);
   bold(11);
   rd.textAlign = "left";
   rd.fillStyle = "rgb(0,0,100)";
-  rd.fillText(`${lap} / ${laps}`, fromLeft(51), 18 * scale());
+  rd.fillText(
+    laps === null ? `${lap}` : `${lap} / ${laps}`,
+    fromLeft(51),
+    18 * scale(),
+  );
   draw("wasted", fromLeft(92), 7);
   rd.fillText(`${wasted} / ${rivals}`, fromLeft(150), 18 * scale());
   draw("position", fromLeft(42), 27);

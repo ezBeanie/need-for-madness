@@ -31,6 +31,7 @@ import {
   gunCarOf,
   isDeathmatch,
   isGunGame,
+  isLapSession,
   noteCrashLanding,
   noteHit,
   noteStunt,
@@ -56,7 +57,8 @@ import {
   catchWastingNow,
   recording,
 } from "./recording.js";
-import { PIECE, pieceModels, pieces, throughTheRace, track } from "./track.js";
+import { PIECE, pieceModels, pieces, track } from "./track.js";
+import { lapTick, throughTheRace } from "./lapTimes.js";
 import { acos } from "../core/exactMath.js";
 
 // Run again quietly, the race is computed as ever, but nothing of it is heard or thrown
@@ -231,6 +233,9 @@ export function drive() {
       stopDriving(c);
     }
     driveCar(c);
+  }
+  if (isLapSession()) {
+    lapTick(game.carCount);
   }
   if (isDeathmatch()) {
     deathmatchTick(respawn, upgrade);
@@ -416,7 +421,8 @@ function reportCheckpoints(c) {
     while (raceEvents.oncheckpoint >= track.nsp) {
       raceEvents.oncheckpoint -= track.nsp;
     }
-    if (racers[c].clear == track.nlaps * track.nsp - 1) {
+    // (time attack laps on: no lap is the last)
+    if (racers[c].clear == track.nlaps * track.nsp - 1 && !isLapSession()) {
       raceEvents.onlastcheck = true;
     }
     if (track.haltall) {
@@ -3799,7 +3805,32 @@ const upgrade = (c) => {
   fixcar(c);
 };
 
+// Time attack: a wasted car back at the checkpoint it cleared last, facing the next one
+// (none cleared yet: where it lies).
+const placeAtCheckpoint = (c) => {
+  if (racers[c].clear == 0) {
+    return;
+  }
+  const at = racers[c].clearedPathPoint;
+  let next = (at + 1) % track.n;
+  while (track.typ[next] <= 0) {
+    next = (next + 1) % track.n;
+  }
+  const body = car[c];
+  body.x = track.x[at];
+  body.z = track.z[at];
+  body.y = track.y[at] + body.grat;
+  // (a heading of 0 faces along z, 90 against x)
+  body.xz =
+    (-Math.atan2(track.x[next] - body.x, track.z[next] - body.z) * 180) /
+    Math.PI;
+  racers[c].focus = -1;
+};
+
 function respawn(c) {
+  if (isLapSession()) {
+    placeAtCheckpoint(c);
+  }
   rebuild(c);
   if (c == game.player) {
     raceEvents.playerWreckTicks = 0;

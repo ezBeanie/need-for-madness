@@ -34,7 +34,11 @@ import {
   raceSetup,
 } from "../core/state.js";
 import { nextStrength } from "../race/career.js";
-import { bestTimes, formatTime } from "../race/timeAttack.js";
+import {
+  bestTimes,
+  formatTime,
+  nextSessionMinutes,
+} from "../race/timeAttack.js";
 import { applyFieldSize, nextRaceSize } from "../race/field.js";
 import {
   AFTER_LOAD,
@@ -102,6 +106,7 @@ const FIRST_SWITCH_STAGE = 3;
 
 const inCampaign = () => raceSetup.kind == RACE_KIND.campaign;
 const quickRace = () => raceSetup.kind == RACE_KIND.quickRace;
+const timeAttack = () => raceSetup.kind == RACE_KIND.timeAttack;
 // practice and time attack race alone
 const alone = () =>
   raceSetup.kind == RACE_KIND.practice ||
@@ -382,7 +387,9 @@ const drawClassic = () => {
           30,
         ],
       ]
-    : [];
+    : timeAttack()
+      ? [["minutes", ` ${raceSetup.rules.minutes} Min  [C] `, 75, 30]]
+      : [];
   if (track.tips.length) {
     buttons.push(["tip", showingTip ? " Okay " : " Tip ", 75, 392]);
   } else if (inCampaign() && (track.stage == 1 || track.stage == 2)) {
@@ -434,6 +441,9 @@ const drawClassic = () => {
   }
   if (chosen == "strength") {
     nextStrength();
+  }
+  if (chosen == "minutes") {
+    nextSessionMinutes();
   }
   if (chosen == "tip") {
     showingTip = !showingTip;
@@ -673,7 +683,8 @@ const drawControls = (hue) => {
   if (quickRace()) {
     drawQuickRaceButtons(colors);
   }
-  if (raceSetup.kind == RACE_KIND.timeAttack) {
+  if (timeAttack()) {
+    drawSessionButton(colors);
     drawBestTimes(hue);
   }
   if (
@@ -721,23 +732,33 @@ const drawControls = (hue) => {
 };
 
 // A quick race's field size and how strong its opponents are.
+const optionButton = (id, y, text, colors) =>
+  drawButton({
+    id,
+    x: view.width - 225 * view.scale,
+    y: y * view.scaleY,
+    width: 230,
+    height: 50,
+    ...colors,
+    layout: BUTTON.textOnly,
+    text,
+    fontSize: 18,
+    textOpacity: 0.7,
+    image: null,
+    imageOpacity: 0,
+    pulsing: false,
+  });
+
+// Time attack: how long its session lasts.
+const drawSessionButton = (colors) => {
+  const text = t("{minutes} Min  [C]", { minutes: raceSetup.rules.minutes });
+  if (optionButton(11, 105, text, colors)) {
+    nextSessionMinutes();
+  }
+};
+
 const drawQuickRaceButtons = (colors) => {
-  const button = (id, y, text) =>
-    drawButton({
-      id,
-      x: view.width - 225 * view.scale,
-      y: y * view.scaleY,
-      width: 230,
-      height: 50,
-      ...colors,
-      layout: BUTTON.textOnly,
-      text,
-      fontSize: 18,
-      textOpacity: 0.7,
-      image: null,
-      imageOpacity: 0,
-      pulsing: false,
-    });
+  const button = (id, y, text) => optionButton(id, y, text, colors);
   if (button(11, 105, t("{cars} Cars  [C]", { cars: game.raceCars }))) {
     nextRaceSize();
   }
@@ -753,10 +774,7 @@ const drawBestTimes = (hue) => {
   drawCenteredText(
     310,
     best
-      ? t("Best lap {lap}   Best race {race}", {
-          lap: formatTime(best.lap),
-          race: formatTime(best.race),
-        })
+      ? t("Best lap {lap}", { lap: formatTime(best.lap) })
       : t("No best time yet"),
     ...hslToRgb(hue, 1, 0.25),
     TEXT.heading,

@@ -1,12 +1,24 @@
 // What a room's race shows beyond the original's HUD: who wasted whom (a feed at the right in
 // the modern look, the message in the middle in the classic one), most kills' clock and
-// leaders at the top, and at the end every car's result in a table.
+// leaders at the top, time attack's timing (alone too), and at the end every car's result
+// in a table.
 
 import { drawClassicMessage } from "../classic/hud.js";
 import { RACE_MODE, game, raceSetup } from "../core/state.js";
 import { TICK_MS, tick } from "../core/tick.js";
 import { nameOfCar } from "../net/roomCars.js";
-import { deathmatchLeft, killTable } from "../race/deathmatch.js";
+import {
+  deathmatch,
+  deathmatchLeft,
+  isLapSession,
+  killTable,
+} from "../race/deathmatch.js";
+import { lapTable, laps, timeIsUp } from "../race/lapTimes.js";
+import {
+  currentLapTicks,
+  formatDelta,
+  formatTime,
+} from "../race/timeAttack.js";
 import { racers } from "../race/racers.js";
 import { track } from "../race/track.js";
 import { classicMenus } from "../render/look.js";
@@ -124,6 +136,9 @@ export const drawFeed = (top, bottom) => {
 // comes under it may start. In the classic look a line at the bottom, as the original would.
 const LEADERS = 3;
 export const drawDeathmatchBoard = (top) => {
+  if (isLapSession()) {
+    return classicMenus() ? top : drawLapBoard(top);
+  }
   const table = killTable();
   if (classicMenus()) {
     const [lead] = table;
@@ -271,4 +286,162 @@ export const drawResults = (heads, rows) => {
     );
   }
   rd.restore();
+};
+
+// --- time attack's timing ---
+
+// A checkpoint's colours: ahead of the best of all (alone: the stage's best lap), ahead of
+// the next best (alone: the session's best lap; in a room: the car's own), behind both,
+// and a lap that counts for nothing.
+const PURPLE = [199, 125, 255];
+const GREEN = [60, 220, 80];
+const YELLOW = [255, 210, 60];
+const RED = [255, 90, 60];
+const WHITE = [255, 255, 255];
+const hex = (rgb) =>
+  `#${rgb.map((value) => value.toString(16).padStart(2, "0")).join("")}`;
+
+// What a checkpoint passed tells (see Mark in race/lapTimes.js): the difference shown
+// (alone to the car's own best, in a room to the session's fastest lap; null: none to tell
+// against) and its colour.
+export const markTold = (mark, alone) => {
+  if (!mark.valid) {
+    return { delta: null, color: RED };
+  }
+  const [best, next] = alone ? [mark.own, mark.field] : [mark.field, mark.own];
+  const color =
+    best !== null && best < 0
+      ? PURPLE
+      : next !== null && next < 0
+        ? GREEN
+        : best === null && next === null
+          ? WHITE
+          : YELLOW;
+  return { delta: best ?? next, color };
+};
+
+// how long a checkpoint's times show
+const MARK_TICKS = Math.round(3500 / TICK_MS);
+
+// The player's last checkpoint, while it shows: "S2  0:23.456  -0.123", at the line the
+// lap's time, a lap that counts for nothing so marked.
+export const markText = (mark, alone, say = t) => {
+  const { delta } = markTold(mark, alone);
+  const what = mark.k == track.nsp - 1 ? say("Lap") : `S${mark.k + 1}`;
+  return (
+    `${what}  ${formatTime(mark.time)}` +
+    (delta === null ? "" : `  ${formatDelta(delta)}`) +
+    (mark.valid ? "" : `  ${say("(no time)")}`)
+  );
+};
+
+const recentMark = (c) => {
+  const mark = laps.marks[c];
+  return mark && deathmatch.ticks - mark.at < MARK_TICKS ? mark : null;
+};
+
+// Time attack under the race: the player's last checkpoint for a while, the lap and the
+// best lap (the classic look, without the board, also the time left), and big the lap's
+// time so far (red while it counts for nothing). alone: a race alone.
+export const drawLapClock = (alone, say = t) => {
+  const p = game.player;
+  const mark = recentMark(p);
+  if (mark) {
+    drawCenteredText(
+      600,
+      markText(mark, alone, say),
+      ...markTold(mark, alone).color,
+      TEXT.label,
+    );
+  }
+  const best = laps.best[p];
+  const left = timeIsUp()
+    ? say("Last lap")
+    : say("{time} left", { time: clockTime(deathmatchLeft()) });
+  drawCenteredText(
+    636,
+    say("Lap {lap}", { lap: laps.done[p] + 1 }) +
+      (best > 0 ? say("   Best {time}", { time: formatTime(best) }) : "") +
+      (classicMenus() ? `   ${left}` : ""),
+    0,
+    0,
+    0,
+    TEXT.label,
+  );
+  const rgb = laps.valid[p] ? [0, 0, 0] : RED;
+  drawCenteredText(670, formatTime(currentLapTicks()), ...rgb, TEXT.heading);
+};
+
+// Time attack at the left from top on: the time left (once up: the last laps), and with
+// others the cars by their fastest lap, the leader's time and the others' gap to it, each
+// with what its last checkpoint told for a while. Returns where what comes under it may
+// start.
+const drawLapBoard = (top) => {
+  const s = view.scale;
+  const left = 20 * s;
+  rd.save();
+  font(26);
+  const up = timeIsUp();
+  const clock = up ? t("Last lap") : clockTime(deathmatchLeft());
+  const clockWidth = Math.max(120 * s, rd.measureText(clock).width + 28 * s);
+  const clockHeight = 40 * s;
+  bar(left, top, clockWidth, clockHeight, 0.6);
+  rd.textAlign = "center";
+  rd.fillStyle =
+    !up && deathmatchLeft() * TICK_MS <= 10000 ? "#FF5A3C" : "#FFFFFF";
+  rd.fillText(clock, left + clockWidth / 2, top + clockHeight / 2 + 1 * s);
+  let rowTop = top + clockHeight + 6 * s;
+  if (game.carCount > 1) {
+    const table = lapTable(game.carCount);
+    const leader = table[0].best;
+    const rowWidth = 290 * s;
+    const rowHeight = 22 * s;
+    font(13);
+    table.forEach(({ c, best }, place) => {
+      bar(left, rowTop, rowWidth, rowHeight, 0.45);
+      const middle = rowTop + rowHeight / 2;
+      rd.fillStyle = c == game.player ? "#FFB401" : "#FFFFFF";
+      rd.textAlign = "left";
+      rd.fillText(
+        `${place + 1}  ${c == game.player ? t("You") : nameOfCar(c)}`,
+        left + 12 * s,
+        middle,
+      );
+      rd.textAlign = "right";
+      rd.fillText(
+        best == 0
+          ? "-"
+          : place == 0
+            ? formatTime(best)
+            : formatDelta(best - leader),
+        left + rowWidth - 12 * s,
+        middle,
+      );
+      const mark = recentMark(c);
+      const told = mark && markTold(mark, false);
+      if (told?.delta !== null && told?.delta !== undefined) {
+        rd.fillStyle = hex(told.color);
+        rd.fillText(formatDelta(told.delta), left + rowWidth - 92 * s, middle);
+      }
+      rowTop += rowHeight + 3 * s;
+    });
+  }
+  rd.restore();
+  return rowTop + 7 * s;
+};
+
+// Time attack's results, a row per car: its fastest lap, its gap to the fastest, its laps.
+export const LAP_HEADS = ["", "", "Best lap", "Gap", "Laps"];
+export const lapRows = (say = t) => {
+  const table = lapTable(game.carCount);
+  const leader = table[0]?.best ?? 0;
+  return table.map(({ c, best, done }, place) => {
+    const time = best > 0 ? formatTime(best) : "-";
+    const gap = best > 0 && place > 0 ? formatDelta(best - leader) : "";
+    return {
+      cells: [placeName(place), nameOfCar(c), time, gap, String(done)],
+      mine: c == game.player,
+      line: `${placeName(place, say)}  ${nameOfCar(c)}  ${time}  ${gap}`,
+    };
+  });
 };

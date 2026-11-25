@@ -1024,7 +1024,11 @@ test("in the lobby the host chooses the stage, the mode and its rules, the guest
     "None",
   ]);
   await expect(guestPage.locator("#lobbySettings")).toBeHidden();
-  // (the time and the way back are most kills' alone)
+  // (time attack laps for a time too; the time and the way back are the timed modes')
+  await hostPage
+    .getByLabel("Mode", { exact: true })
+    .selectOption("Time attack");
+  await expect(hostPage.getByLabel("Time", { exact: true })).toBeVisible();
   await hostPage
     .getByLabel("Mode", { exact: true })
     .selectOption("Only racing");
