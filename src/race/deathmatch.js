@@ -4,7 +4,9 @@
 // win: a stunt landed scores its power (see rewardStunt), a landing on the roof and a
 // wasting cost points; or of gun game, where every car starts in the first car of a ladder
 // and each kill gets it the next one a moment later (or as it comes back), and a kill in
-// the last one wins (else, once the time is up, the most kills). A car is wasted by the one that hit it last, if that was not long
+// the last one wins (else, once the time is up, the most kills); or time attack, alone or a
+// room's, where the cars pass through each other and the fastest lap wins (see
+// lapTimes.js). A car is wasted by the one that hit it last, if that was not long
 // before (as the HUD tells whom a player wasted). Its state goes with the race's (see
 // net/raceState.js), in these modes only.
 
@@ -81,12 +83,19 @@ const LISTS = [
 
 // whether a room's race in this mode lasts a fixed time
 export const isTimedMode = (mode) =>
+  mode == RACE_MODE.timeAttack ||
   mode == RACE_MODE.mostKills ||
   mode == RACE_MODE.stunts ||
   mode == RACE_MODE.gunGame;
 
-// whether the race is a room's of a fixed time
-export const isDeathmatch = () => isTimedMode(raceSetup.mode) && racesRoom();
+// whether the race is a room's of a fixed time, or time attack alone
+export const isDeathmatch = () =>
+  (isTimedMode(raceSetup.mode) && racesRoom()) ||
+  raceSetup.kind == RACE_KIND.timeAttack;
+// whether the race is time attack's laps, alone or a room's
+export const isLapSession = () =>
+  raceSetup.kind == RACE_KIND.timeAttack ||
+  (raceSetup.mode == RACE_MODE.timeAttack && racesRoom());
 const isStunts = () => raceSetup.mode == RACE_MODE.stunts;
 export const isGunGame = () =>
   raceSetup.mode == RACE_MODE.gunGame && racesRoom();

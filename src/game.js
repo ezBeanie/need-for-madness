@@ -167,13 +167,14 @@ function raceTick() {
       pressFrameKeys(runRaceFrameAgain);
       if (raceEvents.countdown == 0) {
         drive();
+        // (the ghost moves on before the wheels are placed, a new one too)
+        timeAttackTick();
         moveScenery(true);
         recordTick();
         recordRaceTick();
         updateStandings();
         control();
         releaseFrameKeys();
-        timeAttackTick();
         spectateTick();
         drawHud();
         updateEngineSound();

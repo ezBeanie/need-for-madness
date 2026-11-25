@@ -8,7 +8,8 @@ import { lockstep } from "../net/lockstep.js";
 import { CAMERA, camera } from "../render/camera.js";
 import { racers } from "./racers.js";
 import { followCar } from "./replayViewer.js";
-import { throughTheRace, track } from "./track.js";
+import { throughTheRace } from "./lapTimes.js";
+import { track } from "./track.js";
 
 // watching: the player chose to watch; the steering held last tick: a car further each
 // time it is pressed

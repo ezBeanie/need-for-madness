@@ -12,6 +12,7 @@ import {
 } from "../core/state.js";
 import { loadSetting, saveSetting } from "../core/storage.js";
 import { LAST_STAGE, levelOf } from "../data/stages.js";
+import { sessionMinutes } from "./timeAttack.js";
 import { track } from "./track.js";
 
 // progress: the stages opened in the campaign
@@ -40,6 +41,9 @@ export const chooseRaceKind = (kind) => {
   raceSetup.kind = kind;
   raceSetup.mode = RACE_MODE.normal;
   raceSetup.rules = roomRules();
+  if (kind == RACE_KIND.timeAttack) {
+    raceSetup.rules.minutes = sessionMinutes();
+  }
   if (kind == RACE_KIND.campaign) {
     game.unlocked = career.progress;
     game.raceCars = CAMPAIGN_CARS;

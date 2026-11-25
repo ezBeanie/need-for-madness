@@ -7,8 +7,10 @@ import {
   deathmatchState,
   isDeathmatch,
   isDeathmatchState,
+  isLapSession,
   restoreDeathmatch,
 } from "../race/deathmatch.js";
+import { isLapsState, lapsState, restoreLaps } from "../race/lapTimes.js";
 import { random } from "../core/random.js";
 import { game } from "../core/state.js";
 import { tick } from "../core/tick.js";
@@ -89,6 +91,7 @@ export const saveRace = () => {
     flipWhenGrounded: physics.flipWhenGrounded,
     // (only racing for most kills: every other race's state as it always was)
     ...(isDeathmatch() ? { deathmatch: deathmatchState() } : {}),
+    ...(isLapSession() ? { laps: lapsState() } : {}),
   };
 };
 
@@ -125,6 +128,9 @@ export const restoreRace = (state) => {
   if (state.deathmatch) {
     restoreDeathmatch(state.deathmatch);
   }
+  if (state.laps) {
+    restoreLaps(state.laps);
+  }
 };
 
 // whether what another game sent can be the state of a race of so many cars
@@ -144,4 +150,5 @@ export const isRaceState = (state, cars) =>
   state.standings.every(Array.isArray) &&
   typeof state.events == "object" &&
   Number.isFinite(state.fraction) &&
-  (state.deathmatch === undefined || isDeathmatchState(state.deathmatch));
+  (state.deathmatch === undefined || isDeathmatchState(state.deathmatch)) &&
+  (state.laps === undefined || isLapsState(state.laps));

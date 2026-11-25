@@ -1,4 +1,4 @@
-import { MAX_CARS, RACE_MODE, raceSetup, racesRoom } from "../core/state.js";
+import { MAX_CARS } from "../core/state.js";
 import { tick } from "../core/tick.js";
 import { newModel } from "../render/models.js";
 import { fixHoop } from "../render/scene.js";
@@ -102,12 +102,3 @@ export const spinFixHoops = () => {
     fixHoop.shownTexture = 0;
   }
 };
-
-// a room's race against the clock (see race/timeAttack.js)
-export const isRoomTimeAttack = () =>
-  raceSetup.mode == RACE_MODE.timeAttack && racesRoom();
-
-// Whether car c is through its laps in a room's race against the clock: it gets no keys
-// any more, alike in every game, and its driver watches the others.
-export const throughTheRace = (c) =>
-  isRoomTimeAttack() && track.clear[c] >= track.nlaps * track.nsp;

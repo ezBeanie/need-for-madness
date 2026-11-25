@@ -83,7 +83,7 @@ test("in a room's time attack and racing only the cars pass through each other",
   }
 });
 
-test("a room's time attack goes on until every car is through or wasted, timed from the race's tape", async () => {
+test("a room's time attack laps for the room's minutes, the fastest lap first, and ends once the time is up and every car through", async () => {
   const { ctx, step } = await startRace({ stage: 1, car: 5 });
   reset = () => {
     ctx.raceSetup.mode = ctx.RACE_MODE.normal;
@@ -94,79 +94,72 @@ test("a room's time attack goes on until every car is through or wasted, timed f
   }
   ctx.game.humans = [0, 1];
   ctx.raceSetup.mode = ctx.RACE_MODE.timeAttack;
-  const done = ctx.track.nlaps * ctx.track.nsp;
-  ctx.racers[1].clear = done;
-  ctx.updateStandings();
-  // (the first through ends nothing)
-  expect(ctx.track.haltall).toBe(false);
-  for (let c = 0; c < ctx.game.carCount; c++) {
-    if (c != 1) {
-      ctx.racers[c].wasted = c != 0;
-      ctx.racers[c].clear = c == 0 ? done : 0;
+  ctx.raceSetup.rules.minutes = 1;
+  expect(ctx.isLapSession()).toBe(true);
+  expect(ctx.isDeathmatch()).toBe(true);
+  ctx.startTimeAttack();
+  ctx.deathmatch.ticks = 0;
+  ctx.track.haltall = false;
+  const nsp = ctx.track.nsp;
+  // car 1 laps faster than car 0; the others never get round
+  const lapOf = { 0: 400, 1: 300 };
+  for (let t = 1; t <= ctx.deathmatchTicks() + 400; t++) {
+    for (let c = 0; c < ctx.game.carCount; c++) {
+      ctx.racers[c].wasted = false;
+      ctx.racers[c].clear = lapOf[c] ? Math.floor((t * nsp) / lapOf[c]) : 0;
     }
+    ctx.lapTick(ctx.game.carCount);
+    ctx.deathmatch.ticks++;
+    ctx.updateStandings();
   }
+  const table = ctx.lapTable(ctx.game.carCount);
+  expect(table.slice(0, 2).map(({ c }) => c)).toEqual([1, 0]);
+  expect(table[0].best).toBeCloseTo(300, 0);
+  expect(table[2].best).toBe(0);
+  // a checkpoint of car 0 told against car 1's fastest lap: slower
+  expect(ctx.laps.marks[0].field).toBeGreaterThan(0);
+  // the time up, the two through; the others still drive their first laps
+  expect(ctx.laps.through[0]).toBe(true);
+  expect(ctx.laps.through[1]).toBe(true);
+  expect(ctx.track.haltall).toBe(false);
+  // the others' laps counting for nothing, they are through too, and it is over
+  for (let c = 2; c < ctx.game.carCount; c++) {
+    ctx.racers[c].wasted = true;
+  }
+  ctx.lapTick(ctx.game.carCount);
   ctx.updateStandings();
   expect(ctx.track.haltall).toBe(true);
 
-  // the tape: car 1 crossing the line (across z at 25) halfway through tick 4, car 0
-  // never
-  ctx.resetRaceTape(ctx.game.carCount);
-  const finish = 0;
-  ctx.track.typ[finish] = 1;
-  ctx.track.z[finish] = 25;
-  for (let t = 0; t < 6; t++) {
-    for (const tape of ctx.raceTape.cars) {
-      tape.x[t] = 0;
-      tape.z[t] = 0;
-      tape.clear[t] = 0;
-      tape.clearedPathPoint[t] = finish;
-    }
-    const one = ctx.raceTape.cars[1];
-    one.z[t] = 10 * t;
-    one.clear[t] = 10 * t >= 30 ? done : 0;
-  }
-  ctx.raceTape.length = 6;
-  const times = ctx.finishTimes();
-  expect(times[0]).toBe(null);
-  // (index 3 is after tick 4: from z 20 to 30, the line halfway)
-  expect(times[1]).toBe(3.5);
+  // the times go with the race's state
+  const saved = ctx.saveRace();
+  expect(ctx.isLapsState(saved.laps)).toBe(true);
+  expect(ctx.isRaceState(saved, ctx.game.carCount)).toBe(true);
+  const best = ctx.laps.best.slice();
+  ctx.laps.best[1] = 5;
+  ctx.restoreRace(saved);
+  expect(ctx.laps.best).toEqual(best);
+  expect(ctx.isLapsState({ ...saved.laps, best: ["fast"] })).toBe(false);
 });
 
-test("in a room's time attack the clock runs with each checkpoint's time, and a car through stops while its player watches, heard by all", async () => {
+test("in a room's time attack a car through stops while its player watches, heard by all", async () => {
   const { ctx, step } = await startRace({ stage: 1, car: 5 });
   reset = () => {
     ctx.raceSetup.mode = ctx.RACE_MODE.normal;
     ctx.game.humans = [];
   };
-  const { clocked, timeAttack } = await import("../src/race/timeAttack.js");
-  const { throughTheRace } = await import("../src/race/track.js");
   const { outOfTheRace, spectating } = await import("../src/race/spectate.js");
   for (let i = 0; i < 3; i++) {
     step();
   }
-  // (a normal room race has no clock)
   ctx.game.humans = [0, 1];
-  expect(clocked()).toBe(false);
+  // (a normal room race has no laps of time attack)
+  expect(ctx.isLapSession()).toBe(false);
   ctx.raceSetup.mode = ctx.RACE_MODE.timeAttack;
   ctx.startTimeAttack();
-  expect(clocked()).toBe(true);
-  expect(timeAttack.best).toBe(null);
-  ctx.timeAttackTick();
-  ctx.timeAttackTick();
-  expect(timeAttack.ticks).toBe(2);
-
-  ctx.racers[0].clear = 1;
-  ctx.updateStandings();
-  ctx.timeAttackTick();
-  expect(timeAttack.split.cleared).toBe(1);
-  expect(timeAttack.split.time).toBeGreaterThan(1);
-  expect(timeAttack.split.time).toBeLessThanOrEqual(4);
-
-  expect(throughTheRace(0)).toBe(false);
+  expect(ctx.throughTheRace(0)).toBe(false);
   expect(spectating()).toBe(false);
-  ctx.racers[0].clear = ctx.track.nlaps * ctx.track.nsp;
-  ctx.updateStandings();
-  expect(throughTheRace(0)).toBe(true);
+  ctx.laps.through[0] = true;
+  expect(ctx.throughTheRace(0)).toBe(true);
   expect(spectating()).toBe(true);
   expect(outOfTheRace(0)).toBe(true);
   expect(outOfTheRace(1)).toBe(false);

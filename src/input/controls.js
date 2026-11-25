@@ -21,6 +21,7 @@ import {
   toggleSharp,
 } from "../render/look.js";
 import { nextStrength } from "../race/career.js";
+import { nextSessionMinutes } from "../race/timeAttack.js";
 import { fitCanvas3D } from "../render/renderer.js";
 import { minimap, toggleMinimap } from "../ui/minimap.js";
 import { buttons } from "../ui/widgets.js";
@@ -157,6 +158,14 @@ export function onKey(action, pressed) {
     if (action == "aiStrength") {
       nextStrength();
     }
+  }
+  if (
+    !pressed &&
+    game.phase == PHASE.stageSelect &&
+    raceSetup.kind == RACE_KIND.timeAttack &&
+    action == "raceCars"
+  ) {
+    nextSessionMinutes();
   }
   if (!pressed && action == "toggleLook") {
     toggleLook();

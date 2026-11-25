@@ -36,8 +36,8 @@ export const GERMAN = {
   Fullscreen: "Vollbild",
   "On a phone a touch makes the game fullscreen while this is on.":
     "Auf dem Handy schaltet eine Berührung das Spiel ins Vollbild, solange das an ist.",
-  "Your fastest race on the stage, driven again beside you.":
-    "Dein schnellstes Rennen auf der Stage, noch einmal neben dir gefahren.",
+  "Your fastest lap on the stage, driven again beside you on every lap.":
+    "Deine schnellste Runde auf der Stage, in jeder Runde noch einmal neben dir gefahren.",
   "Touch controls": "Touch-Steuerung",
   Size: "Größe",
   "Arrange the controls": "Steuerung anordnen",
@@ -491,8 +491,6 @@ export const GERMAN = {
   "You Won!": "Gewonnen!",
   "You Lost!": "Verloren!",
   "Finished!": "Im Ziel!",
-  "{place} in {time}, the others still racing":
-    "{place} in {time}, die anderen fahren noch",
   Damage: "Schaden",
   Wasted: "Schrott",
   "Your Team Won!": "Dein Team gewinnt!",
@@ -523,12 +521,22 @@ export const GERMAN = {
   "Continue ": "Weiter ",
   "Watch Race": "Zuschauen",
   "Watch Replay": "Replay",
-  "Lap {lap}/{laps}   {time}": "Runde {lap}/{laps}   {time}",
-  "   Best lap {time}": "   Beste Runde {time}",
-  "Your time: {time}": "Deine Zeit: {time}",
-  "{time}, a new best!": "{time}, neue Bestzeit!",
-  "{time}, best {best}": "{time}, Bestzeit {best}",
-  ", but a new best lap!": ", aber neue beste Runde!",
+  "Lap {lap}": "Runde {lap}",
+  "   Best {time}": "   Beste {time}",
+  "{time} left": "noch {time}",
+  "Last lap": "Letzte Runde",
+  "(no time)": "(ohne Zeit)",
+  "No lap counted": "Keine Runde gewertet",
+  "Best lap {time}": "Beste Runde {time}",
+  "Best lap {time}, a new best!": "Beste Runde {time}, neue Bestzeit!",
+  "Best lap {time}, the stage's best {best}":
+    "Beste Runde {time}, Bestzeit der Stage {best}",
+  "No lap counted, the others on their last laps":
+    "Keine Runde gewertet, die anderen fahren ihre letzte Runde",
+  "{place} with {time}, the others on their last laps":
+    "{place} mit {time}, die anderen fahren ihre letzte Runde",
+  "Best lap": "Beste Runde",
+  Gap: "Abstand",
   " Arrow now pointing at >  CARS": " Pfeil zeigt jetzt auf >  AUTOS",
   " Arrow now pointing at >  TRACK": " Pfeil zeigt jetzt auf >  STRECKE",
   "Check Point Missed!": "Checkpoint verpasst!",
@@ -669,8 +677,8 @@ export const GERMAN = {
   "Final Stage": "Finale Stage",
   "{cars} Cars  [C]": "{cars} Autos  [C]",
   "AI: {strength}  [B]": "KI: {strength}  [B]",
-  "Best lap {lap}   Best race {race}":
-    "Beste Runde {lap}   Bestes Rennen {race}",
+  "Best lap {lap}": "Beste Runde {lap}",
+  "{minutes} Min  [C]": "{minutes} Min  [C]",
   "No best time yet": "Noch keine Bestzeit",
   "TIP ": "TIPP ",
   "PLAY SWITCH ": "SWITCH ",

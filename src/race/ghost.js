@@ -1,8 +1,9 @@
-// Time attack's ghost: the fastest race of the stage driven again beside the player, in
-// the car that drove it, seen through and never in the way. It is no car of the race (it
-// sits in the last of the cars' slots, which a race alone never uses), only where the
-// recorded car was each tick. Each race alone is recorded; one finished faster than the
-// ghost (or the first) becomes the stage's new ghost.
+// Time attack's ghost: the fastest lap of the stage driven again beside the player on each
+// lap, in the car that drove it, seen through and never in the way. It is no car of the
+// race (it sits in the last of the cars' slots, which a race alone never uses), only where
+// the recorded car was each tick. Each lap alone is recorded; one faster than the ghost (or
+// the first) becomes the stage's new ghost. (Ghosts of whole races, kept before, are kept
+// under another name and no more shown.)
 
 import { MAX_CARS, PHASE, game } from "../core/state.js";
 import { camera } from "../render/camera.js";
@@ -36,7 +37,7 @@ export const toggleGhost = () => {
   saveSetting("ghost", ghost.shown ? 1 : 0);
 };
 
-const keyOf = (stage) => `ghost-${stage}`;
+const keyOf = (stage) => `lapGhost-${stage}`;
 
 const emptyTape = () => Object.fromEntries(POSE.map((field) => [field, []]));
 
@@ -97,7 +98,7 @@ const poseGhost = (t) => {
   turnCarAfterItsAngles(GHOST);
 };
 
-// As a race alone begins: the stage's ghost on the grid, and a fresh recording.
+// As a lap alone begins: the stage's ghost where its lap began, and a fresh recording.
 export const startGhost = () => {
   const stored = ghost.shown ? storedGhost(track.stage) : null;
   ghost.tape = stored?.tape ?? null;
@@ -144,7 +145,7 @@ export const showsOf = (c) => {
 // whether the ghost is drawn: in a race alone being raced (not in its replay)
 export const ghostShown = () => ghost.tape != null && game.phase == PHASE.race;
 
-// Every tick of the race (tick t since the start, from 1): the player's car recorded, the
+// Every tick of the lap (tick t since it began, from 1): the player's car recorded, the
 // ghost moved on.
 export const ghostTick = (t) => {
   if (!ghost.driven) {
@@ -159,7 +160,7 @@ export const ghostTick = (t) => {
   }
 };
 
-// The race finished in time, over ticks: the stage's ghost if it is the first or faster.
+// A lap done in time, over ticks: the stage's ghost if it is the first or faster.
 export const keepGhost = (ticks, time) => {
   if (!ghost.driven || isCustom(track.stage)) {
     return;

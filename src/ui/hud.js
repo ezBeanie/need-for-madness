@@ -7,6 +7,7 @@ import {
   deathmatch,
   gunCarOf,
   isDeathmatch,
+  isLapSession,
   killTable,
   teamTable,
 } from "../race/deathmatch.js";
@@ -22,7 +23,11 @@ import {
   clockTime,
   drawDeathmatchBoard,
   drawFeed,
+  drawLapClock,
   drawResults,
+  LAP_HEADS,
+  lapRows,
+  markText,
   noteWreck,
   placeName,
   wastedBy,
@@ -81,15 +86,8 @@ import {
 } from "../race/racers.js";
 import { HIGHLIGHT, startHighlight, recording } from "../race/recording.js";
 import { VIEWER_FROM, nextCamera, openReplay } from "../race/replayViewer.js";
-import {
-  clocked,
-  currentLapTicks,
-  finishTimes,
-  formatTime,
-  isTimeAttack,
-  raceTime,
-  timeAttack,
-} from "../race/timeAttack.js";
+import { formatTime, timeAttack } from "../race/timeAttack.js";
+import { lapTable, laps } from "../race/lapTimes.js";
 import { track } from "../race/track.js";
 import { CAMERA, camera, faceCamera } from "../render/camera.js";
 import { lockCar, lockNext } from "../render/cameraMoves.js";
@@ -753,49 +751,6 @@ const drawOutcome = (text, picture) => {
   }
 };
 
-// A room's time attack: the player's place and time once through, and when every car is
-// through (or wasted) the times of all. Returns whether the race is over.
-const timeAttackOutcome = () => {
-  const times = finishTimes();
-  const through = times
-    .map((time, c) => ({ time, c }))
-    .filter(({ time }) => time !== null)
-    .sort((a, b) => a.time - b.time);
-  if (track.haltall) {
-    const won = through[0]?.c == game.player;
-    drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
-    raceEvents.winner = won;
-    drawResults(
-      ["", "", t("Time")],
-      through.slice(0, MAX_CARS).map(({ time, c }, place) => ({
-        cells: [placeName(place), nameOfCar(c), formatTime(time)],
-        mine: c == game.player,
-        line: `${placeName(place, said)}  ${nameOfCar(c)}  ${formatTime(time)}`,
-      })),
-    );
-    return true;
-  }
-  const place = through.findIndex(({ c }) => c == game.player);
-  // (through, the car stops there and the player may watch the others)
-  if (place == -1) {
-    return false;
-  }
-  if (!watchingOthers()) {
-    drawOutcome("Finished!", "youwon");
-    drawBlinking(
-      192,
-      said("{place} in {time}, the others still racing", {
-        place: placeName(place, said),
-        time: formatTime(through[place].time),
-      }),
-      0,
-      128,
-      255,
-    );
-  }
-  return true;
-};
-
 // the player's car being wasted: a crash, then its burning out
 const soundPlayerWreck = () => {
   if (racers[game.player].cntdest != 0 && raceEvents.playerWreckTicks < 16) {
@@ -869,10 +824,73 @@ export const gunRow = ({ c, kills, deaths }, place) => {
   };
 };
 
+// Time attack once over: alone the best lap (a new best of the stage, or how far from it),
+// in a room every car's fastest lap; and the player's car through while the others drive
+// their last laps. Returns whether the race is over for the player.
+const lapSessionOutcome = () => {
+  const p = game.player;
+  const best = laps.best[p];
+  if (track.haltall && !racesRoom()) {
+    drawOutcome("Finished!", "youwon");
+    raceEvents.winner = best > 0;
+    const record = timeAttack.best?.lap ?? 0;
+    const time = formatTime(best);
+    drawBlinking(
+      192,
+      best == 0
+        ? said("No lap counted")
+        : timeAttack.newBest
+          ? said("Best lap {time}, a new best!", { time })
+          : record > 0
+            ? said("Best lap {time}, the stage's best {best}", {
+                time,
+                best: formatTime(record),
+              })
+            : said("Best lap {time}", { time }),
+      0,
+      128,
+      255,
+    );
+    return true;
+  }
+  const table = lapTable(game.carCount);
+  const place = table.findIndex(({ c }) => c == p);
+  if (track.haltall) {
+    const won = place == 0 && best > 0;
+    drawOutcome(won ? "You Won!" : "You Lost!", won ? "youwon" : "youlost");
+    raceEvents.winner = won;
+    drawResults(
+      LAP_HEADS.map((head) => t(head)),
+      lapRows(said),
+    );
+    return true;
+  }
+  // (through, the car stops there and the player may watch the others)
+  if (!watchingOthers()) {
+    drawOutcome("Finished!", "youwon");
+    drawBlinking(
+      192,
+      best == 0
+        ? said("No lap counted, the others on their last laps")
+        : said("{place} with {time}, the others on their last laps", {
+            place: placeName(place, said),
+            time: formatTime(best),
+          }),
+      0,
+      128,
+      255,
+    );
+  }
+  return true;
+};
+
 // A room's race of a fixed time: the player's wreck and its way back, and once the time is
 // up (or in gun game the last kill done) every car's kills (or points). Returns whether
 // the race is over.
 const deathmatchOutcome = () => {
+  if (isLapSession() && (track.haltall || laps.through[game.player])) {
+    return lapSessionOutcome();
+  }
   if (track.haltall && raceSetup.mode == RACE_MODE.gunGame) {
     const table = killTable();
     const won = table[0]?.c == game.player;
@@ -965,18 +983,10 @@ const raceOutcome = () => {
   if (isDeathmatch()) {
     return deathmatchOutcome();
   }
-  const againstTheClock = raceSetup.mode == RACE_MODE.timeAttack && racesRoom();
-  if (againstTheClock && timeAttackOutcome()) {
-    return true;
-  }
-  if (!againstTheClock && track.haltall && teamOf(game.player) != -1) {
+  if (track.haltall && teamOf(game.player) != -1) {
     return teamsOutcome();
   }
-  if (
-    track.wasted == game.carCount - 1 &&
-    game.carCount != 1 &&
-    !againstTheClock
-  ) {
+  if (track.wasted == game.carCount - 1 && game.carCount != 1) {
     drawOutcome("You Wasted'em!", "youwastedem");
     drawBlinking(192, said("You Won, all cars have been wasted!"), 0, 128, 255);
     if (!track.haltall) {
@@ -1018,14 +1028,7 @@ const raceOutcome = () => {
   if (!over && finishingEnds()) {
     for (let i = 0; i < game.carCount; i++) {
       if (track.clear[i] == track.nlaps * track.nsp && track.pos[i] == 0) {
-        if (i == game.player && isTimeAttack()) {
-          drawOutcome("Finished!", "youwon");
-          drawBlinking(192, finishedIn(), 0, 128, 255);
-          raceEvents.winner = true;
-          if (!track.haltall) {
-            playSound(32, 1);
-          }
-        } else if (i == game.player) {
+        if (i == game.player) {
           drawOutcome("You Won!", "youwon");
           drawBlinking(192, said("You finished first, nice job!"), 0, 128, 255);
           raceEvents.winner = true;
@@ -1416,45 +1419,6 @@ const pause = () => {
 };
 
 // Switch mode: the time until the player switches to another car.
-// Time attack's clock under the race: the race's time, the lap and the best lap.
-const drawClock = () => {
-  const { best, laps } = timeAttack;
-  const lap = Math.min(laps.length + 1, track.nlaps);
-  const bestLap = Math.min(best?.lap ?? Infinity, ...laps);
-  drawCenteredText(
-    636,
-    said("Lap {lap}/{laps}   {time}", {
-      lap,
-      laps: track.nlaps,
-      time: formatTime(currentLapTicks()),
-    }) +
-      (Number.isFinite(bestLap)
-        ? said("   Best lap {time}", { time: formatTime(bestLap) })
-        : ""),
-    0,
-    0,
-    0,
-    TEXT.label,
-  );
-  drawCenteredText(670, formatTime(raceTime()), 0, 0, 0, TEXT.heading);
-};
-
-const finishedIn = () => {
-  const { best, newBest } = timeAttack;
-  const time = said("Your time: {time}", { time: formatTime(raceTime()) });
-  if (newBest.race) {
-    return said("{time}, a new best!", { time });
-  }
-  // (stages made in the editor keep no best times)
-  if (!best) {
-    return time;
-  }
-  return (
-    said("{time}, best {best}", { time, best: formatTime(best.race) }) +
-    (newBest.lap ? said(", but a new best lap!") : "")
-  );
-};
-
 const drawSwitchTimer = () => {
   switchTimer--;
   const minutes = Math.floor(switchTimer / 800);
@@ -1608,12 +1572,14 @@ const afterLabel = (text, x, place) =>
 // Top left: lap, wasted opponents and the position.
 const drawStanding = () => {
   if (classicMenus()) {
+    // (time attack: laps without end, the place by the fastest lap)
+    const lapping = isLapSession();
     drawClassicStanding(
-      racers[game.player].nlaps + 1,
-      track.nlaps,
+      lapping ? laps.done[game.player] + 1 : racers[game.player].nlaps + 1,
+      lapping ? null : track.nlaps,
       track.wasted,
       game.carCount - 1,
-      track.pos[game.player] + 1,
+      (lapping ? lapPlace() : track.pos[game.player]) + 1,
     );
     return;
   }
@@ -1664,13 +1630,22 @@ const drawStanding = () => {
   );
 };
 
+// time attack: the player's place by the fastest lap
+const lapPlace = () =>
+  lapTable(game.carCount).findIndex(({ c }) => c == game.player);
+
 // Most kills, top left: the player's kills, how often it was wasted and its place by kills.
+// (Time attack: its lap, how many it did and its place by the fastest lap.)
 const drawKillStanding = () => {
   const p = game.player;
   const place = ["Place", placeName(killTable().findIndex(({ c }) => c == p))];
   const ladder = GUN_LADDER.length;
-  const shown =
-    raceSetup.mode == RACE_MODE.stunts
+  const shown = isLapSession()
+    ? [
+        ["Lap", laps.done[p] + 1],
+        ...(game.carCount > 1 ? [["Place", placeName(lapPlace())]] : []),
+      ]
+    : raceSetup.mode == RACE_MODE.stunts
       ? [
           ["Points", deathmatch.points[p]],
           ["Stunts", deathmatch.stunts[p]],
@@ -2235,9 +2210,11 @@ const announceEvents = () => {
   if (raceEvents.checkpointsAnnounced != player.clear && player.clear != 0) {
     if (!messageImportant) {
       message = classicMenus() ? "Checkpoint!" : t("Check Point");
-      // (against the clock, with the time it was reached)
-      if (clocked() && timeAttack.split.cleared == player.clear) {
-        message += `  ${formatTime(timeAttack.split.time)}`;
+      // (time attack: the classic look tells the checkpoint's times in the message, the
+      // modern one under it, see drawLapClock)
+      const mark = laps.marks[game.player];
+      if (isLapSession() && classicMenus() && mark) {
+        message = markText(mark, !racesRoom(), said);
       }
       raceEvents.messageTicks = 15;
     }
@@ -2284,8 +2261,8 @@ export function drawHud() {
     ) {
       drawSwitchTimer();
     }
-    if (clocked() && raceEvents.countdown == 0 && !watchingOthers()) {
-      drawClock();
+    if (isLapSession() && raceEvents.countdown == 0 && !watchingOthers()) {
+      drawLapClock(!racesRoom(), said);
     }
     // the left under the standing (and the arrow button, not up there on phones), down to
     // the touch controls' arrow

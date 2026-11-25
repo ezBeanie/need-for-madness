@@ -8,7 +8,9 @@ import { loadText, saveSetting } from "../core/storage.js";
 import { VERSION } from "../data/changelog.js";
 import { carStats } from "../data/carStats.js";
 import { stageLabel } from "../data/stages.js";
-import { formatTime, timeAttack } from "../race/timeAttack.js";
+import { isLapSession } from "../race/deathmatch.js";
+import { laps } from "../race/lapTimes.js";
+import { formatTime } from "../race/timeAttack.js";
 import { track } from "../race/track.js";
 import { own } from "./roomCars.js";
 
@@ -104,10 +106,12 @@ export const tellRaceBegun = () =>
     players: Math.max(1, game.humans.length),
   });
 
-// As the race is over for the player: won or not, against the clock its time.
+// As the race is over for the player: won or not, in time attack its best lap.
 export const tellRaceOver = (won) =>
   tellActivity("result", {
     ...race(),
     result: won ? "won" : "lost",
-    ...(timeAttack.finished ? { time: formatTime(timeAttack.time) } : {}),
+    ...(isLapSession() && laps.best[game.player] > 0
+      ? { time: formatTime(laps.best[game.player]) }
+      : {}),
   });
