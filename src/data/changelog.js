@@ -4,6 +4,15 @@
 
 export const CHANGELOG = [
   {
+    version: "1.5.1",
+    date: "2026-11-25",
+    changes: [
+      "Time attack starts with an untimed warm-up lap: timing, sector times and the ghost begin at the line.",
+      "Time attack alone has no time limit any more: lap for as long as you like and leave through the menu; every new best lap is kept with its ghost at once.",
+      "Time attack's times sit in a panel: the lap and the best, big the lap's time with what the last checkpoint told, a strip of the lap's sectors in their colours and the last lap.",
+    ],
+  },
+  {
     version: "1.5.0",
     date: "2026-11-25",
     changes: [
