@@ -10,7 +10,7 @@ import { nameOfCar } from "../net/roomCars.js";
 import { PHASE, game } from "../core/state.js";
 import { CONFIRM, confirm } from "../input/confirm.js";
 import { keys, takePressedKeys } from "../input/keyboard.js";
-import { pointer } from "../input/pointer.js";
+import { pointer, takeWheel } from "../input/pointer.js";
 import { drawClassicReplayLabel } from "../classic/hud.js";
 import {
   SPEEDS,
@@ -23,13 +23,14 @@ import {
   seekReplay,
   togglePlaying,
   viewer,
+  zoomCamera,
 } from "../race/replayViewer.js";
 import { stopReplaySounds } from "../audio/replaySounds.js";
 import { classicMenus } from "../render/look.js";
 import { leaveOpenedReplay, saveReplay } from "../screens/replays.js";
 import { CAMERA, camera } from "../render/camera.js";
-import { cameraPath } from "../race/cameraPath.js";
-import { toggleCameraPathPanel } from "./cameraPathPanel.js";
+import { cameraPath, nextKeyFrame } from "../race/cameraPath.js";
+import { addKeyHere, toggleCameraPathPanel } from "./cameraPathPanel.js";
 import { isPhone } from "../core/platform.js";
 import {
   drawFreeCameraPad,
@@ -328,6 +329,15 @@ export const placeReplayExit = () => {
 };
 
 const jump = (frames) => seekReplay(viewer.frame + frames);
+
+// to the camera path's keyframe before or after, held there
+const jumpToKey = (step) => {
+  const frame = nextKeyFrame(step);
+  if (frame !== undefined) {
+    viewer.playing = false;
+    seekReplay(frame);
+  }
+};
 // (a replay file needs saving again only with a camera path made since)
 const canSave = () =>
   viewer.from != VIEWER_FROM.file || cameraPath.keys.length > 0;
@@ -358,6 +368,9 @@ const KEYS = {
   KeyV: nextCamera,
   KeyH: () => (shown = !shown),
   KeyI: () => toggleCameraPathPanel(),
+  KeyK: () => addKeyHere(),
+  Comma: () => jumpToKey(-1),
+  Period: () => jumpToKey(1),
   Home: () => seekReplay(0),
   End: () => seekReplay(lastFrame()),
   ArrowUp: () => changeSpeed(1),
@@ -563,7 +576,7 @@ const keysLine = () =>
   t("\u2190 \u2192: a step (hold: wind)     Home / End: start / end     ") +
   t(
     camera.mode == CAMERA.free
-      ? "Free camera: W A S D, Q / E, Shift, drag to look"
+      ? "Free camera: W A S D, Q / E, R / F, Shift, drag to look"
       : camera.mode == CAMERA.behind
         ? "Z / X: look back"
         : "C / \u21e7C: next / previous car",
@@ -709,4 +722,13 @@ export function drawReplayOverlay() {
   }
   readKeys();
   moveFree();
+  zoom();
 }
+
+// Any camera zooms by the wheel, Page Up (in) and Page Down (out) held.
+const ZOOM_WHEEL = 0.001;
+const ZOOM_HELD = 0.02;
+const zoom = () => {
+  const held = keys.held.has("PageDown") - keys.held.has("PageUp");
+  zoomCamera(Math.exp(takeWheel() * ZOOM_WHEEL + held * ZOOM_HELD));
+};

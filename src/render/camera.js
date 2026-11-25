@@ -8,6 +8,8 @@ export const CAMERA = { free: -1, behind: 0, orbit: 1, trackside: 2, flyTo: 3 };
 
 // The camera, as the game logic moves it every tick (drawing interpolates it, see
 // interpolation.js).
+export const DEFAULT_FOV = 55;
+
 export const camera = {
   x: 0,
   y: 0,
@@ -15,8 +17,9 @@ export const camera = {
   // heading and pitch in degrees
   yaw: -90,
   pitch: 30,
-  // projection and view in one matrix
+  // projection and view in one matrix, the vertical field of view at 16:9 in degrees
   matrix: null,
+  fov: DEFAULT_FOV,
   // see CAMERA
   mode: 0,
   // index of the car the camera follows, and the car flyTo moves to
@@ -84,12 +87,12 @@ export const fitFieldOfView = (fieldOfView) =>
 export const seenHeight = () => Math.max(1, NARROWEST / view.aspect);
 export const seenWidth = () => view.aspect * 0.5625 * seenHeight();
 
-// A fresh projection with a field of view of 55 degrees; the camera's turns follow it.
+// A fresh projection with the camera's field of view; the camera's turns follow it.
 export const startProjection = () => {
   camera.matrix = mat4.create();
   mat4.perspective(
     camera.matrix,
-    fitFieldOfView((55 * Math.PI) / 180),
+    fitFieldOfView((camera.fov * Math.PI) / 180),
     view.aspect,
     0.1,
     7000,

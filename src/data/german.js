@@ -543,8 +543,12 @@ export const GERMAN = {
   Go: "Hin",
   "Go to {key}": "Zu {key}",
   "Delete {key}": "{key} löschen",
-  "Fly and turn the camera, pause where it should be, then add a keyframe. Between free cameras the path flies; other cameras cut in. Each keyframe keeps the speed.":
-    "Kamera fliegen und drehen, an der richtigen Stelle anhalten, dann einen Keyframe setzen. Zwischen freien Kameras fliegt der Pfad, andere Kameras schneiden hart. Jeder Keyframe merkt sich die Geschwindigkeit.",
+  "Fly and turn the camera, pause where it should be, then add a keyframe (K). From each keyframe the path flies on or cuts; into and out of a car's camera it glides. Each keyframe keeps the speed and the zoom (wheel). , and . jump between keyframes.":
+    "Kamera fliegen und drehen, an der richtigen Stelle anhalten, dann einen Keyframe setzen (K). Von jedem Keyframe fliegt der Pfad weiter oder schneidet hart; in die Kamera eines Autos und aus ihr heraus gleitet er. Jeder Keyframe merkt sich Geschwindigkeit und Zoom (Mausrad). , und . springen zwischen den Keyframes.",
+  "Move here": "Hierher",
+  "Move {key} here": "{key} hierher verschieben",
+  "Fly on": "Fliegen",
+  "Fly on from {key}": "Von {key} weiterfliegen",
   Low: "Niedrig",
   Medium: "Mittel",
   High: "Hoch",
@@ -629,8 +633,8 @@ export const GERMAN = {
   " (You)": " (Du)",
   "← →: a step (hold: wind)     Home / End: start / end     ":
     "← →: ein Schritt (halten: spulen)     Pos1 / Ende: Anfang / Ende     ",
-  "Free camera: W A S D, Q / E, Shift, drag to look":
-    "Freie Kamera: W A S D, Q / E, Shift, ziehen zum Umsehen",
+  "Free camera: W A S D, Q / E, R / F, Shift, drag to look":
+    "Freie Kamera: W A S D, Q / E, R / F, Shift, ziehen zum Umsehen",
   "Z / X: look back": "Z / X: zurückschauen",
   "C / ⇧C: next / previous car": "C / ⇧C: nächstes / voriges Auto",
   "     H: hide": "     H: ausblenden",

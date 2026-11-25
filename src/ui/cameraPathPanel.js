@@ -1,5 +1,6 @@
 // The replay's camera path beside the race (see race/cameraPath.js): its keyframes, each
-// to jump to or take away, a new one where the replay is, and the path played or not.
+// to jump to, move to where the replay is, fly on from or cut, or take away, a new one
+// where the replay is, and the path played or not.
 // Opened with I or the controls' button, only in the replay viewer.
 
 import { PHASE, game } from "../core/state.js";
@@ -8,21 +9,34 @@ import { nameOfCar } from "../net/roomCars.js";
 import {
   cameraPath,
   dropKey,
+  flies,
   keyHere,
+  moveKey,
+  toggleFly,
   togglePath,
 } from "../race/cameraPath.js";
 import { seekReplay, viewer } from "../race/replayViewer.js";
-import { CAMERA } from "../render/camera.js";
+import { CAMERA, DEFAULT_FOV } from "../render/camera.js";
 import { CAMERA_NAMES, time } from "./replayControls.js";
 
 const panel = document.getElementById("cameraPath");
 const element = (id) => document.getElementById(id);
 
-// what a keyframe says: when, which camera, whose
+// what a keyframe says: when, which camera, whose, how far zoomed
 const told = (key) => {
   const what = t(CAMERA_NAMES[key.mode] ?? "Camera");
   const whose = key.mode == CAMERA.free ? "" : `, ${nameOfCar(key.target)}`;
-  return `${time(key.frame)}  ${what}${whose}`;
+  const fov = Math.round(key.fov ?? DEFAULT_FOV);
+  return `${time(key.frame)}  ${what}${whose}, ${fov}\u00b0`;
+};
+
+const button = (text, label, onClick) => {
+  const made = document.createElement("button");
+  made.type = "button";
+  made.textContent = text;
+  made.setAttribute("aria-label", label);
+  made.addEventListener("click", onClick);
+  return made;
 };
 
 export const showCameraPath = () => {
@@ -34,24 +48,47 @@ export const showCameraPath = () => {
       const item = document.createElement("li");
       const label = document.createElement("span");
       label.textContent = told(key);
-      const go = document.createElement("button");
-      go.type = "button";
-      go.textContent = t("Go");
-      go.setAttribute("aria-label", t("Go to {key}", { key: told(key) }));
-      go.addEventListener("click", () => {
+      const go = button(t("Go"), t("Go to {key}", { key: told(key) }), () => {
         viewer.playing = false;
         seekReplay(key.frame);
       });
-      const drop = document.createElement("button");
-      drop.type = "button";
-      drop.textContent = t("Delete");
-      drop.setAttribute("aria-label", t("Delete {key}", { key: told(key) }));
-      drop.addEventListener("click", () => {
-        dropKey(index);
-        showCameraPath();
-        element("cameraPathAdd").focus();
-      });
-      item.append(label, go, drop);
+      const move = button(
+        t("Move here"),
+        t("Move {key} here", { key: told(key) }),
+        () => {
+          moveKey(index);
+          showCameraPath();
+          element("cameraPathAdd").focus();
+        },
+      );
+      const drop = button(
+        t("Delete"),
+        t("Delete {key}", { key: told(key) }),
+        () => {
+          dropKey(index);
+          showCameraPath();
+          element("cameraPathAdd").focus();
+        },
+      );
+      item.append(label, go, move);
+      // (on to the next: flown or cut, where a free camera takes part)
+      const next = cameraPath.keys[index + 1];
+      if (next && (key.mode == CAMERA.free || next.mode == CAMERA.free)) {
+        const fly = button(
+          t("Fly on"),
+          t("Fly on from {key}", { key: told(key) }),
+          () => {
+            toggleFly(index);
+            showCameraPath();
+            element("cameraPathKeys")
+              .children[index]?.querySelector("[aria-pressed]")
+              ?.focus();
+          },
+        );
+        fly.setAttribute("aria-pressed", flies(key, next) ? "true" : "false");
+        item.append(fly);
+      }
+      item.append(drop);
       return item;
     }),
   );
@@ -62,6 +99,14 @@ const hidePanel = () => {
   panel.hidden = true;
   if (panel.contains?.(document.activeElement)) {
     document.activeElement.blur();
+  }
+};
+
+// (K, or the panel's button)
+export const addKeyHere = () => {
+  keyHere();
+  if (!panel.hidden) {
+    showCameraPath();
   }
 };
 
@@ -76,10 +121,7 @@ export const toggleCameraPathPanel = () => {
 };
 
 export const installCameraPathPanel = () => {
-  element("cameraPathAdd").addEventListener("click", () => {
-    keyHere();
-    showCameraPath();
-  });
+  element("cameraPathAdd").addEventListener("click", addKeyHere);
   element("cameraPathPlay").addEventListener("click", () => {
     togglePath();
     showCameraPath();
