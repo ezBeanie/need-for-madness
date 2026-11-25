@@ -25,23 +25,28 @@ const timeAttackAlone = async () => {
 };
 
 // A session's laps, the cars standing (each checkpoint so counted at the end of its tick):
-// car c clears a checkpoint at each of clears[c] (ticks of the race), wasted at those of
-// wrecks[c] (as the tick begins); until the race's tick `until`, or until it is over.
+// a warm-up lap over at tick WARM, then car c clears a checkpoint at each of clears[c]
+// (ticks after the warm-up lap), wasted at those of wrecks[c] (as the tick begins); until
+// the tick `until` after the warm-up lap, or until it is over.
+const WARM = 10;
 const lapSession = (ctx, clears, { wrecks = [], until = 3000, tick } = {}) => {
   ctx.startTimeAttack();
   ctx.deathmatch.ticks = 0;
+  const { nsp } = ctx.track;
+  const warmUp = Array.from({ length: nsp }, (_, k) => WARM - nsp + 1 + k);
   for (let c = 0; c < ctx.game.carCount; c++) {
     ctx.racers[c].clear = 0;
     ctx.racers[c].wasted = false;
   }
-  for (let t = 1; t <= until && !ctx.track.haltall; t++) {
+  for (let t = 1; t <= until + WARM && !ctx.track.haltall; t++) {
     for (let c = 0; c < ctx.game.carCount; c++) {
-      ctx.racers[c].clear = (clears[c] ?? []).filter((at) => at <= t).length;
-      ctx.racers[c].wasted = (wrecks[c] ?? []).includes(t);
+      const cleared = [...warmUp, ...(clears[c] ?? []).map((at) => at + WARM)];
+      ctx.racers[c].clear = cleared.filter((at) => at <= t).length;
+      ctx.racers[c].wasted = (wrecks[c] ?? []).includes(t - WARM);
     }
     ctx.lapTick(ctx.game.carCount);
     ctx.deathmatch.ticks++;
-    tick?.(t);
+    tick?.(t - WARM);
     ctx.timeAttackTick();
     ctx.updateStandings();
   }
@@ -63,6 +68,9 @@ test("time attack times each lap from line to line, each checkpoint a split, and
   expect(laps.marks[0].valid).toBe(true);
   // the lap on, from the line
   expect(ctx.currentLapTicks()).toBe(10);
+  // the last lap
+  expect(laps.last[0]).toBe(110);
+  expect(laps.lastValid[0]).toBe(true);
   // 35 ms a tick, to the thousandth
   expect(ctx.formatTime(220)).toBe("0:07.700");
   expect(ctx.formatTime(2.5)).toBe("0:00.088");
@@ -81,22 +89,17 @@ test("a lap is timed where within its tick the car crossed the line, not at the 
   ctx.racers[0].clearedPathPoint = line;
   ctx.car[0].x = 0;
   ctx.car[0].z = 0;
-  lapSession(ctx, [[3]], {
-    until: 3,
-    tick: () => {},
-  });
-  // (the cars stood: crossed at the end of the tick)
-  expect(ctx.laps.best[0]).toBe(3);
   ctx.startTimeAttack();
   ctx.deathmatch.ticks = 0;
   ctx.racers[0].clear = 0;
-  for (let t = 1; t <= 3; t++) {
-    ctx.car[0].z = 10 * t;
-    ctx.racers[0].clear = t >= 3 ? 1 : 0;
+  // the warm-up lap over at the end of the first tick, standing; then on at 10 a tick
+  for (let t = 1; t <= 4; t++) {
+    ctx.car[0].z = t == 1 ? 0 : 10 * (t - 1);
+    ctx.racers[0].clear = t >= 4 ? 2 : 1;
     ctx.lapTick(1);
     ctx.deathmatch.ticks++;
   }
-  // from z 20 to 30 in the third tick, the line halfway
+  // from z 20 to 30 in the fourth tick, the line halfway: 3.5, from 1
   expect(ctx.laps.best[0]).toBe(2.5);
 });
 
@@ -113,25 +116,63 @@ test("a wasted car's lap counts for nothing, and the next one does again", async
   expect(laps.marks[0]).toMatchObject({ time: 110, valid: true });
 });
 
-test("once the time is up a lap begun before it is finished and counts, then the session is over", async () => {
+test("the first lap is a warm-up lap: untimed, telling nothing, recording no ghost", async () => {
   storage();
   const { ctx } = await timeAttackAlone();
+  ctx.game.phase = ctx.PHASE.race;
+  const warm = [];
+  lapSession(ctx, [[50, 100]], {
+    until: 100,
+    tick: (t) => {
+      if (t <= 0) {
+        warm.push({
+          warm: ctx.laps.warm[0],
+          mark: ctx.laps.marks[0],
+          ghost: ctx.ghost.driven,
+        });
+      }
+    },
+  });
+  // (the warm-up lap's checkpoints passed, its line too: no lap, no times)
+  expect(warm.slice(0, -1).every(({ warm }) => warm)).toBe(true);
+  expect(warm.every(({ mark }) => mark === null)).toBe(true);
+  expect(warm.slice(0, -1).every(({ ghost }) => ghost === null)).toBe(true);
+  // from its line the first lap, timed and recorded
+  expect(ctx.laps.done[0]).toBe(1);
+  expect(ctx.laps.best[0]).toBe(100);
+  expect(ctx.storedGhost(2).ticks).toBe(100);
+});
+
+test("alone, time attack goes on for as long as the player likes", async () => {
+  storage();
+  const { ctx } = await timeAttackAlone();
+  expect(ctx.deathmatchTicks()).toBe(Infinity);
+  lapSession(ctx, [[]], { until: 60000 });
+  expect(ctx.track.haltall).toBe(false);
+  expect(ctx.laps.through[0]).toBe(false);
+});
+
+test("in a room, once the time is up a lap begun before it is finished and counts, then the session is over", async () => {
+  storage();
+  const { ctx } = await timeAttackAlone();
+  ctx.raceSetup.kind = ctx.RACE_KIND.together;
+  ctx.raceSetup.mode = ctx.RACE_MODE.timeAttack;
   ctx.raceSetup.rules.minutes = 1;
   const up = ctx.deathmatchTicks();
   // laps of 600 ticks: the third ends after the time is up
   const clears = [300, 600, 900, 1200, 1500, 1800];
   const laps = lapSession(ctx, [clears]);
-  expect(up).toBeLessThan(1800);
+  expect(up).toBeLessThan(1800 + WARM);
   expect(laps.done[0]).toBe(3);
   expect(laps.through[0]).toBe(true);
   expect(ctx.track.haltall).toBe(true);
-  expect(ctx.deathmatch.ticks).toBe(1800);
+  expect(ctx.deathmatch.ticks).toBe(1800 + WARM);
   // (through, the car gets no keys any more)
   expect(ctx.throughTheRace(0)).toBe(true);
 
   // a lap that counts for nothing is over as the time is up
   ctx.track.haltall = false;
-  const wrecked = lapSession(ctx, [clears], { wrecks: [[1650]] });
+  const wrecked = lapSession(ctx, [clears], { wrecks: [[1650 - WARM]] });
   expect(wrecked.done[0]).toBe(2);
   expect(ctx.deathmatch.ticks).toBe(up);
   expect(ctx.track.haltall).toBe(true);
@@ -141,6 +182,7 @@ test("once the time is up a lap begun before it is finished and counts, then the
   lapSession(ctx, [[300]], { until: 100000 });
   expect(ctx.track.haltall).toBe(true);
   expect(ctx.deathmatch.ticks * 35).toBeCloseTo((60 + 180) * 1000, -2);
+  ctx.raceSetup.mode = ctx.RACE_MODE.normal;
 });
 
 test("alone, the stage's best lap is kept with its splits, the times told against it, its ghost driven again each lap", async () => {
@@ -169,7 +211,10 @@ test("alone, the stage's best lap is kept with its splits, the times told agains
       if (t == 45) {
         expect(ctx.laps.marks[0]).toMatchObject({ k: 0, own: -5 });
       }
-      seen.push(ctx.ghostShown() ? { ...ctx.car[ctx.GHOST] } : null);
+      // (from the first timed lap on)
+      if (t >= 1) {
+        seen.push(ctx.ghostShown() ? { ...ctx.car[ctx.GHOST] } : null);
+      }
     },
   });
   expect(seen.every((pose) => pose !== null)).toBe(true);
@@ -182,21 +227,6 @@ test("alone, the stage's best lap is kept with its splits, the times told agains
   expect(ctx.bestTimes(3)).toEqual({ lap: 300, splits: [] });
   expect(ctx.bestTimes(ctx.FIRST_OWN_STAGE)).toBe(null);
   expect(ctx.GHOST).toBeGreaterThanOrEqual(ctx.game.carCount);
-});
-
-test("time attack's sessions last as long as chosen, 3 minutes at first", async () => {
-  storage();
-  const { ctx } = await timeAttackAlone();
-  expect(ctx.raceSetup.rules.minutes).toBe(3);
-  ctx.nextSessionMinutes();
-  expect(ctx.raceSetup.rules.minutes).toBe(5);
-  ctx.chooseRaceKind(ctx.RACE_KIND.quickRace);
-  ctx.chooseRaceKind(ctx.RACE_KIND.timeAttack);
-  expect(ctx.raceSetup.rules.minutes).toBe(5);
-  for (let i = 0; i < 3; i++) {
-    ctx.nextSessionMinutes();
-  }
-  expect(ctx.raceSetup.rules.minutes).toBe(3);
 });
 
 test("a wasted car in time attack comes back at the checkpoint it cleared last, facing on, and drives on to the next", async () => {

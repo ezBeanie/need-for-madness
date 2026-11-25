@@ -101,7 +101,8 @@ test("a room's time attack laps for the room's minutes, the fastest lap first, a
   ctx.deathmatch.ticks = 0;
   ctx.track.haltall = false;
   const nsp = ctx.track.nsp;
-  // car 1 laps faster than car 0; the others never get round
+  // car 1 laps faster than car 0 (each first on its warm-up lap); the others never get
+  // round
   const lapOf = { 0: 400, 1: 300 };
   for (let t = 1; t <= ctx.deathmatchTicks() + 400; t++) {
     for (let c = 0; c < ctx.game.carCount; c++) {
@@ -118,16 +119,10 @@ test("a room's time attack laps for the room's minutes, the fastest lap first, a
   expect(table[2].best).toBe(0);
   // a checkpoint of car 0 told against car 1's fastest lap: slower
   expect(ctx.laps.marks[0].field).toBeGreaterThan(0);
-  // the time up, the two through; the others still drive their first laps
-  expect(ctx.laps.through[0]).toBe(true);
-  expect(ctx.laps.through[1]).toBe(true);
-  expect(ctx.track.haltall).toBe(false);
-  // the others' laps counting for nothing, they are through too, and it is over
-  for (let c = 2; c < ctx.game.carCount; c++) {
-    ctx.racers[c].wasted = true;
-  }
-  ctx.lapTick(ctx.game.carCount);
-  ctx.updateStandings();
+  // the time up, the two through; the others, still on their warm-up laps, too: over
+  expect(ctx.laps.through.slice(0, ctx.game.carCount).every(Boolean)).toBe(
+    true,
+  );
   expect(ctx.track.haltall).toBe(true);
 
   // the times go with the race's state

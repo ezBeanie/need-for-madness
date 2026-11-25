@@ -34,11 +34,7 @@ import {
   raceSetup,
 } from "../core/state.js";
 import { nextStrength } from "../race/career.js";
-import {
-  bestTimes,
-  formatTime,
-  nextSessionMinutes,
-} from "../race/timeAttack.js";
+import { bestTimes, formatTime } from "../race/timeAttack.js";
 import { applyFieldSize, nextRaceSize } from "../race/field.js";
 import {
   AFTER_LOAD,
@@ -387,9 +383,7 @@ const drawClassic = () => {
           30,
         ],
       ]
-    : timeAttack()
-      ? [["minutes", ` ${raceSetup.rules.minutes} Min  [C] `, 75, 30]]
-      : [];
+    : [];
   if (track.tips.length) {
     buttons.push(["tip", showingTip ? " Okay " : " Tip ", 75, 392]);
   } else if (inCampaign() && (track.stage == 1 || track.stage == 2)) {
@@ -441,9 +435,6 @@ const drawClassic = () => {
   }
   if (chosen == "strength") {
     nextStrength();
-  }
-  if (chosen == "minutes") {
-    nextSessionMinutes();
   }
   if (chosen == "tip") {
     showingTip = !showingTip;
@@ -684,7 +675,6 @@ const drawControls = (hue) => {
     drawQuickRaceButtons(colors);
   }
   if (timeAttack()) {
-    drawSessionButton(colors);
     drawBestTimes(hue);
   }
   if (
@@ -748,14 +738,6 @@ const optionButton = (id, y, text, colors) =>
     imageOpacity: 0,
     pulsing: false,
   });
-
-// Time attack: how long its session lasts.
-const drawSessionButton = (colors) => {
-  const text = t("{minutes} Min  [C]", { minutes: raceSetup.rules.minutes });
-  if (optionButton(11, 105, text, colors)) {
-    nextSessionMinutes();
-  }
-};
 
 const drawQuickRaceButtons = (colors) => {
   const button = (id, y, text) => optionButton(id, y, text, colors);

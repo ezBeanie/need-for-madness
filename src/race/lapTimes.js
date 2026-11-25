@@ -1,5 +1,7 @@
-// Time attack's laps (alone or a room's, see isLapSession): for a fixed time every car laps
-// the stage, timed from line to line, and its fastest lap counts. Each checkpoint of a lap
+// Time attack's laps (alone or a room's, see isLapSession): every car laps the stage (a
+// room's for a fixed time, alone for as long as the player likes), timed from line to line,
+// and its fastest lap counts. The first lap, from the grid to the line, is a warm-up lap:
+// untimed, as the grid lies elsewhere than the line. Each checkpoint of a lap
 // is a split: the time since the lap began. A lap is timed where within its tick the car
 // crossed the line, so times are finer than ticks. A wasted car's lap counts for nothing
 // (it comes back at its last checkpoint, see physics.js); once the time is up a car still
@@ -13,16 +15,20 @@ import { deathmatch, deathmatchTicks, isLapSession } from "./deathmatch.js";
 import { car, racers } from "./racers.js";
 import { track } from "./track.js";
 
-// by car: when its lap began (in ticks of the race), whether it counts, its splits so far,
-// its laps done, its fastest lap this session (0: none) and that lap's splits, the lap its
+// by car: whether it is on its warm-up lap, when its lap began (in ticks of the race),
+// whether it counts, its splits so far, its laps done, its last lap (0: none) and whether
+// that counted, its fastest lap this session (0: none) and that lap's splits, the lap its
 // times are told against (its own best, before this session too; 0: none) and that one's
 // splits, whether it is through; where it was the tick before and the checkpoints it had
 // cleared; and what its last checkpoint told (see Mark)
 export const laps = {
+  warm: [],
   from: [],
   valid: [],
   splits: [],
   done: [],
+  last: [],
+  lastValid: [],
   best: [],
   bestSplits: [],
   ownBest: [],
@@ -44,14 +50,18 @@ const LISTS = Object.keys(laps);
 // once the time is up, the race goes on no longer than this for the last laps
 const OVERTIME_TICKS = Math.round((3 * 60 * 1000) / TICK_MS);
 
-// As the race begins: every car on its first lap, from the start. own: the lap the
+// As the race begins: every car on its warm-up lap. own: the lap the
 // player's times are told against ({ lap, splits } or null, see timeAttack.js).
 export const startLaps = (player, own) => {
   for (let c = 0; c < MAX_CARS; c++) {
+    laps.warm[c] = true;
     laps.from[c] = 0;
-    laps.valid[c] = true;
+    // (a warm-up lap counts for nothing: the time up, it is not finished)
+    laps.valid[c] = false;
     laps.splits[c] = [];
     laps.done[c] = 0;
+    laps.last[c] = 0;
+    laps.lastValid[c] = false;
     laps.best[c] = 0;
     laps.bestSplits[c] = [];
     const mine = c == player && own?.splits?.length == track.nsp;
@@ -84,11 +94,15 @@ const isMark = (mark) =>
     (mark.own === null || Number.isFinite(mark.own)) &&
     (mark.field === null || Number.isFinite(mark.field)) &&
     typeof mark.valid == "boolean");
+const isFlag = (flag) => typeof flag == "boolean";
 const CHECKS = {
+  warm: isFlag,
   from: isTime,
   valid: (valid) => typeof valid == "boolean",
   splits: isTimes,
   done: Number.isInteger,
+  last: isTime,
+  lastValid: isFlag,
   best: isTime,
   bestSplits: isTimes,
   ownBest: isTime,
@@ -146,9 +160,17 @@ const crossingPart = (i, fromX, fromZ, toX, toZ) => {
 const against = (time, splits, k) =>
   splits.length == track.nsp ? time - splits[k] : null;
 
-// Car c through a checkpoint at a time of the race.
-const pass = (c, at) => {
-  const k = laps.splits[c].length;
+// Car c through its checkpoint k of the lap (the last: the line) at a time of the race.
+const pass = (c, k, at) => {
+  if (laps.warm[c]) {
+    // (the warm-up lap over at the line: the first timed one begins)
+    if (k == track.nsp - 1) {
+      laps.warm[c] = false;
+      laps.from[c] = at;
+      laps.valid[c] = true;
+    }
+    return;
+  }
   const time = at - laps.from[c];
   const fastest = fastestCar();
   laps.marks[c] = {
@@ -165,6 +187,8 @@ const pass = (c, at) => {
   }
   // (the line: the lap done, the next begun)
   laps.done[c]++;
+  laps.last[c] = time;
+  laps.lastValid[c] = laps.valid[c];
   if (laps.valid[c] && (laps.best[c] == 0 || time < laps.best[c])) {
     laps.best[c] = time;
     laps.bestSplits[c] = laps.splits[c].slice();
@@ -199,7 +223,7 @@ export const lapTick = (carCount) => {
           car[c].x,
           car[c].z,
         );
-        pass(c, deathmatch.ticks + part);
+        pass(c, (laps.cleared[c] - 1) % track.nsp, deathmatch.ticks + part);
       }
       // (the time up, a lap that counts for nothing is not finished)
       if (deathmatch.ticks + 1 >= deathmatchTicks() && !laps.valid[c]) {

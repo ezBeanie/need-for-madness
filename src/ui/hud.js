@@ -86,7 +86,7 @@ import {
 } from "../race/racers.js";
 import { HIGHLIGHT, startHighlight, recording } from "../race/recording.js";
 import { VIEWER_FROM, nextCamera, openReplay } from "../race/replayViewer.js";
-import { formatTime, timeAttack } from "../race/timeAttack.js";
+import { formatTime } from "../race/timeAttack.js";
 import { lapTable, laps } from "../race/lapTimes.js";
 import { track } from "../race/track.js";
 import { CAMERA, camera, faceCamera } from "../render/camera.js";
@@ -824,35 +824,12 @@ export const gunRow = ({ c, kills, deaths }, place) => {
   };
 };
 
-// Time attack once over: alone the best lap (a new best of the stage, or how far from it),
-// in a room every car's fastest lap; and the player's car through while the others drive
-// their last laps. Returns whether the race is over for the player.
+// A room's time attack once over: every car's fastest lap; and the player's car through
+// while the others drive their last laps. (Alone it goes on until the player leaves.)
+// Returns whether the race is over for the player.
 const lapSessionOutcome = () => {
   const p = game.player;
   const best = laps.best[p];
-  if (track.haltall && !racesRoom()) {
-    drawOutcome("Finished!", "youwon");
-    raceEvents.winner = best > 0;
-    const record = timeAttack.best?.lap ?? 0;
-    const time = formatTime(best);
-    drawBlinking(
-      192,
-      best == 0
-        ? said("No lap counted")
-        : timeAttack.newBest
-          ? said("Best lap {time}, a new best!", { time })
-          : record > 0
-            ? said("Best lap {time}, the stage's best {best}", {
-                time,
-                best: formatTime(record),
-              })
-            : said("Best lap {time}", { time }),
-      0,
-      128,
-      255,
-    );
-    return true;
-  }
   const table = lapTable(game.carCount);
   const place = table.findIndex(({ c }) => c == p);
   if (track.haltall) {
@@ -1635,16 +1612,16 @@ const lapPlace = () =>
   lapTable(game.carCount).findIndex(({ c }) => c == game.player);
 
 // Most kills, top left: the player's kills, how often it was wasted and its place by kills.
-// (Time attack: its lap, how many it did and its place by the fastest lap.)
+// (Time attack: its place by the fastest lap.)
 const drawKillStanding = () => {
   const p = game.player;
   const place = ["Place", placeName(killTable().findIndex(({ c }) => c == p))];
   const ladder = GUN_LADDER.length;
+  // (the lap is in time attack's panel, see drawLapClock)
   const shown = isLapSession()
-    ? [
-        ["Lap", laps.done[p] + 1],
-        ...(game.carCount > 1 ? [["Place", placeName(lapPlace())]] : []),
-      ]
+    ? game.carCount > 1
+      ? [["Place", placeName(lapPlace())]]
+      : []
     : raceSetup.mode == RACE_MODE.stunts
       ? [
           ["Points", deathmatch.points[p]],

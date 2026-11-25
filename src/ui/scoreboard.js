@@ -4,7 +4,7 @@
 // in a table.
 
 import { drawClassicMessage } from "../classic/hud.js";
-import { RACE_MODE, game, raceSetup } from "../core/state.js";
+import { RACE_MODE, game, raceSetup, racesRoom } from "../core/state.js";
 import { TICK_MS, tick } from "../core/tick.js";
 import { nameOfCar } from "../net/roomCars.js";
 import {
@@ -13,7 +13,7 @@ import {
   isLapSession,
   killTable,
 } from "../race/deathmatch.js";
-import { lapTable, laps, timeIsUp } from "../race/lapTimes.js";
+import { fastestCar, lapTable, laps, timeIsUp } from "../race/lapTimes.js";
 import {
   currentLapTicks,
   formatDelta,
@@ -340,36 +340,160 @@ const recentMark = (c) => {
   return mark && deathmatch.ticks - mark.at < MARK_TICKS ? mark : null;
 };
 
-// Time attack under the race: the player's last checkpoint for a while, the lap and the
-// best lap (the classic look, without the board, also the time left), and big the lap's
-// time so far (red while it counts for nothing). alone: a race alone.
-export const drawLapClock = (alone, say = t) => {
+// The colour of each sector car c drove on its lap so far, by the sector's own time against
+// the same sector of the lap it is told against (see markTold).
+const sectorColors = (c, alone) => {
+  const splits = laps.splits[c];
+  const fastest = fastestCar();
+  const sector = (times, k) =>
+    times.length == track.nsp ? times[k] - (k > 0 ? times[k - 1] : 0) : null;
+  return splits.map((time, k) => {
+    if (!laps.valid[c]) {
+      return RED;
+    }
+    const own = time - (k > 0 ? splits[k - 1] : 0);
+    const against = (times) => {
+      const ref = sector(times, k);
+      return ref === null ? null : own - ref;
+    };
+    const fieldTimes = fastest == -1 ? [] : laps.bestSplits[fastest];
+    return markTold(
+      {
+        valid: true,
+        own: against(alone ? laps.ownSplits[c] : laps.bestSplits[c]),
+        field: against(alone ? laps.bestSplits[c] : fieldTimes),
+      },
+      alone,
+    ).color;
+  });
+};
+
+// Time attack's timing in the classic look: the lines of the original's messages.
+const drawClassicLapClock = (alone, say) => {
   const p = game.player;
-  const mark = recentMark(p);
-  if (mark) {
-    drawCenteredText(
-      600,
-      markText(mark, alone, say),
-      ...markTold(mark, alone).color,
-      TEXT.label,
-    );
-  }
   const best = laps.best[p];
-  const left = timeIsUp()
-    ? say("Last lap")
-    : say("{time} left", { time: clockTime(deathmatchLeft()) });
+  const left = alone
+    ? ""
+    : timeIsUp()
+      ? `   ${say("Last lap")}`
+      : `   ${say("{time} left", { time: clockTime(deathmatchLeft()) })}`;
   drawCenteredText(
     636,
-    say("Lap {lap}", { lap: laps.done[p] + 1 }) +
+    (laps.warm[p]
+      ? say("Warm-up lap")
+      : say("Lap {lap}", { lap: laps.done[p] + 1 })) +
       (best > 0 ? say("   Best {time}", { time: formatTime(best) }) : "") +
-      (classicMenus() ? `   ${left}` : ""),
+      left,
     0,
     0,
     0,
     TEXT.label,
   );
-  const rgb = laps.valid[p] ? [0, 0, 0] : RED;
-  drawCenteredText(670, formatTime(currentLapTicks()), ...rgb, TEXT.heading);
+  if (!laps.warm[p]) {
+    const rgb = laps.valid[p] ? [0, 0, 0] : RED;
+    drawCenteredText(670, formatTime(currentLapTicks()), ...rgb, TEXT.heading);
+  }
+};
+
+// Time attack under the race (alone: a race alone), in a panel: the lap (or the warm-up
+// lap) and the best lap; big the lap's time so far (red while it counts for nothing), for a
+// while after a checkpoint with what it told, after the line the lap's time instead; a strip
+// of the lap's sectors, each in its colour; and the last lap.
+export const drawLapClock = (alone, say = t) => {
+  if (classicMenus()) {
+    drawClassicLapClock(alone, say);
+    return;
+  }
+  const p = game.player;
+  const s = view.scale;
+  const width = 400 * s;
+  const height = 116 * s;
+  const left = (view.width - width) / 2;
+  const top = view.height - height - 14 * s;
+  const pad = 16 * s;
+  rd.save();
+  rd.globalAlpha = 0.6;
+  rd.fillStyle = "#000000";
+  rd.beginPath();
+  rd.roundRect(left, top, width, height, 14 * s);
+  rd.fill();
+  rd.globalAlpha = 1;
+  // the lap, and the best
+  font(14);
+  rd.textAlign = "left";
+  rd.fillStyle = "#01EAFF";
+  const warm = laps.warm[p];
+  rd.fillText(
+    warm ? t("Warm-up lap") : t("Lap {lap}", { lap: laps.done[p] + 1 }),
+    left + pad,
+    top + 18 * s,
+  );
+  const best = laps.best[p];
+  const record = alone ? laps.ownBest[p] : best;
+  rd.textAlign = "right";
+  rd.fillStyle = "#FFFFFF";
+  rd.fillText(
+    record > 0
+      ? t("Best {time}", { time: formatTime(record) })
+      : t("No best lap yet"),
+    left + width - pad,
+    top + 18 * s,
+  );
+  // the time, big, and what the last checkpoint told
+  const mark = recentMark(p);
+  const atLine = mark && mark.k == track.nsp - 1;
+  const middle = top + 52 * s;
+  font(34);
+  rd.textAlign = "center";
+  if (warm) {
+    font(20);
+    rd.fillStyle = "rgba(255, 255, 255, 0.6)";
+    rd.fillText(t("Timing starts at the line"), left + width / 2, middle);
+  } else {
+    const time = atLine ? mark.time : currentLapTicks();
+    rd.fillStyle = atLine || laps.valid[p] ? "#FFFFFF" : hex(RED);
+    rd.fillText(formatTime(time), left + width / 2 - 40 * s, middle);
+  }
+  if (mark && !warm) {
+    const { delta, color } = markTold(mark, alone);
+    font(20);
+    rd.textAlign = "left";
+    rd.fillStyle = hex(color);
+    rd.fillText(
+      mark.valid
+        ? `${atLine ? t("Lap") : `S${mark.k + 1}`} ${
+            delta === null ? "" : formatDelta(delta)
+          }`
+        : t("(no time)"),
+      left + width / 2 + 62 * s,
+      middle,
+    );
+  }
+  // the sectors of the lap: driven in their colour, ahead grey
+  const strip = top + 78 * s;
+  const gap = 4 * s;
+  const count = track.nsp;
+  const each = (width - 2 * pad - gap * (count - 1)) / count;
+  const colors = warm ? [] : sectorColors(p, alone);
+  for (let k = 0; k < count; k++) {
+    rd.fillStyle = colors[k] ? hex(colors[k]) : "rgba(255, 255, 255, 0.18)";
+    rd.beginPath();
+    rd.roundRect(left + pad + k * (each + gap), strip, each, 7 * s, 3 * s);
+    rd.fill();
+  }
+  // the last lap
+  font(13);
+  rd.textAlign = "left";
+  rd.fillStyle = laps.lastValid[p] ? "#FFFFFF" : hex(RED);
+  if (laps.last[p] > 0) {
+    rd.fillText(
+      t("Last {time}", { time: formatTime(laps.last[p]) }) +
+        (laps.lastValid[p] ? "" : ` ${t("(no time)")}`),
+      left + pad,
+      top + height - 14 * s,
+    );
+  }
+  rd.restore();
 };
 
 // Time attack at the left from top on: the time left (once up: the last laps), and with
@@ -377,6 +501,10 @@ export const drawLapClock = (alone, say = t) => {
 // with what its last checkpoint told for a while. Returns where what comes under it may
 // start.
 const drawLapBoard = (top) => {
+  // (alone, no time is up: no board)
+  if (!racesRoom()) {
+    return top;
+  }
   const s = view.scale;
   const left = 20 * s;
   rd.save();
@@ -410,7 +538,9 @@ const drawLapBoard = (top) => {
       rd.textAlign = "right";
       rd.fillText(
         best == 0
-          ? "-"
+          ? laps.warm[c]
+            ? t("Warm-up")
+            : "-"
           : place == 0
             ? formatTime(best)
             : formatDelta(best - leader),
