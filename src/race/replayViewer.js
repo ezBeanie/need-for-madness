@@ -12,6 +12,7 @@ import { takeWheel } from "../input/pointer.js";
 import { PHASE, game } from "../core/state.js";
 import { CAMERA, DEFAULT_FOV, camera } from "../render/camera.js";
 import { BLEND, gl } from "../render/renderer.js";
+import { stopVideo } from "../render/video.js";
 import { burn, effects } from "./effects.js";
 import { raceEvents } from "./events.js";
 import { raceTape, wastedSince } from "./raceTape.js";
@@ -306,6 +307,7 @@ export const openReplay = (from, frame) => {
 
 // Back to where it was opened from; a race goes on as it was.
 export const closeReplay = () => {
+  stopVideo();
   if (viewer.race) {
     seekReplay(lastFrame());
     restoreRace(viewer.race);

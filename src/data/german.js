@@ -555,6 +555,14 @@ export const GERMAN = {
   "Fly and turn the camera, pause where it should be, then add a keyframe (K). From each keyframe the path flies on or cuts; into and out of a car's camera it glides. Each keyframe keeps the speed and the zoom (wheel). , and . jump between keyframes.":
     "Kamera fliegen und drehen, an der richtigen Stelle anhalten, dann einen Keyframe setzen (K). Von jedem Keyframe fliegt der Pfad weiter oder schneidet hart; in die Kamera eines Autos und aus ihr heraus gleitet er. Jeder Keyframe merkt sich Geschwindigkeit und Zoom (Mausrad). , und . springen zwischen den Keyframes.",
   "Move here": "Hierher",
+  "Record video": "Video aufnehmen",
+  "This browser cannot record videos.":
+    "Dieser Browser kann keine Videos aufnehmen.",
+  "From the first keyframe to the last, as the path plays. Esc stops.":
+    "Vom ersten bis zum letzten Keyframe, wie der Pfad spielt. Esc stoppt.",
+  "From here to the end of the replay. Esc stops.":
+    "Von hier bis zum Ende des Replays. Esc stoppt.",
+  "REC {time}   Esc: stop": "REC {time}   Esc: Stopp",
   "Move {key} here": "{key} hierher verschieben",
   "Fly on": "Fliegen",
   "Fly on from {key}": "Von {key} weiterfliegen",

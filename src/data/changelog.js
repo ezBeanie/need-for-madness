@@ -4,6 +4,13 @@
 
 export const CHANGELOG = [
   {
+    version: "1.6.0",
+    date: "2026-11-26",
+    changes: [
+      "Replays can be recorded as a video (Record video in the camera path's panel): along the path from its first keyframe to its last, or the whole replay without one, at 1080 lines with the sounds and music, as WebM (MP4 where the browser records only that). Esc stops it early.",
+    ],
+  },
+  {
     version: "1.5.1",
     date: "2026-11-25",
     changes: [

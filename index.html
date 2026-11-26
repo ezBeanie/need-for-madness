@@ -656,6 +656,8 @@ html.turned dialog:modal:is(.view, .touch-layout, .stage-editor) {
 <p class="hint">Fly and turn the camera, pause where it should be, then add a keyframe (K). From each keyframe the path flies on or cuts; into and out of a car's camera it glides. Each keyframe keeps the speed and the zoom (wheel). , and . jump between keyframes.</p>
 <div class="row"><button type="button" id="cameraPathAdd">Add keyframe here</button><button type="button" id="cameraPathPlay" aria-pressed="false">Play the path</button></div>
 <ol id="cameraPathKeys" aria-label="Keyframes"></ol>
+<div class="row"><button type="button" id="cameraPathVideo" aria-describedby="cameraPathVideoHint">Record video</button></div>
+<p id="cameraPathVideoHint" class="hint"></p>
 <button type="button" id="cameraPathClose">Close</button>
 </aside>
 <button type="button" id="replayExit" class="replay-exit" aria-label="Exit the replay" aria-keyshortcuts="Escape" title="Exit (Esc)" hidden>Exit</button>

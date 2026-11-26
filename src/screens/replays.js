@@ -25,14 +25,27 @@ import { menu } from "./menuState.js";
 // the replay file being opened: its race tape, and the player's car and place before it
 let opened = null;
 
-const fileName = () => {
+const fileName = (extension = REPLAY_FILE_EXTENSION) => {
   const label = stageLabel(track.stage).replaceAll(" ", "-");
   const now = new Date();
   const two = (n) => String(n).padStart(2, "0");
   const date = `${now.getFullYear()}-${two(now.getMonth() + 1)}-${two(now.getDate())}`;
   const time = `${two(now.getHours())}${two(now.getMinutes())}`;
-  return `NFM-${label}-${date}-${time}${REPLAY_FILE_EXTENSION}`;
+  return `NFM-${label}-${date}-${time}${extension}`;
 };
+
+const download = (blob, name) => {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = name;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+// A video of the replay (see ui/replayVideo.js), downloaded by the browser.
+export const saveVideo = (blob, extension) =>
+  download(blob, fileName(`.${extension}`));
 
 // Saves the race the viewer shows as a file, downloaded by the browser.
 export const saveReplay = async () => {
@@ -43,14 +56,7 @@ export const saveReplay = async () => {
     player: game.player,
     ...(cameraPath.keys.length > 0 ? { cameraPath: cameraPath.keys } : {}),
   });
-  const url = URL.createObjectURL(
-    new Blob([bytes], { type: "application/octet-stream" }),
-  );
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = fileName();
-  link.click();
-  setTimeout(() => URL.revokeObjectURL(url), 1000);
+  download(new Blob([bytes], { type: "application/octet-stream" }), fileName());
 };
 
 // Opens a replay file: its stage loads with its cars, then the viewer shows it.
