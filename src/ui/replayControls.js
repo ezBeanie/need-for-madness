@@ -156,7 +156,7 @@ const COLORS = {
     edge: "rgba(1,234,255,0.6)",
     played: "#FFB401",
     unplayed: "rgba(255,255,255,0.18)",
-    face: ["#019DFF", "#01EAFF"],
+    face: ["#0075d8", "#299dff"],
     shadow: "#004A78",
     over: "rgba(1,234,255,0.25)",
     label: "#1B0F05",
@@ -172,9 +172,13 @@ const slanted = (x, y, width, height) => {
   const lean = height * 0.3;
   rd.beginPath();
   rd.moveTo(x + lean, y);
-  rd.lineTo(x + width, y);
+  rd.lineTo(x + width - lean * 1.2, y);
+  rd.lineTo(x + width - lean * 0.8, y + height * 0.08);
+  rd.lineTo(x + width, y + height * .67);
   rd.lineTo(x + width - lean, y + height);
-  rd.lineTo(x, y + height);
+  rd.lineTo(x + lean * 1.2, y + height);
+  rd.lineTo(x + lean * 0.8, y + height * 0.92);
+  rd.lineTo(x, y + height * 0.33);
   rd.closePath();
 };
 
