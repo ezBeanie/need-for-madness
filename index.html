@@ -1,753 +1,2598 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en" translate="no">
-<head>
-<title>Need for Madness</title>
-<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-<!-- (a browser translating the page would fight the game over every text it updates) -->
-<meta name="google" content="notranslate">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="theme-color" content="#15190D">
-<link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
-<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <head>
+    <title>Need for Madness</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <!-- (a browser translating the page would fight the game over every text it updates) -->
+    <meta name="google" content="notranslate" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#15190D" />
+    <link rel="manifest" href="manifest.webmanifest" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="192x192"
+      href="icons/icon-192.png"
+    />
+    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
 
-<style>
-body { margin: 0px; padding: 0px; overflow: hidden; }
-@font-face
-{
-font-family: junk;
-src: url(data/JunkDog.ttf);
-}
-@font-face
-{
-font-family: verd;
-src: url(data/verdana.ttf);
-}
-/* the options and multiplayer beside the classic menus and the screens after the main
+    <style>
+      body {
+        margin: 0px;
+        padding: 0px;
+        overflow: hidden;
+      }
+      @font-face {
+        font-family: junk;
+        src: url(data/JunkDog.ttf);
+      }
+      @font-face {
+        font-family: verd;
+        src: url(data/verdana.ttf);
+      }
+      /* the options and multiplayer beside the classic menus and the screens after the main
    menu, slanted as the main menu's buttons (see src/ui/); the replay's way out beside
    them, as the screens' Back */
-.options-button, .multiplayer-button, .replay-exit {
-  position: fixed; top: 8px; right: 76px; min-height: 44px; padding: 0 22px; border: 0;
-  clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
-  background: linear-gradient(90deg, #019DFF, #01EAFF); color: #1B0F05;
-  font-family: junk, Verdana, sans-serif; font-size: 17px; cursor: pointer;
-}
-.multiplayer-button, .replay-exit { right: 196px; }
-.replay-exit { background: linear-gradient(90deg, #FF3D01, #FFB401); }
-/* the replay's camera path, beside the race */
-.camera-path:not([hidden]) {
-  position: fixed; top: 64px; right: 12px; width: min(340px, calc(100vw - 24px)); max-height: calc(100vh - 200px);
-  overflow-y: auto; box-sizing: border-box; padding: 12px 14px; border: 1px solid rgba(1, 234, 255, 0.6);
-  border-radius: 12px; background: rgba(0, 16, 32, 0.9); color: #ffffff; font-family: verd, Verdana, sans-serif;
-}
-.camera-path h2 { margin: 0 0 8px; font-size: 18px; }
-.camera-path .hint { margin: 0 0 10px; font-size: 13px; color: rgba(255, 255, 255, 0.8); }
-.camera-path .row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
-.camera-path button {
-  min-height: 44px; padding: 0 12px; border: 1px solid #01eaff; border-radius: 8px;
-  background: #001020; color: #ffffff; font: inherit; font-size: 14px; cursor: pointer;
-}
-.camera-path button[aria-pressed="true"] { background: #01eaff; color: #001020; }
-.camera-path button:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
-.camera-path ol { margin: 0 0 10px; padding: 0; list-style: none; }
-.camera-path li { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 4px 0; border-bottom: 1px solid rgba(1, 234, 255, 0.25); font-size: 14px; }
-.camera-path li span { flex: 1 0 100%; }
-.options-button:hover, .multiplayer-button:hover, .replay-exit:hover { filter: brightness(1.15); }
-.options-button:focus-visible, .multiplayer-button:focus-visible, .replay-exit:focus-visible { outline: none; background: #ffffff; }
-.menu-dialog button:focus-visible, .menu-dialog input:focus-visible,
-.menu-dialog select:focus-visible {
-  outline: 3px solid #ffffff; outline-offset: 2px;
-}
-.menu-dialog {
-  width: min(calc(90 * var(--vw)), 420px); padding: 16px 20px; border: 1px solid rgba(1, 234, 255, 0.6);
-  border-radius: 14px; background: rgba(0, 16, 32, 0.94); color: #ffffff;
-  font-family: verd, Verdana, sans-serif;
-}
-.menu-dialog::backdrop { background: rgba(0, 0, 0, 0.5); }
-.menu-dialog h2 { margin: 0 0 12px; font-size: 20px; }
-.menu-dialog p { margin: 0 0 12px; font-size: 14px; line-height: 1.4; }
-.menu-dialog ul { list-style: none; margin: 0; padding: 0; }
-.menu-dialog li + li { margin-top: 8px; }
-.menu-dialog button {
-  display: flex; justify-content: space-between; align-items: center; gap: 12px;
-  width: 100%; min-height: 44px; padding: 8px 14px; border: 0; border-radius: 22px;
-  background: rgba(255, 255, 255, 0.1); color: #ffffff; font: inherit; font-size: 15px;
-  text-align: left; cursor: pointer;
-}
-.menu-dialog button:hover { background: rgba(1, 234, 255, 0.25); }
-.menu-dialog button:disabled { opacity: 0.55; cursor: not-allowed; background: transparent; }
-.menu-dialog label { display: block; margin: 16px 0 6px; font-size: 14px; }
-.menu-dialog input, .menu-dialog select {
-  box-sizing: border-box; width: 100%; min-height: 44px; padding: 8px 14px;
-  border: 1px solid rgba(1, 234, 255, 0.6); border-radius: 22px;
-  background: rgba(0, 0, 0, 0.4); color: #ffffff; font: inherit; font-size: 15px;
-}
-.menu-dialog input + button, .menu-dialog .error + button { margin-top: 8px; }
-.menu-dialog h3 { margin: 16px 0 8px; font-size: 16px; }
-.menu-dialog .error { margin: 6px 0 0; color: #ffb4a8; }
-.menu-dialog .error::before { content: "\26A0  "; }
-.menu-dialog .room { font-size: 26px; letter-spacing: 3px; color: #01eaff; }
-.menu-dialog .close { justify-content: center; margin-top: 14px; }
-/* read out, not shown */
-.visually-hidden {
-  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden;
-  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
-}
-/* the options and the multiplayer lobby: screens of their own over the game, in the main
+      .options-button,
+      .multiplayer-button,
+      .replay-exit {
+        position: fixed;
+        top: 8px;
+        right: 76px;
+        min-height: 40px;
+        padding: 0 22px;
+        border: 0;
+        /* clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%); */
+        clip-path: polygon(
+          min(8%, 16px) 0%,
+          max(92%, 100% - 20px) 0%,
+          max(94%, 100% - 12px) 8%,
+          100% 67%,
+          max(92%, 100% - 20px) 100%,
+          min(8%, 20px) 100%,
+          min(6%, 12px) 92%,
+          0% 33%
+        );
+        /* background: linear-gradient(90deg, #019DFF, #01EAFF); color: #1B0F05; */
+        background: linear-gradient(90deg, #0075d8, #299dff);
+        color: #040f19;
+        font-family: junk, Verdana, sans-serif;
+        font-size: 18px;
+        cursor: pointer;
+      }
+      .multiplayer-button,
+      .replay-exit {
+        right: 196px;
+      }
+      .replay-exit {
+        background: linear-gradient(90deg, #ff3d01, #ffb401);
+      }
+      /* the replay's camera path, beside the race */
+      .camera-path:not([hidden]) {
+        position: fixed;
+        top: 64px;
+        right: 12px;
+        width: min(340px, calc(100vw - 24px));
+        max-height: calc(100vh - 200px);
+        overflow-y: auto;
+        box-sizing: border-box;
+        padding: 12px 14px;
+        border: 1px solid rgba(1, 234, 255, 0.6);
+        border-radius: 12px;
+        background: rgba(0, 16, 32, 0.9);
+        color: #ffffff;
+        font-family: verd, Verdana, sans-serif;
+      }
+      .camera-path h2 {
+        margin: 0 0 8px;
+        font-size: 18px;
+      }
+      .camera-path .hint {
+        margin: 0 0 10px;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.8);
+      }
+      .camera-path .row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 10px;
+      }
+      .camera-path button {
+        min-height: 44px;
+        padding: 0 12px;
+        border: 1px solid #01eaff;
+        border-radius: 8px;
+        background: #001020;
+        color: #ffffff;
+        font: inherit;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .camera-path button[aria-pressed="true"] {
+        background: #01eaff;
+        color: #001020;
+      }
+      .camera-path button:focus-visible {
+        outline: 3px solid #ffffff;
+        outline-offset: 2px;
+      }
+      .camera-path ol {
+        margin: 0 0 10px;
+        padding: 0;
+        list-style: none;
+      }
+      .camera-path li {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 0;
+        border-bottom: 1px solid rgba(1, 234, 255, 0.25);
+        font-size: 14px;
+      }
+      .camera-path li span {
+        flex: 1 0 100%;
+      }
+      .options-button:hover,
+      .multiplayer-button:hover,
+      .replay-exit:hover {
+        filter: brightness(1.15);
+      }
+      .options-button:focus-visible,
+      .multiplayer-button:focus-visible,
+      .replay-exit:focus-visible {
+        outline: none;
+        background: #ffffff;
+      }
+      .menu-dialog button:focus-visible,
+      .menu-dialog input:focus-visible,
+      .menu-dialog select:focus-visible {
+        outline: 3px solid #ffffff;
+        outline-offset: 2px;
+      }
+      .menu-dialog {
+        width: min(calc(90 * var(--vw)), 420px);
+        padding: 16px 20px;
+        border: 1px solid rgba(1, 234, 255, 0.6);
+        border-radius: 14px;
+        background: rgba(0, 16, 32, 0.94);
+        color: #ffffff;
+        font-family: verd, Verdana, sans-serif;
+      }
+      .menu-dialog::backdrop {
+        background: rgba(0, 0, 0, 0.5);
+      }
+      .menu-dialog h2 {
+        margin: 0 0 12px;
+        font-size: 20px;
+      }
+      .menu-dialog p {
+        margin: 0 0 12px;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      .menu-dialog ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .menu-dialog li + li {
+        margin-top: 8px;
+      }
+      .menu-dialog button {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        width: 100%;
+        min-height: 44px;
+        padding: 8px 14px;
+        border: 0;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        font: inherit;
+        font-size: 15px;
+        text-align: left;
+        cursor: pointer;
+      }
+      .menu-dialog button:hover {
+        background: rgba(1, 234, 255, 0.25);
+      }
+      .menu-dialog button:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+        background: transparent;
+      }
+      .menu-dialog label {
+        display: block;
+        margin: 16px 0 6px;
+        font-size: 14px;
+      }
+      .menu-dialog input,
+      .menu-dialog select {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 44px;
+        padding: 8px 14px;
+        border: 1px solid #01eaff99;
+        /* border-radius: 22px; */
+        border-radius: 3% 3.25% / 33% 67%;
+        corner-shape: bevel;
+        background: rgba(0, 0, 0, 0.4);
+        color: #ffffff;
+        font: inherit;
+        font-size: 16px;
+      }
+      .menu-dialog select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpolygon points='6,9 18,9 12,16' fill='%2301eaff'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-size: 20px;
+        background-position: right 10px center;
+        -webkit-appearance: none;
+        appearance: none;
+        cursor: pointer;
+      }
+      .menu-dialog input + button,
+      .menu-dialog .error + button {
+        margin-top: 8px;
+      }
+      .menu-dialog h3 {
+        margin: 16px 0 8px;
+        font-size: 16px;
+      }
+      .menu-dialog .error {
+        margin: 6px 0 0;
+        color: #ffb4a8;
+      }
+      .menu-dialog .error::before {
+        content: "\26A0  ";
+      }
+      .menu-dialog .room {
+        font-size: 26px;
+        letter-spacing: 3px;
+        color: #01eaff;
+      }
+      .menu-dialog .close {
+        justify-content: center;
+        margin-top: 14px;
+      }
+      /* read out, not shown */
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+        border: 0;
+      }
+      /* the options and the multiplayer lobby: screens of their own over the game, in the main
    menu's style */
-.menu-dialog.view {
-  box-sizing: border-box; width: calc(100 * var(--vw)); height: calc(100 * var(--vh)); max-width: none; max-height: none;
-  margin: 0; padding: max(16px, calc(3 * var(--vh))) max(16px, calc(4 * var(--vh))); border: 0; border-radius: 0;
-  overflow-y: auto; background: linear-gradient(160deg, rgba(0, 24, 48, 0.94), rgba(21, 25, 13, 0.97));
-}
-.menu-dialog.view::backdrop { background: transparent; }
-/* (its buttons are flex boxes, which would show them hidden) */
-.view [hidden] { display: none; }
-.view-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 24px; margin-bottom: max(12px, calc(2.5 * var(--vh))); }
-.view h2 {
-  margin: 0; font-family: junk, Verdana, sans-serif; font-weight: normal; font-size: max(30px, calc(6 * var(--vh)));
-  color: #FFB401; text-shadow: calc(0.5 * var(--vh)) calc(0.5 * var(--vh)) 0 #780800;
-}
-.view h3 { margin: 0 0 12px; font-family: junk, Verdana, sans-serif; font-weight: normal; font-size: max(18px, calc(3 * var(--vh))); color: #01eaff; }
-.view .panel { min-width: 0; padding: 14px 18px 18px; border: 1px solid rgba(1, 234, 255, 0.45); border-radius: 14px; background: rgba(0, 10, 20, 0.6); }
-.view button {
-  min-height: 44px; padding: 8px 24px; border-radius: 0;
-  clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);
-  background: linear-gradient(90deg, #019DFF, #01EAFF); color: #1B0F05;
-  font-family: junk, Verdana, sans-serif; font-size: 17px;
-}
-.view button:hover { filter: brightness(1.15); background: linear-gradient(90deg, #019DFF, #01EAFF); }
-.view .go, .view .back, .view .go:hover, .view .back:hover { justify-content: center; background: linear-gradient(90deg, #FF3D01, #FFB401); }
-.view .go[aria-pressed="true"] { background: linear-gradient(90deg, #0FA84A, #5FE38A); }
-.view button:disabled, .view button:disabled:hover { filter: none; opacity: 1; background: rgba(255, 255, 255, 0.18); color: rgba(255, 255, 255, 0.75); }
-/* (an outline would be cut off with the corners: the focused button turns white, also
+      .menu-dialog.view {
+        box-sizing: border-box;
+        width: calc(100 * var(--vw));
+        height: calc(100 * var(--vh));
+        max-width: none;
+        max-height: none;
+        margin: 0;
+        padding: max(16px, calc(3 * var(--vh))) max(16px, calc(4 * var(--vh)));
+        border: 0;
+        border-radius: 0;
+        overflow-y: auto;
+        background: linear-gradient(
+          160deg,
+          rgba(0, 24, 48, 0.94),
+          rgba(21, 25, 13, 0.97)
+        );
+      }
+      .menu-dialog.view::backdrop {
+        background: transparent;
+      }
+      /* (its buttons are flex boxes, which would show them hidden) */
+      .view [hidden] {
+        display: none;
+      }
+      .view-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 24px;
+        margin-bottom: max(12px, calc(2.5 * var(--vh)));
+      }
+      .view h2 {
+        margin: 0;
+        font-family: junk, Verdana, sans-serif;
+        font-weight: normal;
+        font-size: max(30px, calc(6 * var(--vh)));
+        color: #ffb401;
+        text-shadow: calc(0.5 * var(--vh)) calc(0.5 * var(--vh)) 0 #780800;
+      }
+      .view h3 {
+        margin: 0 0 12px;
+        font-family: junk, Verdana, sans-serif;
+        font-weight: normal;
+        font-size: max(18px, calc(3 * var(--vh)));
+        color: #01eaff;
+      }
+      .view .panel {
+        min-width: 0;
+        padding: 14px 18px 18px;
+        border: 1px solid rgba(1, 234, 255, 0.45);
+        border-radius: 14px;
+        background: rgba(0, 10, 20, 0.6);
+      }
+      .view button {
+        min-height: 44px;
+        padding: 8px 24px;
+        border-radius: 0;
+        /*clip-path: polygon(14px 0, 100% 0, calc(100% - 14px) 100%, 0 100%);*/
+        clip-path: polygon(
+          min(8%, 16px) 0%,
+          max(92%, 100% - 20px) 0%,
+          max(94%, 100% - 12px) 8%,
+          100% 67%,
+          max(92%, 100% - 20px) 100%,
+          min(8%, 20px) 100%,
+          min(6%, 12px) 92%,
+          0% 33%
+        );
+        background: linear-gradient(90deg, #0075d8, #299dff);
+        color: #040f19;
+        font-family: junk, Verdana, sans-serif;
+        font-size: 18px;
+      }
+      .view button:hover {
+        filter: brightness(1.15);
+        background: linear-gradient(90deg, #019dff, #01eaff);
+      }
+      .view .go,
+      .view .back,
+      .view .go:hover,
+      .view .back:hover {
+        justify-content: center;
+        background: linear-gradient(90deg, #ff3d01, #ffb401);
+      }
+      .view .go[aria-pressed="true"] {
+        background: linear-gradient(90deg, #0fa84a, #5fe38a);
+      }
+      .view button:disabled,
+      .view button:disabled:hover {
+        filter: none;
+        opacity: 1;
+        background: rgba(255, 255, 255, 0.18);
+        color: rgba(255, 255, 255, 0.75);
+      }
+      /* (an outline would be cut off with the corners: the focused button turns white, also
    pressed or hovered) */
-.view button:focus-visible, .view .go:focus-visible, .view .back:focus-visible { outline: none; background: #ffffff; }
-.view .back { width: auto; margin-left: auto; padding: 8px 36px; }
-.view .row { display: flex; gap: 8px; }
-.view .row input { flex: 1; min-width: 0; }
-.view .row button { width: auto; flex: none; }
-@media (forced-colors: active) {
-  .view button, .options-button, .multiplayer-button, .replay-exit { clip-path: none; border: 1px solid ButtonText; }
-  .view button:focus-visible { outline: 3px solid Highlight; }
-}
-/* the options: their switches in groups side by side */
-.option-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr)); gap: 16px; align-items: start; }
-#options li + li { margin-top: 10px; }
-#options .state { font-weight: bold; white-space: nowrap; }
-#options .volume { display: grid; grid-template-columns: 1fr 3.5em; align-items: center; gap: 4px 12px; margin-top: 14px; }
-#options .volume label { grid-column: 1 / 3; margin: 0; font-family: junk, Verdana, sans-serif; font-size: 17px; color: #ffffff; }
-#options .volume input { width: 100%; min-height: 44px; margin: 0; padding: 0; border: 0; background: none; accent-color: #01EAFF; }
-#options .volume output { color: #01eaff; font-weight: bold; text-align: right; }
-#options .volume .hint { grid-column: 1 / 3; margin: 0; }
-#options .volume input:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
-#options .ready { margin: 0; color: #ffffff; }
-#options .kept { margin-top: 10px; }
-#options .kept progress { width: 100%; height: 10px; accent-color: #01EAFF; }
-#options .kept p { margin: 4px 0 0; color: #01eaff; font-size: 14px; }
-#options .about p { margin: 0; }
-#options .about summary { display: flex; align-items: center; min-height: 44px; color: #01eaff; cursor: pointer; }
-#options .about summary:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
-#options .about h4 { margin: 12px 0 4px; font-size: 15px; color: #ffffff; }
-#options .about ul { margin: 0; padding-left: 20px; list-style: disc; font-size: 14px; line-height: 1.4; }
-#options .about li + li { margin-top: 4px; }
-#options .name label { display: block; margin: 0 0 6px; font-family: junk, Verdana, sans-serif; font-size: 17px; color: #ffffff; }
-#options .name input, #options .name select { width: 100%; }
-/* arranging the touch controls: over the whole screen, the race's dim behind them */
-.touch-layout { box-sizing: border-box; width: calc(100 * var(--vw)); height: calc(100 * var(--vh)); max-width: none; max-height: none; margin: 0; padding: 0; border: 0; background: linear-gradient(160deg, #0a2236, #1d2414); color: #ffffff; }
-.touch-layout::backdrop { background: transparent; }
-.touch-layout h2 { margin: 12px 0 0; font-family: junk, Verdana, sans-serif; font-weight: normal; font-size: 20px; text-align: center; color: #FFB401; }
-.touch-layout .row { position: absolute; left: 50%; top: 48px; transform: translateX(-50%); display: flex; gap: 12px; }
-.view .touch-control, .view .touch-control:hover { position: absolute; min-height: 0; padding: 0; clip-path: none; border: 2px dashed rgba(255, 255, 255, 0.6); border-radius: 12px; background: rgba(255, 255, 255, 0.15); touch-action: none; cursor: grab; }
-.touch-control img { display: block; width: 100%; height: 100%; pointer-events: none; }
-.view .touch-control:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; background: rgba(255, 255, 255, 0.35); }
-.name-tags { position: absolute; left: 0; top: 0; width: 0; height: 0; pointer-events: none; }
-.name-tag { position: fixed; left: 0; top: 0; padding: 2px 10px; text-align: center; white-space: nowrap; background: rgba(0, 10, 20, 0.6); border-bottom: 2px solid #01EAFF; color: #ffffff; font-family: junk, Verdana, sans-serif; font-size: 15px; text-shadow: 1px 1px 0 #000000; }
-.name-tag[hidden] { display: none; }
-.name-tag.in-team { background: color-mix(in srgb, var(--team) 40%, rgba(0, 10, 20, 0.75)); border-bottom-color: var(--team); }
-.name-bars { display: flex; gap: 3px; margin: 2px auto 1px; width: 64px; }
-.name-bar { flex: 1; height: 4px; background: rgba(255, 255, 255, 0.25); }
-.name-bar > span { display: block; height: 100%; width: 0; }
-.name-bar.damage > span { background: #FF4400; }
-.name-bar.power > span { background: #01EAFF; }
-.view .hint { margin: 6px 0 0; font-size: 13px; color: rgba(255, 255, 255, 0.75); }
-.lobby .cards .talking::after { content: " \1F50A"; content: " \1F50A" / ""; }
-#lobbyTalk[aria-pressed="true"] { background: #FFB401; color: #000000; }
-#options .key { margin-left: 6px; padding: 0 6px; border: 1px solid rgba(27, 15, 5, 0.5); border-radius: 4px; font-family: verd, Verdana, sans-serif; font-size: 12px; }
-/* the multiplayer: hosting or joining, then the lobby's cars, race and chat side by side */
-/* the choice: the public rooms beside hosting and joining with a code; on a phone one
+      .view button:focus-visible,
+      .view .go:focus-visible,
+      .view .back:focus-visible {
+        outline: none;
+        background: #ffffff;
+      }
+      .view .back {
+        width: auto;
+        margin-left: auto;
+        padding: 8px 36px;
+      }
+      .view .row {
+        display: flex;
+        gap: 8px;
+      }
+      .view .row input {
+        flex: 1;
+        min-width: 0;
+      }
+      .view .row button {
+        width: auto;
+        flex: none;
+      }
+      @media (forced-colors: active) {
+        .view button,
+        .options-button,
+        .multiplayer-button,
+        .replay-exit {
+          clip-path: none;
+          border: 1px solid ButtonText;
+        }
+        .view button:focus-visible {
+          outline: 3px solid Highlight;
+        }
+      }
+      /* the options: their switches in groups side by side */
+      .option-groups {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
+        gap: 16px;
+        align-items: start;
+      }
+      #options li + li {
+        margin-top: 10px;
+      }
+      #options .state {
+        font-weight: bold;
+        white-space: nowrap;
+      }
+      #options .volume {
+        display: grid;
+        grid-template-columns: 1fr 3.5em;
+        align-items: center;
+        gap: 4px 12px;
+        margin-top: 14px;
+      }
+      #options .volume label {
+        grid-column: 1 / 3;
+        margin: 0;
+        font-family: junk, Verdana, sans-serif;
+        font-size: 17px;
+        color: #ffffff;
+      }
+      #options .volume input {
+        width: 100%;
+        min-height: 44px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: none;
+        accent-color: #01eaff;
+      }
+      #options .volume output {
+        color: #01eaff;
+        font-weight: bold;
+        text-align: right;
+      }
+      #options .volume .hint {
+        grid-column: 1 / 3;
+        margin: 0;
+      }
+      #options .volume input:focus-visible {
+        outline: 3px solid #ffffff;
+        outline-offset: 2px;
+      }
+      #options .ready {
+        margin: 0;
+        color: #ffffff;
+      }
+      #options .kept {
+        margin-top: 10px;
+      }
+      #options .kept progress {
+        width: 100%;
+        height: 10px;
+        accent-color: #01eaff;
+      }
+      #options .kept p {
+        margin: 4px 0 0;
+        color: #01eaff;
+        font-size: 14px;
+      }
+      #options .about p {
+        margin: 0;
+      }
+      #options .about summary {
+        display: flex;
+        align-items: center;
+        min-height: 44px;
+        color: #01eaff;
+        cursor: pointer;
+      }
+      #options .about summary:focus-visible {
+        outline: 3px solid #ffffff;
+        outline-offset: 2px;
+      }
+      #options .about h4 {
+        margin: 12px 0 4px;
+        font-size: 15px;
+        color: #ffffff;
+      }
+      #options .about ul {
+        margin: 0;
+        padding-left: 20px;
+        list-style: disc;
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      #options .about li + li {
+        margin-top: 4px;
+      }
+      #options .name label {
+        display: block;
+        margin: 0 0 6px;
+        font-family: junk, Verdana, sans-serif;
+        font-size: 17px;
+        color: #ffffff;
+      }
+      #options .name input,
+      #options .name select {
+        width: 100%;
+      }
+      /* arranging the touch controls: over the whole screen, the race's dim behind them */
+      .touch-layout {
+        box-sizing: border-box;
+        width: calc(100 * var(--vw));
+        height: calc(100 * var(--vh));
+        max-width: none;
+        max-height: none;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: linear-gradient(160deg, #0a2236, #1d2414);
+        color: #ffffff;
+      }
+      .touch-layout::backdrop {
+        background: transparent;
+      }
+      .touch-layout h2 {
+        margin: 12px 0 0;
+        font-family: junk, Verdana, sans-serif;
+        font-weight: normal;
+        font-size: 20px;
+        text-align: center;
+        color: #ffb401;
+      }
+      .touch-layout .row {
+        position: absolute;
+        left: 50%;
+        top: 48px;
+        transform: translateX(-50%);
+        display: flex;
+        gap: 12px;
+      }
+      .view .touch-control,
+      .view .touch-control:hover {
+        position: absolute;
+        min-height: 0;
+        padding: 0;
+        clip-path: none;
+        border: 2px dashed rgba(255, 255, 255, 0.6);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.15);
+        touch-action: none;
+        cursor: grab;
+      }
+      .touch-control img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+      .view .touch-control:focus-visible {
+        outline: 3px solid #ffffff;
+        outline-offset: 2px;
+        background: rgba(255, 255, 255, 0.35);
+      }
+      .name-tags {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 0;
+        height: 0;
+        pointer-events: none;
+      }
+      .name-tag {
+        position: fixed;
+        left: 0;
+        top: 0;
+        padding: 2px 10px;
+        text-align: center;
+        white-space: nowrap;
+        background: rgba(0, 10, 20, 0.6);
+        border-bottom: 2px solid #01eaff;
+        color: #ffffff;
+        font-family: junk, Verdana, sans-serif;
+        font-size: 15px;
+        text-shadow: 1px 1px 0 #000000;
+      }
+      .name-tag[hidden] {
+        display: none;
+      }
+      .name-tag.in-team {
+        background: color-mix(in srgb, var(--team) 40%, rgba(0, 10, 20, 0.75));
+        border-bottom-color: var(--team);
+      }
+      .name-bars {
+        display: flex;
+        gap: 3px;
+        margin: 2px auto 1px;
+        width: 64px;
+      }
+      .name-bar {
+        flex: 1;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.25);
+      }
+      .name-bar > span {
+        display: block;
+        height: 100%;
+        width: 0;
+      }
+      .name-bar.damage > span {
+        background: #ff4400;
+      }
+      .name-bar.power > span {
+        background: #01eaff;
+      }
+      .view .hint {
+        margin: 6px 0 0;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.75);
+      }
+      .lobby .cards .talking::after {
+        content: " \1F50A";
+        content: " \1F50A" / "";
+      }
+      #lobbyTalk[aria-pressed="true"] {
+        background: #ffb401;
+        color: #000000;
+      }
+      #options .key {
+        margin-left: 6px;
+        padding: 0 6px;
+        border: 1px solid rgba(27, 15, 5, 0.5);
+        border-radius: 4px;
+        font-family: verd, Verdana, sans-serif;
+        font-size: 12px;
+      }
+      /* the multiplayer: hosting or joining, then the lobby's cars, race and chat side by side */
+      /* the choice: the public rooms beside hosting and joining with a code; on a phone one
    below the other, the rooms first */
-.view .choose:not([hidden]) {
-  display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start; max-width: 1000px;
-}
-.choose > .notice { grid-column: 1 / -1; margin: 0; }
-.choose .side { display: grid; gap: 16px; }
-.choose h3 { margin-top: 0; }
-.choose .hint { margin: 0 0 12px; }
-.choose .panel > button { width: 100%; justify-content: center; }
-.choose form label { margin-top: 0; }
-.choose .status { margin: 0; color: rgba(255, 255, 255, 0.8); }
-.choose .status:empty { display: none; }
-@media (max-width: 640px) {
-  .view .choose:not([hidden]) { grid-template-columns: minmax(0, 1fr); gap: 12px; }
-  .choose .side { gap: 12px; }
-}
-.rooms { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
-.rooms:empty { display: none; }
-.rooms li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 2px 12px; padding: 10px 12px; border: 1px solid rgba(1, 234, 255, 0.25); border-radius: 12px; background: rgba(255, 255, 255, 0.06); font-size: 14px; }
-.rooms .who { font-size: 16px; font-weight: bold; overflow-wrap: anywhere; }
-.rooms .race { color: #01eaff; }
-.rooms .count { color: rgba(255, 255, 255, 0.8); }
-.rooms .racing { justify-self: start; margin-top: 4px; padding: 1px 8px; border-radius: 8px; background: #FFB401; color: #000000; font-size: 12px; font-weight: bold; }
-.rooms button { grid-row: 1 / span 4; grid-column: 2; min-height: 44px; padding: 4px 22px; font-size: 15px; }
-.view .room-line { margin: 0; font-size: 16px; }
-.view .room { font-size: 26px; letter-spacing: 3px; color: #01eaff; }
-/* wide: the players, the race, you over the chat (Start in sight); narrower: the race and
+      .view .choose:not([hidden]) {
+        display: grid;
+        grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+        gap: 16px;
+        align-items: start;
+        max-width: 1000px;
+      }
+      .choose > .notice {
+        grid-column: 1 / -1;
+        margin: 0;
+      }
+      .choose .side {
+        display: grid;
+        gap: 16px;
+      }
+      .choose h3 {
+        margin-top: 0;
+      }
+      .choose .hint {
+        margin: 0 0 12px;
+      }
+      .choose .panel > button {
+        width: 100%;
+        justify-content: center;
+      }
+      .choose form label {
+        margin-top: 0;
+      }
+      .choose .status {
+        margin: 0;
+        color: rgba(255, 255, 255, 0.8);
+      }
+      .choose .status:empty {
+        display: none;
+      }
+      @media (max-width: 640px) {
+        .view .choose:not([hidden]) {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 12px;
+        }
+        .choose .side {
+          gap: 12px;
+        }
+      }
+      .rooms {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: grid;
+        gap: 8px;
+      }
+      .rooms:empty {
+        display: none;
+      }
+      .rooms li {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        align-items: center;
+        gap: 2px 12px;
+        padding: 10px 12px;
+        border: 1px solid rgba(1, 234, 255, 0.25);
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.06);
+        font-size: 14px;
+      }
+      .rooms .who {
+        font-size: 16px;
+        font-weight: bold;
+        overflow-wrap: anywhere;
+      }
+      .rooms .race {
+        color: #01eaff;
+      }
+      .rooms .count {
+        color: rgba(255, 255, 255, 0.8);
+      }
+      .rooms .racing {
+        justify-self: start;
+        margin-top: 4px;
+        padding: 1px 8px;
+        border-radius: 8px;
+        background: #ffb401;
+        color: #000000;
+        font-size: 12px;
+        font-weight: bold;
+      }
+      .rooms button {
+        grid-row: 1 / span 4;
+        grid-column: 2;
+        min-height: 44px;
+        padding: 4px 22px;
+        font-size: 15px;
+      }
+      .view .room-line {
+        margin: 0;
+        font-size: 16px;
+      }
+      .view .room {
+        font-size: 26px;
+        letter-spacing: 3px;
+        color: #01eaff;
+      }
+      /* wide: the players, the race, you over the chat (Start in sight); narrower: the race and
    you side by side over the players and the chat; on a phone one below the other, what to
    choose first */
-.lobby:not([hidden]) {
-  display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
-  grid-template-areas: "field race you" "field race chat"; grid-template-rows: auto 1fr; gap: 16px; align-items: start;
-}
-.lobby > .field { grid-area: field; }
-.lobby > .race { grid-area: race; }
-.lobby > .you { grid-area: you; }
-.lobby > .chat { grid-area: chat; }
-@media (max-width: 1100px) {
-  .lobby:not([hidden]) { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-areas: "race you" "field field" "chat chat"; grid-template-rows: none; }
-}
-@media (max-width: 640px) {
-  .lobby:not([hidden]) { grid-template-columns: minmax(0, 1fr); grid-template-areas: "race" "you" "field" "chat"; gap: 12px; }
-  .menu-dialog.view { padding: 12px; }
-  .view .panel { padding: 12px 12px 14px; }
-  .lobby .cards { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 8px; }
-}
-.lobby .settings:not([hidden]) { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(130px, 100%), 1fr)); gap: 12px; }
-#multiplayerBots h3 { margin-top: 20px; }
-.lobby .settings .wide { grid-column: 1 / -1; }
-.lobby .setting label { margin: 0 0 6px; }
-.lobby .setting select { width: 100%; }
-.lobby .setting .car-choice { width: 100%; margin: 0; text-align: left; }
-.lobby .setting .car-choice::after { content: "  \203A"; }
-.lobby .share { margin-bottom: 14px; }
-.lobby .share label { margin-top: 0; }
-.lobby .rules:not([hidden]) { display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; margin: 0; font-size: 15px; }
-.lobby .rules dt { color: rgba(255, 255, 255, 0.75); }
-.lobby .rules dd { margin: 0; font-weight: bold; color: #ffffff; }
-.lobby .cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; }
-.view .cards li + li { margin-top: 0; }
-.lobby .cards li { display: flex; flex-direction: column; gap: 4px; padding: 8px 10px 10px; border: 2px solid transparent; border-radius: 12px; background: rgba(255, 255, 255, 0.07); font-size: 14px; }
-.lobby .cards li.you { border-color: #FFB401; }
-.lobby .car-preview { display: block; width: 100%; aspect-ratio: 5 / 3; }
-.lobby .cards .who { font-weight: bold; }
-.lobby .cards .car { color: #01eaff; }
-.lobby .cards .ready { color: #9ff5b4; }
-.lobby .cards .ready::before { content: "\2713  "; }
-.lobby .cards .waiting { color: rgba(255, 255, 255, 0.7); }
-.lobby .cards .away { color: #ffd76a; }
-.lobby .cards .near { color: rgba(255, 255, 255, 0.85); }
-.lobby .cards .near::before { content: "\21C4  "; }
-.lobby .cards .team::before { content: "\25CF  "; color: var(--team); }
-.lobby .cards label { margin: 0; font-weight: bold; }
-.lobby .cards select { min-height: 44px; padding: 4px 10px; font-size: 14px; }
-.lobby .cards button { min-height: 44px; padding: 4px 18px; font-size: 14px; }
-#multiplayerAddBot { width: auto; margin-top: 10px; }
-.lobby .status { margin: 14px 0 6px; color: #01eaff; }
-.lobby .status:empty { display: none; }
-.lobby .panel > button { width: 100%; justify-content: center; margin-top: 8px; }
-#lobbyChat { list-style: none; margin: 0; padding: 8px 12px; height: max(160px, calc(40 * var(--vh))); overflow-y: auto; border-radius: 12px; background: rgba(0, 0, 0, 0.4); font-size: 14px; line-height: 1.4; overflow-wrap: anywhere; }
-#lobbyChat li + li { margin-top: 4px; }
-#lobbyChat .from { color: #01eaff; font-weight: bold; }
-#lobbyChatForm label { margin-top: 10px; }
-/* the stage editor: a bar of tools, the palette of pieces and the map (see src/editor/) */
-.editor-button {
-  position: fixed; top: 60px; right: 8px; min-height: 44px; padding: 0 16px;
-  border-radius: 22px; border: 1px solid rgba(1, 234, 255, 0.6);
-  background: rgba(0, 16, 32, 0.7); color: #ffffff; font-family: verd, Verdana, sans-serif;
-  font-size: 15px; cursor: pointer;
-}
-.stage-editor {
-  box-sizing: border-box; width: calc(100 * var(--vw)); height: calc(100 * var(--vh)); max-width: none; max-height: none;
-  margin: 0; padding: 0; border: 0; background: #0b1418; color: #ffffff;
-  font-family: verd, Verdana, sans-serif;
-}
-.stage-editor[open] {
-  display: grid; grid-template-columns: 230px 1fr 260px; grid-template-rows: auto 1fr auto;
-  height: calc(100 * var(--vh));
-}
-.stage-editor .editor-bar {
-  grid-column: 1 / 4; display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
-  padding: 8px 12px; border-bottom: 1px solid rgba(1, 234, 255, 0.4);
-}
-.stage-editor h2 { margin: 0 8px 0 0; font-size: 18px; }
-.stage-editor .editor-bar .spacer { flex: 1; }
-.stage-editor .editor-bar button { padding: 6px 12px; }
-.stage-editor .editor-bar { flex-wrap: nowrap; overflow-x: auto; }
-#editorName { width: 150px; }
-#editorHelpButton { min-width: 44px; font-weight: bold; }
-.stage-editor button {
-  min-height: 44px; padding: 6px 14px; border: 1px solid rgba(1, 234, 255, 0.4);
-  border-radius: 22px; background: rgba(255, 255, 255, 0.08); color: #ffffff;
-  font: inherit; font-size: 14px; cursor: pointer;
-}
-.stage-editor button:hover { background: rgba(1, 234, 255, 0.25); }
-.stage-editor kbd { padding: 1px 6px; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 5px; font: inherit; font-size: 12px; }
-.stage-editor button:disabled { opacity: 0.45; cursor: not-allowed; background: transparent; }
-.stage-editor button:focus-visible, .stage-editor input:focus-visible,
-.stage-editor canvas:focus-visible, .editor-button:focus-visible {
-  outline: 3px solid #ffffff; outline-offset: 2px;
-}
-.stage-editor input {
-  min-height: 44px; box-sizing: border-box; padding: 6px 14px; border-radius: 22px;
-  border: 1px solid rgba(1, 234, 255, 0.6); background: rgba(0, 0, 0, 0.4); color: #ffffff;
-  font: inherit; font-size: 14px;
-}
-.stage-editor .label { font-size: 14px; }
-#editorPalette { overflow-y: auto; padding: 4px 10px 12px; border-right: 1px solid rgba(1, 234, 255, 0.4); }
-#editorPalette h3 { margin: 12px 0 6px; font-size: 14px; color: #01eaff; }
-#editorPalette ul { list-style: none; margin: 0; padding: 0; }
-#editorPalette button {
-  display: flex; align-items: center; gap: 8px; width: 100%; margin-top: 4px;
-  padding: 2px 10px 2px 2px; border-radius: 10px; text-align: left;
-}
-#editorPalette button[aria-pressed="true"] { background: rgba(1, 234, 255, 0.35); border-color: #01eaff; }
-#editorPalette canvas { width: 40px; height: 40px; flex: none; }
-#editorMap { width: 100%; height: 100%; display: block; touch-action: none; cursor: crosshair; min-height: 0; }
-/* (the 3D view, drawn on the game's canvas behind, shows through the map) */
-.stage-editor.three-d { background: transparent; }
-.stage-editor.three-d::backdrop { background: transparent; }
-.stage-editor.three-d .editor-bar, .stage-editor.three-d #editorPalette,
-.stage-editor.three-d #editorInspector, .stage-editor.three-d #editorStatus { background: #0b1418; }
-.stage-editor.three-d #editorMap { cursor: grab; }
-#editorInspector { overflow-y: auto; padding: 4px 12px 12px; border-left: 1px solid rgba(1, 234, 255, 0.4); font-size: 14px; }
-#editorInspector h3 { margin: 12px 0 6px; font-size: 14px; color: #01eaff; }
-#editorInspector p { margin: 6px 0; line-height: 1.4; }
-#editorInspector .piece { font-weight: bold; }
-#editorPreview { margin: 0 0 8px; }
-#editorPreview canvas { display: block; width: 100%; aspect-ratio: 3 / 2; border-radius: 10px; background: radial-gradient(circle at 50% 60%, #9fb6c2, #4b6372 80%); }
-#editorPreview figcaption { margin-top: 4px; font-size: 12px; color: rgba(255, 255, 255, 0.75); }
-#editorInspector label { display: block; margin: 10px 0 4px; }
-#editorInspector .row { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 8px; }
-#editorInspector .row label { display: inline; margin: 0; }
-#editorInspector .row input[type="checkbox"] { width: 22px; height: 22px; margin: 0; flex: none; }
-#editorInspector select, #editorInspector input[type="number"] {
-  box-sizing: border-box; width: 100%; min-height: 44px; padding: 6px 10px; border-radius: 10px;
-  border: 1px solid rgba(1, 234, 255, 0.6); background: rgba(0, 0, 0, 0.4); color: #ffffff; font: inherit;
-}
-#editorInspector select:focus-visible, #editorInspector input:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
-#editorProblems { list-style: none; margin: 0; padding: 0; }
-#editorInspector .hint { margin: 4px 0 8px; font-size: 12px; color: rgba(255, 255, 255, 0.75); }
-#editorInspector input[type="range"] { width: 100%; min-height: 44px; margin: 4px 0 0; padding: 0; border: 0; background: none; accent-color: #01EAFF; }
-#editorPath { list-style: none; margin: 0; padding: 0; max-height: calc(34 * var(--vh)); overflow-y: auto; }
-#editorPath li { display: flex; gap: 4px; margin-top: 4px; }
-#editorPath li > button:first-child { flex: 1; min-width: 0; text-align: left; border-radius: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#editorPath li > button:first-child[aria-current="true"] { background: rgba(255, 180, 1, 0.3); border-color: #FFB401; }
-#editorPath .step { width: 44px; padding: 0; flex: none; }
-#editorProblems li { margin-top: 6px; color: #ffd2c8; }
-#editorProblems .ready { color: #9ff5b4; }
-#editorProblems .ready::before { content: "\2713  "; }
-#editorProblems li:not(.ready)::before { content: "\26A0  "; }
-#editorProblems button { width: 100%; text-align: left; border-radius: 10px; color: #ffd2c8; }
-#editorStages select { box-sizing: border-box; width: 100%; min-height: 44px; padding: 8px 14px; border: 1px solid rgba(1, 234, 255, 0.6); border-radius: 22px; background: rgba(0, 0, 0, 0.4); color: #ffffff; font: inherit; font-size: 15px; }
-#editorStages .row { display: flex; gap: 8px; }
-#editorStages .row button { width: auto; flex: none; justify-content: center; }
-#editorStageList { max-height: calc(40 * var(--vh)); overflow-y: auto; margin-bottom: 12px; }
-#editorStageList li { padding: 6px 0; border-bottom: 1px solid rgba(1, 234, 255, 0.2); }
-#editorStageList .name { display: block; margin-bottom: 4px; }
-#editorStages input[type="file"] { padding: 10px 14px; }
-#editorStages > button { margin-top: 8px; justify-content: center; }
-#editorStages select:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
-#editorSettings select { box-sizing: border-box; width: 100%; min-height: 44px; padding: 8px 14px; border: 1px solid rgba(1, 234, 255, 0.6); border-radius: 22px; background: rgba(0, 0, 0, 0.4); color: #ffffff; font: inherit; font-size: 15px; }
-#editorSettings .row { display: flex; gap: 8px; }
-#editorSettings .row button { width: auto; flex: none; justify-content: center; }
-#editorSettings .colors { display: grid; grid-template-columns: auto 1fr auto 1fr; align-items: center; gap: 8px 10px; margin-top: 16px; }
-#editorSettings .colors label { margin: 0; }
-#editorSettings input[type="color"] { min-height: 44px; padding: 2px; border-radius: 10px; }
-#editorSettings select:focus-visible { outline: 3px solid #ffffff; outline-offset: 2px; }
-#editorHelp { max-width: 640px; }
-#editorHelp h3 { margin: 16px 0 6px; font-size: 16px; color: #01eaff; }
-#editorHelp li { font-size: 14px; line-height: 1.4; }
-#editorHelp ul.points li::before { content: "\2022  "; color: #01eaff; }
-#editorHelp dl { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; font-size: 14px; }
-#editorHelp dt { white-space: nowrap; }
-#editorHelp dd { margin: 0; }
-#editorStatus { grid-column: 1 / 4; margin: 0; padding: 8px 12px; font-size: 14px; border-top: 1px solid rgba(1, 234, 255, 0.4); }
-/* the main menu's buttons over the canvas, as wide and high as the canvas draws its own
+      .lobby:not([hidden]) {
+        display: grid;
+        grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr) minmax(0, 1fr);
+        grid-template-areas: "field race you" "field race chat";
+        grid-template-rows: auto 1fr;
+        gap: 16px;
+        align-items: start;
+      }
+      .lobby > .field {
+        grid-area: field;
+      }
+      .lobby > .race {
+        grid-area: race;
+      }
+      .lobby > .you {
+        grid-area: you;
+      }
+      .lobby > .chat {
+        grid-area: chat;
+      }
+      @media (max-width: 1100px) {
+        .lobby:not([hidden]) {
+          grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+          grid-template-areas: "race you" "field field" "chat chat";
+          grid-template-rows: none;
+        }
+      }
+      @media (max-width: 640px) {
+        .lobby:not([hidden]) {
+          grid-template-columns: minmax(0, 1fr);
+          grid-template-areas: "race" "you" "field" "chat";
+          gap: 12px;
+        }
+        .menu-dialog.view {
+          padding: 12px;
+        }
+        .view .panel {
+          padding: 12px 12px 14px;
+        }
+        .lobby .cards {
+          grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+          gap: 8px;
+        }
+      }
+      .lobby .settings:not([hidden]) {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(min(130px, 100%), 1fr));
+        gap: 12px;
+      }
+      #multiplayerBots h3 {
+        margin-top: 20px;
+      }
+      .lobby .settings .wide {
+        grid-column: 1 / -1;
+      }
+      .lobby .setting label {
+        margin: 0 0 6px;
+      }
+      .lobby .setting select {
+        width: 100%;
+      }
+      .lobby .setting .car-choice {
+        width: 100%;
+        margin: 0;
+        text-align: left;
+      }
+      .lobby .setting .car-choice::after {
+        content: "  \203A";
+      }
+      .lobby .share {
+        margin-bottom: 14px;
+      }
+      .lobby .share label {
+        margin-top: 0;
+      }
+      .lobby .rules:not([hidden]) {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 6px 16px;
+        margin: 0;
+        font-size: 15px;
+      }
+      .lobby .rules dt {
+        color: rgba(255, 255, 255, 0.75);
+      }
+      .lobby .rules dd {
+        margin: 0;
+        font-weight: bold;
+        color: #ffffff;
+      }
+      .lobby .cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 10px;
+      }
+      .view .cards li + li {
+        margin-top: 0;
+      }
+      .lobby .cards li {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        padding: 8px 10px 10px;
+        border: 2px solid transparent;
+        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.07);
+        font-size: 14px;
+      }
+      .lobby .cards li.you {
+        border-color: #ffb401;
+      }
+      .lobby .car-preview {
+        display: block;
+        width: 100%;
+        aspect-ratio: 5 / 3;
+      }
+      .lobby .cards .who {
+        font-weight: bold;
+      }
+      .lobby .cards .car {
+        color: #01eaff;
+      }
+      .lobby .cards .ready {
+        color: #9ff5b4;
+      }
+      .lobby .cards .ready::before {
+        content: "\2713  ";
+      }
+      .lobby .cards .waiting {
+        color: rgba(255, 255, 255, 0.7);
+      }
+      .lobby .cards .away {
+        color: #ffd76a;
+      }
+      .lobby .cards .near {
+        color: rgba(255, 255, 255, 0.85);
+      }
+      .lobby .cards .near::before {
+        content: "\21C4  ";
+      }
+      .lobby .cards .team::before {
+        content: "\25CF  ";
+        color: var(--team);
+      }
+      .lobby .cards label {
+        margin: 0;
+        font-weight: bold;
+      }
+      .lobby .cards select {
+        min-height: 44px;
+        padding: 4px 10px;
+        font-size: 14px;
+      }
+      .lobby .cards button {
+        min-height: 44px;
+        padding: 4px 18px;
+        font-size: 14px;
+      }
+      #multiplayerAddBot {
+        width: auto;
+        margin-top: 10px;
+      }
+      .lobby .status {
+        margin: 14px 0 6px;
+        color: #01eaff;
+      }
+      .lobby .status:empty {
+        display: none;
+      }
+      .lobby .panel > button {
+        width: 100%;
+        justify-content: center;
+        margin-top: 8px;
+      }
+      #lobbyChat {
+        list-style: none;
+        margin: 0;
+        padding: 8px 12px;
+        height: max(160px, calc(40 * var(--vh)));
+        overflow-y: auto;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.4);
+        font-size: 14px;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+      }
+      #lobbyChat li + li {
+        margin-top: 4px;
+      }
+      #lobbyChat .from {
+        color: #01eaff;
+        font-weight: bold;
+      }
+      #lobbyChatForm label {
+        margin-top: 10px;
+      }
+      /* the stage editor: a bar of tools, the palette of pieces and the map (see src/editor/) */
+      .editor-button {
+        position: fixed;
+        top: 60px;
+        right: 8px;
+        min-height: 44px;
+        padding: 0 16px;
+        border-radius: 22px;
+        border: 1px solid rgba(1, 234, 255, 0.6);
+        background: rgba(0, 16, 32, 0.7);
+        color: #ffffff;
+        font-family: verd, Verdana, sans-serif;
+        font-size: 15px;
+        cursor: pointer;
+      }
+      .stage-editor {
+        box-sizing: border-box;
+        width: calc(100 * var(--vw));
+        height: calc(100 * var(--vh));
+        max-width: none;
+        max-height: none;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: #0b1418;
+        color: #ffffff;
+        font-family: verd, Verdana, sans-serif;
+      }
+      .stage-editor[open] {
+        display: grid;
+        grid-template-columns: 230px 1fr 260px;
+        grid-template-rows: auto 1fr auto;
+        height: calc(100 * var(--vh));
+      }
+      .stage-editor .editor-bar {
+        grid-column: 1 / 4;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid rgba(1, 234, 255, 0.4);
+      }
+      .stage-editor h2 {
+        margin: 0 8px 0 0;
+        font-size: 18px;
+      }
+      .stage-editor .editor-bar .spacer {
+        flex: 1;
+      }
+      .stage-editor .editor-bar button {
+        padding: 6px 12px;
+      }
+      .stage-editor .editor-bar {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+      }
+      #editorName {
+        width: 150px;
+      }
+      #editorHelpButton {
+        min-width: 44px;
+        font-weight: bold;
+      }
+      .stage-editor button {
+        min-height: 44px;
+        padding: 6px 14px;
+        border: 1px solid rgba(1, 234, 255, 0.4);
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.08);
+        color: #ffffff;
+        font: inherit;
+        font-size: 14px;
+        cursor: pointer;
+      }
+      .stage-editor button:hover {
+        background: rgba(1, 234, 255, 0.25);
+      }
+      .stage-editor kbd {
+        padding: 1px 6px;
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        border-radius: 5px;
+        font: inherit;
+        font-size: 12px;
+      }
+      .stage-editor button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+        background: transparent;
+      }
+      .stage-editor button:focus-visible,
+      .stage-editor input:focus-visible,
+      .stage-editor canvas:focus-visible,
+      .editor-button:focus-visible {
+        outline: 3px solid #ffffff;
+        outline-offset: 2px;
+      }
+      .stage-editor input {
+        min-height: 44px;
+        box-sizing: border-box;
+        padding: 6px 14px;
+        border-radius: 22px;
+        border: 1px solid rgba(1, 234, 255, 0.6);
+        background: rgba(0, 0, 0, 0.4);
+        color: #ffffff;
+        font: inherit;
+        font-size: 14px;
+      }
+      .stage-editor .label {
+        font-size: 14px;
+      }
+      #editorPalette {
+        overflow-y: auto;
+        padding: 4px 10px 12px;
+        border-right: 1px solid rgba(1, 234, 255, 0.4);
+      }
+      #editorPalette h3 {
+        margin: 12px 0 6px;
+        font-size: 14px;
+        color: #01eaff;
+      }
+      #editorPalette ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      #editorPalette button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        width: 100%;
+        margin-top: 4px;
+        padding: 2px 10px 2px 2px;
+        border-radius: 10px;
+        text-align: left;
+      }
+      #editorPalette button[aria-pressed="true"] {
+        background: rgba(1, 234, 255, 0.35);
+        border-color: #01eaff;
+      }
+      #editorPalette canvas {
+        width: 40px;
+        height: 40px;
+        flex: none;
+      }
+      #editorMap {
+        width: 100%;
+        height: 100%;
+        display: block;
+        touch-action: none;
+        cursor: crosshair;
+        min-height: 0;
+      }
+      /* (the 3D view, drawn on the game's canvas behind, shows through the map) */
+      .stage-editor.three-d {
+        background: transparent;
+      }
+      .stage-editor.three-d::backdrop {
+        background: transparent;
+      }
+      .stage-editor.three-d .editor-bar,
+      .stage-editor.three-d #editorPalette,
+      .stage-editor.three-d #editorInspector,
+      .stage-editor.three-d #editorStatus {
+        background: #0b1418;
+      }
+      .stage-editor.three-d #editorMap {
+        cursor: grab;
+      }
+      #editorInspector {
+        overflow-y: auto;
+        padding: 4px 12px 12px;
+        border-left: 1px solid rgba(1, 234, 255, 0.4);
+        font-size: 14px;
+      }
+      #editorInspector h3 {
+        margin: 12px 0 6px;
+        font-size: 14px;
+        color: #01eaff;
+      }
+      #editorInspector p {
+        margin: 6px 0;
+        line-height: 1.4;
+      }
+      #editorInspector .piece {
+        font-weight: bold;
+      }
+      #editorPreview {
+        margin: 0 0 8px;
+      }
+      #editorPreview canvas {
+        display: block;
+        width: 100%;
+        aspect-ratio: 3 / 2;
+        border-radius: 10px;
+        background: radial-gradient(circle at 50% 60%, #9fb6c2, #4b6372 80%);
+      }
+      #editorPreview figcaption {
+        margin-top: 4px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.75);
+      }
+      #editorInspector label {
+        display: block;
+        margin: 10px 0 4px;
+      }
+      #editorInspector .row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      #editorInspector .row label {
+        display: inline;
+        margin: 0;
+      }
+      #editorInspector .row input[type="checkbox"] {
+        width: 22px;
+        height: 22px;
+        margin: 0;
+        flex: none;
+      }
+      #editorInspector select,
+      #editorInspector input[type="number"] {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 44px;
+        padding: 6px 10px;
+        border-radius: 10px;
+        border: 1px solid rgba(1, 234, 255, 0.6);
+        background: rgba(0, 0, 0, 0.4);
+        color: #ffffff;
+        font: inherit;
+      }
+      #editorInspector select:focus-visible,
+      #editorInspector input:focus-visible {
+        outline: 3px solid #ffffff;
+        outline-offset: 2px;
+      }
+      #editorProblems {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      #editorInspector .hint {
+        margin: 4px 0 8px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, 0.75);
+      }
+      #editorInspector input[type="range"] {
+        width: 100%;
+        min-height: 44px;
+        margin: 4px 0 0;
+        padding: 0;
+        border: 0;
+        background: none;
+        accent-color: #01eaff;
+      }
+      #editorPath {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        max-height: calc(34 * var(--vh));
+        overflow-y: auto;
+      }
+      #editorPath li {
+        display: flex;
+        gap: 4px;
+        margin-top: 4px;
+      }
+      #editorPath li > button:first-child {
+        flex: 1;
+        min-width: 0;
+        text-align: left;
+        border-radius: 10px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      #editorPath li > button:first-child[aria-current="true"] {
+        background: rgba(255, 180, 1, 0.3);
+        border-color: #ffb401;
+      }
+      #editorPath .step {
+        width: 44px;
+        padding: 0;
+        flex: none;
+      }
+      #editorProblems li {
+        margin-top: 6px;
+        color: #ffd2c8;
+      }
+      #editorProblems .ready {
+        color: #9ff5b4;
+      }
+      #editorProblems .ready::before {
+        content: "\2713  ";
+      }
+      #editorProblems li:not(.ready)::before {
+        content: "\26A0  ";
+      }
+      #editorProblems button {
+        width: 100%;
+        text-align: left;
+        border-radius: 10px;
+        color: #ffd2c8;
+      }
+      #editorStages select {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 44px;
+        padding: 8px 14px;
+        border: 1px solid rgba(1, 234, 255, 0.6);
+        border-radius: 22px;
+        background: rgba(0, 0, 0, 0.4);
+        color: #ffffff;
+        font: inherit;
+        font-size: 15px;
+      }
+      #editorStages .row {
+        display: flex;
+        gap: 8px;
+      }
+      #editorStages .row button {
+        width: auto;
+        flex: none;
+        justify-content: center;
+      }
+      #editorStageList {
+        max-height: calc(40 * var(--vh));
+        overflow-y: auto;
+        margin-bottom: 12px;
+      }
+      #editorStageList li {
+        padding: 6px 0;
+        border-bottom: 1px solid rgba(1, 234, 255, 0.2);
+      }
+      #editorStageList .name {
+        display: block;
+        margin-bottom: 4px;
+      }
+      #editorStages input[type="file"] {
+        padding: 10px 14px;
+      }
+      #editorStages > button {
+        margin-top: 8px;
+        justify-content: center;
+      }
+      #editorStages select:focus-visible {
+        outline: 3px solid #ffffff;
+        outline-offset: 2px;
+      }
+      #editorSettings select {
+        box-sizing: border-box;
+        width: 100%;
+        min-height: 44px;
+        padding: 8px 14px;
+        border: 1px solid rgba(1, 234, 255, 0.6);
+        border-radius: 22px;
+        background: rgba(0, 0, 0, 0.4);
+        color: #ffffff;
+        font: inherit;
+        font-size: 15px;
+      }
+      #editorSettings .row {
+        display: flex;
+        gap: 8px;
+      }
+      #editorSettings .row button {
+        width: auto;
+        flex: none;
+        justify-content: center;
+      }
+      #editorSettings .colors {
+        display: grid;
+        grid-template-columns: auto 1fr auto 1fr;
+        align-items: center;
+        gap: 8px 10px;
+        margin-top: 16px;
+      }
+      #editorSettings .colors label {
+        margin: 0;
+      }
+      #editorSettings input[type="color"] {
+        min-height: 44px;
+        padding: 2px;
+        border-radius: 10px;
+      }
+      #editorSettings select:focus-visible {
+        outline: 3px solid #ffffff;
+        outline-offset: 2px;
+      }
+      #editorHelp {
+        max-width: 640px;
+      }
+      #editorHelp h3 {
+        margin: 16px 0 6px;
+        font-size: 16px;
+        color: #01eaff;
+      }
+      #editorHelp li {
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      #editorHelp ul.points li::before {
+        content: "\2022  ";
+        color: #01eaff;
+      }
+      #editorHelp dl {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 6px 14px;
+        margin: 0;
+        font-size: 14px;
+      }
+      #editorHelp dt {
+        white-space: nowrap;
+      }
+      #editorHelp dd {
+        margin: 0;
+      }
+      #editorStatus {
+        grid-column: 1 / 4;
+        margin: 0;
+        padding: 8px 12px;
+        font-size: 14px;
+        border-top: 1px solid rgba(1, 234, 255, 0.4);
+      }
+      /* the main menu's buttons over the canvas, as wide and high as the canvas draws its own
    (720 of its pixels are the screen's height) */
-.main-menu {
-  position: fixed; inset: auto calc(2.5 * var(--vh)) calc(2.5 * var(--vh)) auto; padding: calc(0.5 * var(--vh)); max-height: calc(95 * var(--vh));
-  overflow-y: auto;
-}
-.main-menu ul {
-  display: flex; flex-direction: column; align-items: flex-end; gap: calc(1.4 * var(--vh));
-  list-style: none; margin: 0; padding: 0;
-}
-.main-menu li { filter: drop-shadow(calc(0.7 * var(--vh)) calc(0.7 * var(--vh)) 0 #780800); }
-.main-menu li:has(.play) { filter: drop-shadow(calc(0.7 * var(--vh)) calc(0.7 * var(--vh)) 0 #771D01); }
-.main-menu li:has(#menuMultiplayer), .main-menu .more li { filter: drop-shadow(calc(0.6 * var(--vh)) calc(0.6 * var(--vh)) 0 #004A78); }
-.main-menu li.more { filter: none; }
-/* the other screens two by two under the races */
-.main-menu .more ul { display: grid; grid-template-columns: 1fr 1fr; gap: calc(1.2 * var(--vh)) calc(1.6 * var(--vh)); width: calc(46 * var(--vh)); }
-.main-menu button {
-  width: calc(46 * var(--vh)); min-height: max(44px, calc(6.5 * var(--vh))); padding: 0 calc(3 * var(--vh)); border: 0;
-  clip-path: polygon(calc(3 * var(--vh)) 0, 100% 0, calc(100% - calc(3 * var(--vh))) 100%, 0 100%);
-  background: linear-gradient(90deg, #FF1301, #FF8A01); color: #1B0F05;
-  font-family: junk, Verdana, sans-serif; font-size: max(17px, calc(3.4 * var(--vh))); cursor: pointer;
-}
-.main-menu .play { width: calc(34 * var(--vh)); min-height: max(52px, calc(9 * var(--vh))); font-size: max(22px, calc(5 * var(--vh))); background: linear-gradient(90deg, #FF3D01, #FFB401); }
-#menuMultiplayer, .main-menu .small { background: linear-gradient(90deg, #019DFF, #01EAFF); }
-.main-menu .small {
-  width: 100%; min-height: max(44px, calc(5.5 * var(--vh))); padding: 0 calc(2 * var(--vh)); font-size: max(14px, calc(2.5 * var(--vh)));
-  clip-path: polygon(calc(2 * var(--vh)) 0, 100% 0, calc(100% - calc(2 * var(--vh))) 100%, 0 100%);
-}
-.main-menu button:hover { filter: brightness(1.15); }
-/* (an outline would be cut off with the corners: the focused button turns white) */
-#mainMenu button:focus-visible { outline: none; background: #ffffff; }
-.main-menu li:not(.more):has(:focus-visible) { filter: drop-shadow(0 0 calc(0.5 * var(--vh)) #ffffff) drop-shadow(calc(0.7 * var(--vh)) calc(0.7 * var(--vh)) 0 #000000); }
-@media (forced-colors: active) {
-  .main-menu button { clip-path: none; border: 1px solid ButtonText; }
-  .main-menu button:focus-visible { outline: 3px solid Highlight; }
-}
-/* phones held upright: the game turned a quarter, as iOS lets no page keep itself sideways
+      .main-menu {
+        position: fixed;
+        inset: auto calc(2.5 * var(--vh)) calc(2.5 * var(--vh)) auto;
+        padding: calc(0.5 * var(--vh));
+        max-height: calc(95 * var(--vh));
+        overflow-y: auto;
+      }
+      .main-menu ul {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: calc(1.4 * var(--vh));
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .main-menu li {
+        filter: drop-shadow(
+          calc(0.7 * var(--vh)) calc(0.7 * var(--vh)) 0 #780800
+        );
+      }
+      .main-menu li:has(.play) {
+        filter: drop-shadow(
+          calc(0.7 * var(--vh)) calc(0.7 * var(--vh)) 0 #771d01
+        );
+      }
+      .main-menu li:has(#menuMultiplayer),
+      .main-menu .more li {
+        filter: drop-shadow(
+          calc(0.6 * var(--vh)) calc(0.6 * var(--vh)) 0 #004a78
+        );
+      }
+      .main-menu li.more {
+        filter: none;
+      }
+      /* the other screens two by two under the races */
+      .main-menu .more ul {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: calc(1.2 * var(--vh)) calc(1.6 * var(--vh));
+        width: calc(46 * var(--vh));
+      }
+      .main-menu button {
+        width: calc(46 * var(--vh));
+        min-height: max(40px, calc(6 * var(--vh)));
+        padding: 0 calc(3 * var(--vh));
+        border: 0;
+        /* clip-path: polygon(calc(3 * var(--vh)) 0, 100% 0, calc(100% - calc(3 * var(--vh))) 100%, 0 100%); */
+        clip-path: polygon(
+          min(8%, 16px) 0%,
+          max(92%, 100% - 20px) 0%,
+          max(94%, 100% - 12px) 8%,
+          100% 67%,
+          max(92%, 100% - 20px) 100%,
+          min(8%, 20px) 100%,
+          min(6%, 12px) 92%,
+          0% 33%
+        );
+        background: linear-gradient(90deg, #ff1301, #ff8a01);
+        color: #1b0f05;
+        font-family: junk, Verdana, sans-serif;
+        font-size: max(18px, calc(3.4 * var(--vh)));
+        cursor: pointer;
+      }
+      .main-menu .play {
+        width: calc(34 * var(--vh));
+        min-height: max(52px, calc(9 * var(--vh)));
+        font-size: max(22px, calc(5 * var(--vh)));
+        background: linear-gradient(90deg, #ff3d01, #ffb401);
+      }
+      #menuMultiplayer,
+      .main-menu .small {
+        background: linear-gradient(90deg, #0075d8, #299dff);
+      }
+      .main-menu .small {
+        width: 100%;
+        min-height: max(40px, calc(5.5 * var(--vh)));
+        padding: 0 calc(2 * var(--vh));
+        font-size: max(14px, calc(2.5 * var(--vh)));
+        /* clip-path: polygon(calc(2 * var(--vh)) 0, 100% 0, calc(100% - calc(2 * var(--vh))) 100%, 0 100%); */
+        clip-path: polygon(
+          min(8%, 16px) 0%,
+          max(92%, 100% - 20px) 0%,
+          max(94%, 100% - 12px) 8%,
+          100% 67%,
+          max(92%, 100% - 20px) 100%,
+          min(8%, 20px) 100%,
+          min(6%, 12px) 92%,
+          0% 33%
+        );
+      }
+      .main-menu button:hover {
+        filter: brightness(1.15);
+      }
+      /* (an outline would be cut off with the corners: the focused button turns white) */
+      #mainMenu button:focus-visible {
+        outline: none;
+        background: #ffffff;
+      }
+      .main-menu li:not(.more):has(:focus-visible) {
+        filter: drop-shadow(0 0 calc(0.5 * var(--vh)) #ffffff)
+          drop-shadow(calc(0.7 * var(--vh)) calc(0.7 * var(--vh)) 0 #000000);
+      }
+      @media (forced-colors: active) {
+        .main-menu button {
+          clip-path: none;
+          border: 1px solid ButtonText;
+        }
+        .main-menu button:focus-visible {
+          outline: 3px solid Highlight;
+        }
+      }
+      /* phones held upright: the game turned a quarter, as iOS lets no page keep itself sideways
    (see turnIfUpright in ui/view.js); the views' viewport units turn with it (set in pixels
    there, these until it runs) */
-:root { --vh: 1vh; --vw: 1vw; }
-html.turned { --vh: 1vw; --vw: 1vh; }
-html.turned body {
-  position: fixed; left: 0; top: 0; width: calc(100 * var(--vw)); height: calc(100 * var(--vh));
-  transform-origin: 0 0; transform: translateX(calc(100 * var(--vh))) rotate(90deg);
-}
-/* (a modal dialog lies over the page, not in it: turned about its middle, moved to the
+      :root {
+        --vh: 1vh;
+        --vw: 1vw;
+      }
+      html.turned {
+        --vh: 1vw;
+        --vw: 1vh;
+      }
+      html.turned body {
+        position: fixed;
+        left: 0;
+        top: 0;
+        width: calc(100 * var(--vw));
+        height: calc(100 * var(--vh));
+        transform-origin: 0 0;
+        transform: translateX(calc(100 * var(--vh))) rotate(90deg);
+      }
+      /* (a modal dialog lies over the page, not in it: turned about its middle, moved to the
    screen's) */
-html.turned dialog:modal { rotate: 90deg; }
-html.turned dialog:modal:not(.view, .touch-layout, .stage-editor) {
-  max-width: calc(100 * var(--vw) - 2em - 6px); max-height: calc(100 * var(--vh) - 2em - 6px);
-}
-html.turned dialog:modal:is(.view, .touch-layout, .stage-editor) {
-  translate: calc(50 * var(--vh) - 50 * var(--vw)) calc(50 * var(--vw) - 50 * var(--vh));
-}
-</style>
-<script src="gl-matrix-min.js"></script>
+      html.turned dialog:modal {
+        rotate: 90deg;
+      }
+      html.turned dialog:modal:not(.view, .touch-layout, .stage-editor) {
+        max-width: calc(100 * var(--vw) - 2em - 6px);
+        max-height: calc(100 * var(--vh) - 2em - 6px);
+      }
+      html.turned dialog:modal:is(.view, .touch-layout, .stage-editor) {
+        translate: calc(50 * var(--vh) - 50 * var(--vw))
+          calc(50 * var(--vw) - 50 * var(--vh));
+      }
+    </style>
+    <script src="gl-matrix-min.js"></script>
+  </head>
 
-</head>
+  <body
+    bgcolor="#15190D"
+    link="#D3F2FF"
+    alink="#D3F2FF"
+    vlink="#D3F2FF"
+    leftmargin="0"
+    topmargin="0"
+    margin="0"
+    marginheight="0"
+    marginwidth="0"
+  >
+    <table
+      id="loading"
+      style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%"
+    >
+      <td valign="center" align="center">
+        <span style="font-family: Verdana, Arial; font-size: 14px">
+          <font color="#6DCA00"><b>Loading, please wait...</b></font>
+        </span>
+      </td>
+    </table>
 
-<body bgcolor=#15190D link=#D3F2FF alink=#D3F2FF vlink=#D3F2FF leftmargin=0 topmargin=0 margin=0 marginheight=0 marginwidth=0>
+    <canvas
+      id="canvas3D"
+      style="
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        padding-left: 0;
+        padding-right: 0;
+        margin-right: auto;
+        margin-left: auto;
+        display: block;
+        width: 1280px;
+        height: 720px;
+      "
+      width="1280"
+      height="720"
+    ></canvas>
+    <div id="nameTags" class="name-tags" aria-hidden="true"></div>
+    <canvas
+      id="canvas2D"
+      style="
+        position: absolute;
+        left: 0px;
+        top: 0px;
+        padding-left: 0;
+        padding-right: 0;
+        margin-right: auto;
+        margin-left: auto;
+        display: block;
+        width: 1280px;
+        height: 720px;
+      "
+      width="1280"
+      height="720"
+    ></canvas>
 
-<table id=loading style="position: absolute; left: 0px; top: 0px; width: 100%; height: 100%">
-<td valign=center align=center>
-<span style='font-family:Verdana, Arial; font-size:14px;'>
-<font color=#6DCA00><b>Loading, please wait...</b></font>
-</span>
-</td>
-</table>
+    <nav id="mainMenu" class="main-menu" aria-label="Main menu" hidden>
+      <ul>
+        <li>
+          <button type="button" id="menuCampaign" class="play">Campaign</button>
+        </li>
+        <li><button type="button" id="menuQuickRace">Quick Race</button></li>
+        <li><button type="button" id="menuPractice">Practice</button></li>
+        <li><button type="button" id="menuTimeAttack">Time Attack</button></li>
+        <li>
+          <button
+            type="button"
+            id="menuMultiplayer"
+            aria-haspopup="dialog"
+            aria-controls="multiplayer"
+          >
+            Multiplayer
+          </button>
+        </li>
+        <li class="more">
+          <ul>
+            <li>
+              <button
+                type="button"
+                id="menuStageEditor"
+                class="small"
+                aria-haspopup="dialog"
+                aria-controls="stageEditor"
+              >
+                Stage Editor
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                id="menuOptions"
+                class="small"
+                aria-haspopup="dialog"
+                aria-controls="options"
+              >
+                Options
+              </button>
+            </li>
+            <li>
+              <button type="button" id="menuInstructions" class="small">
+                Instructions
+              </button>
+            </li>
+            <li>
+              <button type="button" id="menuReplay" class="small">
+                Open Replay
+              </button>
+            </li>
+            <li>
+              <button type="button" id="menuReset" class="small" hidden>
+                Reset Game
+              </button>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </nav>
+    <button
+      type="button"
+      id="optionsButton"
+      class="options-button"
+      aria-haspopup="dialog"
+      aria-controls="options"
+      hidden
+    >
+      Options
+    </button>
+    <dialog
+      id="options"
+      class="menu-dialog view"
+      aria-labelledby="optionsTitle"
+    >
+      <header class="view-head">
+        <h2 id="optionsTitle">Options</h2>
+        <button type="button" id="optionsClose" class="back">Back</button>
+      </header>
+      <div class="option-groups">
+        <section class="panel">
+          <h3 id="optionsLanguageTitle">Language</h3>
+          <ul aria-labelledby="optionsLanguageTitle">
+            <li class="name">
+              <label for="languageChosen">Game language</label
+              ><select id="languageChosen">
+                <option value="en" lang="en">English</option>
+                <option value="de" lang="de">Deutsch</option>
+              </select>
+            </li>
+          </ul>
+        </section>
+        <section class="panel">
+          <h3 id="optionsLookTitle">Look</h3>
+          <ul aria-labelledby="optionsLookTitle">
+            <li>
+              <button type="button" id="option-toggleLook" aria-pressed="false">
+                <span>Look <span class="key">L</span></span
+                ><span class="state"></span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                id="option-toggleClassicMenus"
+                aria-pressed="false"
+              >
+                <span>Classic menus and HUD <span class="key">U</span></span
+                ><span class="state"></span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                id="option-toggleSharp"
+                aria-pressed="false"
+              >
+                <span>Classic pixels <span class="key">K</span></span
+                ><span class="state"></span>
+              </button>
+            </li>
+            <li class="name">
+              <label for="graphicsChosen">Graphics</label
+              ><select id="graphicsChosen" aria-describedby="graphicsHint">
+                <option value="0">Low</option>
+                <option value="1">Medium</option>
+                <option value="2">High</option>
+                <option value="3">Ultra</option>
+              </select>
+              <p id="graphicsHint" class="hint">
+                Lower runs smoother on slow devices; higher keeps details and
+                outlines farther away.
+              </p>
+            </li>
+            <li id="fullscreenItem" hidden>
+              <button
+                type="button"
+                id="fullscreenShown"
+                aria-pressed="false"
+                aria-describedby="fullscreenHint"
+              >
+                <span>Fullscreen</span><span class="state"></span>
+              </button>
+              <p id="fullscreenHint" class="hint">
+                On a phone a touch makes the game fullscreen while this is on.
+              </p>
+            </li>
+          </ul>
+        </section>
+        <section class="panel">
+          <h3 id="optionsRaceTitle">Racing</h3>
+          <ul aria-labelledby="optionsRaceTitle">
+            <li>
+              <button
+                type="button"
+                id="option-toggleAiming"
+                aria-pressed="false"
+                aria-describedby="aimingHint"
+              >
+                <span
+                  >Camera turns to a car you choose
+                  <span class="key">T</span></span
+                ><span class="state"></span>
+              </button>
+              <p id="aimingHint" class="hint">
+                In a race tap a car, or use the bar's arrows, F (nearer:
+                Shift+F) or the right stick, nearest first; a click on the left
+                stick lets go. Wasted cars can't be chosen. With none chosen the
+                camera stays behind your car.
+              </p>
+            </li>
+            <li>
+              <button
+                type="button"
+                id="option-toggleMinimap"
+                aria-pressed="false"
+              >
+                <span>Minimap <span class="key">G</span></span
+                ><span class="state"></span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                id="stuntsByKey"
+                aria-pressed="false"
+                aria-describedby="stuntsByKeyHint"
+              >
+                <span>Stunts begin with the handbrake</span
+                ><span class="state"></span>
+              </button>
+              <p id="stuntsByKeyHint" class="hint">
+                In the air press Space (the handbrake) first, then the arrows
+                turn the car. Off: as in the original, an arrow pressed in the
+                air begins a stunt.
+              </p>
+            </li>
+            <li>
+              <button
+                type="button"
+                id="ghostShown"
+                aria-pressed="false"
+                aria-describedby="ghostShownHint"
+              >
+                <span>Ghost in time attack</span><span class="state"></span>
+              </button>
+              <p id="ghostShownHint" class="hint">
+                Your fastest lap on the stage, driven again beside you on every
+                lap.
+              </p>
+            </li>
+          </ul>
+        </section>
+        <section class="panel" id="optionsTouch">
+          <h3 id="optionsTouchTitle">Touch controls</h3>
+          <ul aria-labelledby="optionsTouchTitle">
+            <li class="volume">
+              <label for="touchSize">Size</label
+              ><input
+                type="range"
+                id="touchSize"
+                min="60"
+                max="140"
+                step="10"
+              /><output id="touchSizeShown" for="touchSize"></output>
+            </li>
+            <li>
+              <button
+                type="button"
+                id="touchArrange"
+                aria-describedby="touchArrangeHint"
+              >
+                <span>Arrange the controls</span>
+              </button>
+              <p id="touchArrangeHint" class="hint">
+                Drag each control where your thumbs want it.
+              </p>
+            </li>
+          </ul>
+        </section>
+        <section class="panel">
+          <h3 id="optionsSoundTitle">Sound</h3>
+          <ul aria-labelledby="optionsSoundTitle">
+            <li>
+              <button type="button" id="option-muteSound" aria-pressed="false">
+                <span>Sound <span class="key">N</span></span
+                ><span class="state"></span>
+              </button>
+            </li>
+            <li>
+              <button type="button" id="option-muteMusic" aria-pressed="false">
+                <span>Music <span class="key">M</span></span
+                ><span class="state"></span>
+              </button>
+            </li>
+            <li>
+              <button
+                type="button"
+                id="option-otherCarSounds"
+                aria-pressed="false"
+              >
+                <span>Other cars' sounds <span class="key">O</span></span
+                ><span class="state"></span>
+              </button>
+            </li>
+            <li class="volume">
+              <label for="musicVolume">Music volume</label
+              ><input
+                type="range"
+                id="musicVolume"
+                min="0"
+                max="100"
+                step="5"
+              /><output id="musicVolumeShown" for="musicVolume"></output>
+            </li>
+            <li class="volume">
+              <label for="soundVolume">Effects volume</label
+              ><input
+                type="range"
+                id="soundVolume"
+                min="0"
+                max="100"
+                step="5"
+              /><output id="soundVolumeShown" for="soundVolume"></output>
+            </li>
+            <li class="volume">
+              <label for="otherCarsVolume">Other cars' volume</label
+              ><input
+                type="range"
+                id="otherCarsVolume"
+                min="0"
+                max="100"
+                step="5"
+                aria-describedby="otherCarsVolumeHint"
+              /><output
+                id="otherCarsVolumeShown"
+                for="otherCarsVolume"
+              ></output>
+              <p id="otherCarsVolumeHint" class="hint">
+                Of the effects volume.
+              </p>
+            </li>
+          </ul>
+        </section>
+        <section class="panel">
+          <h3 id="optionsMultiplayerTitle">Multiplayer</h3>
+          <ul aria-labelledby="optionsMultiplayerTitle">
+            <li class="name">
+              <label for="playerName">Your name</label
+              ><input
+                id="playerName"
+                maxlength="16"
+                autocomplete="nickname"
+                spellcheck="false"
+                aria-describedby="playerNameHint"
+              />
+              <p id="playerNameHint" class="hint">
+                The others in a room see it on your car.
+              </p>
+            </li>
+            <li>
+              <button
+                type="button"
+                id="voiceChat"
+                aria-pressed="false"
+                aria-describedby="voiceChatHint"
+              >
+                <span>Voice chat</span><span class="state"></span>
+              </button>
+              <p id="voiceChatHint" class="hint">
+                Voices go straight between the players' games, which so learn
+                each other's internet address.
+              </p>
+            </li>
+            <li>
+              <button
+                type="button"
+                id="voiceByVoice"
+                aria-pressed="false"
+                aria-describedby="voiceByVoiceHint"
+              >
+                <span>Talk</span><span class="state"></span>
+              </button>
+              <p id="voiceByVoiceHint" class="hint">
+                Push to talk: hold P in a race, the Talk button in the lobby. By
+                voice: the others hear you whenever you speak, your microphone
+                open all the time in a room.
+              </p>
+            </li>
+            <li class="volume">
+              <label for="voiceVolume">Voices volume</label
+              ><input
+                type="range"
+                id="voiceVolume"
+                min="0"
+                max="100"
+                step="5"
+              /><output id="voiceVolumeShown" for="voiceVolume"></output>
+            </li>
+          </ul>
+        </section>
+        <section class="panel" id="optionsOffline" hidden>
+          <h3 id="optionsOfflineTitle">Offline</h3>
+          <ul aria-labelledby="optionsOfflineTitle">
+            <li><p id="offlineReady" class="ready" role="status"></p></li>
+            <li>
+              <button
+                type="button"
+                id="offlineMusic"
+                aria-pressed="false"
+                aria-describedby="offlineMusicHint"
+              >
+                <span
+                  >Race music offline <span id="offlineMusicSize"></span></span
+                ><span class="state"></span>
+              </button>
+              <p id="offlineMusicHint" class="hint">
+                Keeps every stage's music for races without the network. Off
+                removes it again.
+              </p>
+            </li>
+            <li class="kept" id="offlineMusicProgress" hidden>
+              <progress
+                id="offlineMusicKept"
+                max="1"
+                value="0"
+                aria-labelledby="offlineMusicKeptShown"
+              ></progress>
+              <p id="offlineMusicKeptShown" role="status"></p>
+            </li>
+          </ul>
+        </section>
+        <section class="panel about">
+          <h3 id="optionsAboutTitle">About</h3>
+          <p id="gameVersion"></p>
+          <details id="changelog"><summary>What's new</summary></details>
+        </section>
+      </div>
+    </dialog>
 
-<canvas id="canvas3D" style="position: absolute; left: 0px; top: 0px; padding-left: 0; padding-right: 0; margin-right: auto; margin-left: auto; display: block; width: 1280px; height: 720px;" width=1280 height=720></canvas>
-<div id="nameTags" class="name-tags" aria-hidden="true"></div>
-<canvas id="canvas2D" style="position: absolute; left: 0px; top: 0px; padding-left: 0; padding-right: 0; margin-right: auto; margin-left: auto; display: block; width: 1280px; height: 720px;" width=1280 height=720></canvas>
+    <button
+      type="button"
+      id="stageEditorButton"
+      class="editor-button"
+      aria-haspopup="dialog"
+      aria-controls="stageEditor"
+      hidden
+    >
+      Stage Editor
+    </button>
+    <dialog
+      id="stageEditor"
+      class="stage-editor"
+      aria-labelledby="stageEditorTitle"
+    >
+      <div class="editor-bar">
+        <h2 id="stageEditorTitle">Stage Editor</h2>
+        <label class="label" for="editorName">Name</label>
+        <input id="editorName" type="text" maxlength="40" autocomplete="off" />
+        <button
+          type="button"
+          id="editorStagesButton"
+          aria-haspopup="dialog"
+          aria-controls="editorStages"
+        >
+          Stages
+        </button>
+        <button type="button" id="editorUndo" aria-keyshortcuts="Control+Z">
+          Undo
+        </button>
+        <button type="button" id="editorRedo" aria-keyshortcuts="Control+Y">
+          Redo
+        </button>
+        <button
+          type="button"
+          id="editorRotate"
+          aria-keyshortcuts="R"
+          title="Turn (R)"
+        >
+          Turn
+        </button>
+        <button
+          type="button"
+          id="editorDelete"
+          aria-keyshortcuts="Delete"
+          title="Delete (Del)"
+        >
+          Delete
+        </button>
+        <button
+          type="button"
+          id="editorOrder"
+          aria-pressed="false"
+          aria-keyshortcuts="O"
+          title="Order path (O)"
+        >
+          Order path
+        </button>
+        <button
+          type="button"
+          id="editor3D"
+          aria-pressed="false"
+          aria-keyshortcuts="V"
+          title="3D view (V)"
+        >
+          3D view
+        </button>
+        <button
+          type="button"
+          id="editorSettingsButton"
+          aria-haspopup="dialog"
+          aria-controls="editorSettings"
+        >
+          Settings
+        </button>
+        <button
+          type="button"
+          id="editorTestDrive"
+          aria-describedby="editorProblemsTitle"
+          aria-keyshortcuts="T"
+          title="Test drive (T)"
+        >
+          Test drive
+        </button>
+        <span class="spacer"></span>
+        <button
+          type="button"
+          id="editorHelpButton"
+          aria-haspopup="dialog"
+          aria-controls="editorHelp"
+          aria-keyshortcuts="Shift+?"
+          aria-label="Help"
+          title="Help (?)"
+        >
+          ?
+        </button>
+        <button type="button" id="editorClose">Close</button>
+      </div>
+      <nav id="editorPalette" aria-label="Pieces"></nav>
+      <canvas
+        id="editorMap"
+        tabindex="0"
+        role="img"
+        aria-label="The stage from above"
+      ></canvas>
+      <aside id="editorInspector" aria-label="Selected piece and problems">
+        <section aria-labelledby="editorSelectedTitle">
+          <h3 id="editorSelectedTitle">Selected</h3>
+          <figure id="editorPreview" hidden>
+            <canvas
+              id="editorPiecePreview"
+              width="240"
+              height="160"
+              aria-hidden="true"
+            ></canvas>
+            <figcaption>As on the map: its top is ahead.</figcaption>
+          </figure>
+          <div id="editorSelected"></div>
+        </section>
+        <section aria-labelledby="editorPathTitle">
+          <h3 id="editorPathTitle">Path</h3>
+          <div class="row">
+            <button type="button" id="editorReverse">Reverse</button
+            ><button
+              type="button"
+              id="editorOrderByPlace"
+              aria-describedby="editorOrderByPlaceHint"
+            >
+              Order by place
+            </button>
+          </div>
+          <p id="editorOrderByPlaceHint" class="hint">
+            From the start, each time to the nearest point.
+          </p>
+          <ol id="editorPath" aria-labelledby="editorPathTitle"></ol>
+        </section>
+        <section aria-labelledby="editorProblemsTitle">
+          <h3 id="editorProblemsTitle">Check</h3>
+          <ul id="editorProblems"></ul>
+        </section>
+      </aside>
+      <p id="editorStatus" aria-live="polite"></p>
+      <dialog
+        id="editorStages"
+        class="menu-dialog"
+        aria-labelledby="editorStagesTitle"
+      >
+        <h2 id="editorStagesTitle">Your stages</h2>
+        <p>They race in the stage select's Own collection.</p>
+        <ul id="editorStageList"></ul>
+        <button type="button" id="stagesNew">New stage</button>
+        <label for="stagesFrom">Start from</label>
+        <div class="row">
+          <select id="stagesFrom"></select
+          ><button type="button" id="stagesCopyGame">Copy stage</button>
+        </div>
+        <label for="stagesImport"
+          >Open a stage file (.txt, also the original game's)</label
+        >
+        <input id="stagesImport" type="file" accept=".txt,text/plain" />
+        <button type="button" id="stagesExport">
+          Save this stage as a file
+        </button>
+        <form method="dialog">
+          <button type="submit" class="close">Done</button>
+        </form>
+      </dialog>
+      <dialog
+        id="editorHelp"
+        class="menu-dialog"
+        aria-labelledby="editorHelpTitle"
+      >
+        <h2 id="editorHelpTitle">How the editor works</h2>
+        <h3>The path</h3>
+        <p>
+          The path is the way the cars go round: the computer cars drive from
+          one point of it to the next, and the checkpoints count in its order.
+          On the map it is the light blue line, its arrows point the way, the
+          white square is the start, and every point has its number.
+        </p>
+        <ul class="points">
+          <li>
+            A road dropped onto the end of another joins it and follows it on
+            the path by itself. Build the lap end to end from the start, and the
+            path builds itself.
+          </li>
+          <li>
+            A piece dropped anywhere else goes to the end of the path. Put it in
+            its place with <b>Order path</b>: click the pieces one after another
+            the way the cars drive, the start first.
+          </li>
+          <li>
+            Or select a point and move it earlier or later on the path, or make
+            it the start.
+          </li>
+          <li>
+            The list under <b>Path</b> on the right has every point in order:
+            click one to select it, the arrows move it a step.
+            <b>Reverse</b> sends the cars round the other way,
+            <b>Order by place</b> goes from the start each time to the nearest
+            point.
+          </li>
+          <li>
+            A point's kind tells the computer cars how to drive it: a corner
+            they may cut, a ramp they drive straight at, a point they may leave
+            out. Trees and other scenery are not on the path.
+          </li>
+          <li>
+            A lap needs a start piece at the middle of the map, a checkpoint and
+            three points.
+          </li>
+        </ul>
+        <h3>3D</h3>
+        <ul class="points">
+          <li>
+            <b>3D view</b> (<kbd>V</kbd>) shows the stage as it races, the
+            selected piece flashing. Fly with <kbd>W</kbd> <kbd>A</kbd>
+            <kbd>S</kbd> <kbd>D</kbd>, <kbd>Q</kbd> and <kbd>E</kbd> down and
+            up, <kbd>Shift</kbd> faster; drag to look round, scroll to move
+            forward and back.
+          </li>
+          <li>
+            <b>See in 3D</b> puts the camera behind the selected piece. A fix
+            hoop's or an air checkpoint's height has a slider.
+          </li>
+          <li>
+            The piece being placed or selected shows on the right as it lies on
+            the map: its top is ahead.
+          </li>
+        </ul>
+        <h3>Keys</h3>
+        <dl>
+          <dt><kbd>R</kbd> / <kbd>Shift</kbd>+<kbd>R</kbd></dt>
+          <dd>Turn the piece (or the one being placed) right / left</dd>
+          <dt><kbd>Del</kbd></dt>
+          <dd>Take the piece away</dd>
+          <dt><kbd>D</kbd></dt>
+          <dd>Place another of the selected piece, turned the same</dd>
+          <dt>Arrow keys</dt>
+          <dd>
+            Move the piece (with <kbd>Shift</kbd> further), or the map when
+            nothing is selected
+          </dd>
+          <dt><kbd>,</kbd> / <kbd>.</kbd></dt>
+          <dd>Select the path's point before / after</dd>
+          <dt><kbd>Shift</kbd>+<kbd>,</kbd> / <kbd>Shift</kbd>+<kbd>.</kbd></dt>
+          <dd>Move the point earlier / later on the path</dd>
+          <dt><kbd>S</kbd></dt>
+          <dd>Make the point the path's start</dd>
+          <dt><kbd>P</kbd></dt>
+          <dd>Change the point's kind</dd>
+          <dt><kbd>O</kbd></dt>
+          <dd>Order the path by clicking</dd>
+          <dt><kbd>F</kbd></dt>
+          <dd>Show the whole stage</dd>
+          <dt><kbd>V</kbd></dt>
+          <dd>The 3D view, or the map</dd>
+          <dt><kbd>+</kbd> / <kbd>-</kbd></dt>
+          <dd>Zoom in / out (or the mouse wheel)</dd>
+          <dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></dt>
+          <dd>Undo / redo</dd>
+          <dt><kbd>T</kbd></dt>
+          <dd>Test drive</dd>
+          <dt><kbd>Esc</kbd></dt>
+          <dd>Stop placing or ordering, deselect, then close</dd>
+          <dt><kbd>?</kbd></dt>
+          <dd>This help</dd>
+        </dl>
+        <form method="dialog">
+          <button type="submit" class="close">Done</button>
+        </form>
+      </dialog>
+      <dialog
+        id="editorSettings"
+        class="menu-dialog"
+        aria-labelledby="editorSettingsTitle"
+      >
+        <h2 id="editorSettingsTitle">Stage settings</h2>
+        <form id="editorSettingsForm" method="dialog" novalidate>
+          <label for="settingLaps">Laps</label>
+          <input id="settingLaps" type="number" min="1" max="15" step="1" />
+          <label for="settingLevel">Opponents as strong as on</label>
+          <select id="settingLevel"></select>
+          <label for="settingMusic">Music of</label>
+          <select id="settingMusic"></select>
+          <label for="settingLookFrom">Look like</label>
+          <div class="row">
+            <select id="settingLookFrom"></select
+            ><button type="button" id="settingCopyLook">Copy look</button>
+          </div>
+          <div class="colors">
+            <label for="settingSky">Sky</label
+            ><input id="settingSky" type="color" />
+            <label for="settingFog">Fog</label
+            ><input id="settingFog" type="color" />
+            <label for="settingGround">Ground</label
+            ><input id="settingGround" type="color" />
+            <label for="settingCloudColor">Clouds</label
+            ><input id="settingCloudColor" type="color" />
+          </div>
+          <label for="settingClouds">Cloud cover</label>
+          <select id="settingClouds">
+            <option value="0">Overcast</option>
+            <option value="1">Cloudy</option>
+            <option value="2">A few clouds</option>
+          </select>
+          <label for="settingDistance">How far one sees</label>
+          <input
+            id="settingDistance"
+            type="number"
+            min="4000"
+            max="20000"
+            step="100"
+          />
+          <button type="submit" class="close">Done</button>
+        </form>
+      </dialog>
+    </dialog>
+    <dialog
+      id="touchLayout"
+      class="touch-layout view"
+      aria-labelledby="touchLayoutTitle"
+    >
+      <h2 id="touchLayoutTitle">Drag the controls where you want them</h2>
+      <div id="touchLayoutControls"></div>
+      <div class="row">
+        <button type="button" id="touchLayoutReset">Reset</button
+        ><button type="button" id="touchLayoutDone" class="go">Done</button>
+      </div>
+    </dialog>
+    <aside
+      id="cameraPath"
+      class="camera-path"
+      aria-labelledby="cameraPathTitle"
+      hidden
+    >
+      <h2 id="cameraPathTitle">Camera path</h2>
+      <p class="hint">
+        Fly and turn the camera, pause where it should be, then add a keyframe
+        (K). From each keyframe the path flies on or cuts; into and out of a
+        car's camera it glides. Each keyframe keeps the speed and the zoom
+        (wheel). , and . jump between keyframes.
+      </p>
+      <div class="row">
+        <button type="button" id="cameraPathAdd">Add keyframe here</button
+        ><button type="button" id="cameraPathPlay" aria-pressed="false">
+          Play the path
+        </button>
+      </div>
+      <ol id="cameraPathKeys" aria-label="Keyframes"></ol>
+      <div class="row">
+        <button
+          type="button"
+          id="cameraPathVideo"
+          aria-describedby="cameraPathVideoHint"
+        >
+          Record video
+        </button>
+      </div>
+      <p id="cameraPathVideoHint" class="hint"></p>
+      <button type="button" id="cameraPathClose">Close</button>
+    </aside>
+    <button
+      type="button"
+      id="replayExit"
+      class="replay-exit"
+      aria-label="Exit the replay"
+      aria-keyshortcuts="Escape"
+      title="Exit (Esc)"
+      hidden
+    >
+      Exit
+    </button>
+    <button
+      type="button"
+      id="multiplayerButton"
+      class="multiplayer-button"
+      aria-haspopup="dialog"
+      aria-controls="multiplayer"
+      hidden
+    >
+      Multiplayer
+    </button>
+    <dialog
+      id="multiplayer"
+      class="menu-dialog view"
+      aria-labelledby="multiplayerTitle"
+    >
+      <header class="view-head">
+        <h2 id="multiplayerTitle">Multiplayer</h2>
+        <p id="multiplayerRoomLine" class="room-line" hidden>
+          Room <strong id="multiplayerRoomName" class="room"></strong>
+        </p>
+        <button type="button" id="multiplayerClose" class="back">Back</button>
+      </header>
+      <div id="multiplayerChoose" class="choose">
+        <p id="multiplayerNotice" class="notice" role="status" hidden></p>
+        <section
+          class="panel browser"
+          aria-labelledby="multiplayerBrowserTitle"
+        >
+          <h3 id="multiplayerBrowserTitle">Public rooms</h3>
+          <p class="hint">
+            Rooms their hosts made public. Up to eight race in one.
+          </p>
+          <p id="multiplayerBrowserStatus" class="status" role="status"></p>
+          <ul
+            id="multiplayerRoomList"
+            class="rooms"
+            aria-labelledby="multiplayerBrowserTitle"
+          ></ul>
+        </section>
+        <div class="side">
+          <section class="panel host" aria-labelledby="multiplayerHostTitle">
+            <h3 id="multiplayerHostTitle">Host</h3>
+            <p class="hint">
+              Open a room of your own, choose the race and invite friends with
+              its code or link, or make it public.
+            </p>
+            <button type="button" id="multiplayerHost" class="go">
+              Host a race
+            </button>
+          </section>
+          <section class="panel code" aria-labelledby="multiplayerCodeTitle">
+            <h3 id="multiplayerCodeTitle">Join with a code</h3>
+            <form id="multiplayerJoinForm" novalidate>
+              <label for="multiplayerCode">Code of the host's room</label>
+              <div class="row">
+                <input
+                  id="multiplayerCode"
+                  name="room"
+                  maxlength="32"
+                  required
+                  aria-required="true"
+                  aria-describedby="multiplayerCodeError"
+                  autocomplete="off"
+                  autocapitalize="none"
+                  spellcheck="false"
+                /><button type="submit" class="join">Join the race</button>
+              </div>
+              <p
+                id="multiplayerCodeError"
+                class="error"
+                role="alert"
+                hidden
+              ></p>
+            </form>
+          </section>
+        </div>
+      </div>
+      <div id="multiplayerRoom" class="lobby" hidden>
+        <section class="panel field" aria-labelledby="multiplayerPlayersTitle">
+          <h3 id="multiplayerPlayersTitle">Players</h3>
+          <ul
+            id="multiplayerPlayers"
+            class="cards"
+            aria-labelledby="multiplayerPlayersTitle"
+          ></ul>
+          <div id="multiplayerBots" hidden>
+            <h3 id="multiplayerBotsTitle">Bots</h3>
+            <ul
+              id="multiplayerBotList"
+              class="cards"
+              aria-labelledby="multiplayerBotsTitle"
+            ></ul>
+            <button type="button" id="multiplayerAddBot">Add a bot</button>
+          </div>
+        </section>
+        <section class="panel race" aria-labelledby="lobbyRaceTitle">
+          <h3 id="lobbyRaceTitle">The race</h3>
+          <div id="multiplayerShare" class="share">
+            <label for="multiplayerLink">Link for your guests</label>
+            <div class="row">
+              <input id="multiplayerLink" readonly /><button
+                type="button"
+                id="multiplayerCopy"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
+          <div id="lobbySettings" class="settings">
+            <div class="setting wide">
+              <label for="lobbyPublic">Who can join</label
+              ><select id="lobbyPublic" aria-describedby="lobbyPublicHint">
+                <option value="0">With the code or link</option>
+                <option value="1">Everyone: a public room</option>
+              </select>
+              <p id="lobbyPublicHint" class="hint">
+                A public room is listed for everyone, with your name and the
+                race.
+              </p>
+            </div>
+            <div class="setting wide">
+              <label for="lobbyStage">Stage</label
+              ><select id="lobbyStage"></select>
+            </div>
+            <div class="setting">
+              <label for="lobbyMode">Mode</label
+              ><select id="lobbyMode"></select>
+            </div>
+            <div class="setting">
+              <label for="lobbyStrength">Bot strength</label
+              ><select id="lobbyStrength"></select>
+            </div>
+            <div class="setting" id="lobbyMinutesChoice">
+              <label for="lobbyMinutes">Time</label
+              ><select id="lobbyMinutes"></select>
+            </div>
+            <div class="setting" id="lobbyRespawnChoice">
+              <label for="lobbyRespawn">Back after</label
+              ><select id="lobbyRespawn"></select>
+            </div>
+            <div class="setting">
+              <label for="lobbyTeams">Teams</label
+              ><select id="lobbyTeams"></select>
+            </div>
+            <div class="setting" id="lobbyTeamCrashesChoice">
+              <label for="lobbyTeamCrashes">Team mates crash</label
+              ><select id="lobbyTeamCrashes">
+                <option value="1">Yes</option>
+                <option value="0">No, pass through</option>
+              </select>
+            </div>
+          </div>
+          <dl id="lobbyRules" class="rules" hidden></dl>
+        </section>
+        <section class="panel you" aria-labelledby="lobbyYouTitle">
+          <h3 id="lobbyYouTitle">You</h3>
+          <div class="settings">
+            <div class="setting wide">
+              <label for="lobbyName">Your name</label
+              ><input
+                id="lobbyName"
+                maxlength="16"
+                autocomplete="nickname"
+                spellcheck="false"
+              />
+            </div>
+            <div class="setting" id="lobbyCarChoice">
+              <label for="lobbyCar" id="lobbyCarLabel">Your car</label
+              ><button
+                type="button"
+                id="lobbyCar"
+                class="car-choice"
+                aria-labelledby="lobbyCarLabel lobbyCar"
+              ></button>
+            </div>
+            <div class="setting">
+              <label for="lobbySkin">Your paint</label
+              ><select id="lobbySkin"></select>
+            </div>
+            <div class="setting" id="lobbyTeamChoice">
+              <label for="lobbyTeam">Your team</label
+              ><select id="lobbyTeam"></select>
+            </div>
+            <div class="setting wide">
+              <label for="lobbyVoice">Voice chat</label
+              ><select id="lobbyVoice" aria-describedby="lobbyTalkHint">
+                <option value="off">Off</option>
+                <option value="push">Push to talk</option>
+                <option value="byVoice">By voice</option>
+              </select>
+            </div>
+          </div>
+          <p id="multiplayerStatus" class="status" role="status"></p>
+          <button type="button" id="lobbyReady" class="go" aria-pressed="false">
+            Ready
+          </button>
+          <button type="button" id="lobbyWatch" class="go" hidden>
+            Watch the race
+          </button>
+          <button type="button" id="lobbyStart" class="go">
+            Start the race
+          </button>
+          <button
+            type="button"
+            id="lobbyTalk"
+            aria-pressed="false"
+            aria-describedby="lobbyTalkHint"
+          >
+            Talk
+          </button>
+          <p id="lobbyTalkHint" class="hint"></p>
+          <button type="button" id="multiplayerLeave">Leave the room</button>
+        </section>
+        <section class="panel chat" aria-labelledby="lobbyChatTitle">
+          <h3 id="lobbyChatTitle">Chat</h3>
+          <ol
+            id="lobbyChat"
+            tabindex="0"
+            aria-labelledby="lobbyChatTitle"
+            aria-live="polite"
+            aria-relevant="additions"
+          ></ol>
+          <form id="lobbyChatForm" novalidate>
+            <label for="lobbyChatText">Message</label>
+            <div class="row">
+              <input
+                id="lobbyChatText"
+                maxlength="200"
+                autocomplete="off"
+              /><button type="submit">Send</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </dialog>
 
-
-<nav id="mainMenu" class="main-menu" aria-label="Main menu" hidden>
-<ul>
-<li><button type="button" id="menuCampaign" class="play">Campaign</button></li>
-<li><button type="button" id="menuQuickRace">Quick Race</button></li>
-<li><button type="button" id="menuPractice">Practice</button></li>
-<li><button type="button" id="menuTimeAttack">Time Attack</button></li>
-<li><button type="button" id="menuMultiplayer" aria-haspopup="dialog" aria-controls="multiplayer">Multiplayer</button></li>
-<li class="more"><ul>
-<li><button type="button" id="menuStageEditor" class="small" aria-haspopup="dialog" aria-controls="stageEditor">Stage Editor</button></li>
-<li><button type="button" id="menuOptions" class="small" aria-haspopup="dialog" aria-controls="options">Options</button></li>
-<li><button type="button" id="menuInstructions" class="small">Instructions</button></li>
-<li><button type="button" id="menuReplay" class="small">Open Replay</button></li>
-<li><button type="button" id="menuReset" class="small" hidden>Reset Game</button></li>
-</ul></li>
-</ul>
-</nav>
-<button type="button" id="optionsButton" class="options-button" aria-haspopup="dialog" aria-controls="options" hidden>Options</button>
-<dialog id="options" class="menu-dialog view" aria-labelledby="optionsTitle">
-<header class="view-head">
-<h2 id="optionsTitle">Options</h2>
-<button type="button" id="optionsClose" class="back">Back</button>
-</header>
-<div class="option-groups">
-<section class="panel">
-<h3 id="optionsLanguageTitle">Language</h3>
-<ul aria-labelledby="optionsLanguageTitle">
-<li class="name"><label for="languageChosen">Game language</label><select id="languageChosen"><option value="en" lang="en">English</option><option value="de" lang="de">Deutsch</option></select></li>
-</ul>
-</section>
-<section class="panel">
-<h3 id="optionsLookTitle">Look</h3>
-<ul aria-labelledby="optionsLookTitle">
-<li><button type="button" id="option-toggleLook" aria-pressed="false"><span>Look <span class="key">L</span></span><span class="state"></span></button></li>
-<li><button type="button" id="option-toggleClassicMenus" aria-pressed="false"><span>Classic menus and HUD <span class="key">U</span></span><span class="state"></span></button></li>
-<li><button type="button" id="option-toggleSharp" aria-pressed="false"><span>Classic pixels <span class="key">K</span></span><span class="state"></span></button></li>
-<li class="name"><label for="graphicsChosen">Graphics</label><select id="graphicsChosen" aria-describedby="graphicsHint"><option value="0">Low</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option></select><p id="graphicsHint" class="hint">Lower runs smoother on slow devices; higher keeps details and outlines farther away.</p></li>
-<li id="fullscreenItem" hidden><button type="button" id="fullscreenShown" aria-pressed="false" aria-describedby="fullscreenHint"><span>Fullscreen</span><span class="state"></span></button><p id="fullscreenHint" class="hint">On a phone a touch makes the game fullscreen while this is on.</p></li>
-</ul>
-</section>
-<section class="panel">
-<h3 id="optionsRaceTitle">Racing</h3>
-<ul aria-labelledby="optionsRaceTitle">
-<li><button type="button" id="option-toggleAiming" aria-pressed="false" aria-describedby="aimingHint"><span>Camera turns to a car you choose <span class="key">T</span></span><span class="state"></span></button><p id="aimingHint" class="hint">In a race tap a car, or use the bar's arrows, F (nearer: Shift+F) or the right stick, nearest first; a click on the left stick lets go. Wasted cars can't be chosen. With none chosen the camera stays behind your car.</p></li>
-<li><button type="button" id="option-toggleMinimap" aria-pressed="false"><span>Minimap <span class="key">G</span></span><span class="state"></span></button></li>
-<li><button type="button" id="stuntsByKey" aria-pressed="false" aria-describedby="stuntsByKeyHint"><span>Stunts begin with the handbrake</span><span class="state"></span></button><p id="stuntsByKeyHint" class="hint">In the air press Space (the handbrake) first, then the arrows turn the car. Off: as in the original, an arrow pressed in the air begins a stunt.</p></li>
-<li><button type="button" id="ghostShown" aria-pressed="false" aria-describedby="ghostShownHint"><span>Ghost in time attack</span><span class="state"></span></button><p id="ghostShownHint" class="hint">Your fastest lap on the stage, driven again beside you on every lap.</p></li>
-</ul>
-</section>
-<section class="panel" id="optionsTouch">
-<h3 id="optionsTouchTitle">Touch controls</h3>
-<ul aria-labelledby="optionsTouchTitle">
-<li class="volume"><label for="touchSize">Size</label><input type="range" id="touchSize" min="60" max="140" step="10"><output id="touchSizeShown" for="touchSize"></output></li>
-<li><button type="button" id="touchArrange" aria-describedby="touchArrangeHint"><span>Arrange the controls</span></button><p id="touchArrangeHint" class="hint">Drag each control where your thumbs want it.</p></li>
-</ul>
-</section>
-<section class="panel">
-<h3 id="optionsSoundTitle">Sound</h3>
-<ul aria-labelledby="optionsSoundTitle">
-<li><button type="button" id="option-muteSound" aria-pressed="false"><span>Sound <span class="key">N</span></span><span class="state"></span></button></li>
-<li><button type="button" id="option-muteMusic" aria-pressed="false"><span>Music <span class="key">M</span></span><span class="state"></span></button></li>
-<li><button type="button" id="option-otherCarSounds" aria-pressed="false"><span>Other cars' sounds <span class="key">O</span></span><span class="state"></span></button></li>
-<li class="volume"><label for="musicVolume">Music volume</label><input type="range" id="musicVolume" min="0" max="100" step="5"><output id="musicVolumeShown" for="musicVolume"></output></li>
-<li class="volume"><label for="soundVolume">Effects volume</label><input type="range" id="soundVolume" min="0" max="100" step="5"><output id="soundVolumeShown" for="soundVolume"></output></li>
-<li class="volume"><label for="otherCarsVolume">Other cars' volume</label><input type="range" id="otherCarsVolume" min="0" max="100" step="5" aria-describedby="otherCarsVolumeHint"><output id="otherCarsVolumeShown" for="otherCarsVolume"></output><p id="otherCarsVolumeHint" class="hint">Of the effects volume.</p></li>
-</ul>
-</section>
-<section class="panel">
-<h3 id="optionsMultiplayerTitle">Multiplayer</h3>
-<ul aria-labelledby="optionsMultiplayerTitle">
-<li class="name"><label for="playerName">Your name</label><input id="playerName" maxlength="16" autocomplete="nickname" spellcheck="false" aria-describedby="playerNameHint"><p id="playerNameHint" class="hint">The others in a room see it on your car.</p></li>
-<li><button type="button" id="voiceChat" aria-pressed="false" aria-describedby="voiceChatHint"><span>Voice chat</span><span class="state"></span></button><p id="voiceChatHint" class="hint">Voices go straight between the players' games, which so learn each other's internet address.</p></li>
-<li><button type="button" id="voiceByVoice" aria-pressed="false" aria-describedby="voiceByVoiceHint"><span>Talk</span><span class="state"></span></button><p id="voiceByVoiceHint" class="hint">Push to talk: hold P in a race, the Talk button in the lobby. By voice: the others hear you whenever you speak, your microphone open all the time in a room.</p></li>
-<li class="volume"><label for="voiceVolume">Voices volume</label><input type="range" id="voiceVolume" min="0" max="100" step="5"><output id="voiceVolumeShown" for="voiceVolume"></output></li>
-</ul>
-</section>
-<section class="panel" id="optionsOffline" hidden>
-<h3 id="optionsOfflineTitle">Offline</h3>
-<ul aria-labelledby="optionsOfflineTitle">
-<li><p id="offlineReady" class="ready" role="status"></p></li>
-<li><button type="button" id="offlineMusic" aria-pressed="false" aria-describedby="offlineMusicHint"><span>Race music offline <span id="offlineMusicSize"></span></span><span class="state"></span></button><p id="offlineMusicHint" class="hint">Keeps every stage's music for races without the network. Off removes it again.</p></li>
-<li class="kept" id="offlineMusicProgress" hidden><progress id="offlineMusicKept" max="1" value="0" aria-labelledby="offlineMusicKeptShown"></progress><p id="offlineMusicKeptShown" role="status"></p></li>
-</ul>
-</section>
-<section class="panel about">
-<h3 id="optionsAboutTitle">About</h3>
-<p id="gameVersion"></p>
-<details id="changelog"><summary>What's new</summary></details>
-</section>
-</div>
-</dialog>
-
-<button type="button" id="stageEditorButton" class="editor-button" aria-haspopup="dialog" aria-controls="stageEditor" hidden>Stage Editor</button>
-<dialog id="stageEditor" class="stage-editor" aria-labelledby="stageEditorTitle">
-<div class="editor-bar">
-<h2 id="stageEditorTitle">Stage Editor</h2>
-<label class="label" for="editorName">Name</label>
-<input id="editorName" type="text" maxlength="40" autocomplete="off">
-<button type="button" id="editorStagesButton" aria-haspopup="dialog" aria-controls="editorStages">Stages</button>
-<button type="button" id="editorUndo" aria-keyshortcuts="Control+Z">Undo</button>
-<button type="button" id="editorRedo" aria-keyshortcuts="Control+Y">Redo</button>
-<button type="button" id="editorRotate" aria-keyshortcuts="R" title="Turn (R)">Turn</button>
-<button type="button" id="editorDelete" aria-keyshortcuts="Delete" title="Delete (Del)">Delete</button>
-<button type="button" id="editorOrder" aria-pressed="false" aria-keyshortcuts="O" title="Order path (O)">Order path</button>
-<button type="button" id="editor3D" aria-pressed="false" aria-keyshortcuts="V" title="3D view (V)">3D view</button>
-<button type="button" id="editorSettingsButton" aria-haspopup="dialog" aria-controls="editorSettings">Settings</button>
-<button type="button" id="editorTestDrive" aria-describedby="editorProblemsTitle" aria-keyshortcuts="T" title="Test drive (T)">Test drive</button>
-<span class="spacer"></span>
-<button type="button" id="editorHelpButton" aria-haspopup="dialog" aria-controls="editorHelp" aria-keyshortcuts="Shift+?" aria-label="Help" title="Help (?)">?</button>
-<button type="button" id="editorClose">Close</button>
-</div>
-<nav id="editorPalette" aria-label="Pieces"></nav>
-<canvas id="editorMap" tabindex="0" role="img" aria-label="The stage from above"></canvas>
-<aside id="editorInspector" aria-label="Selected piece and problems">
-<section aria-labelledby="editorSelectedTitle"><h3 id="editorSelectedTitle">Selected</h3>
-<figure id="editorPreview" hidden><canvas id="editorPiecePreview" width="240" height="160" aria-hidden="true"></canvas><figcaption>As on the map: its top is ahead.</figcaption></figure>
-<div id="editorSelected"></div></section>
-<section aria-labelledby="editorPathTitle"><h3 id="editorPathTitle">Path</h3>
-<div class="row"><button type="button" id="editorReverse">Reverse</button><button type="button" id="editorOrderByPlace" aria-describedby="editorOrderByPlaceHint">Order by place</button></div>
-<p id="editorOrderByPlaceHint" class="hint">From the start, each time to the nearest point.</p>
-<ol id="editorPath" aria-labelledby="editorPathTitle"></ol></section>
-<section aria-labelledby="editorProblemsTitle"><h3 id="editorProblemsTitle">Check</h3><ul id="editorProblems"></ul></section>
-</aside>
-<p id="editorStatus" aria-live="polite"></p>
-<dialog id="editorStages" class="menu-dialog" aria-labelledby="editorStagesTitle">
-<h2 id="editorStagesTitle">Your stages</h2>
-<p>They race in the stage select's Own collection.</p>
-<ul id="editorStageList"></ul>
-<button type="button" id="stagesNew">New stage</button>
-<label for="stagesFrom">Start from</label>
-<div class="row"><select id="stagesFrom"></select><button type="button" id="stagesCopyGame">Copy stage</button></div>
-<label for="stagesImport">Open a stage file (.txt, also the original game's)</label>
-<input id="stagesImport" type="file" accept=".txt,text/plain">
-<button type="button" id="stagesExport">Save this stage as a file</button>
-<form method="dialog"><button type="submit" class="close">Done</button></form>
-</dialog>
-<dialog id="editorHelp" class="menu-dialog" aria-labelledby="editorHelpTitle">
-<h2 id="editorHelpTitle">How the editor works</h2>
-<h3>The path</h3>
-<p>The path is the way the cars go round: the computer cars drive from one point of it to the next, and the checkpoints count in its order. On the map it is the light blue line, its arrows point the way, the white square is the start, and every point has its number.</p>
-<ul class="points">
-<li>A road dropped onto the end of another joins it and follows it on the path by itself. Build the lap end to end from the start, and the path builds itself.</li>
-<li>A piece dropped anywhere else goes to the end of the path. Put it in its place with <b>Order path</b>: click the pieces one after another the way the cars drive, the start first.</li>
-<li>Or select a point and move it earlier or later on the path, or make it the start.</li>
-<li>The list under <b>Path</b> on the right has every point in order: click one to select it, the arrows move it a step. <b>Reverse</b> sends the cars round the other way, <b>Order by place</b> goes from the start each time to the nearest point.</li>
-<li>A point's kind tells the computer cars how to drive it: a corner they may cut, a ramp they drive straight at, a point they may leave out. Trees and other scenery are not on the path.</li>
-<li>A lap needs a start piece at the middle of the map, a checkpoint and three points.</li>
-</ul>
-<h3>3D</h3>
-<ul class="points">
-<li><b>3D view</b> (<kbd>V</kbd>) shows the stage as it races, the selected piece flashing. Fly with <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd>, <kbd>Q</kbd> and <kbd>E</kbd> down and up, <kbd>Shift</kbd> faster; drag to look round, scroll to move forward and back.</li>
-<li><b>See in 3D</b> puts the camera behind the selected piece. A fix hoop's or an air checkpoint's height has a slider.</li>
-<li>The piece being placed or selected shows on the right as it lies on the map: its top is ahead.</li>
-</ul>
-<h3>Keys</h3>
-<dl>
-<dt><kbd>R</kbd> / <kbd>Shift</kbd>+<kbd>R</kbd></dt><dd>Turn the piece (or the one being placed) right / left</dd>
-<dt><kbd>Del</kbd></dt><dd>Take the piece away</dd>
-<dt><kbd>D</kbd></dt><dd>Place another of the selected piece, turned the same</dd>
-<dt>Arrow keys</dt><dd>Move the piece (with <kbd>Shift</kbd> further), or the map when nothing is selected</dd>
-<dt><kbd>,</kbd> / <kbd>.</kbd></dt><dd>Select the path's point before / after</dd>
-<dt><kbd>Shift</kbd>+<kbd>,</kbd> / <kbd>Shift</kbd>+<kbd>.</kbd></dt><dd>Move the point earlier / later on the path</dd>
-<dt><kbd>S</kbd></dt><dd>Make the point the path's start</dd>
-<dt><kbd>P</kbd></dt><dd>Change the point's kind</dd>
-<dt><kbd>O</kbd></dt><dd>Order the path by clicking</dd>
-<dt><kbd>F</kbd></dt><dd>Show the whole stage</dd>
-<dt><kbd>V</kbd></dt><dd>The 3D view, or the map</dd>
-<dt><kbd>+</kbd> / <kbd>-</kbd></dt><dd>Zoom in / out (or the mouse wheel)</dd>
-<dt><kbd>Ctrl</kbd>+<kbd>Z</kbd> / <kbd>Ctrl</kbd>+<kbd>Y</kbd></dt><dd>Undo / redo</dd>
-<dt><kbd>T</kbd></dt><dd>Test drive</dd>
-<dt><kbd>Esc</kbd></dt><dd>Stop placing or ordering, deselect, then close</dd>
-<dt><kbd>?</kbd></dt><dd>This help</dd>
-</dl>
-<form method="dialog"><button type="submit" class="close">Done</button></form>
-</dialog>
-<dialog id="editorSettings" class="menu-dialog" aria-labelledby="editorSettingsTitle">
-<h2 id="editorSettingsTitle">Stage settings</h2>
-<form id="editorSettingsForm" method="dialog" novalidate>
-<label for="settingLaps">Laps</label>
-<input id="settingLaps" type="number" min="1" max="15" step="1">
-<label for="settingLevel">Opponents as strong as on</label>
-<select id="settingLevel"></select>
-<label for="settingMusic">Music of</label>
-<select id="settingMusic"></select>
-<label for="settingLookFrom">Look like</label>
-<div class="row"><select id="settingLookFrom"></select><button type="button" id="settingCopyLook">Copy look</button></div>
-<div class="colors">
-<label for="settingSky">Sky</label><input id="settingSky" type="color">
-<label for="settingFog">Fog</label><input id="settingFog" type="color">
-<label for="settingGround">Ground</label><input id="settingGround" type="color">
-<label for="settingCloudColor">Clouds</label><input id="settingCloudColor" type="color">
-</div>
-<label for="settingClouds">Cloud cover</label>
-<select id="settingClouds"><option value="0">Overcast</option><option value="1">Cloudy</option><option value="2">A few clouds</option></select>
-<label for="settingDistance">How far one sees</label>
-<input id="settingDistance" type="number" min="4000" max="20000" step="100">
-<button type="submit" class="close">Done</button>
-</form>
-</dialog>
-</dialog>
-<dialog id="touchLayout" class="touch-layout view" aria-labelledby="touchLayoutTitle">
-<h2 id="touchLayoutTitle">Drag the controls where you want them</h2>
-<div id="touchLayoutControls"></div>
-<div class="row"><button type="button" id="touchLayoutReset">Reset</button><button type="button" id="touchLayoutDone" class="go">Done</button></div>
-</dialog>
-<aside id="cameraPath" class="camera-path" aria-labelledby="cameraPathTitle" hidden>
-<h2 id="cameraPathTitle">Camera path</h2>
-<p class="hint">Fly and turn the camera, pause where it should be, then add a keyframe (K). From each keyframe the path flies on or cuts; into and out of a car's camera it glides. Each keyframe keeps the speed and the zoom (wheel). , and . jump between keyframes.</p>
-<div class="row"><button type="button" id="cameraPathAdd">Add keyframe here</button><button type="button" id="cameraPathPlay" aria-pressed="false">Play the path</button></div>
-<ol id="cameraPathKeys" aria-label="Keyframes"></ol>
-<div class="row"><button type="button" id="cameraPathVideo" aria-describedby="cameraPathVideoHint">Record video</button></div>
-<p id="cameraPathVideoHint" class="hint"></p>
-<button type="button" id="cameraPathClose">Close</button>
-</aside>
-<button type="button" id="replayExit" class="replay-exit" aria-label="Exit the replay" aria-keyshortcuts="Escape" title="Exit (Esc)" hidden>Exit</button>
-<button type="button" id="multiplayerButton" class="multiplayer-button" aria-haspopup="dialog" aria-controls="multiplayer" hidden>Multiplayer</button>
-<dialog id="multiplayer" class="menu-dialog view" aria-labelledby="multiplayerTitle">
-<header class="view-head">
-<h2 id="multiplayerTitle">Multiplayer</h2>
-<p id="multiplayerRoomLine" class="room-line" hidden>Room <strong id="multiplayerRoomName" class="room"></strong></p>
-<button type="button" id="multiplayerClose" class="back">Back</button>
-</header>
-<div id="multiplayerChoose" class="choose">
-<p id="multiplayerNotice" class="notice" role="status" hidden></p>
-<section class="panel browser" aria-labelledby="multiplayerBrowserTitle">
-<h3 id="multiplayerBrowserTitle">Public rooms</h3>
-<p class="hint">Rooms their hosts made public. Up to eight race in one.</p>
-<p id="multiplayerBrowserStatus" class="status" role="status"></p>
-<ul id="multiplayerRoomList" class="rooms" aria-labelledby="multiplayerBrowserTitle"></ul>
-</section>
-<div class="side">
-<section class="panel host" aria-labelledby="multiplayerHostTitle">
-<h3 id="multiplayerHostTitle">Host</h3>
-<p class="hint">Open a room of your own, choose the race and invite friends with its code or link, or make it public.</p>
-<button type="button" id="multiplayerHost" class="go">Host a race</button>
-</section>
-<section class="panel code" aria-labelledby="multiplayerCodeTitle">
-<h3 id="multiplayerCodeTitle">Join with a code</h3>
-<form id="multiplayerJoinForm" novalidate>
-<label for="multiplayerCode">Code of the host's room</label>
-<div class="row"><input id="multiplayerCode" name="room" maxlength="32" required aria-required="true" aria-describedby="multiplayerCodeError" autocomplete="off" autocapitalize="none" spellcheck="false"><button type="submit" class="join">Join the race</button></div>
-<p id="multiplayerCodeError" class="error" role="alert" hidden></p>
-</form>
-</section>
-</div>
-</div>
-<div id="multiplayerRoom" class="lobby" hidden>
-<section class="panel field" aria-labelledby="multiplayerPlayersTitle">
-<h3 id="multiplayerPlayersTitle">Players</h3>
-<ul id="multiplayerPlayers" class="cards" aria-labelledby="multiplayerPlayersTitle"></ul>
-<div id="multiplayerBots" hidden>
-<h3 id="multiplayerBotsTitle">Bots</h3>
-<ul id="multiplayerBotList" class="cards" aria-labelledby="multiplayerBotsTitle"></ul>
-<button type="button" id="multiplayerAddBot">Add a bot</button>
-</div>
-</section>
-<section class="panel race" aria-labelledby="lobbyRaceTitle">
-<h3 id="lobbyRaceTitle">The race</h3>
-<div id="multiplayerShare" class="share">
-<label for="multiplayerLink">Link for your guests</label>
-<div class="row"><input id="multiplayerLink" readonly><button type="button" id="multiplayerCopy">Copy</button></div>
-</div>
-<div id="lobbySettings" class="settings">
-<div class="setting wide"><label for="lobbyPublic">Who can join</label><select id="lobbyPublic" aria-describedby="lobbyPublicHint"><option value="0">With the code or link</option><option value="1">Everyone: a public room</option></select><p id="lobbyPublicHint" class="hint">A public room is listed for everyone, with your name and the race.</p></div>
-<div class="setting wide"><label for="lobbyStage">Stage</label><select id="lobbyStage"></select></div>
-<div class="setting"><label for="lobbyMode">Mode</label><select id="lobbyMode"></select></div>
-<div class="setting"><label for="lobbyStrength">Bot strength</label><select id="lobbyStrength"></select></div>
-<div class="setting" id="lobbyMinutesChoice"><label for="lobbyMinutes">Time</label><select id="lobbyMinutes"></select></div>
-<div class="setting" id="lobbyRespawnChoice"><label for="lobbyRespawn">Back after</label><select id="lobbyRespawn"></select></div>
-<div class="setting"><label for="lobbyTeams">Teams</label><select id="lobbyTeams"></select></div>
-<div class="setting" id="lobbyTeamCrashesChoice"><label for="lobbyTeamCrashes">Team mates crash</label><select id="lobbyTeamCrashes"><option value="1">Yes</option><option value="0">No, pass through</option></select></div>
-</div>
-<dl id="lobbyRules" class="rules" hidden></dl>
-</section>
-<section class="panel you" aria-labelledby="lobbyYouTitle">
-<h3 id="lobbyYouTitle">You</h3>
-<div class="settings">
-<div class="setting wide"><label for="lobbyName">Your name</label><input id="lobbyName" maxlength="16" autocomplete="nickname" spellcheck="false"></div>
-<div class="setting" id="lobbyCarChoice"><label for="lobbyCar" id="lobbyCarLabel">Your car</label><button type="button" id="lobbyCar" class="car-choice" aria-labelledby="lobbyCarLabel lobbyCar"></button></div>
-<div class="setting"><label for="lobbySkin">Your paint</label><select id="lobbySkin"></select></div>
-<div class="setting" id="lobbyTeamChoice"><label for="lobbyTeam">Your team</label><select id="lobbyTeam"></select></div>
-<div class="setting wide"><label for="lobbyVoice">Voice chat</label><select id="lobbyVoice" aria-describedby="lobbyTalkHint"><option value="off">Off</option><option value="push">Push to talk</option><option value="byVoice">By voice</option></select></div>
-</div>
-<p id="multiplayerStatus" class="status" role="status"></p>
-<button type="button" id="lobbyReady" class="go" aria-pressed="false">Ready</button>
-<button type="button" id="lobbyWatch" class="go" hidden>Watch the race</button>
-<button type="button" id="lobbyStart" class="go">Start the race</button>
-<button type="button" id="lobbyTalk" aria-pressed="false" aria-describedby="lobbyTalkHint">Talk</button>
-<p id="lobbyTalkHint" class="hint"></p>
-<button type="button" id="multiplayerLeave">Leave the room</button>
-</section>
-<section class="panel chat" aria-labelledby="lobbyChatTitle">
-<h3 id="lobbyChatTitle">Chat</h3>
-<ol id="lobbyChat" tabindex="0" aria-labelledby="lobbyChatTitle" aria-live="polite" aria-relevant="additions"></ol>
-<form id="lobbyChatForm" novalidate>
-<label for="lobbyChatText">Message</label>
-<div class="row"><input id="lobbyChatText" maxlength="200" autocomplete="off"><button type="submit">Send</button></div>
-</form>
-</section>
-</div>
-</dialog>
-
-<script type="module" src="/src/game.js"></script>
-</body>
+    <script type="module" src="/src/game.js"></script>
+  </body>
 </html>
